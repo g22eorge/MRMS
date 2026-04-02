@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          Role     @default(INTAKE)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions     Session[]
+  accounts     Account[]
+  jobsCreated  Job[]      @relation("CreatedBy")
+  jobsAssigned Job[]      @relation("AssignedTo")
+  payoutsMarked Job[]     @relation("PayoutMarkedBy")
+  auditLogs    AuditLog[]
+  clientNotes  ClientNote[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  INTAKE
+  TECHNICIAN_INTERNAL
+  TECHNICIAN_EXTERNAL
+  OPS
+  ACCOUNTS
+}
+
+enum JobStatus {
+  RECEIVED
+  DIAGNOSING
+  REFERRED
+  AWAITING_APPROVAL
+  IN_REPAIR
+  COMPLETED
+  CLOSED
+}
+
+enum RepairPath {
+  IN_HOUSE
+  EXTERNAL
+}
+
+enum DeviceType {
+  PHONE_ANDROID
+  PHONE_IPHONE
+  TABLET
+  WINDOWS_PC
+  MAC
+  OTHER
+}
+
+enum TimelineConfidence {
+  FIRM
+  ESTIMATED
+  PARTS_DEPENDENT
+}
+
+model Client {
+  id           String   @id @default(cuid())
+  fullName     String
+  phone        String   @unique
+  email        String?
+  organization String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  jobs         Job[]
+  notesEntries ClientNote[]
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id            String     @id @default(cuid())
+  jobNumber     String     @unique
+  status        JobStatus  @default(RECEIVED)
+  repairPath    RepairPath?
+  clientId      String
+  client        Client     @relation(fields: [clientId], references: [id])
+  createdById   String
+  createdBy     User       @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedToId  String?
+  assignedTo    User?      @relation("AssignedTo", fields: [assignedToId], references: [id])
+  deviceType    DeviceType
+  brand         String
+  model         String
+  serialOrImei  String?
+  accessories   String?
+  physicalNotes String?
+
+  issueDescription  String
+  diagnosisNotes    String?
+  externalDiagnosis String?
+  recommendedRepair String?
+  partsNeeded       String?
+
+  externalTechBill Float? @map("costEstimate")
+  clientBill       Float? @map("finalCost")
+  externalTechFee Float?
+  externalPaid    Boolean   @default(false)
+  externalPaidAt  DateTime?
+  externalPaidById String?
+  externalPaidBy  User?     @relation("PayoutMarkedBy", fields: [externalPaidById], references: [id])
+  externalPaymentRef String?
+  clientApproved Boolean?
+  approvalDate   DateTime?
+  quotedAt       DateTime?
+
+  repairTimeline  String?
+  timelineMinMinutes Int?
+  timelineMaxMinutes Int?
+  timelineConfidence TimelineConfidence?
+  timelineNote String?
+  technicianNotes String?
+  workDone        String?
+  partsReplaced   String?
+
+  receivedAt  DateTime  @default(now())
+  completedAt DateTime?
+  closedAt    DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  photos    Photo[]
+  auditLogs AuditLog[]
+}
+
+model Photo {
+  id         String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  url         String
+  label       String?
+  uploadedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+}

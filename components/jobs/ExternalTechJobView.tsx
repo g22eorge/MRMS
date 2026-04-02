@@ -1,0 +1,224 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+
+import { updateJobAction } from "@/app/(app)/jobs/[id]/actions";
+
+type ExternalJob = {
+  id: string;
+  jobNumber: string;
+  status: string;
+  clientApproved: boolean | null;
+  approvalDate: string | null;
+  deviceType: string;
+  brand: string;
+  model: string;
+  serialOrImei: string | null;
+  accessories: string | null;
+  externalDiagnosis: string | null;
+  partsNeeded: string | null;
+  externalTechBill: number | null;
+  repairTimeline: string | null;
+  timelineMinMinutes: number | null;
+  timelineMaxMinutes: number | null;
+  timelineConfidence: "FIRM" | "ESTIMATED" | "PARTS_DEPENDENT" | null;
+  timelineNote: string | null;
+};
+
+type Unit = "HOUR" | "DAY" | "WEEK";
+
+function fromMinutes(value: number | null, unit: Unit) {
+  if (!value) return "";
+  const divisor = unit === "HOUR" ? 60 : unit === "DAY" ? 60 * 24 : 60 * 24 * 7;
+  return String(Number((value / divisor).toFixed(2)));
+}
+
+export function ExternalTechJobView({
+  job,
+  returnTo,
+}: {
+  job: ExternalJob;
+  returnTo: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [unit, setUnit] = useState<Unit>("HOUR");
+  const [minValue, setMinValue] = useState(fromMinutes(job.timelineMinMinutes, "HOUR"));
+  const [maxValue, setMaxValue] = useState(fromMinutes(job.timelineMaxMinutes, "HOUR"));
+
+  const timelinePreview = useMemo(() => {
+    if (!minValue && !maxValue) return "No timeline selected";
+    const min = minValue || maxValue;
+    const max = maxValue || minValue;
+    const label = unit.toLowerCase() + ((Number(max) > 1 || Number(min) > 1) ? "s" : "");
+    return min === max ? `${min} ${label}` : `${min}-${max} ${label}`;
+  }, [maxValue, minValue, unit]);
+
+  const quickChips: Array<{ label: string; min: string; max: string; unit: Unit }> = [
+    { label: "1-2h", min: "1", max: "2", unit: "HOUR" },
+    { label: "3-4h", min: "3", max: "4", unit: "HOUR" },
+    { label: "Same day", min: "1", max: "1", unit: "DAY" },
+    { label: "1-2d", min: "1", max: "2", unit: "DAY" },
+    { label: "3-5d", min: "3", max: "5", unit: "DAY" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
+        {job.status === "IN_REPAIR" && job.clientApproved ? (
+          <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            Client approved. You can proceed with repair now.
+            {job.approvalDate ? ` Approved on ${new Date(job.approvalDate).toLocaleString()}.` : ""}
+          </div>
+        ) : null}
+        {job.status === "AWAITING_APPROVAL" ? (
+          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Awaiting client approval. Hold repair work until approval is confirmed.
+          </div>
+        ) : null}
+        <p className="text-sm text-slate-600">
+          {job.deviceType} / {job.brand} {job.model}
+        </p>
+        <p className="mt-1 text-sm text-slate-600">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
+        <p className="text-sm text-slate-600">Accessories: {job.accessories ?? "-"}</p>
+      </div>
+
+      <form
+        action={(formData) => {
+          formData.set("jobId", job.id);
+          startTransition(async () => {
+            const res = await updateJobAction(formData);
+            if (res.error) {
+              toast.error(res.error);
+              return;
+            }
+            toast.success("External diagnosis updated");
+            window.location.assign(returnTo);
+          });
+        }}
+        className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+      >
+        <h3 className="font-semibold">External Diagnosis</h3>
+        <textarea
+          name="externalDiagnosis"
+          defaultValue={job.externalDiagnosis ?? ""}
+          placeholder="Diagnosis summary"
+          className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2"
+        />
+        <textarea
+          name="partsNeeded"
+          defaultValue={job.partsNeeded ?? ""}
+          placeholder="Parts needed"
+          className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2"
+        />
+        <input
+          name="externalTechBill"
+          type="number"
+          step="0.01"
+          defaultValue={job.externalTechBill ?? undefined}
+          placeholder="External tech bill"
+          className="w-full rounded-md border border-slate-300 px-3 py-2"
+        />
+
+        <div className="space-y-2 rounded-md border border-slate-200 p-3">
+          <p className="text-sm font-medium">Timeline Builder</p>
+          <div className="flex flex-wrap gap-2">
+            {quickChips.map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  setUnit(chip.unit);
+                  setMinValue(chip.min);
+                  setMaxValue(chip.max);
+                }}
+                className="rounded-full border border-slate-300 px-2 py-1 text-xs hover:border-teal-600"
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-3">
+            <input
+              name="timelineMinValue"
+              type="number"
+              step="0.1"
+              min="0"
+              value={minValue}
+              onChange={(event) => setMinValue(event.target.value)}
+              placeholder="Min"
+              className="rounded-md border border-slate-300 px-3 py-2"
+            />
+            <input
+              name="timelineMaxValue"
+              type="number"
+              step="0.1"
+              min="0"
+              value={maxValue}
+              onChange={(event) => setMaxValue(event.target.value)}
+              placeholder="Max"
+              className="rounded-md border border-slate-300 px-3 py-2"
+            />
+            <select
+              name="timelineUnit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as Unit)}
+              className="rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="HOUR">Hours</option>
+              <option value="DAY">Days</option>
+              <option value="WEEK">Weeks</option>
+            </select>
+          </div>
+
+          <select
+            name="timelineConfidence"
+            defaultValue={job.timelineConfidence ?? "ESTIMATED"}
+            className="w-full rounded-md border border-slate-300 px-3 py-2"
+          >
+            <option value="FIRM">Firm</option>
+            <option value="ESTIMATED">Estimated</option>
+            <option value="PARTS_DEPENDENT">Parts dependent</option>
+          </select>
+
+          <textarea
+            name="timelineNote"
+            defaultValue={job.timelineNote ?? ""}
+            placeholder="Delay reason (optional)"
+            className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2"
+          />
+
+          <input type="hidden" name="repairTimeline" value={timelinePreview === "No timeline selected" ? "" : timelinePreview} />
+          <p className="rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            ETA Preview: <span className="font-medium">{timelinePreview}</span>
+          </p>
+          {job.repairTimeline ? (
+            <p className="text-xs text-slate-500">Current saved ETA: {job.repairTimeline}</p>
+          ) : null}
+        </div>
+
+        <div className="flex gap-2">
+          <button disabled={isPending} className="rounded-md bg-teal-700 px-3 py-2 text-white">
+            {isPending ? "Saving..." : "Save"}
+          </button>
+          {job.status === "IN_REPAIR" ? (
+            <button
+              type="submit"
+              name="nextStatus"
+              value="COMPLETED"
+              disabled={isPending}
+              className="rounded-md bg-emerald-700 px-3 py-2 text-white disabled:opacity-60"
+            >
+              Mark Completed
+            </button>
+          ) : null}
+          <a href={returnTo} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  );
+}

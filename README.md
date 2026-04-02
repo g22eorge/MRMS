@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Eagle Info Repair Manager
 
-## Getting Started
+Role-based repair job management system built with Next.js App Router, BetterAuth, Prisma, and SQLite.
 
-First, run the development server:
+## Quick Start
+
+1. Install deps:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Configure env:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Run migrations + generate:
 
-## Learn More
+```bash
+bunx prisma migrate dev --name init
+bunx prisma generate
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Seed admin user:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+bun run seed
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. Start dev server:
 
-## Deploy on Vercel
+```bash
+bun run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Sample Login
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Email: `admin@eagle.local`
+- Password: `Admin123!`
+
+## Useful Checks
+
+- Lint: `bun run lint`
+- Production build: `bun run build`
+- Static internal link check: `bun run check:links`
+- Revenue report from DB: `bun run report:revenue`
+- Backfill legacy completed jobs missing final cost: `bun run data:backfill-final-cost`
+- Ship gate checks: `bun run predeploy:check`
+- CI release gate (requires HTTPS + QA base URL): `bun run predeploy:ci`
+
+## Revenue Logic
+
+Default display currency is controlled by `APP_CURRENCY`.
+
+- Default: `UGX`
+- To switch to USD (or another ISO currency code), set `APP_CURRENCY="USD"`.
+
+Revenue widget on `/reports` calculates:
+
+- jobs where `status = COMPLETED`
+- and `clientBill` is set
+- and `completedAt` is in current month
+
+If `clientBill` is never filled in job financials, revenue remains `0`.
+
+## Deployment
+
+SQLite is best suited for single-server deployment.
+
+### Render (recommended)
+
+This repo includes `render.yaml` with:
+
+- persistent disk mounted at `/var/data`
+- SQLite database at `file:/var/data/dev.db`
+- uploads at `/var/data/uploads`
+
+Steps:
+
+1. Push this repo to GitHub.
+2. In Render, create a new **Blueprint** service from the repo.
+3. Set required env vars in Render:
+   - `NEXT_PUBLIC_APP_URL` (your app URL)
+   - `BETTER_AUTH_URL` (same URL)
+   - `BETTER_AUTH_SECRET` (strong random string)
+4. Deploy.
+
+After first deploy, open a shell in Render and run:
+
+```bash
+bun run seed
+```
+
+Then log in with the seeded admin.
+
+### Local container run
+
+```bash
+docker compose up --build
+```
+
+App: `http://localhost:3000`
+
+### Production notes
+
+- Set a strong `BETTER_AUTH_SECRET`
+- Keep `prisma/dev.db` on persistent storage/volume
+- Back up SQLite regularly
+- If scaling to multiple servers, move to PostgreSQL
