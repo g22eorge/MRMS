@@ -43,15 +43,32 @@ function parseSetCookie(setCookie: string, origin: URL): Cookie {
 
 async function login(page: Page, email: string) {
   const origin = new URL(baseUrl);
-  const response = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password, callbackURL: "/dashboard" }),
-  });
+  let response: Response | null = null;
+  let failureNote = "";
 
-  expect(response.ok).toBeTruthy();
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    response = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        origin: baseUrl,
+      },
+      body: JSON.stringify({ email, password, callbackURL: "/dashboard" }),
+    });
 
-  const cookies = response.headers.getSetCookie().map((entry) => parseSetCookie(entry, origin));
+    if (response.ok) {
+      break;
+    }
+
+    const body = await response.text();
+    failureNote = `status=${response.status} body=${body.slice(0, 240)}`;
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+
+  expect(response?.ok, failureNote).toBeTruthy();
+
+  const cookies = response!.headers.getSetCookie().map((entry) => parseSetCookie(entry, origin));
   await page.context().addCookies(cookies);
 
   await page.goto("/dashboard");
