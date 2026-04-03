@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
@@ -87,11 +86,7 @@ export default async function ReportsPage({
 }) {
   const filters = await searchParams;
   const { user } = await getCurrentUserRole();
-  if (user.role === "ADMIN") {
-    const query = filters.month ? `?month=${encodeURIComponent(filters.month)}` : "";
-    redirect(`/dashboard${query}`);
-  }
-  if (user.role !== "OPS") {
+  if (user.role !== "ADMIN" && user.role !== "OPS") {
     redirect("/dashboard");
   }
 
@@ -103,7 +98,6 @@ export default async function ReportsPage({
 
   const [
     statusGroup,
-    deviceGroup,
     completedAll,
     completedSelected,
     completedPrev,
@@ -113,7 +107,6 @@ export default async function ReportsPage({
     externalPayoutOutstandingJobs,
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
-    prisma.job.groupBy({ by: ["deviceType"], _count: { deviceType: true } }),
     prisma.job.findMany({ where: { status: "COMPLETED" } }),
     prisma.job.findMany({
       where: {
@@ -160,10 +153,6 @@ export default async function ReportsPage({
     name: statusLabel[status],
     value: statusCount.get(status) ?? 0,
   }));
-  const deviceData = deviceGroup.map((d) => ({
-    name: deviceLabel[d.deviceType] ?? d.deviceType,
-    value: d._count.deviceType,
-  }));
 
   const revenueFor = (jobs: typeof completedSelected) =>
     jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
@@ -199,7 +188,6 @@ export default async function ReportsPage({
     return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   })();
 
-  const topDevices = [...deviceData].sort((a, b) => b.value - a.value).slice(0, 5);
   const totalPath = inHouseCount + externalCount;
   const externalRatio = totalPath > 0 ? (externalCount / totalPath) * 100 : 0;
 
@@ -367,6 +355,38 @@ export default async function ReportsPage({
       .sort((a, b) => b.total - a.total);
   })();
 
+  const topDevices = deviceInsights.slice(0, 5).map((item) => ({ name: item.device, value: item.total }));
+  const queuePressure = funnel.diagnosing + funnel.awaitingApproval + funnel.inRepair;
+  const completionMomentum = completedSelected.length - completedPrev.length;
+
+  const exportItems = [
+    {
+      title: "Pipeline Aging",
+      caption: "Queue delay risk by status bands",
+      href: "/api/reports/export?type=pipeline-aging",
+    },
+    {
+      title: "Repair Margin",
+      caption: "Job-level client bill vs technician cost",
+      href: `/api/reports/export?type=revenue-variance&month=${selectedMonthString}`,
+    },
+    {
+      title: "Technician Performance",
+      caption: "Throughput and completion mix per technician",
+      href: "/api/reports/export?type=technician-performance",
+    },
+    {
+      title: "External Payouts",
+      caption: "Outstanding and paid external technician fees",
+      href: "/api/reports/export?type=external-payouts",
+    },
+    {
+      title: "Device Performance",
+      caption: "Device type completion, margin, and trend",
+      href: `/api/reports/export?type=device-performance&month=${selectedMonthString}`,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-end gap-3">
@@ -378,39 +398,28 @@ export default async function ReportsPage({
         />
       </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-        <p className="mb-2 text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Export</p>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="/api/reports/export?type=pipeline-aging"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
-          >
-            Pipeline Aging CSV
-          </a>
-          <a
-            href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`}
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
-          >
-            Repair Margin CSV
-          </a>
-          <a
-            href="/api/reports/export?type=technician-performance"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
-          >
-            Technician Performance CSV
-          </a>
-          <a
-            href="/api/reports/export?type=external-payouts"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
-          >
-            External Payouts CSV
-          </a>
-          <a
-            href={`/api/reports/export?type=device-performance&month=${selectedMonthString}`}
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
-          >
-            Device Performance CSV
-          </a>
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Downloads</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">Report Export Center</p>
+          </div>
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-xs text-[var(--ink-muted)]">
+            CSV
+          </span>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {exportItems.map((item) => (
+            <a
+              key={item.title}
+              href={item.href}
+              className="group rounded-lg border border-[var(--line)] bg-white p-3 transition hover:-translate-y-[1px] hover:border-[var(--brand)]"
+            >
+              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+              <p className="mt-2 text-xs font-medium text-[var(--brand)] group-hover:underline">Download CSV</p>
+            </a>
+          ))}
         </div>
       </div>
 
@@ -451,7 +460,28 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <ReportsCharts statusData={statusData} deviceData={deviceData} />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completion Momentum</p>
+          <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            {completionMomentum >= 0 ? "+" : ""}
+            {completionMomentum}
+          </p>
+          <p className="mt-2 text-xs text-[var(--ink-muted)]">Completed jobs vs previous month</p>
+        </div>
+        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Queue Pressure</p>
+          <p className="mt-2 text-3xl font-semibold text-amber-700">{queuePressure}</p>
+          <p className="mt-2 text-xs text-[var(--ink-muted)]">Diagnosing + awaiting approval + in repair</p>
+        </div>
+        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Aging Risk</p>
+          <p className={`mt-2 text-3xl font-semibold ${delayedJobs.length > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+            {delayedJobs.length}
+          </p>
+          <p className="mt-2 text-xs text-[var(--ink-muted)]">Open jobs older than 3 days</p>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 lg:col-span-2">

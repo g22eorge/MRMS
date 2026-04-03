@@ -375,12 +375,9 @@ export default async function DashboardPage({
             className="flex items-center"
             selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
           />
-          <div className="flex flex-wrap gap-2">
-            <a href="/api/reports/export?type=pipeline-aging" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Pipeline Aging CSV</a>
-            <a href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Repair Margin CSV</a>
-            <a href="/api/reports/export?type=technician-performance" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Technician CSV</a>
-            <a href="/api/reports/export?type=external-payouts" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Payout CSV</a>
-          </div>
+          <Link href={`/reports?month=${selectedMonthString}`} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">
+            Open Report Downloads
+          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -409,7 +406,7 @@ export default async function DashboardPage({
         <ReportsCharts statusData={statusData} deviceData={deviceData} />
 
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
-          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Use <a href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">Repair Margin CSV</a> to inspect job-level variance.
+          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Download detailed CSV packs from <Link href={`/reports?month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">Reports</Link>.
         </div>
       </div>
     );
