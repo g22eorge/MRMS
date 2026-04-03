@@ -67,6 +67,22 @@ If `clientBill` is never filled in job financials, revenue remains `0`.
 
 ## Deployment
 
+This project supports local SQLite and Turso (libSQL).
+
+### Turso (recommended for production)
+
+Set these environment variables:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+- `NEXT_PUBLIC_APP_URL`
+- `BETTER_AUTH_URL`
+- `BETTER_AUTH_SECRET`
+
+When `TURSO_DATABASE_URL` is set, Prisma uses the libSQL adapter automatically.
+
+### Local SQLite / single server
+
 SQLite is best suited for single-server deployment.
 
 ### Render (recommended)
