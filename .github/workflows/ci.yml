@@ -11,7 +11,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:./prisma/dev.db
+      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
       BETTER_AUTH_SECRET: ci_dummy_secret_abcdefghijklmnopqrstuvwxyz123456
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
@@ -74,7 +74,7 @@ jobs:
   qa-backend:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:./prisma/dev.db
+      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
       BETTER_AUTH_SECRET: ci_dummy_secret_abcdefghijklmnopqrstuvwxyz123456
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
@@ -119,6 +119,9 @@ jobs:
       - name: Seed data
         run: bun run seed
 
+      - name: Build
+        run: bun run build
+
       - name: QA data integrity
         run: bun run qa:data-integrity
 
@@ -157,7 +160,7 @@ jobs:
   qa-e2e:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:./prisma/dev.db
+      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
       BETTER_AUTH_SECRET: ci_dummy_secret_abcdefghijklmnopqrstuvwxyz123456
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:4173
       BETTER_AUTH_URL: http://127.0.0.1:4173

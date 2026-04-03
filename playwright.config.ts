@@ -1,8 +1,10 @@
 import { defineConfig } from "@playwright/test";
+import path from "node:path";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 const port = new URL(baseURL).port || "4173";
-const authEnv = `NEXT_PUBLIC_APP_URL=${baseURL} BETTER_AUTH_URL=${baseURL} BETTER_AUTH_SECRET=abcdefghijklmnopqrstuvwxyz123456 PROD=false DATABASE_URL=file:./prisma/dev.db`;
+const databaseUrl = `file:${path.resolve(process.cwd(), "prisma/dev.db")}`;
+const authEnv = `NEXT_PUBLIC_APP_URL=${baseURL} BETTER_AUTH_URL=${baseURL} BETTER_AUTH_SECRET=abcdefghijklmnopqrstuvwxyz123456 PROD=false DATABASE_URL=${databaseUrl}`;
 
 const webServerBoot = `${authEnv} bunx prisma migrate deploy && ${authEnv} bun run seed`;
 
