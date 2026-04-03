@@ -11,11 +11,29 @@ const nav = [
   { href: "/technicians/payouts", label: "Payouts", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/clients", label: "Clients", roles: ["ADMIN", "OPS"] },
   { href: "/technicians", label: "Tech", roles: "all" },
-  { href: "/reports", label: "Reports", roles: ["OPS"] },
+  { href: "/reports", label: "Reports", roles: ["ADMIN", "OPS"] },
   { href: "/settings/users", label: "Users", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", roles: ["ADMIN"] },
   { href: "/settings/profile", label: "Profile", roles: "all" },
 ] as const;
+
+const roleOrder: Record<Role, readonly string[]> = {
+  ADMIN: [
+    "/dashboard",
+    "/jobs",
+    "/clients",
+    "/technicians",
+    "/reports",
+    "/settings/users",
+    "/settings/branding",
+    "/settings/profile",
+  ],
+  OPS: ["/dashboard", "/jobs", "/clients", "/technicians", "/reports", "/settings/profile"],
+  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
+  TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
+  INTAKE: ["/dashboard", "/jobs", "/settings/profile"],
+  ACCOUNTS: ["/dashboard", "/jobs", "/reports", "/settings/profile"],
+};
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
   return rule === "all" ? true : rule.includes(role);
@@ -33,7 +51,10 @@ function mobileLabel(label: string) {
   if (label === "Approval Jobs") return "Approvals";
   if (label === "My Queue") return "Queue";
   if (label === "My Jobs") return "Jobs";
+  if (label === "Work Orders") return "Jobs";
   if (label === "My Payouts") return "Payouts";
+  if (label === "Work Queue") return "Queue";
+  if (label === "Technician Board") return "Board";
   if (label === "Overview") return "Home";
   if (label === "Profile") return "Me";
   return label;
@@ -107,29 +128,35 @@ function navIcon(href: string) {
 function roleLabel(role: Role, href: string, label: string) {
   if (role === "TECHNICIAN_EXTERNAL") {
     if (href === "/dashboard") return "Overview";
-    if (href === "/jobs") return "My Jobs";
+    if (href === "/jobs") return "Work Orders";
     if (href === "/technicians/payouts") return "My Payouts";
+    if (href === "/settings/profile") return "Profile";
   }
   if (role === "TECHNICIAN_INTERNAL") {
-    if (href === "/jobs") return "My Queue";
+    if (href === "/jobs") return "Work Queue";
+    if (href === "/technicians") return "Technician Board";
   }
   if (role === "OPS") {
-    if (href === "/jobs") return "Billing Jobs";
+    if (href === "/jobs") return "Operations";
     if (href === "/reports") return "Finance";
   }
-  if (role === "OPS") {
-    if (href === "/jobs") return "Approval Jobs";
+  if (role === "ADMIN") {
+    if (href === "/jobs") return "Operations";
+    if (href === "/technicians") return "Technician Board";
   }
   return label;
+}
+
+function orderedNavForRole(role: Role) {
+  const visible = nav.filter((item) => isVisible(role, item.roles));
+  const ranking = new Map(roleOrder[role].map((href, index) => [href, index]));
+  return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
 }
 
 export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const visibleNav =
-    role === "TECHNICIAN_EXTERNAL"
-      ? nav.filter((item) => ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"].includes(item.href))
-      : nav.filter((item) => isVisible(role, item.roles));
+  const visibleNav = orderedNavForRole(role);
   const mobilePrimary = visibleNav.slice(0, 4);
   const mobileMore = visibleNav.slice(4);
 
