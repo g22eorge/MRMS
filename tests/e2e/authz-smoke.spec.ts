@@ -1,7 +1,7 @@
 import { expect, test, type Cookie, type Page } from "@playwright/test";
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";
-const externalTechEmail = process.env.E2E_EXTERNAL_EMAIL ?? "tech.external@eagle.local";
+const externalTechEmail = process.env.E2E_EXTERNAL_EMAIL ?? "abdu@eagle.tech";
 const password = process.env.E2E_PASSWORD ?? process.env.SEED_PASSWORD ?? "Admin123!";
 const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 
@@ -90,7 +90,7 @@ test("admin sees admin navigation and can open user settings", async ({ page }) 
 test("external technician is restricted from client-identifying views", async ({ page }) => {
   await login(page, externalTechEmail);
 
-  await expect(page.getByRole("link", { name: "My Jobs" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Work Orders" })).toBeVisible();
   await expect(page.getByRole("link", { name: "My Payouts" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Clients" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Reports" })).toHaveCount(0);
