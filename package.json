@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "bun run prisma:generate && next build",
+    "build": "prisma generate && next build",
+    "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "check:links": "node scripts/check-links.mjs",
@@ -18,11 +19,12 @@
     "data:backfill-final-cost": "node scripts/backfill-final-cost.mjs",
     "predeploy:check": "node scripts/predeploy-check.mjs",
     "predeploy:ci": "REQUIRE_HTTPS=1 REQUIRE_QA_HTTP=1 REQUIRE_E2E=1 node scripts/predeploy-check.mjs",
-    "prisma:generate": "bunx prisma generate",
+    "prisma:generate": "prisma generate",
     "prisma:migrate": "bunx prisma migrate dev",
     "seed": "bun run prisma/seed.ts",
     "seed:base": "bun run prisma/seed-base.ts",
-    "seed:demo": "bun run prisma/seed.ts"
+    "seed:demo": "bun run prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
