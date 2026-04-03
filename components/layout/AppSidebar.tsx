@@ -17,7 +17,7 @@ const nav = [
   { href: "/settings/profile", label: "Profile", roles: "all" },
 ] as const;
 
-const roleOrder: Record<Role, readonly string[]> = {
+const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ADMIN: [
     "/dashboard",
     "/jobs",
@@ -31,8 +31,6 @@ const roleOrder: Record<Role, readonly string[]> = {
   OPS: ["/dashboard", "/jobs", "/clients", "/technicians", "/reports", "/settings/profile"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
-  INTAKE: ["/dashboard", "/jobs", "/settings/profile"],
-  ACCOUNTS: ["/dashboard", "/jobs", "/reports", "/settings/profile"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
@@ -149,7 +147,8 @@ function roleLabel(role: Role, href: string, label: string) {
 
 function orderedNavForRole(role: Role) {
   const visible = nav.filter((item) => isVisible(role, item.roles));
-  const ranking = new Map(roleOrder[role].map((href, index) => [href, index]));
+  const ordered = roleOrder[role] ?? visible.map((item) => item.href);
+  const ranking = new Map(ordered.map((href, index) => [href, index]));
   return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
 }
 
