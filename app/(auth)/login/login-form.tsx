@@ -18,20 +18,24 @@ export function LoginForm() {
     const password = String(data.get("password") ?? "");
 
     setIsPending(true);
-    const response = await authClient.signIn.email({
-      email,
-      password,
-      callbackURL: "/dashboard",
-    });
-    setIsPending(false);
+    try {
+      const response = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/dashboard",
+      });
 
-    if (response.error) {
-      toast.error(response.error.message || "Invalid credentials");
-      return;
+      if (response.error) {
+        toast.error(response.error.message || "Invalid credentials");
+        return;
+      }
+
+      router.replace("/dashboard");
+    } catch {
+      toast.error("Sign in failed. Please try again.");
+    } finally {
+      setIsPending(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   };
 
   return (

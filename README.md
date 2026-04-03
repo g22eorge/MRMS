@@ -73,13 +73,14 @@ This project supports local SQLite and Turso (libSQL).
 
 Set these environment variables:
 
+- `PROD=true`
 - `TURSO_DATABASE_URL`
 - `TURSO_AUTH_TOKEN`
 - `NEXT_PUBLIC_APP_URL`
 - `BETTER_AUTH_URL`
 - `BETTER_AUTH_SECRET`
 
-When `TURSO_DATABASE_URL` is set, Prisma uses the libSQL adapter automatically.
+When `PROD=true`, Prisma uses Turso via the libSQL adapter.
 
 ### Local SQLite / single server
 

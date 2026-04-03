@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "(prisma generate || bunx prisma generate || npx prisma generate) && next build",
-    "vercel-build": "(prisma generate || bunx prisma generate || npx prisma generate) && next build",
+    "vercel-build": "if [ \"$PROD\" = \"true\" ]; then (prisma migrate deploy || bunx prisma migrate deploy || npx prisma migrate deploy); fi; (prisma generate || bunx prisma generate || npx prisma generate) && next build",
     "start": "next start",
     "lint": "eslint",
     "check:links": "node scripts/check-links.mjs",
@@ -27,12 +27,14 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@libsql/client": "^0.17.2",
     "@prisma/adapter-libsql": "^7.6.0",
     "@prisma/client": "6.19.0",
     "@react-pdf/renderer": "^4.3.2",
     "better-auth": "^1.5.6",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "install": "^0.13.0",
     "next": "16.2.2",
     "prisma": "6.19.0",
     "react": "19.2.4",
