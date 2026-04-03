@@ -12,7 +12,7 @@ function tursoUrlWithToken(url: string, token?: string) {
 const databaseUrl =
   process.env.PROD === "true"
     ? tursoUrlWithToken(process.env.TURSO_DATABASE_URL ?? "", process.env.TURSO_AUTH_TOKEN)
-    : process.env.DATABASE_URL || "file:./dev.db";
+    : process.env.DATABASE_URL || "file:./prisma/dev.db";
 
 if (process.env.PROD === "true" && !process.env.TURSO_DATABASE_URL) {
   throw new Error("Missing TURSO_DATABASE_URL while PROD=true");

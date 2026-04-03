@@ -1,13 +1,15 @@
 import { defineConfig } from "@playwright/test";
 
-const baseURL = process.env.E2E_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 const port = new URL(baseURL).port || "4173";
-const authEnv = `NEXT_PUBLIC_APP_URL=${baseURL} BETTER_AUTH_URL=${baseURL}`;
+const authEnv = `NEXT_PUBLIC_APP_URL=${baseURL} BETTER_AUTH_URL=${baseURL} BETTER_AUTH_SECRET=abcdefghijklmnopqrstuvwxyz123456 PROD=false DATABASE_URL=file:./prisma/dev.db`;
+
+const webServerBoot = `${authEnv} bunx prisma migrate deploy && ${authEnv} bun run seed`;
 
 const webServerCommand =
   process.env.E2E_SKIP_BUILD === "1"
-    ? `${authEnv} PORT=${port} bun run start`
-    : `${authEnv} bun run build && ${authEnv} PORT=${port} bun run start`;
+    ? `${webServerBoot} && ${authEnv} PORT=${port} bun run start`
+    : `${authEnv} bun run build && ${webServerBoot} && ${authEnv} PORT=${port} bun run start`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -24,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: webServerCommand,
     url: `${baseURL}/login`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120000,
   },
 });

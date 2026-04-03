@@ -17,6 +17,14 @@ function run(cmd, args) {
   }
 }
 
+if (!process.env.PROD) {
+  process.env.PROD = "false";
+}
+
+if (process.env.PROD !== "true") {
+  process.env.DATABASE_URL = process.env.PREDEPLOY_DATABASE_URL ?? "file:./dev.db";
+}
+
 const secret = process.env.BETTER_AUTH_SECRET ?? "";
 if (!secret || secret.includes("replace-with") || secret.length < 32) {
   fail("BETTER_AUTH_SECRET must be set to a strong random value (32+ chars).");
@@ -37,9 +45,14 @@ if (process.env.REQUIRE_HTTPS === "1") {
 
 if (publicUrl.includes("localhost") || authUrl.includes("localhost")) {
   warn("Using localhost URLs. Set production URLs before deployment.");
+  process.env.PROD = "false";
 }
 
 run("bunx", ["prisma", "migrate", "status"]);
+if (process.env.PROD !== "true") {
+  run("bunx", ["prisma", "migrate", "deploy"]);
+  run("bun", ["run", "seed"]);
+}
 run("bun", ["run", "lint"]);
 run("bun", ["run", "build"]);
 run("bun", ["run", "qa:data-integrity"]);

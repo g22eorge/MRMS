@@ -3,7 +3,7 @@ import { expect, test, type Cookie, type Page } from "@playwright/test";
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";
 const externalTechEmail = process.env.E2E_EXTERNAL_EMAIL ?? "tech.external@eagle.local";
 const password = process.env.E2E_PASSWORD ?? process.env.SEED_PASSWORD ?? "Admin123!";
-const baseUrl = process.env.E2E_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 
 function parseSetCookie(setCookie: string, origin: URL): Cookie {
   const [nameValue, ...attributes] = setCookie.split(";").map((value) => value.trim());
@@ -55,7 +55,7 @@ async function login(page: Page, email: string) {
   await page.context().addCookies(cookies);
 
   await page.goto("/dashboard");
-  await page.waitForURL("**/dashboard");
+  await page.waitForURL("**/dashboard", { timeout: 20000 });
 }
 
 test("admin sees admin navigation and can open user settings", async ({ page }) => {

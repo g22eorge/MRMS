@@ -6,22 +6,20 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 function createPrismaClient() {
   const prod = process.env.PROD === "true";
 
-  const url = prod
-    ? process.env.TURSO_DATABASE_URL
-    : process.env.DATABASE_URL ?? "file:./dev.db";
-  const authToken = prod ? process.env.TURSO_AUTH_TOKEN : undefined;
+  if (!prod) {
+    return new PrismaClient({
+      log: ["error", "warn"],
+    });
+  }
 
+  const url = process.env.TURSO_DATABASE_URL;
   if (!url) {
-    throw new Error(
-      prod
-        ? "Missing TURSO_DATABASE_URL while PROD=true"
-        : "Missing DATABASE_URL while PROD is not true",
-    );
+    throw new Error("Missing TURSO_DATABASE_URL while PROD=true");
   }
 
   const adapter = new PrismaLibSql({
     url,
-    ...(authToken ? { authToken } : {}),
+    ...(process.env.TURSO_AUTH_TOKEN ? { authToken: process.env.TURSO_AUTH_TOKEN } : {}),
   });
 
   return new PrismaClient({
