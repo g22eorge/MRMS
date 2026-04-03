@@ -15,6 +15,7 @@
     "qa:perf": "node scripts/qa-perf.mjs",
     "qa:http-security": "node scripts/qa-http-security.mjs",
     "qa:e2e": "playwright test",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
     "qa:all": "bun run qa:data-integrity && bun run qa:concurrency && bun run qa:perf",
     "data:backfill-final-cost": "node scripts/backfill-final-cost.mjs",
     "predeploy:check": "node scripts/predeploy-check.mjs",
