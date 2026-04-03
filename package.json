@@ -11,11 +11,13 @@
     "report:revenue": "node scripts/revenue-report.mjs",
     "qa:data-integrity": "node scripts/qa-data-integrity.mjs",
     "qa:concurrency": "node scripts/qa-concurrency.mjs",
+    "qa:perf": "node scripts/qa-perf.mjs",
     "qa:http-security": "node scripts/qa-http-security.mjs",
-    "qa:all": "bun run qa:data-integrity && bun run qa:concurrency",
+    "qa:e2e": "playwright test",
+    "qa:all": "bun run qa:data-integrity && bun run qa:concurrency && bun run qa:perf",
     "data:backfill-final-cost": "node scripts/backfill-final-cost.mjs",
     "predeploy:check": "node scripts/predeploy-check.mjs",
-    "predeploy:ci": "REQUIRE_HTTPS=1 REQUIRE_QA_HTTP=1 node scripts/predeploy-check.mjs",
+    "predeploy:ci": "REQUIRE_HTTPS=1 REQUIRE_QA_HTTP=1 REQUIRE_E2E=1 node scripts/predeploy-check.mjs",
     "prisma:generate": "bunx prisma generate",
     "prisma:migrate": "bunx prisma migrate dev",
     "seed": "bun run prisma/seed.ts",
@@ -25,6 +27,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "6.19.0",
+    "@react-pdf/renderer": "^4.3.2",
     "better-auth": "^1.5.6",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -38,6 +41,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

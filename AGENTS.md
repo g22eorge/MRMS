@@ -32,11 +32,9 @@
 | Role | Key Permissions |
 |---|---|
 | `ADMIN` | Full access — all jobs, all clients, all reports, pricing overrides, user management |
-| `INTAKE` | Create jobs, capture client + device info, view job status |
 | `TECHNICIAN_INTERNAL` | View assigned jobs, add diagnosis, update repair work |
 | `TECHNICIAN_EXTERNAL` | View job ID + device specs + diagnosis summary ONLY. Can add cost estimate & timeline. Cannot see client info |
-| `OPS` | Communicate with client, update approval status, add notes |
-| `ACCOUNTS` | View costs, generate invoices, track payments |
+| `OPS` | Create jobs, capture client + device info, communicate with client, update approval status, add notes, view costs, generate invoices, track payments |
 
 ---
 
@@ -101,7 +99,7 @@ model User {
   email         String   @unique
   emailVerified Boolean  @default(false)
   image         String?
-  role          Role     @default(INTAKE)
+  role          Role     @default(OPS)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -154,11 +152,9 @@ model Verification {
 
 enum Role {
   ADMIN
-  INTAKE
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
   OPS
-  ACCOUNTS
 }
 
 enum JobStatus {
@@ -359,15 +355,15 @@ src/app/
 │   ├── dashboard/page.tsx
 │   ├── jobs/
 │   │   ├── page.tsx         ← Job list
-│   │   ├── new/page.tsx     ← Create job (INTAKE, ADMIN)
+│   │   ├── new/page.tsx     ← Create job (OPS, ADMIN)
 │   │   └── [id]/
 │   │       ├── page.tsx     ← Job detail (role-filtered view)
 │   │       └── edit/page.tsx
 │   ├── clients/
-│   │   ├── page.tsx         ← Client list (ADMIN, OPS, ACCOUNTS only)
+│   │   ├── page.tsx         ← Client list (ADMIN, OPS only)
 │   │   └── [id]/page.tsx
 │   ├── technicians/page.tsx ← External tech portal filtered view
-│   ├── reports/page.tsx     ← ADMIN, ACCOUNTS only
+│   ├── reports/page.tsx     ← ADMIN, OPS only
 │   └── settings/
 │       ├── users/page.tsx   ← ADMIN only
 │       └── profile/page.tsx
@@ -386,8 +382,8 @@ Build a `<AppSidebar>` component that shows nav items based on session role:
 |---|---|
 | Dashboard | All |
 | Jobs | All |
-| Clients | ADMIN, OPS, ACCOUNTS |
-| Reports | ADMIN, ACCOUNTS |
+| Clients | ADMIN, OPS |
+| Reports | ADMIN, OPS |
 | Users / Settings | ADMIN only |
 
 ### 2.4 Role Guard Utility
@@ -397,9 +393,9 @@ Create `src/lib/permissions.ts`:
 import { Role } from "@prisma/client";
 
 export const can = {
-  viewClientInfo: (role: Role) => ["ADMIN", "INTAKE", "OPS", "ACCOUNTS"].includes(role),
-  viewFinancials: (role: Role) => ["ADMIN", "ACCOUNTS"].includes(role),
-  createJob: (role: Role) => ["ADMIN", "INTAKE"].includes(role),
+  viewClientInfo: (role: Role) => ["ADMIN", "OPS"].includes(role),
+  viewFinancials: (role: Role) => ["ADMIN", "OPS"].includes(role),
+  createJob: (role: Role) => ["ADMIN", "OPS"].includes(role),
   editDiagnosis: (role: Role) => ["ADMIN", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"].includes(role),
   manageUsers: (role: Role) => role === "ADMIN",
   approveWork: (role: Role) => ["ADMIN", "OPS"].includes(role),
@@ -470,7 +466,7 @@ async function generateJobNumber(): Promise<string> {
 Use Next.js Server Actions for form submission. Validate with Zod on server. Create `Client` if new, then create `Job`, then create initial `AuditLog` entry.
 
 ### ✅ Phase 3 Done When:
-- [ ] INTAKE/ADMIN can create a full job in 4 steps
+- [ ] OPS/ADMIN can create a full job in 4 steps
 - [ ] Duplicate client check works
 - [ ] Job number auto-generates correctly
 - [ ] Job appears in job list with status `RECEIVED`
@@ -497,7 +493,7 @@ npx shadcn@latest add table pagination input select badge
 | Client Name | All except TECHNICIAN_EXTERNAL |
 | Assigned To | ADMIN, OPS |
 | Received Date | All |
-| Cost Estimate | ADMIN, ACCOUNTS |
+| Cost Estimate | ADMIN, OPS |
 | Actions | All (context-sensitive) |
 
 ### 4.3 Filters
@@ -535,7 +531,7 @@ In the API/server component, filter query based on role:
   → Client Info    (hidden from TECHNICIAN_EXTERNAL)
   → Diagnosis      (editable by TECHNICIAN_INTERNAL, TECHNICIAN_EXTERNAL — limited)
   → Repair Log     (editable by TECHNICIAN_INTERNAL, ADMIN)
-  → Financials     (ADMIN, ACCOUNTS, OPS only)
+  → Financials     (ADMIN, OPS only)
   → Timeline/Audit (ADMIN, OPS)
   → Photos         (all roles)
 ```
@@ -616,9 +612,9 @@ Create `src/app/api/upload/route.ts` using Next.js `formData()`. Save files to `
 
 ## 🧱 PHASE 8 — Reports Dashboard
 
-**Goal:** Admin/Accounts reporting page.
+**Goal:** Admin/OPS reporting page.
 
-Route: `/reports` — protected for `ADMIN` and `ACCOUNTS` roles.
+Route: `/reports` — protected for `ADMIN` and `OPS` roles.
 
 ### Metrics to Display:
 - Total jobs by status (bar or donut chart)
@@ -633,7 +629,7 @@ Use shadcn `Card` components for metric tiles. Use Recharts (included in Next.js
 ### ✅ Phase 8 Done When:
 - [ ] Reports page loads with real data from DB
 - [ ] Charts render correctly
-- [ ] Non-admin/accounts roles get 403 or redirect
+- [ ] Non-admin/ops roles get 403 or redirect
 
 ---
 

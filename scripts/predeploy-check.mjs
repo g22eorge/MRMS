@@ -44,6 +44,7 @@ run("bun", ["run", "lint"]);
 run("bun", ["run", "build"]);
 run("bun", ["run", "qa:data-integrity"]);
 run("bun", ["run", "qa:concurrency"]);
+run("bun", ["run", "qa:perf"]);
 
 if (process.env.QA_BASE_URL) {
   run("bun", ["run", "qa:http-security"]);
@@ -51,6 +52,16 @@ if (process.env.QA_BASE_URL) {
   fail("QA_BASE_URL must be set when REQUIRE_QA_HTTP=1");
 } else {
   warn("QA_BASE_URL not set; skipped qa:http-security.");
+}
+
+if (process.env.REQUIRE_E2E === "1") {
+  process.env.E2E_BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
+  process.env.NEXT_PUBLIC_APP_URL = process.env.E2E_BASE_URL;
+  process.env.BETTER_AUTH_URL = process.env.E2E_BASE_URL;
+  process.env.E2E_SKIP_BUILD = "1";
+  run("bun", ["run", "qa:e2e"]);
+} else {
+  warn("REQUIRE_E2E not set; skipped qa:e2e.");
 }
 
 console.log("OK: predeploy checks passed.");

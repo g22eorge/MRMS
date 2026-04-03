@@ -3,6 +3,7 @@ import { JobStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
+import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { getJobPayoutsByIds } from "@/lib/payouts";
@@ -36,14 +37,47 @@ function monthLabel(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
+function monthSequence(endYear: number, endMonth: number, count: number) {
+  return Array.from({ length: count }, (_, idx) => {
+    const d = new Date(endYear, endMonth - 1 - (count - 1 - idx), 1);
+    return {
+      key: monthLabel(d.getFullYear(), d.getMonth() + 1),
+      start: new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0),
+      end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  });
+}
+
+function monthOptions(count: number) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    const value = monthLabel(date.getFullYear(), date.getMonth() + 1);
+    const label = date.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    return { value, label };
+  });
+}
+
 const statusLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  REFERRED: "Referred",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+};
+
+const deviceLabel: Record<string, string> = {
+  PHONE_ANDROID: "Android Phone",
+  PHONE_IPHONE: "iPhone",
+  TABLET: "Tablet",
+  WINDOWS_PC: "Windows PC",
+  MAC: "Mac",
+  OTHER: "Other",
 };
 
 export default async function ReportsPage({
@@ -51,12 +85,16 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const filters = await searchParams;
   const { user } = await getCurrentUserRole();
-  if (!(user.role === "ADMIN" || user.role === "ACCOUNTS")) {
+  if (user.role === "ADMIN") {
+    const query = filters.month ? `?month=${encodeURIComponent(filters.month)}` : "";
+    redirect(`/dashboard${query}`);
+  }
+  if (user.role !== "OPS") {
     redirect("/dashboard");
   }
 
-  const filters = await searchParams;
   const selected = parseMonth(filters.month);
   const selectedRange = monthRange(selected.year, selected.month);
   const prevMonthDate = new Date(selected.year, selected.month - 2, 1);
@@ -91,16 +129,17 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: {
-        status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"] },
+        status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
       },
       select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
-    prisma.job.count({ where: { repairPath: "EXTERNAL" } }),
-    prisma.job.count({ where: { repairPath: "IN_HOUSE" } }),
+    prisma.job.count({ where: { repairPath: "EXTERNAL", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
+    prisma.job.count({ where: { repairPath: "IN_HOUSE", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
     prisma.job.findMany({
       where: {
         repairPath: "EXTERNAL",
         status: "COMPLETED",
+        completedAt: { gte: selectedRange.start, lte: selectedRange.end },
       },
       select: { id: true },
     }),
@@ -120,7 +159,10 @@ export default async function ReportsPage({
     name: statusLabel[status],
     value: statusCount.get(status) ?? 0,
   }));
-  const deviceData = deviceGroup.map((d) => ({ name: d.deviceType, value: d._count.deviceType }));
+  const deviceData = deviceGroup.map((d) => ({
+    name: deviceLabel[d.deviceType] ?? d.deviceType,
+    value: d._count.deviceType,
+  }));
 
   const revenueFor = (jobs: typeof completedSelected) =>
     jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
@@ -188,32 +230,151 @@ export default async function ReportsPage({
     .sort((a, b) => b.eightPlus - a.eightPlus || b.threeToSeven - a.threeToSeven);
 
   const funnel = {
-    referred: statusData.find((s) => s.key === "REFERRED")?.value ?? 0,
+    diagnosing: statusData.find((s) => s.key === "DIAGNOSING")?.value ?? 0,
     awaitingApproval: statusData.find((s) => s.key === "AWAITING_APPROVAL")?.value ?? 0,
     inRepair: statusData.find((s) => s.key === "IN_REPAIR")?.value ?? 0,
+    readyForPickup: statusData.find((s) => s.key === "READY_FOR_PICKUP")?.value ?? 0,
     completed: statusData.find((s) => s.key === "COMPLETED")?.value ?? 0,
   };
 
   const selectedMonthString = monthLabel(selected.year, selected.month);
   const prevMonthString = monthLabel(prev.year, prev.month);
   const currency = getAppCurrency();
+  const selectableMonths = monthOptions(18);
+  const trendMonths = monthSequence(selected.year, selected.month, 6);
+
+  const trendJobs = await prisma.job.findMany({
+    where: {
+      receivedAt: {
+        gte: trendMonths[0].start,
+        lte: trendMonths[trendMonths.length - 1].end,
+      },
+    },
+    select: {
+      deviceType: true,
+      receivedAt: true,
+    },
+  });
+
+  const trendByDevice = new Map<string, Map<string, number>>();
+  for (const job of trendJobs) {
+    const device = deviceLabel[job.deviceType] ?? job.deviceType;
+    const key = monthLabel(job.receivedAt.getFullYear(), job.receivedAt.getMonth() + 1);
+    const monthMap = trendByDevice.get(device) ?? new Map<string, number>();
+    monthMap.set(key, (monthMap.get(key) ?? 0) + 1);
+    trendByDevice.set(device, monthMap);
+  }
+
+  const jobsInSelectedMonth = await prisma.job.findMany({
+    where: {
+      receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+    },
+    select: {
+      deviceType: true,
+      status: true,
+      receivedAt: true,
+      completedAt: true,
+      repairPath: true,
+      assignedTo: { select: { name: true } },
+      externalTechBill: true,
+      clientBill: true,
+    },
+  });
+
+  const deviceInsights = (() => {
+    const map = new Map<
+      string,
+      {
+        total: number;
+        open: number;
+        completed: number;
+        cancelledOrClosed: number;
+        ext: number;
+        inHouse: number;
+        turnaroundHoursSum: number;
+        turnaroundCount: number;
+        revenue: number;
+        margin: number;
+        techFreq: Map<string, number>;
+      }
+    >();
+
+    const ensure = (device: string) => {
+      const existing = map.get(device);
+      if (existing) return existing;
+      const created = {
+        total: 0,
+        open: 0,
+        completed: 0,
+        cancelledOrClosed: 0,
+        ext: 0,
+        inHouse: 0,
+        turnaroundHoursSum: 0,
+        turnaroundCount: 0,
+        revenue: 0,
+        margin: 0,
+        techFreq: new Map<string, number>(),
+      };
+      map.set(device, created);
+      return created;
+    };
+
+    for (const job of jobsInSelectedMonth) {
+      const bucket = ensure(deviceLabel[job.deviceType] ?? job.deviceType);
+      bucket.total += 1;
+      if (["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
+        bucket.open += 1;
+      }
+      if (job.status === "COMPLETED") {
+        bucket.completed += 1;
+        if (job.completedAt) {
+          bucket.turnaroundHoursSum += (job.completedAt.getTime() - job.receivedAt.getTime()) / 36e5;
+          bucket.turnaroundCount += 1;
+        }
+        const clientBill = getClientBill(job) ?? 0;
+        const extBill = getExternalTechBill(job) ?? 0;
+        bucket.revenue += clientBill;
+        bucket.margin += clientBill - extBill;
+      }
+      if (job.status === "CLOSED") {
+        bucket.cancelledOrClosed += 1;
+      }
+      if (job.repairPath === "EXTERNAL") bucket.ext += 1;
+      if (job.repairPath === "IN_HOUSE") bucket.inHouse += 1;
+      if (job.assignedTo?.name) {
+        bucket.techFreq.set(job.assignedTo.name, (bucket.techFreq.get(job.assignedTo.name) ?? 0) + 1);
+      }
+    }
+
+    return [...map.entries()]
+      .map(([device, value]) => ({
+        device,
+        total: value.total,
+        completed: value.completed,
+        open: value.open,
+        cancelledOrClosed: value.cancelledOrClosed,
+        completionRate: value.total > 0 ? (value.completed / value.total) * 100 : 0,
+        avgTurnaroundHours: value.turnaroundCount > 0 ? value.turnaroundHoursSum / value.turnaroundCount : 0,
+        revenue: value.revenue,
+        margin: value.margin,
+        avgMarginPerCompleted: value.completed > 0 ? value.margin / value.completed : 0,
+        ext: value.ext,
+        inHouse: value.inHouse,
+        topTech: [...value.techFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-",
+        trend: trendMonths.map((m) => trendByDevice.get(device)?.get(m.key) ?? 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Reports</h1>
-          <p className="text-sm text-[var(--ink-muted)]">Operational and financial insights for repair performance.</p>
-        </div>
-        <form className="flex items-center gap-2">
-          <input
-            type="month"
-            name="month"
-            defaultValue={selectedMonthString}
-            className="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-          <button className="rounded-md border border-[var(--line)] bg-white px-3 py-1 text-sm">Go</button>
-        </form>
+      <div className="flex flex-wrap items-end justify-end gap-3">
+        <MonthSelectForm
+          value={selectedMonthString}
+          options={selectableMonths}
+          className="flex items-center"
+          selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+        />
       </div>
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -242,6 +403,12 @@ export default async function ReportsPage({
             className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
           >
             External Payouts CSV
+          </a>
+          <a
+            href={`/api/reports/export?type=device-performance&month=${selectedMonthString}`}
+            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm hover:border-[var(--brand)]"
+          >
+            Device Performance CSV
           </a>
         </div>
       </div>
@@ -274,12 +441,12 @@ export default async function ReportsPage({
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External ratio</p>
           <p className="mt-1 text-2xl font-semibold">{externalRatio.toFixed(0)}%</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalCount} external / {inHouseCount} in-house</p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalCount} external / {inHouseCount} in-house ({selectedMonthString})</p>
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External payouts due</p>
           <p className="mt-1 text-2xl font-semibold">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid</p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid ({selectedMonthString})</p>
         </div>
       </div>
 
@@ -314,6 +481,76 @@ export default async function ReportsPage({
         </div>
       </div>
 
+      <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="mb-3 text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
+        {deviceInsights.length === 0 ? (
+          <p className="text-sm text-[var(--ink-muted)]">No jobs found for this month.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                <tr>
+                  <th className="px-2 py-2">Device</th>
+                  <th className="px-2 py-2">Total</th>
+                  <th className="px-2 py-2">Open</th>
+                  <th className="px-2 py-2">Completed</th>
+                  <th className="px-2 py-2">Closed/Cancelled</th>
+                  <th className="px-2 py-2">Completion %</th>
+                  <th className="px-2 py-2">Avg Turnaround</th>
+                  <th className="px-2 py-2">Revenue</th>
+                  <th className="px-2 py-2">Margin</th>
+                  <th className="px-2 py-2">Avg Margin</th>
+                  <th className="px-2 py-2">Path Split</th>
+                  <th className="px-2 py-2">Top Tech</th>
+                  <th className="px-2 py-2">6-Month Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deviceInsights.map((row) => (
+                  <tr key={row.device} className="border-t border-[var(--line)]">
+                    <td className="px-2 py-2 font-medium">{row.device}</td>
+                    <td className="px-2 py-2">{row.total}</td>
+                    <td className="px-2 py-2">{row.open}</td>
+                    <td className="px-2 py-2">{row.completed}</td>
+                    <td className="px-2 py-2">{row.cancelledOrClosed}</td>
+                    <td className="px-2 py-2">{row.completionRate.toFixed(1)}%</td>
+                    <td className="px-2 py-2">{row.avgTurnaroundHours.toFixed(1)}h</td>
+                    <td className="px-2 py-2">{formatMoney(row.revenue, currency)}</td>
+                    <td className={`px-2 py-2 ${row.margin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                      {formatMoney(row.margin, currency)}
+                    </td>
+                    <td className="px-2 py-2">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
+                    <td className="px-2 py-2">{row.ext} ext / {row.inHouse} in-house</td>
+                    <td className="px-2 py-2">{row.topTech}</td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-2">
+                        <svg width="68" height="28" viewBox="0 0 68 28" className="overflow-visible">
+                          {(() => {
+                            const max = Math.max(...row.trend, 1);
+                            const points = row.trend
+                              .map((value, index) => {
+                                const x = (index / Math.max(row.trend.length - 1, 1)) * 64 + 2;
+                                const y = 24 - (value / max) * 20;
+                                return `${x},${y}`;
+                              })
+                              .join(" ");
+                            return <polyline points={points} fill="none" stroke="#0f766e" strokeWidth="2" />;
+                          })()}
+                        </svg>
+                        <span className={`text-xs ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                          {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "+" : ""}
+                          {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0)}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="mb-2 text-sm font-semibold">Aging Alerts (Open Jobs)</p>
@@ -340,8 +577,8 @@ export default async function ReportsPage({
           <p className="mb-2 text-sm font-semibold">Approval Funnel</p>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <span>Referred</span>
-              <span className="font-semibold">{funnel.referred}</span>
+              <span>Diagnosing</span>
+              <span className="font-semibold">{funnel.diagnosing}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <span>Awaiting approval</span>
@@ -350,6 +587,10 @@ export default async function ReportsPage({
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <span>In repair</span>
               <span className="font-semibold">{funnel.inRepair}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <span>Ready for pickup</span>
+              <span className="font-semibold">{funnel.readyForPickup}</span>
             </div>
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <span>Completed</span>

@@ -3,6 +3,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -33,15 +34,26 @@ const newJobSchema = z.object({
 });
 
 export async function generateJobNumber() {
-  const year = new Date().getFullYear();
-  const count = await prisma.job.count();
-  return `EI-${year}-${String(count + 1).padStart(4, "0")}`;
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const prefix = `EIS-${month}/${year}/`;
+  const latest = await prisma.job.findFirst({
+    where: { jobNumber: { startsWith: prefix } },
+    orderBy: { jobNumber: "desc" },
+    select: { jobNumber: true },
+  });
+
+  const latestSeq = latest?.jobNumber.slice(prefix.length) ?? "0";
+  const numeric = Number(latestSeq);
+  const next = Number.isFinite(numeric) ? numeric + 1 : 1;
+  return `${prefix}${String(next).padStart(4, "0")}`;
 }
 
 export async function createJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
 
-  if (!(user.role === "ADMIN" || user.role === "INTAKE")) {
+  if (!(user.role === "ADMIN" || user.role === "OPS")) {
     return { error: "You cannot create jobs." };
   }
 
@@ -67,25 +79,43 @@ export async function createJobAction(formData: FormData) {
     },
   });
 
-  const jobNumber = await generateJobNumber();
+  let job: { id: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const jobNumber = await generateJobNumber();
+    try {
+      job = await prisma.job.create({
+        data: {
+          jobNumber,
+          clientId: client.id,
+          createdById: session.user.id,
+          deviceType: parsed.data.deviceType,
+          brand: sanitizeText(parsed.data.brand),
+          model: sanitizeText(parsed.data.model),
+          serialOrImei: sanitizeOptionalText(parsed.data.serialOrImei),
+          accessories: sanitizeOptionalText(parsed.data.accessories),
+          physicalNotes: sanitizeOptionalText(parsed.data.physicalNotes),
+          issueDescription: sanitizeText(parsed.data.issueDescription),
+          receivedAt: parsed.data.receivedAt
+            ? new Date(parsed.data.receivedAt)
+            : new Date(),
+        },
+        select: { id: true },
+      });
+      break;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
 
-  const job = await prisma.job.create({
-    data: {
-      jobNumber,
-      clientId: client.id,
-      createdById: session.user.id,
-      deviceType: parsed.data.deviceType,
-      brand: sanitizeText(parsed.data.brand),
-      model: sanitizeText(parsed.data.model),
-      serialOrImei: sanitizeOptionalText(parsed.data.serialOrImei),
-      accessories: sanitizeOptionalText(parsed.data.accessories),
-      physicalNotes: sanitizeOptionalText(parsed.data.physicalNotes),
-      issueDescription: sanitizeText(parsed.data.issueDescription),
-      receivedAt: parsed.data.receivedAt
-        ? new Date(parsed.data.receivedAt)
-        : new Date(),
-    },
-  });
+  if (!job) {
+    return { error: "Could not allocate unique job number. Please retry." };
+  }
 
   await prisma.auditLog.create({
     data: {

@@ -7,7 +7,12 @@ import { getAppCurrency } from "@/lib/currency";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 
-type ExportType = "pipeline-aging" | "revenue-variance" | "technician-performance" | "external-payouts";
+type ExportType =
+  | "pipeline-aging"
+  | "revenue-variance"
+  | "technician-performance"
+  | "external-payouts"
+  | "device-performance";
 
 function toCsv(rows: Array<Record<string, string | number>>) {
   if (rows.length === 0) return "";
@@ -57,12 +62,12 @@ function parseMonth(value: string | null) {
 
 function allowedForType(role: Role, type: ExportType) {
   if (type === "revenue-variance") {
-    return role === "ADMIN" || role === "ACCOUNTS";
+    return role === "ADMIN";
   }
   if (type === "external-payouts") {
-    return role === "ADMIN" || role === "ACCOUNTS" || role === "OPS";
+    return role === "ADMIN";
   }
-  return role === "ADMIN" || role === "ACCOUNTS" || role === "OPS";
+  return role === "ADMIN" || role === "OPS";
 }
 
 export async function GET(req: NextRequest) {
@@ -81,7 +86,7 @@ export async function GET(req: NextRequest) {
   }
 
   const type = (req.nextUrl.searchParams.get("type") ?? "") as ExportType;
-  if (!["pipeline-aging", "revenue-variance", "technician-performance", "external-payouts"].includes(type)) {
+  if (!["pipeline-aging", "revenue-variance", "technician-performance", "external-payouts", "device-performance"].includes(type)) {
     return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
   }
 
@@ -97,7 +102,7 @@ export async function GET(req: NextRequest) {
     const jobs = await prisma.job.findMany({
       where: {
         status: {
-          in: ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"],
+          in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"],
         },
       },
       include: { assignedTo: true },
@@ -210,6 +215,136 @@ export async function GET(req: NextRequest) {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="external-payouts-${new Date().toISOString().slice(0, 10)}.csv"`,
+      },
+    });
+  }
+
+  if (type === "device-performance") {
+    const month = parseMonth(req.nextUrl.searchParams.get("month"));
+    const jobs = await prisma.job.findMany({
+      where: {
+        receivedAt: { gte: month.start, lte: month.end },
+      },
+      select: {
+        deviceType: true,
+        status: true,
+        receivedAt: true,
+        completedAt: true,
+        repairPath: true,
+        assignedTo: { select: { name: true } },
+      },
+    });
+
+    const completedFinancial = await prisma.job.findMany({
+      where: {
+        status: "COMPLETED",
+        completedAt: { gte: month.start, lte: month.end },
+      },
+      select: {
+        deviceType: true,
+        externalTechBill: true,
+        clientBill: true,
+      },
+    });
+
+    const stats = new Map<
+      string,
+      {
+        total: number;
+        open: number;
+        completed: number;
+        cancelledOrClosed: number;
+        external: number;
+        inHouse: number;
+        turnaroundHoursSum: number;
+        turnaroundCount: number;
+        revenue: number;
+        margin: number;
+        techFreq: Map<string, number>;
+      }
+    >();
+
+    const get = (deviceType: string) => {
+      const current = stats.get(deviceType);
+      if (current) return current;
+      const created = {
+        total: 0,
+        open: 0,
+        completed: 0,
+        cancelledOrClosed: 0,
+        external: 0,
+        inHouse: 0,
+        turnaroundHoursSum: 0,
+        turnaroundCount: 0,
+        revenue: 0,
+        margin: 0,
+        techFreq: new Map<string, number>(),
+      };
+      stats.set(deviceType, created);
+      return created;
+    };
+
+    for (const job of jobs) {
+      const bucket = get(job.deviceType);
+      bucket.total += 1;
+      if (["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
+        bucket.open += 1;
+      }
+      if (job.status === "COMPLETED") {
+        bucket.completed += 1;
+        if (job.completedAt) {
+          bucket.turnaroundHoursSum +=
+            (job.completedAt.getTime() - job.receivedAt.getTime()) / 36e5;
+          bucket.turnaroundCount += 1;
+        }
+      }
+      if (job.status === "CLOSED") {
+        bucket.cancelledOrClosed += 1;
+      }
+      if (job.repairPath === "EXTERNAL") bucket.external += 1;
+      if (job.repairPath === "IN_HOUSE") bucket.inHouse += 1;
+      if (job.assignedTo?.name) {
+        bucket.techFreq.set(job.assignedTo.name, (bucket.techFreq.get(job.assignedTo.name) ?? 0) + 1);
+      }
+    }
+
+    for (const job of completedFinancial) {
+      const bucket = get(job.deviceType);
+      const clientBill = getClientBill(job) ?? 0;
+      const extBill = getExternalTechBill(job) ?? 0;
+      bucket.revenue += clientBill;
+      bucket.margin += clientBill - extBill;
+    }
+
+    const rows = [...stats.entries()]
+      .map(([deviceType, s]) => {
+        const topTech = [...s.techFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+        return {
+          exportedAt,
+          month: month.label,
+          currency,
+          deviceType,
+          totalJobs: s.total,
+          openJobs: s.open,
+          completedJobs: s.completed,
+          cancelledOrClosedJobs: s.cancelledOrClosed,
+          externalJobs: s.external,
+          inHouseJobs: s.inHouse,
+          completionRatePct: s.total > 0 ? ((s.completed / s.total) * 100).toFixed(2) : "0.00",
+          avgTurnaroundHours: s.turnaroundCount > 0 ? (s.turnaroundHoursSum / s.turnaroundCount).toFixed(2) : "0.00",
+          revenue: s.revenue.toFixed(2),
+          margin: s.margin.toFixed(2),
+          avgMarginPerJob: s.completed > 0 ? (s.margin / s.completed).toFixed(2) : "0.00",
+          topTechnician: topTech,
+        };
+      })
+      .sort((a, b) => b.totalJobs - a.totalJobs);
+
+    const csv = toCsv(rows);
+    return new NextResponse(csv, {
+      headers: {
+        "content-type": "text/csv; charset=utf-8",
+        "content-disposition": `attachment; filename="device-performance-${month.label}.csv"`,
       },
     });
   }

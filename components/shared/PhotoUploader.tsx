@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ export function PhotoUploader({
   photos: Photo[];
   canDelete: boolean;
 }) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -35,7 +37,8 @@ export function PhotoUploader({
               return;
             }
             toast.success("Uploaded");
-            window.location.reload();
+            formRef.current?.reset();
+            router.refresh();
           });
         }}
         className="flex flex-wrap items-center gap-2"
@@ -66,7 +69,7 @@ export function PhotoUploader({
                       toast.error("Delete failed");
                       return;
                     }
-                    window.location.reload();
+                    router.refresh();
                   }}
                 >
                   <button

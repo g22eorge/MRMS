@@ -134,7 +134,7 @@ export default async function ClientDetailPage({
   async function addClientNote(formData: FormData) {
     "use server";
     const { session, user: currentUser } = await getCurrentUserRole();
-    if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS" || currentUser.role === "ACCOUNTS")) {
+    if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) {
       return;
     }
 

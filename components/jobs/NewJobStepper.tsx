@@ -61,7 +61,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             key={label}
             type="button"
             onClick={() => setStep(idx)}
-            className={`rounded-full px-3 py-1 text-sm ${
+            className={`rounded-full px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${
               idx === step ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-700"
             }`}
           >
@@ -167,7 +167,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           type="button"
           disabled={step === 0}
           onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
-          className="rounded-md border border-slate-300 px-3 py-2 disabled:opacity-50"
+          className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] disabled:opacity-50 sm:py-2 sm:text-sm"
         >
           Back
         </button>
@@ -176,7 +176,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <button
             type="button"
             onClick={() => setStep((prev) => Math.min(prev + 1, steps.length - 1))}
-            className="rounded-md bg-slate-800 px-3 py-2 text-white"
+            className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
           >
             Next
           </button>
@@ -184,7 +184,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-md bg-teal-700 px-3 py-2 text-white disabled:opacity-60"
+            className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
           >
             {isPending ? "Creating..." : "Create Job"}
           </button>

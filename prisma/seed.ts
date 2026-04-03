@@ -193,6 +193,12 @@ async function ensureAudit(jobId: string, userId: string, action: string, detail
   });
 }
 
+function formatJobNumber(date: Date, sequence: number) {
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  return `EIS-${month}/${year}/${String(sequence).padStart(4, "0")}`;
+}
+
 async function main() {
   const defaultPassword = process.env.SEED_PASSWORD ?? "Admin123!";
 
@@ -201,13 +207,6 @@ async function main() {
     email: process.env.SEED_ADMIN_EMAIL ?? "admin@eagle.local",
     role: "ADMIN",
     password: process.env.SEED_ADMIN_PASSWORD ?? defaultPassword,
-  });
-
-  const intake = await ensureUser({
-    name: "Intake Officer",
-    email: "intake@eagle.local",
-    role: "INTAKE",
-    password: defaultPassword,
   });
 
   const techInternal = await ensureUser({
@@ -231,16 +230,11 @@ async function main() {
     password: defaultPassword,
   });
 
-  const accounts = await ensureUser({
-    name: "Accounts Officer",
-    email: "accounts@eagle.local",
-    role: "ACCOUNTS",
-    password: defaultPassword,
-  });
-
   console.log("Seeded users for all roles.");
 
-  const year = new Date().getFullYear();
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
   const c1 = await ensureClient({
     fullName: "Revenue Demo Client",
     phone: "000-REV-0001",
@@ -279,7 +273,7 @@ async function main() {
 
   const jobs = await Promise.all([
     ensureJob({
-      jobNumber: `EI-${year}-9001`,
+      jobNumber: formatJobNumber(currentDate, 1),
       status: "COMPLETED",
       repairPath: "IN_HOUSE",
       clientId: c1.id,
@@ -290,8 +284,8 @@ async function main() {
       model: "Galaxy A54",
       issueDescription: "Screen flickers and touch is intermittent",
       diagnosisNotes: "Display connector reseated and panel replaced",
-      externalTechBill: 180,
-      clientBill: 199.99,
+      externalTechBill: 180000,
+      clientBill: 240000,
       clientApproved: true,
       repairTimeline: "2 days",
       workDone: "Replaced display assembly and tested touch sensors",
@@ -300,10 +294,10 @@ async function main() {
       completedAt: new Date(now),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9002`,
+      jobNumber: formatJobNumber(currentDate, 2),
       status: "RECEIVED",
       clientId: c2.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techInternal.id,
       deviceType: "PHONE_IPHONE",
       brand: "Apple",
@@ -312,10 +306,10 @@ async function main() {
       receivedAt: new Date(now - 1 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9003`,
+      jobNumber: formatJobNumber(currentDate, 3),
       status: "DIAGNOSING",
       clientId: c3.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techInternal.id,
       deviceType: "WINDOWS_PC",
       brand: "Dell",
@@ -325,18 +319,18 @@ async function main() {
       receivedAt: new Date(now - 3 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9004`,
-      status: "REFERRED",
+      jobNumber: formatJobNumber(currentDate, 4),
+      status: "IN_REPAIR",
       repairPath: "EXTERNAL",
       clientId: c4.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techExternal.id,
       deviceType: "MAC",
       brand: "Apple",
       model: "MacBook Pro 2019",
       issueDescription: "No display but keyboard lights up",
       externalDiagnosis: "Likely logic board fault; requires board-level repair",
-      externalTechBill: 420,
+      externalTechBill: 420000,
       repairTimeline: "5-7 days",
       timelineMinMinutes: 5 * 24 * 60,
       timelineMaxMinutes: 7 * 24 * 60,
@@ -345,18 +339,18 @@ async function main() {
       receivedAt: new Date(now - 5 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9005`,
+      jobNumber: formatJobNumber(currentDate, 5),
       status: "AWAITING_APPROVAL",
       repairPath: "EXTERNAL",
       clientId: c5.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techExternal.id,
       deviceType: "TABLET",
       brand: "Samsung",
       model: "Tab S7",
       issueDescription: "Tablet not charging",
       externalDiagnosis: "Charging IC replacement required",
-      externalTechBill: 150,
+      externalTechBill: 150000,
       clientApproved: null,
       timelineMinMinutes: 2 * 24 * 60,
       timelineMaxMinutes: 3 * 24 * 60,
@@ -364,18 +358,18 @@ async function main() {
       receivedAt: new Date(now - 4 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9006`,
+      jobNumber: formatJobNumber(currentDate, 6),
       status: "IN_REPAIR",
       repairPath: "IN_HOUSE",
       clientId: c6.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techInternal.id,
       deviceType: "OTHER",
       brand: "Canon",
       model: "Printer i-Sensys",
       issueDescription: "Paper jam error even with empty path",
       diagnosisNotes: "Worn sensor arm",
-      externalTechBill: 90,
+      externalTechBill: 120000,
       clientApproved: true,
       repairTimeline: "1 day",
       timelineMinMinutes: 8 * 60,
@@ -384,36 +378,36 @@ async function main() {
       receivedAt: new Date(now - 2 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9007`,
+      jobNumber: formatJobNumber(currentDate, 7),
       status: "CLOSED",
       repairPath: "EXTERNAL",
       clientId: c2.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: ops.id,
       deviceType: "PHONE_ANDROID",
       brand: "Xiaomi",
       model: "Redmi Note 11",
       issueDescription: "Bootloop after update",
       diagnosisNotes: "Storage likely degraded",
-      externalTechBill: 220,
+      externalTechBill: 220000,
       clientApproved: false,
       receivedAt: new Date(now - 9 * day),
       closedAt: new Date(now - 6 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9008`,
+      jobNumber: formatJobNumber(currentDate, 8),
       status: "COMPLETED",
       repairPath: "IN_HOUSE",
       clientId: c3.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techInternal.id,
       deviceType: "WINDOWS_PC",
       brand: "HP",
       model: "ProDesk 400",
       issueDescription: "Overheating and noisy fan",
       diagnosisNotes: "Dust clog and bad fan bearing",
-      externalTechBill: 65,
-      clientBill: 70,
+      externalTechBill: 110000,
+      clientBill: 150000,
       clientApproved: true,
       workDone: "Replaced fan and cleaned thermal path",
       partsReplaced: "CPU fan",
@@ -421,19 +415,19 @@ async function main() {
       completedAt: new Date(now - 5 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9009`,
+      jobNumber: formatJobNumber(currentDate, 9),
       status: "COMPLETED",
       repairPath: "EXTERNAL",
       clientId: c4.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techExternal.id,
       deviceType: "MAC",
       brand: "Apple",
       model: "MacBook Air M1",
       issueDescription: "Liquid damage around keyboard",
       externalDiagnosis: "Keyboard and top case replacement",
-      externalTechBill: 350,
-      clientBill: 365,
+      externalTechBill: 350000,
+      clientBill: 500000,
       clientApproved: true,
       timelineMinMinutes: 2 * 24 * 60,
       timelineMaxMinutes: 4 * 24 * 60,
@@ -442,26 +436,93 @@ async function main() {
       completedAt: new Date(now - 2 * day),
     }),
     ensureJob({
-      jobNumber: `EI-${year}-9010`,
+      jobNumber: formatJobNumber(currentDate, 10),
       status: "IN_REPAIR",
       repairPath: "IN_HOUSE",
       clientId: c5.id,
-      createdById: intake.id,
+      createdById: ops.id,
       assignedToId: techInternal.id,
       deviceType: "PHONE_IPHONE",
       brand: "Apple",
       model: "iPhone XR",
       issueDescription: "Rear camera not focusing",
       diagnosisNotes: "Camera module replacement ongoing",
-      externalTechBill: 120,
+      externalTechBill: 120000,
       clientApproved: true,
       receivedAt: new Date(now - 2 * day),
     }),
   ]);
 
-  console.log(`Seeded/ensured ${jobs.length} demo jobs.`);
+  const sequenceByMonthYear: Record<string, number> = {
+    [`${currentMonth}/${currentYear}`]: 11,
+  };
+  const monthlyJobs = await Promise.all(
+    Array.from({ length: 18 }, (_, orderIndex) => {
+      const index = 17 - orderIndex;
+      const monthDate = new Date();
+      monthDate.setDate(1);
+      monthDate.setMonth(monthDate.getMonth() - index);
+      const jobMonth = monthDate.getMonth() + 1;
+      const jobYear = monthDate.getFullYear();
+      const monthYearKey = `${jobMonth}/${jobYear}`;
+      const nextSequence = sequenceByMonthYear[monthYearKey] ?? 1;
+      sequenceByMonthYear[monthYearKey] = nextSequence + 1;
 
-  for (const job of jobs) {
+      const completedAt = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth(),
+        Math.min(25, 8 + (index % 12)),
+        14,
+        30,
+        0,
+        0,
+      );
+      const safeCompletedAt = completedAt.getTime() > now ? new Date(now - 2 * 60 * 60 * 1000) : completedAt;
+      const receivedAt = new Date(safeCompletedAt.getTime() - (2 + (index % 3)) * day);
+      const isExternal = index % 2 === 0;
+      const externalTechBill = 140000 + index * 12000;
+      const clientBill = externalTechBill + 70000 + (index % 4) * 10000;
+      const monthlyClient = [c1, c2, c3, c4, c5, c6][index % 6];
+
+      return ensureJob({
+        jobNumber: formatJobNumber(monthDate, nextSequence),
+        status: "COMPLETED",
+        repairPath: isExternal ? "EXTERNAL" : "IN_HOUSE",
+        clientId: monthlyClient.id,
+        createdById: ops.id,
+        assignedToId: isExternal ? techExternal.id : techInternal.id,
+        deviceType: isExternal ? "MAC" : "PHONE_ANDROID",
+        brand: isExternal ? "Apple" : "Samsung",
+        model: isExternal ? `MacBook ${2018 + (index % 6)}` : `Galaxy A${30 + (index % 10)}`,
+        issueDescription: isExternal
+          ? "Board-level repair required after liquid contact"
+          : "Display and battery performance degradation",
+        diagnosisNotes: isExternal
+          ? undefined
+          : "In-house diagnostics completed; repair validated after stress test",
+        externalDiagnosis: isExternal
+          ? "Specialized board repair and component replacement completed"
+          : undefined,
+        externalTechBill,
+        clientBill,
+        clientApproved: true,
+        repairTimeline: isExternal ? "3-5 days" : "1-2 days",
+        timelineMinMinutes: isExternal ? 3 * 24 * 60 : 24 * 60,
+        timelineMaxMinutes: isExternal ? 5 * 24 * 60 : 2 * 24 * 60,
+        timelineConfidence: isExternal ? "ESTIMATED" : "FIRM",
+        workDone: isExternal
+          ? "External specialist completed board-level restoration"
+          : "In-house replacement and QA validation completed",
+        partsReplaced: isExternal ? "Logic board components" : "Display and battery",
+        receivedAt,
+        completedAt: safeCompletedAt,
+      });
+    }),
+  );
+
+  console.log(`Seeded/ensured ${jobs.length + monthlyJobs.length} demo jobs.`);
+
+  for (const job of [...jobs, ...monthlyJobs]) {
     await ensureAudit(job.id, admin.id, "JOB_CREATED", { seeded: true, jobNumber: job.jobNumber });
   }
 
@@ -473,10 +534,23 @@ async function main() {
     seeded: true,
     note: "Estimate shared with client",
   });
-  await ensureAudit(jobs[0].id, accounts.id, "INVOICE_READY", {
+  await ensureAudit(jobs[0].id, admin.id, "INVOICE_READY", {
     seeded: true,
-    amount: 199.99,
+    amount: 240000,
   });
+
+  const jobsWithoutAudit = await prisma.job.findMany({
+    where: { auditLogs: { none: {} } },
+    select: { id: true, jobNumber: true },
+  });
+
+  for (const job of jobsWithoutAudit) {
+    await ensureAudit(job.id, admin.id, "JOB_CREATED", {
+      seeded: true,
+      backfill: true,
+      jobNumber: job.jobNumber,
+    });
+  }
 
   console.log("Seeded audit logs.");
   console.log("Sample login password for seeded non-admin users:", defaultPassword);

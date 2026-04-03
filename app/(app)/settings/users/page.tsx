@@ -26,11 +26,14 @@ export default async function UsersPage() {
 
   async function createUser(formData: FormData) {
     "use server";
+    const { user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
     const parsed = createUserSchema.safeParse({
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
-      role: String(formData.get("role") ?? "INTAKE"),
+      role: String(formData.get("role") ?? "OPS"),
     });
     if (!parsed.success) return;
 
@@ -53,8 +56,11 @@ export default async function UsersPage() {
     });
   }
 
-  async function updateRole(formData: FormData) {
+async function updateRole(formData: FormData) {
     "use server";
+    const { user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
     const parsed = updateRoleSchema.safeParse({
       id: String(formData.get("id") ?? ""),
       role: String(formData.get("role") ?? ""),
@@ -65,7 +71,11 @@ export default async function UsersPage() {
 
   async function deactivate(formData: FormData) {
     "use server";
+    const { session, user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
     const id = String(formData.get("id"));
+    if (!id || id === session.user.id) return;
     await prisma.user.update({ where: { id }, data: { isActive: false } });
   }
 
@@ -73,7 +83,6 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">User Management</h1>
       <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
         <div className="grid gap-2 md:grid-cols-4">
@@ -82,11 +91,9 @@ export default async function UsersPage() {
           <input required name="password" type="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <select name="role" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <option value="ADMIN">ADMIN</option>
-            <option value="INTAKE">INTAKE</option>
             <option value="TECHNICIAN_INTERNAL">TECHNICIAN_INTERNAL</option>
             <option value="TECHNICIAN_EXTERNAL">TECHNICIAN_EXTERNAL</option>
             <option value="OPS">OPS</option>
-            <option value="ACCOUNTS">ACCOUNTS</option>
           </select>
         </div>
         <button className="w-full rounded-md bg-[var(--brand)] px-3 py-2 text-white md:w-auto">Create User</button>
@@ -106,11 +113,9 @@ export default async function UsersPage() {
                 <input type="hidden" name="id" value={u.id} />
                 <select name="role" defaultValue={u.role} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-2 text-sm">
                   <option value="ADMIN">ADMIN</option>
-                  <option value="INTAKE">INTAKE</option>
                   <option value="TECHNICIAN_INTERNAL">TECHNICIAN_INTERNAL</option>
                   <option value="TECHNICIAN_EXTERNAL">TECHNICIAN_EXTERNAL</option>
                   <option value="OPS">OPS</option>
-                  <option value="ACCOUNTS">ACCOUNTS</option>
                 </select>
                 <button className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">Update Role</button>
               </form>

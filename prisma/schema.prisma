@@ -19,7 +19,7 @@ model User {
   phone         String?
   emailVerified Boolean  @default(false)
   image         String?
-  role          Role     @default(INTAKE)
+  role          Role     @default(OPS)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -73,21 +73,32 @@ model Verification {
 
 enum Role {
   ADMIN
-  INTAKE
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
   OPS
-  ACCOUNTS
 }
 
 enum JobStatus {
   RECEIVED
   DIAGNOSING
-  REFERRED
   AWAITING_APPROVAL
   IN_REPAIR
+  READY_FOR_PICKUP
   COMPLETED
   CLOSED
+}
+
+enum RecommendationOption {
+  PROCEED_REPAIR
+  REPLACE_DEVICE
+  RETURN_UNREPAIRED
+}
+
+enum CommunicationStatus {
+  NONE
+  AWAITING_RESPONSE
+  APPROVED
+  DECLINED
 }
 
 enum RepairPath {
@@ -108,6 +119,16 @@ enum TimelineConfidence {
   FIRM
   ESTIMATED
   PARTS_DEPENDENT
+}
+
+enum WorkflowReason {
+  NONE
+  PARTS_PENDING
+  SPECIALIST_ESCALATION
+  CLIENT_DECLINED
+  UNREPAIRABLE
+  CUSTOMER_CANCELLED
+  OTHER
 }
 
 model Client {
@@ -153,13 +174,20 @@ model Job {
   physicalNotes String?
 
   issueDescription  String
+  workflowReason    WorkflowReason @default(NONE)
+  statusNote        String?
   diagnosisNotes    String?
   externalDiagnosis String?
   recommendedRepair String?
+  recommendationOption RecommendationOption?
+  communicationStatus CommunicationStatus @default(NONE)
+  clientConversationNote String?
+  lastClientContactAt DateTime?
   partsNeeded       String?
 
   externalTechBill Float? @map("costEstimate")
   clientBill       Float? @map("finalCost")
+  vatApplicable    Boolean @default(true)
   externalTechFee Float?
   externalPaid    Boolean   @default(false)
   externalPaidAt  DateTime?
@@ -206,4 +234,28 @@ model AuditLog {
   action    String
   detail    String?
   createdAt DateTime @default(now())
+}
+
+model DocumentBrandingSettings {
+  id                   String   @id @default("singleton")
+  companyName          String   @default("Eagle Info Solutions")
+  companyTagline       String?
+  companyAddressLine1  String   @default("Nalubega Complex, 1st Floor")
+  companyAddressLine2  String   @default("Shop L28, Bombo Road Opposite Watoto Church")
+  companyContacts      String   @default("+256772 006 344 | +256754 006 344")
+  companyEmail         String?
+  companyWebsite       String?
+  documentTitle        String   @default("Job Card")
+  quotePrefix          String   @default("EIS")
+  quoteFormat          String   @default("{PREFIX} {M}/{YYYY}/{SEQ}")
+  quoteValidityDays    Int      @default(30)
+  sequencePadLength    Int      @default(4)
+  vatDefaultApplicable Boolean  @default(true)
+  vatRatePercent       Float    @default(18)
+  vatLabel             String   @default("VAT")
+  termsText            String   @default("Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.")
+  footerText           String   @default("Built by Almeida 2026. All rights reserved.")
+  signatureCompanyLabel String  @default("Signed by: Eagle Info Solutions")
+  signatureClientLabel String   @default("Signed by: Client")
+  updatedAt            DateTime @updatedAt
 }

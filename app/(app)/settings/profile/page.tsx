@@ -6,7 +6,6 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Profile</h1>
       <ProfileForm name={user.name} email={user.email} role={user.role} phone={user.phone} />
     </div>
   );

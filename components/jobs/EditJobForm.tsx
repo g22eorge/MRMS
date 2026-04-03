@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ type EditJobFormProps = {
 };
 
 export function EditJobForm({ job, returnTo }: EditJobFormProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -40,7 +42,8 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
             }
 
             toast.success("Job updated");
-            window.location.assign(res.redirectTo);
+            router.push(res.redirectTo);
+            router.refresh();
           });
         }}
         className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2"

@@ -15,7 +15,32 @@ export type JobRow = {
   assignedTo?: string;
   receivedAt: Date;
   externalTechBill?: number | null;
+  workflowReason?: WorkflowReason | null;
 };
+
+type WorkflowReason =
+  | "NONE"
+  | "PARTS_PENDING"
+  | "SPECIALIST_ESCALATION"
+  | "CLIENT_DECLINED"
+  | "UNREPAIRABLE"
+  | "CUSTOMER_CANCELLED"
+  | "OTHER";
+
+type HighlightReason = Exclude<WorkflowReason, "NONE">;
+
+const workflowReasonTone: Record<HighlightReason, string> = {
+  PARTS_PENDING: "bg-amber-100 text-amber-800",
+  SPECIALIST_ESCALATION: "bg-cyan-100 text-cyan-800",
+  CLIENT_DECLINED: "bg-rose-100 text-rose-800",
+  UNREPAIRABLE: "bg-red-100 text-red-800",
+  CUSTOMER_CANCELLED: "bg-zinc-200 text-zinc-800",
+  OTHER: "bg-slate-100 text-slate-700",
+};
+
+function workflowReasonLabel(reason: HighlightReason) {
+  return reason.replaceAll("_", " ");
+}
 
 export function JobTable({
   jobs,
@@ -31,7 +56,7 @@ export function JobTable({
   returnTo?: string;
 }) {
   const canSeeClient = role !== "TECHNICIAN_EXTERNAL";
-  const canSeeCost = role === "ADMIN" || role === "ACCOUNTS";
+  const canSeeCost = role === "ADMIN" || role === "OPS";
   const canSeeAssignment = role === "ADMIN" || role === "OPS";
   const canEditPage = role !== "TECHNICIAN_EXTERNAL";
 
@@ -64,6 +89,13 @@ export function JobTable({
                 <p className="text-[var(--ink-muted)]">Received</p>
                 <p className="font-medium text-[var(--ink)]">{job.receivedAt.toLocaleDateString()}</p>
               </div>
+              {job.workflowReason && job.workflowReason !== "NONE" ? (
+                <div className="col-span-2">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
+                    {workflowReasonLabel(job.workflowReason)}
+                  </span>
+                </div>
+              ) : null}
               {canSeeCost ? (
                 <div>
                   <p className="text-[var(--ink-muted)]">External Bill</p>
@@ -72,25 +104,25 @@ export function JobTable({
               ) : null}
             </div>
 
-            <div className="mt-3 flex gap-2 max-[360px]:grid max-[360px]:grid-cols-2">
-              <Link
-                href={`/jobs/${job.id}`}
-                className="flex-1 rounded-md bg-[var(--brand)] px-3 py-2 text-center text-sm font-medium text-white max-[360px]:px-2"
-              >
-                Open
-              </Link>
+            <div className="mt-3 flex gap-2">
+                <Link
+                  href={`/jobs/${job.id}`}
+                className="btn-premium flex-1 rounded-md px-3 py-1.5 text-center text-[13px] font-medium sm:py-2 sm:text-sm"
+                >
+                  Open
+                </Link>
               {canEditPage ? (
                 <Link
                   href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                  className="flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-center text-sm font-medium text-[var(--ink)] max-[360px]:px-2"
+                  className="btn-premium-secondary flex-1 rounded-md px-3 py-1.5 text-center text-[13px] font-medium sm:py-2 sm:text-sm"
                 >
                   Edit
                 </Link>
               ) : null}
               {canDelete && deleteAction ? (
-                <form action={deleteAction} className="flex-1 max-[360px]:col-span-2">
+                <form action={deleteAction} className="flex-1">
                   <input type="hidden" name="id" value={job.id} />
-                  <button className="w-full rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                  <button className="btn-premium-danger w-full rounded-md px-3 py-1.5 text-[13px] font-medium sm:py-2 sm:text-sm">
                     Delete
                   </button>
                 </form>
@@ -101,47 +133,68 @@ export function JobTable({
       </div>
 
       <div className="hidden overflow-x-auto sm:block">
-        <table className="min-w-full text-sm">
+        <table className="min-w-[1080px] w-full border-collapse text-sm">
         <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>
-            <th className="px-4 py-3">Job #</th>
-            <th className="px-4 py-3">Device</th>
-            <th className="px-4 py-3">Status</th>
-            {canSeeClient ? <th className="px-4 py-3">Client</th> : null}
-            {canSeeAssignment ? <th className="px-4 py-3">Assigned</th> : null}
-            <th className="px-4 py-3">Received</th>
-            {canSeeCost ? <th className="px-4 py-3">External Bill</th> : null}
-            <th className="px-4 py-3">Actions</th>
+            <th className="border-b border-[var(--line)] px-4 py-3">Job #</th>
+            <th className="border-b border-[var(--line)] px-4 py-3">Device</th>
+            <th className="border-b border-[var(--line)] px-4 py-3">Status</th>
+            {canSeeClient ? <th className="border-b border-[var(--line)] px-4 py-3">Client</th> : null}
+            {canSeeAssignment ? <th className="border-b border-[var(--line)] px-4 py-3">Assigned</th> : null}
+            <th className="border-b border-[var(--line)] px-4 py-3">Flag</th>
+            <th className="border-b border-[var(--line)] px-4 py-3">Received</th>
+            {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">External Bill</th> : null}
+            <th className="border-b border-[var(--line)] px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
           {jobs.map((job) => (
-            <tr key={job.id} className="border-t border-[var(--line)]/70 transition hover:bg-[var(--panel-strong)]/70">
-              <td className="px-4 py-3 font-semibold">{job.jobNumber}</td>
-              <td className="px-4 py-3">{job.deviceType} / {job.brand} {job.model}</td>
-              <td className="px-4 py-3"><JobStatusBadge status={job.status} /></td>
-              {canSeeClient ? <td className="px-4 py-3">{job.clientName ?? "-"}</td> : null}
-              {canSeeAssignment ? <td className="px-4 py-3">{job.assignedTo ?? "-"}</td> : null}
-              <td className="px-4 py-3">{job.receivedAt.toLocaleDateString()}</td>
-              {canSeeCost ? <td className="px-4 py-3">{job.externalTechBill ? formatMoney(job.externalTechBill) : "-"}</td> : null}
-              <td className="px-4 py-3">
-                <Link href={`/jobs/${job.id}`} className="text-teal-700 hover:underline">
-                  Open
-                </Link>
-                {canEditPage ? (
+            <tr key={job.id} className="transition hover:bg-[var(--panel-strong)]/60">
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle font-semibold">
+                <p className="mono max-w-[12rem] truncate">{job.jobNumber}</p>
+              </td>
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle">
+                <p className="max-w-[20rem] truncate font-medium text-[var(--ink)]">
+                  {job.brand} {job.model} <span className="text-xs text-[var(--ink-muted)]">- {job.deviceType.replaceAll("_", " ")}</span>
+                </p>
+              </td>
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><JobStatusBadge status={job.status} /></td>
+              {canSeeClient ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><p className="max-w-[14rem] truncate">{job.clientName ?? "-"}</p></td> : null}
+              {canSeeAssignment ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><p className="max-w-[14rem] truncate">{job.assignedTo ?? "-"}</p></td> : null}
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle">
+                {job.workflowReason && job.workflowReason !== "NONE" ? (
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
+                    {workflowReasonLabel(job.workflowReason)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--ink-muted)]">-</span>
+                )}
+              </td>
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.receivedAt.toLocaleDateString()}</td>
+              {canSeeCost ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.externalTechBill ? formatMoney(job.externalTechBill) : "-"}</td> : null}
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
+                <div className="inline-flex items-center gap-2">
                   <Link
-                    href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                    className="ml-3 text-slate-700 hover:underline"
+                    href={`/jobs/${job.id}`}
+                    className="btn-premium inline-block rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
                   >
-                    Edit
+                    Open
                   </Link>
-                ) : null}
-                {canDelete && deleteAction ? (
-                  <form action={deleteAction} className="ml-3 inline">
-                    <input type="hidden" name="id" value={job.id} />
-                    <button className="text-rose-700 hover:underline">Delete</button>
-                  </form>
-                ) : null}
+                  {canEditPage ? (
+                    <Link
+                      href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
+                      className="btn-premium-secondary inline-block rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+                    >
+                      Edit
+                    </Link>
+                  ) : null}
+                  {canDelete && deleteAction ? (
+                    <form action={deleteAction} className="inline">
+                      <input type="hidden" name="id" value={job.id} />
+                      <button className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Delete</button>
+                    </form>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}

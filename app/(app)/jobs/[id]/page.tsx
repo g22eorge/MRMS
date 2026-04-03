@@ -50,6 +50,7 @@ export default async function JobDetailPage({
           id: job.id,
           jobNumber: job.jobNumber,
           status: job.status,
+          updatedAt: job.updatedAt.toISOString(),
           clientApproved: job.clientApproved,
           approvalDate: job.approvalDate ? job.approvalDate.toISOString() : null,
           deviceType: job.deviceType,

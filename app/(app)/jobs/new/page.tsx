@@ -12,7 +12,6 @@ export default async function NewJobPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Create New Job</h1>
       <NewJobStepper receivedByName={user.name} />
     </div>
   );

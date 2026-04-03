@@ -1,6 +1,12 @@
 "use server";
 
-import { JobStatus, RepairPath, Role } from "@prisma/client";
+import {
+  CommunicationStatus,
+  JobStatus,
+  RecommendationOption,
+  RepairPath,
+  Role,
+} from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -8,8 +14,19 @@ import { hasJobPayoutColumns } from "@/lib/payouts";
 import { sanitizeOptionalText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 
+const workflowReasonValues = [
+  "NONE",
+  "PARTS_PENDING",
+  "SPECIALIST_ESCALATION",
+  "CLIENT_DECLINED",
+  "UNREPAIRABLE",
+  "CUSTOMER_CANCELLED",
+  "OTHER",
+] as const;
+
 const updateSchema = z.object({
   jobId: z.string().min(1),
+  expectedUpdatedAt: z.string().optional(),
   assignedToId: z.string().optional(),
   diagnosisNotes: z.string().optional(),
   externalDiagnosis: z.string().optional(),
@@ -17,8 +34,12 @@ const updateSchema = z.object({
   externalTechBill: z.coerce.number().optional(),
   clientBill: z.coerce.number().optional(),
   externalTechFee: z.coerce.number().optional(),
+  vatApplicable: z.enum(["true", "false"]).optional(),
   externalPaid: z.enum(["true", "false"]).optional(),
   externalPaymentRef: z.string().optional(),
+  recommendationOption: z.nativeEnum(RecommendationOption).optional(),
+  communicationStatus: z.nativeEnum(CommunicationStatus).optional(),
+  clientConversationNote: z.string().optional(),
   repairPath: z.nativeEnum(RepairPath).optional(),
   repairTimeline: z.string().optional(),
   timelineMinValue: z.coerce.number().positive().optional(),
@@ -26,6 +47,8 @@ const updateSchema = z.object({
   timelineUnit: z.enum(["HOUR", "DAY", "WEEK"]).optional(),
   timelineConfidence: z.enum(["FIRM", "ESTIMATED", "PARTS_DEPENDENT"]).optional(),
   timelineNote: z.string().optional(),
+  workflowReason: z.enum(workflowReasonValues).optional(),
+  statusNote: z.string().optional(),
   workDone: z.string().optional(),
   partsReplaced: z.string().optional(),
   nextStatus: z.nativeEnum(JobStatus).optional(),
@@ -62,6 +85,11 @@ function buildTimeline(payload: z.infer<typeof updateSchema>) {
 
 export async function updateJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
+  const hasPartsNeededField = formData.has("partsNeeded");
+  const hasStatusNoteField = formData.has("statusNote");
+  const hasWorkflowReasonField = formData.has("workflowReason");
+  const hasCommunicationStatusField = formData.has("communicationStatus");
+  const hasClientConversationNoteField = formData.has("clientConversationNote");
   const parsed = updateSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
@@ -73,12 +101,23 @@ export async function updateJobAction(formData: FormData) {
     return { error: "Job not found" };
   }
 
+  if (payload.expectedUpdatedAt) {
+    const expected = new Date(payload.expectedUpdatedAt).toISOString();
+    const actual = existing.updatedAt.toISOString();
+    if (expected !== actual) {
+      return {
+        error:
+          "This job changed since you opened it. Refresh and review latest updates before saving.",
+      };
+    }
+  }
+
   const transitions: Partial<Record<JobStatus, JobStatus[]>> = {
     RECEIVED: [JobStatus.DIAGNOSING],
-    DIAGNOSING: [JobStatus.IN_REPAIR, JobStatus.REFERRED],
-    REFERRED: [JobStatus.AWAITING_APPROVAL],
+    DIAGNOSING: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.CLOSED],
     AWAITING_APPROVAL: [JobStatus.IN_REPAIR, JobStatus.CLOSED],
-    IN_REPAIR: [JobStatus.COMPLETED],
+    IN_REPAIR: [JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
+    READY_FOR_PICKUP: [JobStatus.COMPLETED, JobStatus.CLOSED],
   };
 
   if (payload.nextStatus) {
@@ -91,13 +130,29 @@ export async function updateJobAction(formData: FormData) {
   const roleCanTransition = (role: Role, nextStatus: JobStatus) => {
     if (role === "ADMIN") return true;
     if (role === "TECHNICIAN_INTERNAL") {
-      return ([JobStatus.DIAGNOSING, JobStatus.IN_REPAIR, JobStatus.COMPLETED] as JobStatus[]).includes(nextStatus);
+      return (
+        [
+          JobStatus.DIAGNOSING,
+          JobStatus.IN_REPAIR,
+          JobStatus.READY_FOR_PICKUP,
+          JobStatus.COMPLETED,
+          JobStatus.CLOSED,
+        ] as JobStatus[]
+      ).includes(nextStatus);
     }
     if (role === "TECHNICIAN_EXTERNAL") {
       return ([JobStatus.COMPLETED] as JobStatus[]).includes(nextStatus);
     }
     if (role === "OPS") {
-      return ([JobStatus.AWAITING_APPROVAL, JobStatus.CLOSED, JobStatus.IN_REPAIR] as JobStatus[]).includes(nextStatus);
+      return (
+        [
+          JobStatus.AWAITING_APPROVAL,
+          JobStatus.CLOSED,
+          JobStatus.IN_REPAIR,
+          JobStatus.READY_FOR_PICKUP,
+          JobStatus.COMPLETED,
+        ] as JobStatus[]
+      ).includes(nextStatus);
     }
     return false;
   };
@@ -120,7 +175,7 @@ export async function updateJobAction(formData: FormData) {
     if (!hasFinalCostAfterUpdate) {
       return {
         error:
-          "Cannot complete job yet. Our bill to client must be set by Accounts/Admin first.",
+          "Cannot complete job yet. Our bill to client must be set by Admin first.",
       };
     }
   }
@@ -137,7 +192,18 @@ export async function updateJobAction(formData: FormData) {
     payload.externalPaid !== undefined ||
     payload.externalPaymentRef !== undefined;
 
-  if (payoutChangeRequested && (user.role === "ADMIN" || user.role === "ACCOUNTS")) {
+  const adminFinancialChangeRequested =
+    payload.clientBill !== undefined || payload.vatApplicable !== undefined;
+
+  if (adminFinancialChangeRequested && user.role !== "ADMIN") {
+    return { error: "Only admin can update client billing controls." };
+  }
+
+  if (payoutChangeRequested && user.role !== "ADMIN") {
+    return { error: "Only admin can update payout controls." };
+  }
+
+  if (payoutChangeRequested && user.role === "ADMIN") {
     const payoutColumnsReady = await hasJobPayoutColumns();
     if (!payoutColumnsReady) {
       return {
@@ -152,7 +218,15 @@ export async function updateJobAction(formData: FormData) {
 
   if (user.role === "TECHNICIAN_EXTERNAL") {
     data.externalDiagnosis = sanitizeOptionalText(payload.externalDiagnosis) || undefined;
-    data.partsNeeded = sanitizeOptionalText(payload.partsNeeded) || undefined;
+    if (hasPartsNeededField) {
+      data.partsNeeded = sanitizeOptionalText(payload.partsNeeded) || null;
+    }
+    if (hasStatusNoteField) {
+      data.statusNote = sanitizeOptionalText(payload.statusNote) || null;
+    }
+    if (hasWorkflowReasonField) {
+      data.workflowReason = payload.workflowReason ?? "NONE";
+    }
     data.repairTimeline = timeline?.repairTimeline ?? (sanitizeOptionalText(payload.repairTimeline) || undefined);
     data.timelineMinMinutes = timeline?.timelineMinMinutes;
     data.timelineMaxMinutes = timeline?.timelineMaxMinutes;
@@ -166,7 +240,15 @@ export async function updateJobAction(formData: FormData) {
   } else {
     data.diagnosisNotes = sanitizeOptionalText(payload.diagnosisNotes) || undefined;
     data.externalDiagnosis = sanitizeOptionalText(payload.externalDiagnosis) || undefined;
-    data.partsNeeded = sanitizeOptionalText(payload.partsNeeded) || undefined;
+    if (hasPartsNeededField) {
+      data.partsNeeded = sanitizeOptionalText(payload.partsNeeded) || null;
+    }
+    if (hasStatusNoteField) {
+      data.statusNote = sanitizeOptionalText(payload.statusNote) || null;
+    }
+    if (hasWorkflowReasonField) {
+      data.workflowReason = payload.workflowReason ?? "NONE";
+    }
     data.repairTimeline = timeline?.repairTimeline ?? (sanitizeOptionalText(payload.repairTimeline) || undefined);
     data.timelineMinMinutes = timeline?.timelineMinMinutes;
     data.timelineMaxMinutes = timeline?.timelineMaxMinutes;
@@ -175,7 +257,6 @@ export async function updateJobAction(formData: FormData) {
     data.workDone = sanitizeOptionalText(payload.workDone) || undefined;
     data.partsReplaced = sanitizeOptionalText(payload.partsReplaced) || undefined;
     data.externalTechBill = payload.externalTechBill;
-    data.repairPath = payload.repairPath;
     if ((user.role === "ADMIN" || user.role === "OPS") && payload.assignedToId !== undefined) {
       const assigneeId = payload.assignedToId.trim();
       if (!assigneeId) {
@@ -187,7 +268,7 @@ export async function updateJobAction(formData: FormData) {
             isActive: true,
             role: { in: [Role.TECHNICIAN_INTERNAL, Role.TECHNICIAN_EXTERNAL] },
           },
-          select: { id: true },
+          select: { id: true, role: true },
         });
 
         if (!assignee) {
@@ -195,11 +276,18 @@ export async function updateJobAction(formData: FormData) {
         }
 
         data.assignedToId = assignee.id;
+        data.repairPath =
+          assignee.role === Role.TECHNICIAN_EXTERNAL
+            ? RepairPath.EXTERNAL
+            : RepairPath.IN_HOUSE;
       }
     }
-    if (user.role === "ADMIN" || user.role === "ACCOUNTS") {
+    if (user.role === "ADMIN") {
       data.clientBill = payload.clientBill;
       data.externalTechFee = payload.externalTechFee;
+      if (payload.vatApplicable !== undefined) {
+        data.vatApplicable = payload.vatApplicable === "true";
+      }
 
       if (payload.externalPaymentRef !== undefined) {
         data.externalPaymentRef = sanitizeOptionalText(payload.externalPaymentRef) || null;
@@ -215,13 +303,43 @@ export async function updateJobAction(formData: FormData) {
         }
       }
     }
+    if (user.role === "ADMIN" || user.role === "OPS") {
+      if (payload.recommendationOption !== undefined) {
+        data.recommendationOption = payload.recommendationOption;
+      }
+      if (hasCommunicationStatusField) {
+        data.communicationStatus = payload.communicationStatus ?? existing.communicationStatus;
+      }
+
+      const nextClientConversationNote =
+        hasClientConversationNoteField
+          ? sanitizeOptionalText(payload.clientConversationNote) || null
+          : existing.clientConversationNote;
+
+      if (hasClientConversationNoteField) {
+        data.clientConversationNote = nextClientConversationNote;
+      }
+
+      const communicationChanged =
+        hasCommunicationStatusField &&
+        (payload.communicationStatus ?? existing.communicationStatus) !== existing.communicationStatus;
+      const conversationChanged =
+        hasClientConversationNoteField && nextClientConversationNote !== existing.clientConversationNote;
+
+      if (communicationChanged || conversationChanged) {
+        data.lastClientContactAt = new Date();
+      }
+    }
     data.status = payload.nextStatus;
     if (existing.status === JobStatus.AWAITING_APPROVAL && payload.nextStatus) {
       data.clientApproved = payload.nextStatus === JobStatus.IN_REPAIR;
       data.approvalDate = new Date();
     }
     data.completedAt = payload.nextStatus === JobStatus.COMPLETED ? new Date() : undefined;
-    data.closedAt = payload.nextStatus === JobStatus.CLOSED ? new Date() : undefined;
+    data.closedAt =
+      payload.nextStatus === JobStatus.CLOSED
+        ? new Date()
+        : undefined;
   }
 
   let updated;
@@ -232,13 +350,22 @@ export async function updateJobAction(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
+    const legacyClientBillField = message.includes("Unknown argument `clientBill`");
+    const legacyExternalBillField = message.includes("Unknown argument `externalTechBill`");
     if (
       message.includes("Unknown argument `timelineMinMinutes`") ||
       message.includes("Unknown argument `timelineMaxMinutes`") ||
       message.includes("Unknown argument `timelineConfidence`") ||
       message.includes("Unknown argument `timelineNote`") ||
-      message.includes("Unknown argument `clientBill`") ||
-      message.includes("Unknown argument `externalTechBill`")
+      legacyClientBillField ||
+      legacyExternalBillField ||
+      message.includes("Unknown argument `recommendationOption`") ||
+      message.includes("Unknown argument `communicationStatus`") ||
+      message.includes("Unknown argument `clientConversationNote`") ||
+      message.includes("Unknown argument `lastClientContactAt`")
+      || message.includes("Unknown argument `vatApplicable`")
+      || message.includes("Unknown argument `statusNote`")
+      || message.includes("Unknown argument `workflowReason`")
     ) {
       const fallbackData = { ...data } as Record<string, unknown>;
       delete fallbackData.timelineMinMinutes;
@@ -246,14 +373,21 @@ export async function updateJobAction(formData: FormData) {
       delete fallbackData.timelineConfidence;
       delete fallbackData.timelineNote;
 
-      if ("clientBill" in fallbackData) {
+      if (legacyClientBillField && "clientBill" in fallbackData) {
         fallbackData.finalCost = fallbackData.clientBill;
         delete fallbackData.clientBill;
       }
-      if ("externalTechBill" in fallbackData) {
+      if (legacyExternalBillField && "externalTechBill" in fallbackData) {
         fallbackData.costEstimate = fallbackData.externalTechBill;
         delete fallbackData.externalTechBill;
       }
+      delete fallbackData.recommendationOption;
+      delete fallbackData.communicationStatus;
+      delete fallbackData.clientConversationNote;
+      delete fallbackData.lastClientContactAt;
+      delete fallbackData.vatApplicable;
+      delete fallbackData.statusNote;
+      delete fallbackData.workflowReason;
 
       updated = await (prisma.job as unknown as {
         update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{

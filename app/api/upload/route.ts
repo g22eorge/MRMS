@@ -13,7 +13,7 @@ const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(req: NextRequest) {
-  await getCurrentUserRole();
+  const { session, user } = await getCurrentUserRole();
   const formData = await req.formData();
   const jobId = String(formData.get("jobId") ?? "");
   const label = sanitizeText(String(formData.get("label") ?? "other"));
@@ -23,9 +23,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid upload payload" }, { status: 400 });
   }
 
-  const job = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true } });
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true, assignedToId: true },
+  });
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
+  }
+
+  const roleAllowed = [
+    "ADMIN",
+    "OPS",
+    "TECHNICIAN_INTERNAL",
+    "TECHNICIAN_EXTERNAL",
+  ].includes(user.role);
+  if (!roleAllowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (
+    (user.role === "TECHNICIAN_INTERNAL" || user.role === "TECHNICIAN_EXTERNAL") &&
+    job.assignedToId !== session.user.id
+  ) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const uploadDir = path.join(getUploadsRoot(), "jobs", jobId);

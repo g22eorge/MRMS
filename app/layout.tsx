@@ -30,6 +30,9 @@ export default function RootLayout({
     <html lang="en" className={`${display.variable} ${mono.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         {children}
+        <footer className="border-t border-[var(--line)] bg-white/70 px-4 py-2 text-center text-xs text-[var(--ink-muted)]">
+          System built by Almeida 2026 all rights reserved.
+        </footer>
         <Toaster richColors />
       </body>
     </html>

@@ -1,14 +1,80 @@
 import { JobStatus } from "@prisma/client";
 import Link from "next/link";
 
-import { getClientBill } from "@/lib/billing";
+import { ReportsCharts } from "@/components/reports/ReportsCharts";
+import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
+import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
-export default async function DashboardPage() {
+type SearchParams = {
+  month?: string;
+};
+
+function parseMonth(monthParam?: string) {
+  if (!monthParam) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+  const [y, m] = monthParam.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+  return { year: y, month: m };
+}
+
+function monthRange(year: number, month: number) {
+  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+
+function monthLabel(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function monthOptions(count: number) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    const value = monthLabel(date.getFullYear(), date.getMonth() + 1);
+    const label = date.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    return { value, label };
+  });
+}
+
+const statusLabel: Record<JobStatus, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  AWAITING_APPROVAL: "Awaiting Approval",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
+const deviceLabel: Record<string, string> = {
+  PHONE_ANDROID: "Android Phone",
+  PHONE_IPHONE: "iPhone",
+  TABLET: "Tablet",
+  WINDOWS_PC: "Windows PC",
+  MAC: "Mac",
+  OTHER: "Other",
+};
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const { session, user } = await getCurrentUserRole();
+  const filters = await searchParams;
 
   if (user.role === "TECHNICIAN_EXTERNAL") {
     const jobs = await prisma.job.findMany({
@@ -25,7 +91,7 @@ export default async function DashboardPage() {
     const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
 
     const currency = getAppCurrency();
-    const openCount = jobs.filter((job) => ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"].includes(job.status)).length;
+    const openCount = jobs.filter((job) => ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)).length;
     const completedCount = jobs.filter((job) => job.status === "COMPLETED").length;
     const paidTotal = jobs
       .filter((job) => payouts.get(job.id)?.externalPaid && typeof payouts.get(job.id)?.externalTechFee === "number")
@@ -41,12 +107,6 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-5">
-        <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-5 text-white md:p-7">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Technician Overview</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Work & Payouts</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/85">Track your assigned jobs and external payout status in one view.</p>
-        </section>
-
         <div className="grid gap-4 md:grid-cols-4">
           <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs</p>
@@ -114,12 +174,6 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-5">
-        <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-5 text-white md:p-7">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Technician Overview</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Repair Queue</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/85">Focus on jobs currently assigned to you.</p>
-        </section>
-
         <div className="grid gap-4 md:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned</p>
@@ -162,7 +216,205 @@ export default async function DashboardPage() {
     );
   }
 
-  if (user.role === "ACCOUNTS") {
+  if (user.role === "ADMIN") {
+    const selected = parseMonth(filters.month);
+    const selectedRange = monthRange(selected.year, selected.month);
+    const prevMonthDate = new Date(selected.year, selected.month - 2, 1);
+    const prev = { year: prevMonthDate.getFullYear(), month: prevMonthDate.getMonth() + 1 };
+    const prevRange = monthRange(prev.year, prev.month);
+    const currency = getAppCurrency();
+
+    const [
+      statusGroup,
+      deviceGroup,
+      completedSelected,
+      completedPrev,
+      receivedSelectedCount,
+      receivedPrevCount,
+      closedSelectedCount,
+      closedPrevCount,
+      openJobs,
+      externalCount,
+      inHouseCount,
+      externalCompleted,
+      totalJobs,
+    ] = await Promise.all([
+      prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
+      prisma.job.groupBy({ by: ["deviceType"], _count: { deviceType: true } }),
+      prisma.job.findMany({
+        where: {
+          status: "COMPLETED",
+          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        },
+      }),
+      prisma.job.findMany({
+        where: {
+          status: "COMPLETED",
+          completedAt: { gte: prevRange.start, lte: prevRange.end },
+        },
+      }),
+      prisma.job.count({ where: { receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
+      prisma.job.count({ where: { receivedAt: { gte: prevRange.start, lte: prevRange.end } } }),
+      prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
+      prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: prevRange.start, lte: prevRange.end } } }),
+      prisma.job.findMany({
+        where: {
+          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR"] },
+        },
+        select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
+      }),
+      prisma.job.count({ where: { repairPath: "EXTERNAL", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
+      prisma.job.count({ where: { repairPath: "IN_HOUSE", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
+      prisma.job.findMany({
+        where: {
+          repairPath: "EXTERNAL",
+          status: "COMPLETED",
+          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        },
+        select: { id: true },
+      }),
+      prisma.job.count(),
+    ]);
+
+    const openCount = openJobs.length;
+    const completedCount = statusGroup.find((s) => s.status === "COMPLETED")?._count.status ?? 0;
+    const awaitingApproval = statusGroup.find((s) => s.status === "AWAITING_APPROVAL")?._count.status ?? 0;
+    const completedSelectedCount = completedSelected.length;
+    const completedPrevCount = completedPrev.length;
+
+    const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
+    const payoutOutstanding = externalCompleted
+      .map((job) => payoutMap.get(job.id))
+      .filter((row) => row && !row.externalPaid)
+      .reduce((sum, row) => sum + (row?.externalTechFee ?? 0), 0);
+
+    const revenueFor = (jobs: typeof completedSelected) => jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
+    const revenueSelected = revenueFor(completedSelected);
+    const revenuePrev = revenueFor(completedPrev);
+    const revenueDelta = revenueSelected - revenuePrev;
+    const marginSelected = completedSelected.reduce(
+      (sum, job) => sum + ((getClientBill(job) ?? 0) - (getExternalTechBill(job) ?? 0)),
+      0,
+    );
+    const marginRate = revenueSelected > 0 ? (marginSelected / revenueSelected) * 100 : 0;
+
+    const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
+    const statusData = (Object.values(JobStatus) as JobStatus[]).map((status) => ({
+      key: status,
+      name: statusLabel[status],
+      value: statusCount.get(status) ?? 0,
+    }));
+    const deviceData = deviceGroup.map((d) => ({
+      name: deviceLabel[d.deviceType] ?? d.deviceType,
+      value: d._count.deviceType,
+    }));
+
+    const selectedMonthString = monthLabel(selected.year, selected.month);
+    const prevMonthString = monthLabel(prev.year, prev.month);
+    const totalPath = inHouseCount + externalCount;
+    const externalRatio = totalPath > 0 ? (externalCount / totalPath) * 100 : 0;
+    const selectableMonths = monthOptions(18);
+    const receivedDelta = receivedSelectedCount - receivedPrevCount;
+    const completedDeltaCount = completedSelectedCount - completedPrevCount;
+    const closedDelta = closedSelectedCount - closedPrevCount;
+
+    return (
+      <div className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-4">
+          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs (All Time)</p>
+            <p className="mt-2 text-4xl font-semibold">{totalJobs}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View all jobs →</p>
+          </Link>
+          <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Queue (Now)</p>
+            <p className="mt-2 text-4xl font-semibold text-[var(--brand)]">{openCount}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Needs team action →</p>
+          </Link>
+          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed (All Time)</p>
+            <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedCount}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
+          </Link>
+          <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting Approval (Now)</p>
+            <p className="mt-2 text-4xl font-semibold text-amber-700">{awaitingApproval}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Client approvals →</p>
+          </Link>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
+            <p className="mt-1 text-2xl font-semibold">{receivedSelectedCount}</p>
+            <p className={`mt-1 text-xs ${receivedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {receivedDelta >= 0 ? "+" : ""}{receivedDelta} vs {prevMonthString}
+            </p>
+          </div>
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
+            <p className="mt-1 text-2xl font-semibold">{completedSelectedCount}</p>
+            <p className={`mt-1 text-xs ${completedDeltaCount >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {completedDeltaCount >= 0 ? "+" : ""}{completedDeltaCount} vs {prevMonthString}
+            </p>
+          </div>
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
+            <p className="mt-1 text-2xl font-semibold">{closedSelectedCount}</p>
+            <p className={`mt-1 text-xs ${closedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {closedDelta >= 0 ? "+" : ""}{closedDelta} vs {prevMonthString}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <MonthSelectForm
+            value={selectedMonthString}
+            options={selectableMonths}
+            className="flex items-center"
+            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            <a href="/api/reports/export?type=pipeline-aging" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Pipeline Aging CSV</a>
+            <a href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Repair Margin CSV</a>
+            <a href="/api/reports/export?type=technician-performance" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Technician CSV</a>
+            <a href="/api/reports/export?type=external-payouts" className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">Payout CSV</a>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
+            <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
+            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
+          </div>
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair Margin</p>
+            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatMoney(marginSelected, currency)}</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
+          </div>
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Ratio</p>
+            <p className="mt-1 text-2xl font-semibold">{externalRatio.toFixed(0)}%</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalCount} external / {inHouseCount} in-house ({selectedMonthString})</p>
+          </div>
+          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Payouts Due</p>
+            <p className="mt-1 text-2xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs ({selectedMonthString})</p>
+          </div>
+        </div>
+
+        <ReportsCharts statusData={statusData} deviceData={deviceData} />
+
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
+          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Use <a href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">Repair Margin CSV</a> to inspect job-level variance.
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role === "OPS") {
     const currency = getAppCurrency();
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
@@ -175,7 +427,7 @@ export default async function DashboardPage() {
       }),
       prisma.job.count({
         where: {
-          status: { in: ["IN_REPAIR", "AWAITING_APPROVAL", "REFERRED"] },
+          status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
         },
       }),
       prisma.job.findMany({
@@ -197,12 +449,6 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-5">
-        <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-5 text-white md:p-7">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Accounts Overview</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Billing & Payout Control</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/85">Monitor client billing, completed jobs, and unpaid external payouts.</p>
-        </section>
-
         <div className="grid gap-4 md:grid-cols-4">
           <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue this month</p>
@@ -214,7 +460,7 @@ export default async function DashboardPage() {
             <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedThisMonth.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review completed jobs →</p>
           </Link>
-          <Link href="/jobs?status=IN_REPAIR,AWAITING_APPROVAL,REFERRED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Pending billing path</p>
             <p className="mt-2 text-4xl font-semibold text-amber-700">{pendingBilling}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs before completion →</p>
@@ -229,80 +475,14 @@ export default async function DashboardPage() {
     );
   }
 
-  if (user.role === "OPS") {
-    const [awaitingApproval, referred, inRepair, recentApprovals] = await Promise.all([
-      prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
-      prisma.job.count({ where: { status: "REFERRED" } }),
-      prisma.job.count({ where: { status: "IN_REPAIR" } }),
-      prisma.job.findMany({
-        where: { status: { in: ["AWAITING_APPROVAL", "REFERRED"] } },
-        include: { client: true },
-        orderBy: { updatedAt: "desc" },
-        take: 6,
-      }),
-    ]);
-
-    return (
-      <div className="space-y-5">
-        <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-5 text-white md:p-7">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Operations Overview</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Client Approval Pipeline</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/85">Manage referrals, approvals, and transitions into active repair.</p>
-        </section>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting approval</p>
-            <p className="mt-2 text-4xl font-semibold text-amber-700">{awaitingApproval}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Call/update clients →</p>
-          </Link>
-          <Link href="/jobs?status=REFERRED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Referred</p>
-            <p className="mt-2 text-4xl font-semibold">{referred}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">External estimates pending →</p>
-          </Link>
-          <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In repair</p>
-            <p className="mt-2 text-4xl font-semibold text-emerald-700">{inRepair}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Active jobs →</p>
-          </Link>
-        </div>
-
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-sm font-semibold">Recent Approval Queue</p>
-          {recentApprovals.length === 0 ? (
-            <p className="text-sm text-[var(--ink-muted)]">No approval actions pending.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {recentApprovals.map((job) => (
-                <li key={job.id} className="flex items-center justify-between gap-2 border-b border-[var(--line)] py-2">
-                  <p className="truncate font-medium">{job.jobNumber} - {job.client.fullName}</p>
-                  <span className="text-xs text-[var(--ink-muted)]">{job.status}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   const [totalJobs, openJobs, completedJobs] = await Promise.all([
     prisma.job.count(),
-    prisma.job.count({ where: { status: { in: [JobStatus.RECEIVED, JobStatus.DIAGNOSING, JobStatus.IN_REPAIR, JobStatus.REFERRED, JobStatus.AWAITING_APPROVAL] } } }),
+    prisma.job.count({ where: { status: { in: [JobStatus.RECEIVED, JobStatus.DIAGNOSING, JobStatus.IN_REPAIR, JobStatus.READY_FOR_PICKUP, JobStatus.AWAITING_APPROVAL] } } }),
     prisma.job.count({ where: { status: JobStatus.COMPLETED } }),
   ]);
 
   return (
     <div className="space-y-5">
-      <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-5 text-white md:p-7">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/70">Operations Overview</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Repair Workbench</h1>
-        <p className="mt-2 max-w-2xl text-sm text-white/85">
-          Keep intake, diagnostics, approvals, and closure in one live queue with role-safe visibility.
-        </p>
-      </section>
-
       <div className="grid gap-4 md:grid-cols-3">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs</p>
@@ -311,7 +491,7 @@ export default async function DashboardPage() {
           <p className="mt-3 text-xs font-medium text-[var(--brand)]">View all jobs →</p>
         </Link>
         <Link
-          href="/jobs?status=RECEIVED,DIAGNOSING,REFERRED,AWAITING_APPROVAL,IN_REPAIR"
+          href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>

@@ -31,7 +31,7 @@ export default async function TechniciansPage({
     where: {
       ...where,
       ...(statusFilter ? { status: statusFilter } : {}),
-      ...(filters.ready === "1" ? { status: "IN_REPAIR", clientApproved: true } : {}),
+      ...(filters.ready === "1" ? { status: { in: ["IN_REPAIR"] }, clientApproved: true } : {}),
       ...(filters.q
         ? {
             OR: [
@@ -66,11 +66,6 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Technician Portal</h1>
-        <p className="text-sm text-[var(--ink-muted)]">Prioritized queue for assigned repair work.</p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Assigned</p>
@@ -101,9 +96,9 @@ export default async function TechniciansPage({
           <option value="">All statuses</option>
           <option value="RECEIVED">RECEIVED</option>
           <option value="DIAGNOSING">DIAGNOSING</option>
-          <option value="REFERRED">REFERRED</option>
           <option value="AWAITING_APPROVAL">AWAITING_APPROVAL</option>
           <option value="IN_REPAIR">IN_REPAIR</option>
+          <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
           <option value="COMPLETED">COMPLETED</option>
           <option value="CLOSED">CLOSED</option>
         </select>
@@ -139,7 +134,7 @@ export default async function TechniciansPage({
                 </div>
                 <div className="flex gap-2">
                   <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="text-teal-700 hover:underline">Open</Link>
-                  {job.status === "IN_REPAIR" ? (
+                  {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
                     <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="text-emerald-700 hover:underline">Mark completed</Link>
                   ) : null}
                 </div>

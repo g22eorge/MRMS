@@ -83,8 +83,6 @@ export default async function TechnicianPayoutsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">My Payouts</h1>
-          <p className="text-sm text-[var(--ink-muted)]">Track paid and unpaid external technician fees for your assigned jobs.</p>
           {!payoutColumnsReady ? (
             <p className="mt-1 text-xs text-amber-700">Payout columns are not migrated yet in this environment. Run latest Prisma migrations.</p>
           ) : null}
