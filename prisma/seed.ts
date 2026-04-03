@@ -41,6 +41,14 @@ async function ensureUser({
   return user;
 }
 
+async function deactivateUsersByEmail(emails: string[]) {
+  if (emails.length === 0) return;
+  await prisma.user.updateMany({
+    where: { email: { in: emails } },
+    data: { isActive: false },
+  });
+}
+
 async function ensureClient({
   fullName,
   phone,
@@ -210,25 +218,45 @@ async function main() {
   });
 
   const techInternal = await ensureUser({
-    name: "Internal Tech",
-    email: "tech.internal@eagle.local",
+    name: "Rest",
+    email: "rest@eagle.tech",
     role: "TECHNICIAN_INTERNAL",
     password: defaultPassword,
   });
 
   const techExternal = await ensureUser({
-    name: "External Tech",
-    email: "tech.external@eagle.local",
+    name: "Abdu",
+    email: "abdu@eagle.tech",
     role: "TECHNICIAN_EXTERNAL",
     password: defaultPassword,
   });
 
   const ops = await ensureUser({
-    name: "Ops Coordinator",
-    email: "ops@eagle.local",
+    name: "Kakande",
+    email: "ops@eagle.tech",
     role: "OPS",
     password: defaultPassword,
   });
+
+  const ryan = await ensureUser({
+    name: "Ryan",
+    email: "ryan@eagle.tech",
+    role: "TECHNICIAN_EXTERNAL",
+    password: defaultPassword,
+  });
+
+  const dan = await ensureUser({
+    name: "Dan",
+    email: "dan@eagle.tech",
+    role: "TECHNICIAN_EXTERNAL",
+    password: defaultPassword,
+  });
+
+  await deactivateUsersByEmail([
+    "ops@eagle.local",
+    "tech.internal@eagle.local",
+    "tech.external@eagle.local",
+  ]);
 
   console.log("Seeded users for all roles.");
 
@@ -383,7 +411,7 @@ async function main() {
       repairPath: "EXTERNAL",
       clientId: c2.id,
       createdById: ops.id,
-      assignedToId: ops.id,
+      assignedToId: dan.id,
       deviceType: "PHONE_ANDROID",
       brand: "Xiaomi",
       model: "Redmi Note 11",
@@ -483,6 +511,7 @@ async function main() {
       const externalTechBill = 140000 + index * 12000;
       const clientBill = externalTechBill + 70000 + (index % 4) * 10000;
       const monthlyClient = [c1, c2, c3, c4, c5, c6][index % 6];
+      const rotatingExternalTech = [techExternal.id, ryan.id, dan.id][index % 3];
 
       return ensureJob({
         jobNumber: formatJobNumber(monthDate, nextSequence),
@@ -490,7 +519,7 @@ async function main() {
         repairPath: isExternal ? "EXTERNAL" : "IN_HOUSE",
         clientId: monthlyClient.id,
         createdById: ops.id,
-        assignedToId: isExternal ? techExternal.id : techInternal.id,
+        assignedToId: isExternal ? rotatingExternalTech : techInternal.id,
         deviceType: isExternal ? "MAC" : "PHONE_ANDROID",
         brand: isExternal ? "Apple" : "Samsung",
         model: isExternal ? `MacBook ${2018 + (index % 6)}` : `Galaxy A${30 + (index % 10)}`,
