@@ -23,8 +23,7 @@
     "prisma:migrate": "bunx prisma migrate dev",
     "seed": "bun run prisma/seed.ts",
     "seed:base": "bun run prisma/seed-base.ts",
-    "seed:demo": "bun run prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "seed:demo": "bun run prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
