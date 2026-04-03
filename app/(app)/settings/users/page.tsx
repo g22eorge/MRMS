@@ -7,6 +7,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { RoleActionButton, SubmitActionButton } from "@/components/settings/UserActionButtons";
+import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -23,10 +24,15 @@ const updateRoleSchema = z.object({
 
 const updateDetailsSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(2),
-  email: z.string().email(),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Enter a valid email"),
   phone: z.string().optional(),
 });
+
+type UserDetailsState = {
+  error?: string;
+  success?: string;
+};
 
 const roleChoices: Role[] = [
   Role.ADMIN,
@@ -92,10 +98,10 @@ export default async function UsersPage() {
     revalidatePath("/settings/users");
   }
 
-  async function updateDetails(formData: FormData) {
+  async function updateDetails(_prevState: UserDetailsState, formData: FormData): Promise<UserDetailsState> {
     "use server";
     const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
+    if (currentUser.role !== "ADMIN") return { error: "Unauthorized action" };
 
     const parsed = updateDetailsSchema.safeParse({
       id: String(formData.get("id") ?? ""),
@@ -103,26 +109,31 @@ export default async function UsersPage() {
       email: String(formData.get("email") ?? "").trim().toLowerCase(),
       phone: String(formData.get("phone") ?? "").trim(),
     });
-    if (!parsed.success) return;
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid profile details" };
 
     const existingEmail = await prisma.user.findUnique({
       where: { email: parsed.data.email },
       select: { id: true },
     });
     if (existingEmail && existingEmail.id !== parsed.data.id) {
-      return;
+      return { error: "Email is already used by another user" };
     }
 
-    await prisma.user.update({
-      where: { id: parsed.data.id },
-      data: {
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone || null,
-      },
-    });
+    try {
+      await prisma.user.update({
+        where: { id: parsed.data.id },
+        data: {
+          name: parsed.data.name,
+          email: parsed.data.email,
+          phone: parsed.data.phone || null,
+        },
+      });
+    } catch {
+      return { error: "Could not update this user profile right now" };
+    }
 
     revalidatePath("/settings/users");
+    return { success: "Profile updated" };
   }
 
   async function deactivate(formData: FormData) {
@@ -187,38 +198,7 @@ export default async function UsersPage() {
               <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs">{u.role.replaceAll("_", " ")}</span>
             </div>
 
-            <form
-              action={updateDetails}
-              className="mb-3 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]"
-            >
-              <input type="hidden" name="id" value={u.id} />
-              <input
-                required
-                name="name"
-                defaultValue={u.name}
-                placeholder="Full name"
-                className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-              />
-              <input
-                required
-                type="email"
-                name="email"
-                defaultValue={u.email}
-                placeholder="Email"
-                className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-              />
-              <input
-                name="phone"
-                defaultValue={u.phone ?? ""}
-                placeholder="Phone"
-                className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-              />
-              <SubmitActionButton
-                idleLabel="Save Profile"
-                pendingLabel="Saving..."
-                className="btn-premium h-10 rounded-md px-3 py-2 text-sm text-white md:w-fit"
-              />
-            </form>
+            <UserDetailsForm id={u.id} name={u.name} email={u.email} phone={u.phone} action={updateDetails} />
 
             <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
               <form action={updateRole} className="flex flex-wrap gap-2">
