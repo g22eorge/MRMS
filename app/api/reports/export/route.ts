@@ -186,7 +186,7 @@ export async function GET(req: NextRequest) {
     const jobs = await prisma.job.findMany({
       where: {
         repairPath: "EXTERNAL",
-        assignedToId: { not: null },
+        assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
       },
       include: { assignedTo: true },
       orderBy: { receivedAt: "asc" },

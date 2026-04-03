@@ -268,6 +268,7 @@ export default async function DashboardPage({
       prisma.job.findMany({
         where: {
           repairPath: "EXTERNAL",
+          assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
           status: "COMPLETED",
           completedAt: { gte: selectedRange.start, lte: selectedRange.end },
         },
@@ -431,7 +432,11 @@ export default async function DashboardPage({
         },
       }),
       prisma.job.findMany({
-        where: { status: "COMPLETED", repairPath: "EXTERNAL" },
+        where: {
+          status: "COMPLETED",
+          repairPath: "EXTERNAL",
+          assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
+        },
         select: { id: true },
       }),
     ]);
