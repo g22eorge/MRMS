@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { RoleActionButton, SubmitActionButton } from "@/components/settings/UserActionButtons";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -46,9 +47,9 @@ export default async function UsersPage() {
     if (currentUser.role !== "ADMIN") return;
 
     const parsed = createUserSchema.safeParse({
-      name: String(formData.get("name") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
+      name: String(formData.get("name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim().toLowerCase(),
+      phone: String(formData.get("phone") ?? "").trim(),
       password: String(formData.get("password") ?? ""),
       role: String(formData.get("role") ?? "OPS"),
     });
@@ -98,18 +99,26 @@ export default async function UsersPage() {
 
     const parsed = updateDetailsSchema.safeParse({
       id: String(formData.get("id") ?? ""),
-      name: String(formData.get("name") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
+      name: String(formData.get("name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim().toLowerCase(),
+      phone: String(formData.get("phone") ?? "").trim(),
     });
     if (!parsed.success) return;
+
+    const existingEmail = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+      select: { id: true },
+    });
+    if (existingEmail && existingEmail.id !== parsed.data.id) {
+      return;
+    }
 
     await prisma.user.update({
       where: { id: parsed.data.id },
       data: {
-        name: parsed.data.name.trim(),
-        email: parsed.data.email.trim().toLowerCase(),
-        phone: parsed.data.phone?.trim() || null,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone || null,
       },
     });
 
@@ -161,7 +170,11 @@ export default async function UsersPage() {
             ))}
           </div>
         </fieldset>
-        <button className="w-full rounded-md bg-[var(--brand)] px-3 py-2 text-white md:w-auto">Create User</button>
+        <SubmitActionButton
+          idleLabel="Create User"
+          pendingLabel="Creating..."
+          className="btn-premium w-full rounded-md px-3 py-2 text-white md:w-auto"
+        />
       </form>
 
       <div className="space-y-2">
@@ -174,7 +187,10 @@ export default async function UsersPage() {
               <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs">{u.role.replaceAll("_", " ")}</span>
             </div>
 
-            <form action={updateDetails} className="mb-3 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-4">
+            <form
+              action={updateDetails}
+              className="mb-3 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]"
+            >
               <input type="hidden" name="id" value={u.id} />
               <input
                 required
@@ -197,33 +213,33 @@ export default async function UsersPage() {
                 placeholder="Phone"
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
               />
-              <button className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">Save Profile</button>
+              <SubmitActionButton
+                idleLabel="Save Profile"
+                pendingLabel="Saving..."
+                className="btn-premium h-10 rounded-md px-3 py-2 text-sm text-white md:w-fit"
+              />
             </form>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
               <form action={updateRole} className="flex flex-wrap gap-2">
                 <input type="hidden" name="id" value={u.id} />
                 {roleChoices.map((role) => (
-                  <button
+                  <RoleActionButton
                     key={role}
-                    name="role"
-                    value={role}
-                    className={`rounded-full border px-3 py-1 text-xs ${
-                      u.role === role
-                        ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                        : "border-[var(--line)] bg-white text-[var(--ink)]"
-                    }`}
-                  >
-                    {role.replaceAll("_", " ")}
-                  </button>
+                    role={role}
+                    currentRole={u.role}
+                    label={role.replaceAll("_", " ")}
+                  />
                 ))}
               </form>
               {u.isActive ? (
                 <form action={deactivate}>
                   <input type="hidden" name="id" value={u.id} />
-                  <button className="w-full rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:w-auto">
-                    Deactivate
-                  </button>
+                  <SubmitActionButton
+                    idleLabel="Deactivate"
+                    pendingLabel="Deactivating..."
+                    className="btn-premium-danger w-full rounded-md px-3 py-2 text-sm sm:w-auto"
+                  />
                 </form>
               ) : (
                 <span className="text-sm text-slate-500">Inactive</span>
