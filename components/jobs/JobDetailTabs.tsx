@@ -1,6 +1,6 @@
 "use client";
 
-import { JobStatus, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { updateJobAction } from "@/app/(app)/jobs/[id]/actions";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
+import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "timeline", "photos"] as const;

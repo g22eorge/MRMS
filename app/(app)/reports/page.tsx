@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { JobStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -154,7 +154,7 @@ export default async function ReportsPage({
   const externalPayoutOutstandingTotal = unpaidPayouts.reduce((sum, payout) => sum + (payout.externalTechFee ?? 0), 0);
 
   const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
-  const statusData = (Object.values(JobStatus) as JobStatus[]).map((status) => ({
+  const statusData = JOB_STATUSES.map((status) => ({
     key: status,
     name: statusLabel[status],
     value: statusCount.get(status) ?? 0,

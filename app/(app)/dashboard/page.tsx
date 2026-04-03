@@ -1,10 +1,10 @@
-import { JobStatus } from "@prisma/client";
 import Link from "next/link";
 
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -299,7 +299,7 @@ export default async function DashboardPage({
     const marginRate = revenueSelected > 0 ? (marginSelected / revenueSelected) * 100 : 0;
 
     const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
-    const statusData = (Object.values(JobStatus) as JobStatus[]).map((status) => ({
+    const statusData = JOB_STATUSES.map((status) => ({
       key: status,
       name: statusLabel[status],
       value: statusCount.get(status) ?? 0,
@@ -477,8 +477,8 @@ export default async function DashboardPage({
 
   const [totalJobs, openJobs, completedJobs] = await Promise.all([
     prisma.job.count(),
-    prisma.job.count({ where: { status: { in: [JobStatus.RECEIVED, JobStatus.DIAGNOSING, JobStatus.IN_REPAIR, JobStatus.READY_FOR_PICKUP, JobStatus.AWAITING_APPROVAL] } } }),
-    prisma.job.count({ where: { status: JobStatus.COMPLETED } }),
+    prisma.job.count({ where: { status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] } } }),
+    prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 
   return (

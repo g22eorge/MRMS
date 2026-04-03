@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { JobStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { JobTable, JobRow } from "@/components/jobs/JobTable";
 import { StatusFlowNotice } from "@/components/jobs/StatusFlowNotice";
+import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -154,7 +155,7 @@ export default async function JobsPage({
           />
           <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
             <option value="">All statuses</option>
-            {Object.values(JobStatus).map((status) => (
+            {JOB_STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>

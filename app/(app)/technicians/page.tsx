@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { JobStatus } from "@prisma/client";
 
+import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -17,7 +17,7 @@ export default async function TechniciansPage({
 }) {
   const { session, user } = await getCurrentUserRole();
   const filters = await searchParams;
-  const validStatuses = new Set(Object.values(JobStatus));
+  const validStatuses = new Set<string>(JOB_STATUSES);
   const statusFilter = filters.status && validStatuses.has(filters.status as JobStatus)
     ? (filters.status as JobStatus)
     : undefined;

@@ -1,4 +1,4 @@
-import { JobStatus } from "@prisma/client";
+import { JobStatus } from "@/lib/job-status";
 
 const classMap: Record<JobStatus, string> = {
   RECEIVED: "bg-slate-100 text-slate-700",

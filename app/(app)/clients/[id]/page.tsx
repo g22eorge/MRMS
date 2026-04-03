@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { JobStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -254,7 +255,7 @@ export default async function ClientDetailPage({
             <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm" />
             <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm">
               <option value="">All statuses</option>
-              {Object.values(JobStatus).map((status) => (
+              {JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
             </select>

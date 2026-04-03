@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { JobStatus, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
+import { JobStatus } from "@/lib/job-status";
 
 export type JobRow = {
   id: string;
