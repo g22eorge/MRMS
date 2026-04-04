@@ -190,13 +190,13 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {visibleTabs.map((tab) => (
           <button
             type="button"
             key={tab}
             onClick={() => setActive(tab)}
-            className={`whitespace-nowrap rounded-md px-3 py-2.5 text-sm capitalize ${
+            className={`w-full rounded-md px-3 py-2.5 text-sm capitalize sm:w-auto ${
               active === tab ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-700"
             }`}
           >
@@ -209,14 +209,14 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="mb-4 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Repair Journey</p>
-            <div className="flex flex-nowrap gap-2 overflow-x-auto">
+            <div className="flex flex-wrap gap-2">
               {stageLabels.map((label, index) => {
                 const isDone = index < currentStageIndex;
                 const isCurrent = index === currentStageIndex;
                 return (
                   <span
                     key={label}
-                    className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
                       isCurrent
                         ? "border-teal-700 bg-teal-700 text-white"
                         : isDone
@@ -229,7 +229,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                 );
               })}
               {job.status === "CLOSED" ? (
-                <span className="whitespace-nowrap rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-800">
+                <span className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-800">
                   Closed
                 </span>
               ) : null}
