@@ -81,7 +81,7 @@ export function LoginForm() {
           <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border-slate-300 text-teal-700" />
           Remember me
         </label>
-        <a href="#" className="text-teal-700 hover:underline">
+        <a href="mailto:support@eagleinfo.com" className="text-teal-700 hover:underline">
           Forgot password?
         </a>
       </div>

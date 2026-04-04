@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -33,7 +34,7 @@ export default async function ClientDetailPage({
   const { user } = await getCurrentUserRole();
   const canEdit = user.role === "ADMIN" || user.role === "OPS";
 
-  if (user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL") {
+  if (!can.viewClientInfo(user)) {
     redirect("/dashboard");
   }
 

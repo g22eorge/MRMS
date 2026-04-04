@@ -138,28 +138,55 @@ export default async function JobsPage({
   const openNow = rows.filter((row) => row.status !== "COMPLETED" && row.status !== "CLOSED").length;
   const readyForPickup = rows.filter((row) => row.status === "READY_FOR_PICKUP").length;
   const awaitingApproval = rows.filter((row) => row.status === "AWAITING_APPROVAL").length;
+  const pulseBaseFilters = Object.fromEntries(
+    Object.entries(preserved).filter(([key]) => key !== "status" && key !== "page"),
+  ) as Record<string, string>;
+
+  function pulseHref(statusCsv?: string) {
+    const params = new URLSearchParams(pulseBaseFilters);
+    if (statusCsv) params.set("status", statusCsv);
+    const query = params.toString();
+    return query ? `/jobs?${query}` : "/jobs";
+  }
+
+  const activeStatusKey = statuses.join(",");
 
   return (
     <div className="space-y-5">
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
-        <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Pulse</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Pulse</p>
+          <span className="text-[11px] text-[var(--ink-muted)]">Tap to filter</span>
+        </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <Link
+            href={pulseHref()}
+            className={`rounded-lg border px-3 py-2 ${!activeStatusKey ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
+          >
             <p className="text-[11px] text-[var(--ink-muted)]">Results</p>
             <p className="text-lg font-semibold">{total}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          </Link>
+          <Link
+            href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
+            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
+          >
             <p className="text-[11px] text-[var(--ink-muted)]">Open Now</p>
             <p className="text-lg font-semibold text-[var(--brand)]">{openNow}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          </Link>
+          <Link
+            href={pulseHref("AWAITING_APPROVAL")}
+            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "AWAITING_APPROVAL" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
+          >
             <p className="text-[11px] text-[var(--ink-muted)]">Awaiting Approval</p>
             <p className="text-lg font-semibold text-amber-700">{awaitingApproval}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          </Link>
+          <Link
+            href={pulseHref("READY_FOR_PICKUP")}
+            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "READY_FOR_PICKUP" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
+          >
             <p className="text-[11px] text-[var(--ink-muted)]">Ready Pickup</p>
             <p className="text-lg font-semibold text-emerald-700">{readyForPickup}</p>
-          </div>
+          </Link>
         </div>
       </div>
 

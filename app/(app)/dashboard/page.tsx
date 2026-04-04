@@ -472,6 +472,10 @@ export default async function DashboardPage({
     const receivedDelta = receivedSelectedCount - receivedPrevCount;
     const completedDeltaCount = completedSelectedCount - completedPrevCount;
     const closedDelta = closedSelectedCount - closedPrevCount;
+    const reportHref =
+      period === "year"
+        ? `/reports?period=year&year=${selectedYear}`
+        : `/reports?period=month&month=${selectedMonthString}`;
 
     return (
       <div className="space-y-5">
@@ -480,7 +484,7 @@ export default async function DashboardPage({
             { label: "Received", value: String(receivedSelectedCount), href: `/jobs?from=${selectedFrom}&to=${selectedTo}` },
             { label: "Completed", value: String(completedSelectedCount), href: `/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`, tone: "success" },
             { label: "Closed", value: String(closedSelectedCount), href: `/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`, tone: "warning" },
-            { label: "Revenue", value: formatMoney(revenueSelected, currency), href: `/reports?month=${selectedMonthString}`, tone: "brand" },
+            { label: "Revenue", value: formatMoney(revenueSelected, currency), href: reportHref, tone: "brand" },
           ]}
         />
 
@@ -512,7 +516,7 @@ export default async function DashboardPage({
             </p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open closure view →</p>
           </Link>
-          <Link href={`/reports?month=${selectedMonthString}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoney(revenueSelected, currency)}</p>
             <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
@@ -546,7 +550,7 @@ export default async function DashboardPage({
             className="flex items-center"
             selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
           />
-          <Link href={`/reports?month=${selectedMonthString}`} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">
+          <Link href={reportHref} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">
             Open Report Downloads
           </Link>
         </div>
@@ -608,7 +612,7 @@ export default async function DashboardPage({
           <p className="mt-1 text-[var(--ink-muted)]">
             For full trend charts and downloadable packs, use the Reports workspace.
           </p>
-          <Link href={`/reports?month=${selectedMonthString}`} className="mt-2 inline-block text-xs font-medium text-[var(--brand)] hover:underline">
+          <Link href={reportHref} className="mt-2 inline-block text-xs font-medium text-[var(--brand)] hover:underline">
             Open Reports →
           </Link>
         </div>
@@ -618,7 +622,7 @@ export default async function DashboardPage({
         </div>
 
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
-          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Download detailed CSV packs from <Link href={`/reports?month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">Reports</Link>.
+          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Download detailed CSV packs from <Link href={reportHref} className="text-[var(--brand)] hover:underline">Reports</Link>.
         </div>
       </div>
     );
@@ -631,6 +635,10 @@ export default async function DashboardPage({
     const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
     const selectedPeriodLabel = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
     const selectablePeriods = period === "year" ? yearOptions(6) : monthOptions(18);
+    const reportHref =
+      period === "year"
+        ? `/reports?period=year&year=${selectedYear}`
+        : `/reports?period=month&month=${selectedPeriodLabel}`;
 
     const [completedThisMonth, pendingBilling, externalCompleted] = await Promise.all([
       prisma.job.findMany({
@@ -699,7 +707,7 @@ export default async function DashboardPage({
         />
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
-          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold">{formatMoney(monthRevenue, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open reports →</p>
@@ -714,7 +722,7 @@ export default async function DashboardPage({
             <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{pendingBilling}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs before completion →</p>
           </Link>
-          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
             <p className="mt-2 text-3xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>

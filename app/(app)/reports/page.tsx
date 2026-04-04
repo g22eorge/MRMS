@@ -7,6 +7,7 @@ import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -105,7 +106,7 @@ export default async function ReportsPage({
   const filters = await searchParams;
   const { user } = await getCurrentUserRole();
   const period: "month" | "year" = filters.period === "year" ? "year" : "month";
-  if (user.role !== "ADMIN" && user.role !== "OPS") {
+  if (!can.viewAccountsSummary(user)) {
     redirect("/dashboard");
   }
 
@@ -255,6 +256,7 @@ export default async function ReportsPage({
       : monthLabel(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
   const currency = getAppCurrency();
   const selectableMonths = period === "year" ? yearOptions(6) : monthOptions(18);
+  const monthlyExportMonth = monthLabel(selectedMonth.year, selectedMonth.month);
   const trendAnchor = selectedRange.end;
   const trendMonths = monthSequence(trendAnchor.getFullYear(), trendAnchor.getMonth() + 1, 6);
 
@@ -391,25 +393,33 @@ export default async function ReportsPage({
       caption: "Queue delay risk by status bands",
       href: "/api/reports/export?type=pipeline-aging",
     },
-    {
-      title: "Repair Margin",
-      caption: "Job-level client bill vs technician cost",
-      href: `/api/reports/export?type=revenue-variance&month=${selectedMonthString}`,
-    },
+    ...(user.role === "ADMIN"
+      ? [
+          {
+            title: "Repair Margin",
+            caption: "Job-level client bill vs technician cost",
+            href: `/api/reports/export?type=revenue-variance&month=${monthlyExportMonth}`,
+          },
+        ]
+      : []),
     {
       title: "Technician Performance",
       caption: "Throughput and completion mix per technician",
       href: "/api/reports/export?type=technician-performance",
     },
-    {
-      title: "External Payouts",
-      caption: "Outstanding and paid external technician fees",
-      href: "/api/reports/export?type=external-payouts",
-    },
+    ...(user.role === "ADMIN"
+      ? [
+          {
+            title: "External Payouts",
+            caption: "Outstanding and paid external technician fees",
+            href: "/api/reports/export?type=external-payouts",
+          },
+        ]
+      : []),
     {
       title: "Device Performance",
       caption: "Device type completion, margin, and trend",
-      href: `/api/reports/export?type=device-performance&month=${selectedMonthString}`,
+      href: `/api/reports/export?type=device-performance&month=${monthlyExportMonth}`,
     },
   ];
 
@@ -863,13 +873,20 @@ export default async function ReportsPage({
       </div>
 
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
-        Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Use
-        {" "}
-        <Link href={`/api/reports/export?type=revenue-variance&month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">
-          Repair Margin CSV
-        </Link>
-        {" "}
-        to investigate client bill vs external tech bill variance.
+        Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."}
+        {user.role === "ADMIN" ? (
+          <>
+            {" "}Use
+            {" "}
+            <Link href={`/api/reports/export?type=revenue-variance&month=${monthlyExportMonth}`} className="text-[var(--brand)] hover:underline">
+              Repair Margin CSV
+            </Link>
+            {" "}
+            to investigate client bill vs external tech bill variance.
+          </>
+        ) : (
+          <> Use Pipeline Aging and Device Performance CSVs to drill into operational bottlenecks.</>
+        )}
       </div>
     </div>
   );

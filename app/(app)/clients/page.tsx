@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -28,7 +29,7 @@ export default async function ClientsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { user } = await getCurrentUserRole();
-  if (user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL") {
+  if (!can.viewClientInfo(user)) {
     redirect("/dashboard");
   }
 
