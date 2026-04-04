@@ -137,7 +137,7 @@ export default async function JobsPage({
 
   return (
     <div className="space-y-5">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Pulse</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -172,7 +172,7 @@ export default async function JobsPage({
 
       {isExternalTech ? (
         <>
-          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
             <input
               name="q"
               defaultValue={filters.q}
@@ -199,7 +199,7 @@ export default async function JobsPage({
               </div>
             </details>
           </form>
-          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-5">
+          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-5">
             <input
               name="q"
               defaultValue={filters.q}
@@ -225,7 +225,7 @@ export default async function JobsPage({
         </>
       ) : (
         <div className="space-y-2">
-          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
             <input
               name="q"
               defaultValue={filters.q}
@@ -268,7 +268,7 @@ export default async function JobsPage({
               </div>
             </details>
           </form>
-          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-6">
+          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-6">
             <input
               name="q"
               defaultValue={filters.q}
@@ -302,7 +302,7 @@ export default async function JobsPage({
             <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
             <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
             <button className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-            <p className="mono md:col-span-6 text-[11px] text-[var(--ink-muted)]">Tip: `RECEIVED,IN_REPAIR,COMPLETED`</p>
+            <p className="mono lg:col-span-6 text-[11px] text-[var(--ink-muted)]">Tip: `RECEIVED,IN_REPAIR,COMPLETED`</p>
           </form>
           <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> AWAITING_APPROVAL -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED or CLOSED. Use job workflow notes for parts pending, specialist escalation, or closure reason." />
         </div>

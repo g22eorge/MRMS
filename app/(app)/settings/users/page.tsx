@@ -172,7 +172,7 @@ export default async function UsersPage() {
     <div className="space-y-4">
       <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
-        <div className="grid gap-2 md:hidden">
+        <div className="grid gap-2 lg:hidden">
           <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <div className="grid grid-cols-2 gap-2">
@@ -189,18 +189,18 @@ export default async function UsersPage() {
           </details>
         </div>
 
-        <div className="hidden gap-2 md:grid md:grid-cols-4">
+        <div className="hidden gap-2 lg:grid lg:grid-cols-4">
           <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input name="phone" placeholder="Phone (optional)" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input required name="password" type="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
         </div>
 
-        <div className="hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:block">
+        <div className="hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 lg:block">
           <label htmlFor="create-user-role" className="mb-1 block text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">
             Role
           </label>
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="grid gap-2 lg:grid-cols-4">
             {roleChoices.map((role) => (
               <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
                 <input type="radio" name="role" value={role} defaultChecked={role === Role.OPS} />

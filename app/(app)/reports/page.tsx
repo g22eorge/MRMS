@@ -414,7 +414,7 @@ export default async function ReportsPage({
         defaultOpen
         storageKey="reports.exportCenter"
         groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
       >
         <div className="grid gap-2">
           {exportItems.map((item) => (
@@ -430,7 +430,7 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
+      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Downloads</p>
@@ -460,7 +460,7 @@ export default async function ReportsPage({
         defaultOpen
         storageKey="reports.performanceMetrics"
         groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
       >
         <div className="grid gap-2">
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -492,7 +492,7 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-3">
+      <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
           <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
@@ -533,7 +533,7 @@ export default async function ReportsPage({
         title="Signal Tiles"
         storageKey="reports.signalTiles"
         groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
       >
         <div className="grid gap-2">
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -554,7 +554,7 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+      <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completion Momentum</p>
           <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
@@ -610,7 +610,7 @@ export default async function ReportsPage({
         title="Device Performance Drill-down"
         storageKey="reports.deviceDrilldown"
         groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
       >
         <div className="space-y-2">
           {deviceInsights.map((row) => (
@@ -632,7 +632,7 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="panel-shadow hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
+      <div className="panel-shadow hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
         <p className="mb-3 text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
         {deviceInsights.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No jobs found for this month.</p>
@@ -706,7 +706,7 @@ export default async function ReportsPage({
         title="Operational Risks"
         storageKey="reports.operationalRisks"
         groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
       >
         <div className="space-y-3">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">

@@ -125,7 +125,7 @@ export default async function DashboardPage({
           ]}
         />
 
-        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{jobs.length}</p>
@@ -155,7 +155,7 @@ export default async function DashboardPage({
           title="Recent Assigned Jobs"
           storageKey="dashboard.external.recentAssigned"
           groupName="mobile-dashboard-sections"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
         >
           {jobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -180,7 +180,7 @@ export default async function DashboardPage({
           )}
         </PersistedDisclosure>
 
-        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
+        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {jobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -230,7 +230,7 @@ export default async function DashboardPage({
           ]}
         />
 
-        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{assignedJobs.length}</p>
@@ -257,7 +257,7 @@ export default async function DashboardPage({
           title="Recent Assigned Jobs"
           storageKey="dashboard.internal.recentAssigned"
           groupName="mobile-dashboard-sections"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
         >
           {assignedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -273,7 +273,7 @@ export default async function DashboardPage({
           )}
         </PersistedDisclosure>
 
-        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
+        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {assignedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -396,7 +396,7 @@ export default async function DashboardPage({
           ]}
         />
 
-        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{receivedSelectedCount}</p>
@@ -452,7 +452,7 @@ export default async function DashboardPage({
           defaultOpen
           storageKey="dashboard.admin.monthlySignals"
           groupName="mobile-dashboard-sections"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
         >
           <div className="grid gap-2">
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -476,7 +476,7 @@ export default async function DashboardPage({
           </div>
         </PersistedDisclosure>
 
-        <div className="hidden gap-4 md:grid md:grid-cols-4">
+        <div className="hidden gap-4 lg:grid lg:grid-cols-4">
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
             <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
@@ -499,7 +499,7 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm md:hidden">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm lg:hidden">
           <p className="font-semibold text-[var(--ink)]">Quick mobile briefing</p>
           <p className="mt-1 text-[var(--ink-muted)]">
             For full trend charts and downloadable packs, use the Reports workspace.
@@ -509,7 +509,7 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <ReportsCharts statusData={statusData} deviceData={deviceData} />
         </div>
 
@@ -568,7 +568,7 @@ export default async function DashboardPage({
           ]}
         />
 
-        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue this month</p>
             <p className="mt-2 text-3xl font-semibold">{formatMoney(monthRevenue, currency)}</p>
@@ -610,7 +610,7 @@ export default async function DashboardPage({
         ]}
       />
 
-      <div className="hidden gap-3 md:grid md:grid-cols-3">
+      <div className="hidden gap-3 lg:grid lg:grid-cols-3">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs</p>
           <p className="mt-2 text-3xl font-semibold sm:text-4xl">{totalJobs}</p>

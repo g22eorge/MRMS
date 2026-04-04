@@ -82,7 +82,7 @@ export default async function TechnicianPayoutsPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
+      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
         <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
           <p className="text-sm font-semibold">{formatMoney(total, currency)}</p>
@@ -108,7 +108,7 @@ export default async function TechnicianPayoutsPage({
         </Link>
       </div>
 
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
         <input
           name="q"
           defaultValue={filters.q}
@@ -117,7 +117,7 @@ export default async function TechnicianPayoutsPage({
         />
       </form>
 
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-4">
+      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-4">
         <input
           name="q"
           defaultValue={filters.q}
@@ -147,7 +147,7 @@ export default async function TechnicianPayoutsPage({
         </div>
       </form>
 
-      <div className="hidden gap-3 md:grid md:grid-cols-3">
+      <div className="hidden gap-3 lg:grid lg:grid-cols-3">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Total in view</p>
           <p className="text-2xl font-semibold">{formatMoney(total, currency)}</p>

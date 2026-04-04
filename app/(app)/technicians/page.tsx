@@ -123,7 +123,7 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
+      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
         <Link href="/technicians" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Assigned</p>
           <p className="text-sm font-semibold">{assignedCount}</p>
@@ -142,7 +142,7 @@ export default async function TechniciansPage({
         </Link>
       </div>
 
-      <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-4">
+      <div className="hidden gap-3 lg:grid lg:grid-cols-4">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Assigned</p>
           <p className="text-2xl font-semibold">{assignedCount}</p>
@@ -161,7 +161,7 @@ export default async function TechniciansPage({
         </div>
       </div>
 
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
         <input
           name="q"
           defaultValue={filters.q}
@@ -170,7 +170,7 @@ export default async function TechniciansPage({
         />
       </form>
 
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-4">
+      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-4">
         <input
           name="q"
           defaultValue={filters.q}
@@ -197,7 +197,7 @@ export default async function TechniciansPage({
         </div>
       </form>
 
-      <div className="panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 flex flex-wrap gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 md:top-24">
+      <div className="panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 flex flex-wrap gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 lg:top-24">
         {quickActions.map((action) => (
           <Link key={action.href} href={action.href} className="btn-premium-secondary rounded-md px-3 py-1.5 text-xs">
             {action.label}
@@ -207,7 +207,7 @@ export default async function TechniciansPage({
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Queue Map</p>
-        <div className="mt-2 grid grid-cols-2 gap-2 md:hidden">
+        <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
           {statusCounts.map((status) => (
             <div key={`mobile-${status.key}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] text-[var(--ink-muted)]">{status.key.replaceAll("_", " ")}</p>
@@ -215,7 +215,7 @@ export default async function TechniciansPage({
             </div>
           ))}
         </div>
-        <div className="mt-2 hidden gap-2 md:grid md:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-2 hidden gap-2 lg:grid lg:grid-cols-5">
           {statusCounts.map((status) => (
             <div key={status.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] text-[var(--ink-muted)]">{status.key.replaceAll("_", " ")}</p>
@@ -233,7 +233,7 @@ export default async function TechniciansPage({
         {spotlightJobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">Nothing urgent right now.</p>
         ) : (
-          <div className="grid gap-2 md:grid-cols-3">
+          <div className="grid gap-2 lg:grid-cols-3">
             {spotlightJobs.map((job) => (
               <div key={`spotlight-${job.id}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <div className="flex items-center justify-between gap-2">
