@@ -170,7 +170,7 @@ export default async function JobsPage({
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
             className={`rounded-lg border px-3 py-2 ${activeStatusKey === "RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
           >
-            <p className="text-[11px] text-[var(--ink-muted)]">Open Now</p>
+            <p className="text-[11px] text-[var(--ink-muted)]">Active Queue</p>
             <p className="text-lg font-semibold text-[var(--brand)]">{openNow}</p>
           </Link>
           <Link

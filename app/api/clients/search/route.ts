@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
-  await getCurrentUserRole();
+  const { user } = await getCurrentUserRole();
+  if (!can.viewClientInfo(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const phone = req.nextUrl.searchParams.get("phone")?.trim();
 
   if (!phone || phone.length < 3) {
