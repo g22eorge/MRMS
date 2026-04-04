@@ -7,6 +7,7 @@ import {
   RepairPath,
   Role,
 } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -208,6 +209,7 @@ export async function updateJobAction(formData: FormData) {
     payload.externalTechFee !== undefined ||
     payload.externalPaid !== undefined ||
     payload.externalPaymentRef !== undefined;
+  const canManagePayouts = user.role === "ADMIN" || can.reviewExternalBills(permissionUser);
 
   const adminFinancialChangeRequested =
     payload.clientBill !== undefined || payload.vatApplicable !== undefined;
@@ -216,11 +218,11 @@ export async function updateJobAction(formData: FormData) {
     return { error: "Only authorized invoice approvers can update client billing controls." };
   }
 
-  if (payoutChangeRequested && user.role !== "ADMIN") {
-    return { error: "Only admin can update payout controls." };
+  if (payoutChangeRequested && !canManagePayouts) {
+    return { error: "Only authorized finance users can update payout controls." };
   }
 
-  if (payoutChangeRequested && user.role === "ADMIN") {
+  if (payoutChangeRequested && canManagePayouts) {
     const payoutColumnsReady = await hasJobPayoutColumns();
     if (!payoutColumnsReady) {
       return {
@@ -302,9 +304,9 @@ export async function updateJobAction(formData: FormData) {
     if (can.approveInvoices(permissionUser)) {
       data.clientBill = payload.clientBill;
     }
-    if (user.role === "ADMIN") {
+    if (canManagePayouts) {
       data.externalTechFee = payload.externalTechFee;
-      if (payload.vatApplicable !== undefined) {
+      if (user.role === "ADMIN" && payload.vatApplicable !== undefined) {
         data.vatApplicable = payload.vatApplicable === "true";
       }
 
@@ -429,6 +431,11 @@ export async function updateJobAction(formData: FormData) {
       detail: JSON.stringify(payload),
     },
   });
+
+  revalidatePath(`/jobs/${payload.jobId}`);
+  revalidatePath("/jobs");
+  revalidatePath("/technicians");
+  revalidatePath("/dashboard");
 
   return { success: true };
 }

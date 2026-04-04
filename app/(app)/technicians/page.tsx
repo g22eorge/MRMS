@@ -12,6 +12,14 @@ type SearchParams = {
   dismiss?: string;
 };
 
+const ACTIVE_BOARD_STATUSES = [
+  "RECEIVED",
+  "DIAGNOSING",
+  "AWAITING_APPROVAL",
+  "IN_REPAIR",
+  "READY_FOR_PICKUP",
+];
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -50,7 +58,6 @@ function nextCourse(job: {
       ? "Prepare referral notes and submit external handoff."
       : "Finalize diagnosis and move job to internal repair.";
   }
-  if (job.status === "REFERRED") return "Collect external estimate and confirm timeline.";
   if (job.status === "AWAITING_APPROVAL") return "Await client approval before active repair work.";
   if (job.status === "IN_REPAIR") {
     if (job.ready) return "Run final checks and prepare pickup handoff.";
@@ -100,8 +107,6 @@ export default async function TechniciansPage({
   const jobs = await prisma.job.findMany({
     where: {
       ...where,
-      ...(statusFilter ? { status: statusFilter } : {}),
-      ...(filters.ready === "1" ? { status: { in: ["IN_REPAIR"] }, clientApproved: true } : {}),
       ...(filters.q
         ? {
             OR: [
@@ -118,7 +123,14 @@ export default async function TechniciansPage({
     },
   });
 
-  const normalized = jobs.map((job) => {
+  const normalized = jobs
+    .filter((job) => {
+      if (statusFilter && job.status !== statusFilter) return false;
+      if (!statusFilter && !ACTIVE_BOARD_STATUSES.includes(job.status)) return false;
+      if (filters.ready === "1" && !(job.status === "IN_REPAIR" && job.clientApproved === true)) return false;
+      return true;
+    })
+    .map((job) => {
     const extendedJob = job as typeof job & { timelineNote?: string | null };
     const ageDays = Math.floor((job.updatedAt.getTime() - job.receivedAt.getTime()) / (1000 * 60 * 60 * 24));
     const elapsedMinutes = Math.max(0, Math.floor((job.updatedAt.getTime() - job.receivedAt.getTime()) / (1000 * 60)));
@@ -137,7 +149,7 @@ export default async function TechniciansPage({
       priority,
       timelineNote: extendedJob.timelineNote ?? null,
     };
-  });
+    });
 
   const sortedJobs = [...normalized].sort((a, b) => {
     if (a.ready !== b.ready) return Number(b.ready) - Number(a.ready);

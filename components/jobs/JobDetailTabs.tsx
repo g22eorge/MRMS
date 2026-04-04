@@ -20,6 +20,13 @@ function formatUtcDateTime(value: Date | string) {
   return `${date.toISOString().slice(0, 19).replace("T", " ")} UTC`;
 }
 
+function formatBillAmount(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 type Props = {
   role: Role;
   permissions?: string[];
@@ -120,6 +127,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+  const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
   const canAssignJobs = can.assignJobs(permissionUser);
   const canUpdateClientCommunication = can.approveWork(permissionUser);
   const isIntake = role === "INTAKE";
@@ -151,6 +159,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
   const clientBillValue = typeof job.clientBill === "number" ? job.clientBill : 0;
   const repairCostBeforeVat = vatApplicable ? clientBillValue / 1.18 : clientBillValue;
   const vatAmount = vatApplicable ? Math.max(clientBillValue - repairCostBeforeVat, 0) : 0;
+  const hasPayoutControls = canManagePayouts && job.repairPath === "EXTERNAL";
 
   const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
   const assignedRole = job.assignedTo?.role;
@@ -397,7 +406,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             {job.statusNote ? <p className="text-sm text-slate-600">Workflow note: {job.statusNote}</p> : null}
             {isIntake ? (
               <p className="text-sm text-slate-700">
-                Client-facing cost: {typeof job.clientBill === "number" ? job.clientBill.toFixed(2) : "Pending final approval"}
+                Client-facing cost: {typeof job.clientBill === "number" ? formatBillAmount(job.clientBill) : "Pending final approval"}
               </p>
             ) : null}
           </div>
@@ -603,17 +612,33 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           ) : null}
           {canManageFinancials ? (
             <p className="text-xs text-slate-600">
-              Repair cost: {repairCostBeforeVat.toFixed(2)} | VAT: {vatAmount.toFixed(2)} | Total: {clientBillValue.toFixed(2)}
+              Repair cost: {formatBillAmount(repairCostBeforeVat)} | VAT: {formatBillAmount(vatAmount)} | Total: {formatBillAmount(clientBillValue)}
             </p>
           ) : null}
           {canManageFinancials ? (
               <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-                Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${existingMargin.toFixed(2)}`}
+                Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${formatBillAmount(existingMargin)}`}
               </p>
           ) : null}
-          {canManageFinancials && job.repairPath === "EXTERNAL" ? (
+          {hasPayoutControls ? (
             <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
+              <div className="rounded-md border border-slate-200 bg-white p-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-slate-600">Payout status</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {job.externalPaid ? "Paid" : "Not paid"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  External bill: {typeof job.externalTechBill === "number" ? formatBillAmount(job.externalTechBill) : "-"}
+                  {" | "}
+                  Payout amount: {typeof job.externalTechFee === "number" ? formatBillAmount(job.externalTechFee) : "-"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {job.externalPaidAt ? `Paid on ${formatUtcDateTime(job.externalPaidAt)}` : "Awaiting payout confirmation"}
+                </p>
+              </div>
               <input
                 name="externalTechFee"
                 type="number"
@@ -636,9 +661,16 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
+                  disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Save Billing
+                </button>
+                <button
+                  type="submit"
                   name="externalPaid"
                   value="true"
-                  disabled={isFinancialPending}
+                  disabled={isFinancialPending || job.externalPaid === true}
                   className="btn-premium-success w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Paid
@@ -647,7 +679,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                   type="submit"
                   name="externalPaid"
                   value="false"
-                  disabled={isFinancialPending}
+                  disabled={isFinancialPending || job.externalPaid === false}
                   className="btn-premium-warning w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Unpaid
@@ -655,12 +687,30 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               </div>
             </div>
           ) : null}
-          <button
-            disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-            className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-          >
-            Save
-          </button>
+          {!hasPayoutControls && job.repairPath === "EXTERNAL" ? (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
+              <p className="mt-1 text-xs text-slate-600">
+                You can view financial summaries, but payout controls require finance authorization.
+              </p>
+            </div>
+          ) : null}
+          {job.repairPath !== "EXTERNAL" ? (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
+              <p className="mt-1 text-xs text-slate-600">
+                Payout controls appear only when this job is set to external repair.
+              </p>
+            </div>
+          ) : null}
+          {!hasPayoutControls ? (
+            <button
+              disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+              className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Save Billing
+            </button>
+          ) : null}
           {savedSection === "financials" ? <p className="text-xs text-emerald-700">Saved</p> : null}
         </form>
       ) : null}
