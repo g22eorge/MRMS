@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -22,8 +23,9 @@ export default async function JobDetailPage({
       ? returnTo
       : "/jobs";
 
+  const canOverseeExternal = user.permissions.includes("can_view_external_updates") || user.permissions.includes("can_view_external_quotes");
   const where =
-    user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
+    user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !canOverseeExternal)
       ? { id, assignedToId: session.user.id }
       : { id };
 
@@ -90,7 +92,7 @@ export default async function JobDetailPage({
   }
 
   const technicians =
-    user.role === "ADMIN" || user.role === "OPS"
+    can.assignJobs(user)
       ? await prisma.user.findMany({
           where: {
             isActive: true,
@@ -107,5 +109,5 @@ export default async function JobDetailPage({
     clientBill: getClientBill(job),
   };
 
-  return <JobDetailTabs role={user.role} job={jobWithBilling} technicians={technicians} />;
+  return <JobDetailTabs role={user.role} permissions={user.permissions} job={jobWithBilling} technicians={technicians} />;
 }

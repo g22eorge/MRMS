@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -53,7 +54,7 @@ export async function generateJobNumber() {
 export async function createJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
 
-  if (!(user.role === "ADMIN" || user.role === "OPS" || user.role === "INTAKE")) {
+  if (!can.createJob(user)) {
     return { error: "You cannot create jobs." };
   }
 

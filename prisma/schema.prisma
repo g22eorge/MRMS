@@ -26,11 +26,23 @@ model User {
 
   sessions     Session[]
   accounts     Account[]
+  permissionGrants UserPermission[]
   jobsCreated  Job[]      @relation("CreatedBy")
   jobsAssigned Job[]      @relation("AssignedTo")
   payoutsMarked Job[]     @relation("PayoutMarkedBy")
   auditLogs    AuditLog[]
   clientNotes  ClientNote[]
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([permission])
 }
 
 model Session {

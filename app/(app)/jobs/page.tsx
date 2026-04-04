@@ -43,9 +43,10 @@ export default async function JobsPage({
   const pageSize = 20;
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
   const orderBy = sort === "job_number_desc" ? { jobNumber: "desc" as const } : { receivedAt: "desc" as const };
+  const internalCanSearchAll = user.role === "TECHNICIAN_INTERNAL" && can.searchJobs(user);
 
   const whereBase = {
-    ...(user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
+    ...(user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !internalCanSearchAll)
       ? { assignedToId: session.user.id }
       : {}),
     ...(statuses.length > 0 ? { status: { in: statuses } } : {}),
@@ -96,6 +97,7 @@ export default async function JobsPage({
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   const isExternalTech = user.role === "TECHNICIAN_EXTERNAL";
+  const lookupByPhone = can.viewClientInfo(user);
 
   async function deleteJobAction(formData: FormData) {
     "use server";
@@ -161,7 +163,7 @@ export default async function JobsPage({
         </div>
       </div>
 
-      {can.createJob(user.role) ? (
+      {can.createJob(user) ? (
         <div className="flex justify-end">
           <Link
             href="/jobs/new"
@@ -231,7 +233,7 @@ export default async function JobsPage({
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder={user.role === "INTAKE" ? "Search job # or phone and press Enter" : "Search job # or client and press Enter"}
+              placeholder={lookupByPhone ? "Search job # or phone and press Enter" : "Search job # or client and press Enter"}
               className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
             />
             <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
@@ -274,7 +276,7 @@ export default async function JobsPage({
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder={user.role === "INTAKE" ? "Search job # or phone" : "Search job # or client"}
+              placeholder={lookupByPhone ? "Search job # or phone" : "Search job # or client"}
               className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
             />
             <input
@@ -334,6 +336,7 @@ export default async function JobsPage({
         <JobTable
           jobs={rows}
           role={user.role}
+          permissions={user.permissions}
           canDelete={user.role === "ADMIN"}
           deleteAction={deleteJobAction}
           returnTo={returnTo}

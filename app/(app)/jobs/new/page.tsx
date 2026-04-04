@@ -6,7 +6,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 export default async function NewJobPage() {
   const { user } = await getCurrentUserRole();
-  if (!can.createJob(user.role)) {
+  if (!can.createJob(user)) {
     redirect("/jobs");
   }
 

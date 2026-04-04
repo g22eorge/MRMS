@@ -4,12 +4,22 @@ import Link from "next/link";
 import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 
+import { can } from "@/lib/permissions";
+
 type QuickAction = {
   href: string;
   label: string;
 };
 
-function roleActions(role: Role): QuickAction[] {
+function roleActions(role: Role, permissions: string[]): QuickAction[] {
+  const permissionUser = { role, permissions };
+  if (role === "TECHNICIAN_INTERNAL" && can.createJob(permissionUser)) {
+    return [
+      { href: "/jobs/new", label: "New Intake" },
+      { href: "/jobs", label: "Lookup Jobs" },
+      { href: "/dashboard", label: "Overview" },
+    ];
+  }
   if (role === "ADMIN") {
     return [
       { href: "/jobs/new", label: "New Job" },
@@ -49,9 +59,9 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function MobileQuickActions({ role }: { role: Role }) {
+export function MobileQuickActions({ role, permissions = [] }: { role: Role; permissions?: string[] }) {
   const pathname = usePathname();
-  const actions = roleActions(role);
+  const actions = roleActions(role, permissions);
 
   return (
     <div className="mobile-quick-actions glass grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] px-2 py-2 lg:hidden">

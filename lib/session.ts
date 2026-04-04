@@ -37,7 +37,13 @@ export async function getCurrentUserRole() {
   const session = await requireSession();
   const baseUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true, isActive: true, name: true, email: true },
+    select: {
+      role: true,
+      isActive: true,
+      name: true,
+      email: true,
+      permissionGrants: { select: { permission: true } },
+    },
   });
 
   let phone: string | null = null;
@@ -52,7 +58,13 @@ export async function getCurrentUserRole() {
     }
   }
 
-  const user = baseUser ? { ...baseUser, phone } : null;
+  const user = baseUser
+    ? {
+        ...baseUser,
+        phone,
+        permissions: baseUser.permissionGrants.map((grant) => grant.permission),
+      }
+    : null;
 
   if (!user?.isActive) {
     redirect("/login");

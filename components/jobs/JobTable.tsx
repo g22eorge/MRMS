@@ -5,6 +5,7 @@ import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { JobStatus } from "@/lib/job-status";
+import { can } from "@/lib/permissions";
 
 export type JobRow = {
   id: string;
@@ -48,21 +49,24 @@ function workflowReasonLabel(reason: HighlightReason) {
 export function JobTable({
   jobs,
   role,
+  permissions = [],
   canDelete,
   deleteAction,
   returnTo,
 }: {
   jobs: JobRow[];
   role: Role;
+  permissions?: string[];
   canDelete?: boolean;
   deleteAction?: (formData: FormData) => Promise<void>;
   returnTo?: string;
 }) {
+  const permissionUser = { role, permissions };
   const canSeeClient = role !== "TECHNICIAN_EXTERNAL";
-  const canSeeCost = role === "ADMIN" || role === "OPS" || role === "INTAKE";
-  const canSeeAssignment = role === "ADMIN" || role === "OPS" || role === "INTAKE";
-  const canEditPage = role !== "TECHNICIAN_EXTERNAL" && role !== "INTAKE";
-  const isIntake = role === "INTAKE";
+  const canSeeCost = can.viewApprovedCost(permissionUser) || can.reviewExternalBills(permissionUser);
+  const canSeeAssignment = can.assignJobs(permissionUser) || role === "ADMIN" || role === "OPS";
+  const canEditPage = role !== "TECHNICIAN_EXTERNAL" && !can.createJob(permissionUser);
+  const showClientFacingCostOnly = can.viewApprovedCost(permissionUser) && !can.reviewExternalBills(permissionUser);
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
@@ -94,7 +98,7 @@ export function JobTable({
                     <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</p>
                     {canSeeCost ? (
                       <p className="mt-1 text-[11px] font-semibold text-[var(--ink)]">
-                        {isIntake
+                        {showClientFacingCostOnly
                           ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
                             ? formatMoney(job.clientBill)
                             : "Pending final"
@@ -129,9 +133,9 @@ export function JobTable({
               ) : null}
               {canSeeCost ? (
                 <div>
-                  <p className="text-[var(--ink-muted)]">{isIntake ? "Client Cost" : "External Bill"}</p>
+                  <p className="text-[var(--ink-muted)]">{showClientFacingCostOnly ? "Client Cost" : "External Bill"}</p>
                   <p className="font-medium text-[var(--ink)]">
-                    {isIntake
+                    {showClientFacingCostOnly
                       ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
                         ? formatMoney(job.clientBill)
                         : "Pending final"
@@ -183,7 +187,7 @@ export function JobTable({
             {canSeeAssignment ? <th className="border-b border-[var(--line)] px-4 py-3">Assigned</th> : null}
             <th className="border-b border-[var(--line)] px-4 py-3">Flag</th>
             <th className="border-b border-[var(--line)] px-4 py-3">Received</th>
-            {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">{isIntake ? "Client Cost" : "External Bill"}</th> : null}
+            {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">{showClientFacingCostOnly ? "Client Cost" : "External Bill"}</th> : null}
             <th className="border-b border-[var(--line)] px-4 py-3">Actions</th>
           </tr>
         </thead>
@@ -213,7 +217,7 @@ export function JobTable({
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.receivedAt.toLocaleDateString()}</td>
               {canSeeCost ? (
                 <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
-                  {isIntake
+                  {showClientFacingCostOnly
                     ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
                       ? formatMoney(job.clientBill)
                       : "Pending final"

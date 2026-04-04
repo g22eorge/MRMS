@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
+import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { RoleActionButton, SubmitActionButton } from "@/components/settings/UserActionButtons";
@@ -35,6 +36,12 @@ const updatePasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const togglePermissionSchema = z.object({
+  id: z.string().min(1),
+  permission: z.string().min(3),
+  enabled: z.enum(["true", "false"]),
+});
+
 type UserDetailsState = {
   error?: string;
   success?: string;
@@ -48,13 +55,25 @@ const roleChoices: Role[] = [
   Role.TECHNICIAN_EXTERNAL,
 ];
 
-const roleDisplay: Record<Role, string> = {
+const roleDisplay: Partial<Record<Role, string>> = {
   ADMIN: "Admin",
   OPS: "Ops",
   INTAKE: "Intake",
   TECHNICIAN_INTERNAL: "Internal Tech",
   TECHNICIAN_EXTERNAL: "External Tech",
 };
+
+const safeRoleChoices = roleChoices.filter(
+  (role): role is Role => typeof role === "string" && role.length > 0,
+);
+
+function prettyRole(role: Role) {
+  return role.replaceAll("_", " ");
+}
+
+function roleLabel(role: Role) {
+  return roleDisplay[role] ?? prettyRole(role);
+}
 
 export default async function UsersPage() {
   const { user } = await getCurrentUserRole();
@@ -199,6 +218,47 @@ export default async function UsersPage() {
     revalidatePath("/settings/users");
   }
 
+  async function togglePermission(formData: FormData) {
+    "use server";
+    const { user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
+    const parsed = togglePermissionSchema.safeParse({
+      id: String(formData.get("id") ?? ""),
+      permission: String(formData.get("permission") ?? ""),
+      enabled: String(formData.get("enabled") ?? "false"),
+    });
+    if (!parsed.success) return;
+    if (!EXTRA_PERMISSIONS.includes(parsed.data.permission as (typeof EXTRA_PERMISSIONS)[number])) {
+      return;
+    }
+
+    if (parsed.data.enabled === "true") {
+      await prisma.userPermission.upsert({
+        where: {
+          userId_permission: {
+            userId: parsed.data.id,
+            permission: parsed.data.permission,
+          },
+        },
+        create: {
+          userId: parsed.data.id,
+          permission: parsed.data.permission,
+        },
+        update: {},
+      });
+    } else {
+      await prisma.userPermission.deleteMany({
+        where: {
+          userId: parsed.data.id,
+          permission: parsed.data.permission,
+        },
+      });
+    }
+
+    revalidatePath("/settings/users");
+  }
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -208,6 +268,7 @@ export default async function UsersPage() {
       phone: true,
       role: true,
       isActive: true,
+      permissionGrants: { select: { permission: true } },
     },
   });
 
@@ -221,8 +282,8 @@ export default async function UsersPage() {
           <div className="grid grid-cols-2 gap-2">
             <input required name="password" type="password" placeholder="Password" className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
             <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
-              {roleChoices.map((role) => (
-                <option key={`mobile-${role}`} value={role}>{role.replaceAll("_", " ")}</option>
+              {safeRoleChoices.map((role) => (
+                <option key={`mobile-${role}`} value={role}>{prettyRole(role)}</option>
               ))}
             </select>
           </div>
@@ -244,10 +305,10 @@ export default async function UsersPage() {
             Role
           </label>
           <div className="grid gap-2 lg:grid-cols-4">
-            {roleChoices.map((role) => (
+            {safeRoleChoices.map((role) => (
               <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
                 <input type="radio" name="role" value={role} defaultChecked={role === Role.OPS} />
-                <span>{role.replaceAll("_", " ")}</span>
+                <span>{prettyRole(role)}</span>
               </label>
             ))}
           </div>
@@ -271,7 +332,7 @@ export default async function UsersPage() {
                   <p className="truncate text-xs text-[var(--ink-muted)]">{u.phone || "No phone"}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleDisplay[u.role]}</span>
+                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleLabel(u.role)}</span>
                   <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
                     {u.isActive ? "Active" : "Inactive"}
                   </span>
@@ -285,14 +346,14 @@ export default async function UsersPage() {
             <div className="grid gap-2">
               <form action={updateRole} className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 <input type="hidden" name="id" value={u.id} />
-                {roleChoices.map((role) => (
-                  <RoleActionButton
-                    key={role}
-                    role={role}
-                    currentRole={u.role}
-                    label={roleDisplay[role]}
-                  />
-                ))}
+                {safeRoleChoices.map((role) => (
+                    <RoleActionButton
+                      key={role}
+                      role={role}
+                      currentRole={u.role}
+                      label={roleLabel(role)}
+                    />
+                  ))}
               </form>
               <form action={updatePassword} className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 sm:grid-cols-[1fr_auto]">
                 <input type="hidden" name="id" value={u.id} />
@@ -310,6 +371,25 @@ export default async function UsersPage() {
                   className="btn-premium w-full rounded-md px-3 py-2 text-sm text-white sm:w-auto"
                 />
               </form>
+              <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                <summary className="list-none text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Extended permissions</summary>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {EXTRA_PERMISSIONS.map((permission) => {
+                    const enabled = u.permissionGrants.some((grant) => grant.permission === permission);
+                    return (
+                      <form key={`${u.id}-${permission}`} action={togglePermission} className="rounded-md border border-[var(--line)] bg-white p-2">
+                        <input type="hidden" name="id" value={u.id} />
+                        <input type="hidden" name="permission" value={permission} />
+                        <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
+                        <button className="w-full text-left text-xs">
+                          <p className="font-semibold text-[var(--ink)]">{permission.replaceAll("_", " ")}</p>
+                          <p className={`mt-1 ${enabled ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>{enabled ? "Enabled" : "Disabled"}</p>
+                        </button>
+                      </form>
+                    );
+                  })}
+                </div>
+              </details>
               {u.isActive ? (
                 <form action={deactivate} className="sm:w-fit">
                   <input type="hidden" name="id" value={u.id} />

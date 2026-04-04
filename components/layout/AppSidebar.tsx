@@ -5,6 +5,8 @@ import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { can } from "@/lib/permissions";
+
 type NavGroup = "work" | "finance" | "admin" | "personal";
 
 const nav = [
@@ -166,15 +168,22 @@ function roleLabel(role: Role, href: string, label: string) {
   return label;
 }
 
-function orderedNavForRole(role: Role) {
+function orderedNavForRole(role: Role, permissions: string[]) {
   const visible = nav.filter((item) => isVisible(role, item.roles));
+  const permissionUser = { role, permissions };
+  if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/clients")) {
+    visible.push(nav.find((item) => item.href === "/clients")!);
+  }
+  if (can.viewAccountsSummary(permissionUser) && !visible.some((item) => item.href === "/reports")) {
+    visible.push(nav.find((item) => item.href === "/reports")!);
+  }
   const ordered = roleOrder[role] ?? visible.map((item) => item.href);
   const ranking = new Map(ordered.map((href, index) => [href, index]));
   return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
 }
 
-function groupedNavForRole(role: Role) {
-  const ordered = orderedNavForRole(role);
+function groupedNavForRole(role: Role, permissions: string[]) {
+  const ordered = orderedNavForRole(role, permissions);
   const groups = roleGroupOrder[role] ?? ["work", "personal"];
   return groups
     .map((group) => ({
@@ -199,11 +208,11 @@ function mobilePrimaryForRole(role: Role, items: ReturnType<typeof orderedNavFor
     .filter((item): item is (typeof items)[number] => Boolean(item));
 }
 
-export function AppSidebar({ role }: { role: Role }) {
+export function AppSidebar({ role, permissions = [] }: { role: Role; permissions?: string[] }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const visibleNav = orderedNavForRole(role);
-  const groupedNav = groupedNavForRole(role);
+  const visibleNav = orderedNavForRole(role, permissions);
+  const groupedNav = groupedNavForRole(role, permissions);
   const mobilePrimary = mobilePrimaryForRole(role, visibleNav);
   const mobileMore = visibleNav.filter((item) => !mobilePrimary.some((primary) => primary.href === item.href));
   const moreActive = mobileMore.some((item) => isActive(pathname, item.href));

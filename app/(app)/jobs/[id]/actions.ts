@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
 import { hasJobPayoutColumns } from "@/lib/payouts";
 import { sanitizeOptionalText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -85,7 +86,9 @@ function buildTimeline(payload: z.infer<typeof updateSchema>) {
 
 export async function updateJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
-  if (user.role === "INTAKE") {
+  const permissionUser = { role: user.role, permissions: user.permissions };
+  const isReadOnlyIntake = user.role === "INTAKE" && !can.editDiagnosis(permissionUser);
+  if (isReadOnlyIntake) {
     return { error: "Intake is read-only after job creation." };
   }
   const hasPartsNeededField = formData.has("partsNeeded");
@@ -198,8 +201,8 @@ export async function updateJobAction(formData: FormData) {
   const adminFinancialChangeRequested =
     payload.clientBill !== undefined || payload.vatApplicable !== undefined;
 
-  if (adminFinancialChangeRequested && user.role !== "ADMIN") {
-    return { error: "Only admin can update client billing controls." };
+  if (adminFinancialChangeRequested && !can.approveInvoices(permissionUser)) {
+    return { error: "Only authorized invoice approvers can update client billing controls." };
   }
 
   if (payoutChangeRequested && user.role !== "ADMIN") {
@@ -260,7 +263,7 @@ export async function updateJobAction(formData: FormData) {
     data.workDone = sanitizeOptionalText(payload.workDone) || undefined;
     data.partsReplaced = sanitizeOptionalText(payload.partsReplaced) || undefined;
     data.externalTechBill = payload.externalTechBill;
-    if ((user.role === "ADMIN" || user.role === "OPS") && payload.assignedToId !== undefined) {
+    if (can.assignJobs(permissionUser) && payload.assignedToId !== undefined) {
       const assigneeId = payload.assignedToId.trim();
       if (!assigneeId) {
         data.assignedToId = null;
@@ -285,8 +288,10 @@ export async function updateJobAction(formData: FormData) {
             : RepairPath.IN_HOUSE;
       }
     }
-    if (user.role === "ADMIN") {
+    if (can.approveInvoices(permissionUser)) {
       data.clientBill = payload.clientBill;
+    }
+    if (user.role === "ADMIN") {
       data.externalTechFee = payload.externalTechFee;
       if (payload.vatApplicable !== undefined) {
         data.vatApplicable = payload.vatApplicable === "true";
@@ -306,7 +311,7 @@ export async function updateJobAction(formData: FormData) {
         }
       }
     }
-    if (user.role === "ADMIN" || user.role === "OPS") {
+    if (user.role === "ADMIN" || user.role === "OPS" || can.assignJobs(permissionUser)) {
       if (payload.recommendationOption !== undefined) {
         data.recommendationOption = payload.recommendationOption;
       }

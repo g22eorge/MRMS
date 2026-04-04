@@ -3,6 +3,20 @@ import { DeviceType, JobStatus, RepairPath, Role } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
+const restExtendedPermissions = [
+  "can_intake",
+  "can_search_jobs",
+  "can_generate_job_cards",
+  "can_view_job_progress",
+  "can_view_approved_cost",
+  "can_assign_jobs",
+  "can_view_external_updates",
+  "can_view_external_quotes",
+  "can_review_external_bills",
+  "can_view_accounts_summary",
+  "can_approve_invoices",
+] as const;
+
 async function ensureCredentialAccount(userId: string, password: string) {
   const existing = await prisma.account.findFirst({
     where: { userId, providerId: "credential" },
@@ -47,6 +61,15 @@ async function deactivateUsersByEmail(emails: string[]) {
     where: { email: { in: emails } },
     data: { isActive: false },
   });
+}
+
+async function ensureUserPermissions(userId: string, permissions: readonly string[]) {
+  await prisma.userPermission.deleteMany({ where: { userId } });
+  for (const permission of permissions) {
+    await prisma.userPermission.create({
+      data: { userId, permission },
+    });
+  }
 }
 
 async function ensureClient({
@@ -223,6 +246,7 @@ async function main() {
     role: "TECHNICIAN_INTERNAL",
     password: defaultPassword,
   });
+  await ensureUserPermissions(techInternal.id, restExtendedPermissions);
 
   const techExternal = await ensureUser({
     name: "Abdu",
@@ -234,9 +258,10 @@ async function main() {
   const ops = await ensureUser({
     name: "Kakande",
     email: "ops@eagle.tech",
-    role: "OPS",
+    role: "INTAKE",
     password: defaultPassword,
   });
+  await ensureUserPermissions(ops.id, []);
 
   const ryan = await ensureUser({
     name: "Ryan",

@@ -22,6 +22,7 @@ function formatUtcDateTime(value: Date | string) {
 
 type Props = {
   role: Role;
+  permissions?: string[];
   technicians: Array<{
     id: string;
     name: string;
@@ -90,7 +91,7 @@ type Props = {
   };
 };
 
-export function JobDetailTabs({ role, job, technicians }: Props) {
+export function JobDetailTabs({ role, permissions = [], job, technicians }: Props) {
   const router = useRouter();
   const [active, setActive] = useState<(typeof tabs)[number]>("overview");
   const [savedSection, setSavedSection] = useState<
@@ -116,14 +117,17 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
     const timer = setTimeout(() => setSavedSection(null), 2000);
     return () => clearTimeout(timer);
   }, [savedSection]);
-  const canViewFinancials = role === "ADMIN" || role === "OPS";
-  const canManageFinancials = role === "ADMIN";
+  const permissionUser = { role, permissions };
+  const canViewFinancials = can.viewFinancials(permissionUser);
+  const canManageFinancials = can.approveInvoices(permissionUser);
+  const canAssignJobs = can.assignJobs(permissionUser);
+  const canUpdateClientCommunication = can.approveWork(permissionUser);
   const isIntake = role === "INTAKE";
 
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
     if (tab === "financials") return canViewFinancials;
-    if (tab === "timeline") return ["ADMIN", "OPS", "INTAKE"].includes(role);
+    if (tab === "timeline") return ["ADMIN", "OPS", "INTAKE"].includes(role) || can.viewClientInfo(permissionUser);
     if ((tab === "diagnosis" || tab === "repair") && isIntake) return false;
     return true;
   });
@@ -259,7 +263,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
             ) : null}
           </div>
 
-          {(role === "ADMIN" || role === "OPS") && technicians.length > 0 ? (
+          {canAssignJobs && technicians.length > 0 ? (
             <form
               action={(formData) => {
                 formData.set("jobId", job.id);
@@ -308,7 +312,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
             </form>
           ) : null}
 
-          {role === "ADMIN" || role === "OPS" ? (
+          {canUpdateClientCommunication ? (
             <form
               action={(formData) => {
                 formData.set("jobId", job.id);
@@ -398,7 +402,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
             ) : null}
           </div>
 
-          {role === "ADMIN" || role === "OPS" ? (
+          {canUpdateClientCommunication ? (
             <form
               action={(formData) => {
                 formData.set("jobId", job.id);
@@ -511,7 +515,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               Repair path: <span className="font-medium">{derivedRepairPath}</span>
             </div>
           ) : null}
-            <button disabled={isTerminal || !can.editDiagnosis(role) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
+            <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
               Save
             </button>
           {savedSection === "diagnosis" ? <p className="text-xs text-emerald-700">Saved</p> : null}
