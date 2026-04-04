@@ -66,8 +66,8 @@ export function ExternalTechJobView({
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="min-w-0 space-y-4">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
         {job.status === "IN_REPAIR" && job.clientApproved ? (
           <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -80,11 +80,11 @@ export function ExternalTechJobView({
             Awaiting client approval. Hold repair work until approval is confirmed.
           </div>
         ) : null}
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">
           {job.deviceType} / {job.brand} {job.model}
         </p>
-        <p className="mt-1 text-sm text-slate-600">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
-        <p className="text-sm text-slate-600">Accessories: {job.accessories ?? "-"}</p>
+        <p className="mt-1 text-sm text-slate-600 [overflow-wrap:anywhere]">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
+        <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">Accessories: {job.accessories ?? "-"}</p>
       </div>
 
       <form
@@ -102,7 +102,7 @@ export function ExternalTechJobView({
             router.refresh();
           });
         }}
-        className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+        className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
       >
         <h3 className="font-semibold">External Diagnosis</h3>
         <textarea
@@ -145,7 +145,7 @@ export function ExternalTechJobView({
             ))}
           </div>
 
-          <div className="grid gap-2 md:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-3">
             <input
               name="timelineMinValue"
               type="number"
@@ -204,10 +204,10 @@ export function ExternalTechJobView({
           ) : null}
         </div>
 
-        <div className="flex flex-nowrap gap-2 overflow-x-auto">
+        <div className="flex flex-wrap gap-2">
           <button
             disabled={isPending}
-            className="btn-premium whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            className="btn-premium w-full whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
           >
             {isPending ? "Saving..." : "Save"}
           </button>
@@ -217,14 +217,14 @@ export function ExternalTechJobView({
               name="nextStatus"
               value="COMPLETED"
               disabled={isPending}
-              className="btn-premium-success whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+              className="btn-premium-success w-full whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
             >
               Mark Completed
             </button>
           ) : null}
           <a
             href={returnTo}
-            className="btn-premium-secondary whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            className="btn-premium-secondary inline-flex w-full items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
           >
             Cancel
           </a>

@@ -177,12 +177,12 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
             : 4;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="min-w-0 space-y-4">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">{job.jobNumber}</h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">
               {job.deviceType} / {job.brand} {job.model}
             </p>
           </div>
@@ -190,13 +190,13 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {visibleTabs.map((tab) => (
           <button
             type="button"
             key={tab}
             onClick={() => setActive(tab)}
-            className={`rounded-md px-3 py-2.5 text-sm whitespace-nowrap ${
+            className={`whitespace-nowrap rounded-md px-3 py-2.5 text-sm capitalize ${
               active === tab ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-700"
             }`}
           >
@@ -239,21 +239,21 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
           <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 1 - Intake</p>
             <p className="font-medium">Issue</p>
-            <p className="text-sm text-slate-700">{job.issueDescription}</p>
+            <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">{job.issueDescription}</p>
           </div>
 
           <div className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 2 - Technician Diagnosis</p>
-            <p className="text-sm text-slate-600">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
+            <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
             <p className="text-sm text-slate-600">Repair path: {derivedRepairPath}</p>
             {job.diagnosisNotes ? (
-              <p className="text-sm text-slate-700">Internal diagnosis: {job.diagnosisNotes}</p>
+              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
             ) : null}
             {job.externalDiagnosis ? (
-              <p className="text-sm text-slate-700">External diagnosis: {job.externalDiagnosis}</p>
+              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">External diagnosis: {job.externalDiagnosis}</p>
             ) : null}
             {job.partsNeeded ? (
-              <p className="text-sm text-slate-700">Parts needed: {job.partsNeeded}</p>
+              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">Parts needed: {job.partsNeeded}</p>
             ) : null}
           </div>
 
@@ -273,9 +273,9 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   router.refresh();
                 });
               }}
-              className="mt-4 flex flex-wrap items-end gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+              className="mt-4 flex flex-wrap items-end gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-3 [&_*]:min-w-0"
             >
-              <div className="min-w-[220px] flex-1">
+              <div className="min-w-0 flex-1 sm:min-w-[220px]">
                 <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
                   Assigned Technician
                 </label>
@@ -296,7 +296,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                 <button
                   type="submit"
                   disabled={isAssignPending}
-                className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Save Assignment
                 </button>
@@ -322,7 +322,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   router.refresh();
                 });
               }}
-              className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+              className="mt-4 space-y-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-3 [&_*]:min-w-0"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                 Step 3 - Client Approval & Recommendation
@@ -364,7 +364,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               <button
                 type="submit"
                 disabled={isCommunicationPending}
-                className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
               >
                 Save Communication
               </button>
@@ -407,7 +407,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   router.refresh();
                 });
               }}
-              className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+              className="mt-4 space-y-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-3 [&_*]:min-w-0"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Update Repair / Closure Context</p>
               <select
@@ -432,7 +432,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               <button
                 type="submit"
                 disabled={isContextPending}
-                className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
               >
                 Save Context
               </button>
@@ -469,7 +469,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               router.refresh();
             });
           }}
-          className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+          className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
         >
           {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
             <textarea
@@ -504,9 +504,9 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               Repair path: <span className="font-medium">{derivedRepairPath}</span>
             </div>
           ) : null}
-          <button disabled={isTerminal || !can.editDiagnosis(role) || isDiagnosisPending} className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm">
-            Save
-          </button>
+            <button disabled={isTerminal || !can.editDiagnosis(role) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
+              Save
+            </button>
           {savedSection === "diagnosis" ? <p className="text-xs text-emerald-700">Saved</p> : null}
         </form>
       ) : null}
@@ -527,11 +527,11 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               router.refresh();
             });
           }}
-          className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+          className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
         >
           <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Work done" className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2" />
           <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="Parts replaced" className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2" />
-          <button disabled={isTerminal || isRepairPending} className="btn-premium rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Save</button>
+          <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
           {savedSection === "repair" ? <p className="text-xs text-emerald-700">Saved</p> : null}
         </form>
       ) : null}
@@ -552,7 +552,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               router.refresh();
             });
           }}
-          className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+          className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
         >
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Billing</p>
           <input
@@ -596,9 +596,9 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
             </p>
           ) : null}
           {canManageFinancials ? (
-            <p className={`text-xs ${existingMargin !== null && existingMargin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-              Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${existingMargin.toFixed(2)}`}
-            </p>
+              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${existingMargin.toFixed(2)}`}
+              </p>
           ) : null}
           {canManageFinancials && job.repairPath === "EXTERNAL" ? (
             <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -628,7 +628,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   name="externalPaid"
                   value="true"
                   disabled={isFinancialPending}
-                  className="btn-premium-success rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+                  className="btn-premium-success w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Paid
                 </button>
@@ -637,16 +637,16 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   name="externalPaid"
                   value="false"
                   disabled={isFinancialPending}
-                  className="btn-premium-warning rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+                  className="btn-premium-warning w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Unpaid
                 </button>
               </div>
             </div>
           ) : null}
-            <button
+          <button
             disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-            className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+            className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
           >
             Save
           </button>
@@ -667,7 +667,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
           href={`/api/jobs/${job.id}/invoice`}
           target="_blank"
           rel="noreferrer"
-          className="btn-premium-secondary inline-block rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+          className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-md px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
         >
           Generate Invoice
         </a>
@@ -689,7 +689,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               router.refresh();
             });
           }}
-          className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-4"
+          className="flex flex-wrap gap-2 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
         >
           {job.workflowReason && job.workflowReason !== "NONE" ? (
             <p className="w-full text-xs text-slate-600">
@@ -712,7 +712,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
                   event.preventDefault();
                 }
               }}
-              className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+              className="btn-premium-dark w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
             >
               Set {status}
             </button>
