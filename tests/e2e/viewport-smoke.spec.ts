@@ -77,10 +77,13 @@ const viewports = [
 const paths = [
   "/dashboard",
   "/jobs",
+  "/jobs/new",
   "/clients",
   "/technicians",
   "/reports",
   "/settings/users",
+  "/settings/branding",
+  "/settings/profile",
   "/technicians/payouts",
 ] as const;
 
@@ -193,6 +196,57 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
       });
 
       expect(detailOverflow, `/clients/[id] overflow at ${viewport.width}x${viewport.height}: ${detailOverflow.join(" | ")}`).toEqual([]);
+    }
+
+    await page.goto("/jobs");
+    await page.waitForLoadState("networkidle");
+    const firstJobLink = page.getByRole("link", { name: "Open" }).first();
+    if (await firstJobLink.isVisible()) {
+      await firstJobLink.click();
+      await page.waitForLoadState("networkidle");
+      const jobDetailOverflow = await page.evaluate(() => {
+        const offenders: string[] = [];
+        const nodes = Array.from(document.querySelectorAll<HTMLElement>("body *"));
+
+        for (const node of nodes) {
+          const style = window.getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden") continue;
+          if (style.position === "fixed") continue;
+          if (node.getClientRects().length === 0) continue;
+
+          const rect = node.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          if (rect.right <= window.innerWidth + 1) continue;
+
+          let allowOverflow = false;
+          let current: HTMLElement | null = node;
+          while (current) {
+            const currentStyle = window.getComputedStyle(current);
+            if (
+              currentStyle.overflowX === "auto" ||
+              currentStyle.overflowX === "scroll" ||
+              currentStyle.overflowX === "clip"
+            ) {
+              allowOverflow = true;
+              break;
+            }
+            current = current.parentElement;
+          }
+
+          if (!allowOverflow) {
+            if (node.closest("[class*='sm:block']")) continue;
+            if (typeof node.className === "string" && node.className.includes("min-w-")) continue;
+            const parentTable = node.closest("table");
+            if (parentTable && parentTable.className.includes("min-w-")) continue;
+            offenders.push(`${node.tagName.toLowerCase()}.${node.className}`.trim());
+            if (offenders.length >= 4) break;
+          }
+        }
+
+        return offenders;
+      });
+
+      expect(jobDetailOverflow, `/jobs/[id] overflow at ${viewport.width}x${viewport.height}: ${jobDetailOverflow.join(" | ")}`).toEqual([]);
     }
   }
 });

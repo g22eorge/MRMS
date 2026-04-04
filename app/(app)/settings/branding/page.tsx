@@ -216,8 +216,8 @@ export default async function BrandingPage({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+    <div className="min-w-0 space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-sm font-semibold">Document Studio</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Manage logo, numbering, VAT defaults, terms, signatures, and quotation wording.
@@ -227,7 +227,7 @@ export default async function BrandingPage({
         {params.error ? <p className="mt-2 text-sm text-rose-700">{params.error.replaceAll("+", " ")}</p> : null}
       </div>
 
-      <form action={saveBrandingAction} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <form action={saveBrandingAction} className="panel-shadow space-y-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 [&_*]:min-w-0">
         <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3" open>
           <summary className="text-sm font-semibold text-[var(--ink)]">Company & Numbering</summary>
           <div className="mt-3 grid gap-2 lg:grid-cols-2">
@@ -241,7 +241,7 @@ export default async function BrandingPage({
           <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-            <p className="text-xs text-[var(--ink-muted)] lg:col-span-2">
+            <p className="text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
             Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
           </p>
           <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
@@ -274,7 +274,7 @@ export default async function BrandingPage({
         <button className="btn-premium w-full rounded-md px-3 py-2 text-sm lg:w-auto">Save Document Settings</button>
       </form>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="mb-2 text-sm font-semibold">Invoice Logo</p>
         <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG, WEBP (max 5MB). Recommended wide aspect ratio.</p>
 
@@ -283,7 +283,7 @@ export default async function BrandingPage({
             type="file"
             name="logo"
             accept="image/png,image/jpeg,image/webp"
-            className="rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-sm"
+            className="w-full min-w-0 rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-xs sm:text-sm"
             required
           />
           <button className="btn-premium rounded-md px-3 py-2 text-sm lg:px-3 lg:py-1.5">Upload Logo</button>
