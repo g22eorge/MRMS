@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -268,19 +269,23 @@ export default async function ClientDetailPage({
         ) : (
           <>
             <div className="space-y-2 sm:hidden">
-              {client.jobs.map((job: ClientDetail["jobs"][number]) => (
-                <div key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{job.status}</span>
-                  </div>
-                  <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">Received {job.receivedAt.toLocaleDateString()}</p>
+              <ProgressiveList initialCount={4} step={4}>
+                {client.jobs.map((job: ClientDetail["jobs"][number]) => (
+                  <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
+                  <summary className="list-none">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{job.status}</span>
+                    </div>
+                    <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">Received {job.receivedAt.toLocaleDateString()}</p>
+                  </summary>
                   <Link href={`/jobs/${job.id}`} className="mt-2 inline-block rounded-md bg-[var(--brand)] px-3 py-2 text-sm font-medium text-white max-[360px]:w-full max-[360px]:text-center">
                     Open
                   </Link>
-                </div>
-              ))}
+                  </details>
+                ))}
+              </ProgressiveList>
             </div>
 
             <div className="hidden overflow-x-auto sm:block">

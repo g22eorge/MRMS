@@ -146,32 +146,50 @@ export default async function JobsPage({
       ) : null}
 
       {isExternalTech ? (
-        <form className="panel-shadow grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid-cols-5">
-          <input
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Search job #"
-            className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
-          />
-          <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-            <option value="">All statuses</option>
-            {JOB_STATUSES.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-          <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-            <option value="received_desc">Newest received</option>
-            <option value="job_number_desc">Job number desc</option>
-          </select>
-          <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-          <div className="flex gap-2">
-            <button className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-            <Link href="/jobs" className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Reset</Link>
-          </div>
-        </form>
+        <>
+          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Search job # and press Enter"
+              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+            />
+          </form>
+          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-5">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Search job #"
+              className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+            />
+            <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
+              <option value="">All statuses</option>
+              {JOB_STATUSES.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
+              <option value="received_desc">Newest received</option>
+              <option value="job_number_desc">Job number desc</option>
+            </select>
+            <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
+            <div className="flex gap-2">
+              <button className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
+              <Link href="/jobs" className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Reset</Link>
+            </div>
+          </form>
+        </>
       ) : (
         <div className="space-y-2">
-          <form className="panel-shadow grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid-cols-6">
+          <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Search job # or client and press Enter"
+              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+            />
+          </form>
+          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-6">
             <input
               name="q"
               defaultValue={filters.q}

@@ -10,6 +10,13 @@
   --brand: #0d766e;
   --brand-deep: #115e59;
   --accent: #0ea5a1;
+  --mobile-gap: 0.75rem;
+  --mobile-radius: 0.9rem;
+  --mobile-shell-top: 0.75rem;
+  --mobile-shell-bottom: 7rem;
+  --mobile-header-height: 3.75rem;
+  --mobile-quick-actions-height: 3.15rem;
+  --mobile-stack-offset: calc(var(--mobile-header-height) + var(--mobile-quick-actions-height));
 }
 
 @theme inline {
@@ -43,6 +50,29 @@ pre,
 
 .fade-in {
   animation: fade-in-up 380ms ease-out both;
+}
+
+.mobile-page-shell {
+  display: grid;
+  gap: var(--mobile-gap);
+}
+
+.mobile-section {
+  border-radius: var(--mobile-radius);
+}
+
+.soft-reveal {
+  animation: fade-in-up 260ms ease-out both;
+}
+
+.mobile-quick-actions {
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 18px rgba(15, 23, 33, 0.09);
+  scrollbar-width: none;
+}
+
+.mobile-quick-actions::-webkit-scrollbar {
+  display: none;
 }
 
 .btn-premium {
@@ -207,6 +237,16 @@ a:active .nav-icon-premium {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --mobile-gap: 0.65rem;
+    --mobile-radius: 0.82rem;
+    --mobile-shell-top: 0.6rem;
+    --mobile-shell-bottom: 7.2rem;
+    --mobile-header-height: 3.6rem;
+    --mobile-quick-actions-height: 3rem;
+    --mobile-stack-offset: calc(var(--mobile-header-height) + var(--mobile-quick-actions-height));
+  }
+
   body {
     line-height: 1.45;
   }
@@ -217,7 +257,7 @@ a:active .nav-icon-premium {
   }
 
   :where(button, a[role="button"]) {
-    min-height: 38px;
+    min-height: 40px;
     touch-action: manipulation;
   }
 
@@ -225,8 +265,34 @@ a:active .nav-icon-premium {
     -webkit-tap-highlight-color: transparent;
   }
 
+  :where(details > summary) {
+    touch-action: manipulation;
+  }
+
   :where(button:active, a[role="button"]:active, a[href]:active) {
     transform: scale(0.98);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root {
+    --mobile-gap: 0.8rem;
+    --mobile-radius: 0.92rem;
+  }
+
+  .panel-shadow {
+    box-shadow: 0 1px 0 rgba(15, 23, 33, 0.05), 0 11px 26px rgba(15, 23, 33, 0.09);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .soft-reveal {
+    animation: none !important;
+  }
+
+  * {
+    scroll-behavior: auto !important;
   }
 }
 

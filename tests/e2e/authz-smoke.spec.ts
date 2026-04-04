@@ -78,11 +78,11 @@ async function login(page: Page, email: string) {
 test("admin sees admin navigation and can open user settings", async ({ page }) => {
   await login(page, adminEmail);
 
-  await expect(page.getByRole("link", { name: "Users" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Branding" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Clients" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Users" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Branding" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Clients" }).first()).toBeVisible();
 
-  await page.getByRole("link", { name: "Users" }).click();
+  await page.getByRole("link", { name: "Users" }).first().click();
   await page.waitForURL("**/settings/users");
   await expect(page.getByRole("button", { name: "Create User" })).toBeVisible();
 });
@@ -90,14 +90,14 @@ test("admin sees admin navigation and can open user settings", async ({ page }) 
 test("external technician is restricted from client-identifying views", async ({ page }) => {
   await login(page, externalTechEmail);
 
-  await expect(page.getByRole("link", { name: "Work Orders" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "My Payouts" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Work Orders" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "My Payouts" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Clients" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Reports" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Users" })).toHaveCount(0);
 
   await page.goto("/jobs");
-  await expect(page.getByPlaceholder("Search job #")).toBeVisible();
+  await expect(page.getByPlaceholder("Search job #", { exact: true }).first()).toBeVisible();
   await expect(page.getByPlaceholder("Search job # or client")).toHaveCount(0);
 
   await page.getByRole("link", { name: "Open" }).first().click();

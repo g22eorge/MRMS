@@ -34,7 +34,7 @@ export function StatusFlowNotice({ message }: Props) {
   if (!visible) return null;
 
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs text-[var(--ink-muted)]">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere]">
       {message}
     </div>
   );

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
+import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
@@ -398,7 +400,37 @@ export default async function ReportsPage({
         />
       </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <StickyKpiRow
+        items={[
+          { label: "Revenue", value: formatMoney(revenueSelected, currency), tone: "brand" },
+          { label: "Margin", value: formatMoney(marginSelected, currency), tone: marginSelected >= 0 ? "success" : "warning" },
+          { label: "Completed", value: String(completedSelected.length), tone: "success" },
+          { label: "Payouts", value: formatMoney(externalPayoutOutstandingTotal, currency), tone: "warning" },
+        ]}
+      />
+
+      <PersistedDisclosure
+        title="Report Export Center"
+        defaultOpen
+        storageKey="reports.exportCenter"
+        groupName="reports-mobile-sections"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+      >
+        <div className="grid gap-2">
+          {exportItems.map((item) => (
+            <a
+              key={item.title}
+              href={item.href}
+              className="rounded-lg border border-[var(--line)] bg-white p-3"
+            >
+              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+            </a>
+          ))}
+        </div>
+      </PersistedDisclosure>
+
+      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Downloads</p>
@@ -423,7 +455,44 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-6">
+      <PersistedDisclosure
+        title="Performance Metrics"
+        defaultOpen
+        storageKey="reports.performanceMetrics"
+        groupName="reports-mobile-sections"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+      >
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
+            <p className="text-sm font-semibold">{formatMoney(revenueSelected, currency)}</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
+            <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {formatMoney(marginSelected, currency)}
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed</p>
+            <p className="text-sm font-semibold">{completedSelected.length}</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Avg Repair Time</p>
+            <p className="text-sm font-semibold">{averageRepairTimeHours.toFixed(1)}h</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">External Ratio</p>
+            <p className="text-sm font-semibold">{externalRatio.toFixed(0)}%</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
+            <p className="text-sm font-semibold text-amber-700">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
+          </div>
+        </div>
+      </PersistedDisclosure>
+
+      <div className="hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
           <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
@@ -460,7 +529,32 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <PersistedDisclosure
+        title="Signal Tiles"
+        storageKey="reports.signalTiles"
+        groupName="reports-mobile-sections"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+      >
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completion Momentum</p>
+            <p className={`text-sm font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {completionMomentum >= 0 ? "+" : ""}
+              {completionMomentum}
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Queue Pressure</p>
+            <p className="text-sm font-semibold text-amber-700">{queuePressure}</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Aging Risk</p>
+            <p className={`text-sm font-semibold ${delayedJobs.length > 0 ? "text-rose-700" : "text-emerald-700"}`}>{delayedJobs.length}</p>
+          </div>
+        </div>
+      </PersistedDisclosure>
+
+      <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completion Momentum</p>
           <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
@@ -483,7 +577,7 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 lg:col-span-2">
           <p className="mb-2 text-sm font-semibold">Most Common Fault Keywords</p>
           {commonFaults.length === 0 ? (
@@ -512,13 +606,39 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+      <PersistedDisclosure
+        title="Device Performance Drill-down"
+        storageKey="reports.deviceDrilldown"
+        groupName="reports-mobile-sections"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+      >
+        <div className="space-y-2">
+          {deviceInsights.map((row) => (
+            <details key={`${row.device}-mobile`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+              <summary className="list-none">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-[var(--ink)]">{row.device}</p>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">{row.total} jobs</span>
+                </div>
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div><p className="text-[var(--ink-muted)]">Open</p><p className="font-semibold">{row.open}</p></div>
+                <div><p className="text-[var(--ink-muted)]">Completed</p><p className="font-semibold">{row.completed}</p></div>
+                <div><p className="text-[var(--ink-muted)]">Closed</p><p className="font-semibold">{row.cancelledOrClosed}</p></div>
+                <div><p className="text-[var(--ink-muted)]">Revenue</p><p className="font-semibold">{formatMoney(row.revenue, currency)}</p></div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </PersistedDisclosure>
+
+      <div className="panel-shadow hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
         <p className="mb-3 text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
         {deviceInsights.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No jobs found for this month.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                 <tr>
                   <th className="px-2 py-2">Device</th>
@@ -582,7 +702,42 @@ export default async function ReportsPage({
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <PersistedDisclosure
+        title="Operational Risks"
+        storageKey="reports.operationalRisks"
+        groupName="reports-mobile-sections"
+        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+      >
+        <div className="space-y-3">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+            <p className="mb-2 text-sm font-semibold">Aging Alerts</p>
+            {agingRows.length === 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">No aging alerts. Open queue is healthy.</p>
+            ) : (
+              <div className="space-y-2">
+                {agingRows.map((row) => (
+                  <div key={`mobile-${row.status}`} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                    <p className="font-medium">{row.status}</p>
+                    <p className="text-[var(--ink-muted)]">3-7 days: {row.threeToSeven} • 8+ days: {row.eightPlus}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+            <p className="mb-2 text-sm font-semibold">Approval Funnel</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between"><span>Diagnosing</span><span className="font-semibold">{funnel.diagnosing}</span></div>
+              <div className="flex items-center justify-between"><span>Awaiting approval</span><span className="font-semibold">{funnel.awaitingApproval}</span></div>
+              <div className="flex items-center justify-between"><span>In repair</span><span className="font-semibold">{funnel.inRepair}</span></div>
+              <div className="flex items-center justify-between"><span>Ready for pickup</span><span className="font-semibold">{funnel.readyForPickup}</span></div>
+              <div className="flex items-center justify-between"><span>Completed</span><span className="font-semibold text-emerald-700">{funnel.completed}</span></div>
+            </div>
+          </div>
+        </div>
+      </PersistedDisclosure>
+
+      <div className="hidden gap-3 lg:grid lg:grid-cols-2">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="mb-2 text-sm font-semibold">Aging Alerts (Open Jobs)</p>
           {agingRows.length === 0 ? (

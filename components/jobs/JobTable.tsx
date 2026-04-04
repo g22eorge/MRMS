@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 
+import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { JobStatus } from "@/lib/job-status";
@@ -64,14 +65,39 @@ export function JobTable({
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
       <div className="space-y-3 p-3 sm:hidden">
-        {jobs.map((job) => (
-          <div key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
-              <JobStatusBadge status={job.status} />
-            </div>
-            <p className="mt-1 truncate text-sm font-medium text-[var(--ink)]">{job.brand} {job.model}</p>
-            <p className="truncate text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">{job.deviceType.replaceAll("_", " ")}</p>
+        <ProgressiveList initialCount={4} step={6}>
+          {jobs.map((job) => (
+            <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
+              <summary className="list-none">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="mono truncate text-sm font-semibold">{job.jobNumber}</p>
+                    <p className="mt-1 truncate text-sm font-medium text-[var(--ink)]">{job.brand} {job.model}</p>
+                    <p className="truncate text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">{job.deviceType.replaceAll("_", " ")}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--ink-muted)]">
+                      {canSeeAssignment ? (
+                        <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5">
+                          Assigned: {job.assignedTo ?? "-"}
+                        </span>
+                      ) : null}
+                      {canSeeClient ? (
+                        <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5">
+                          Client: {job.clientName ?? "-"}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <JobStatusBadge status={job.status} />
+                    <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</p>
+                    {canSeeCost ? (
+                      <p className="mt-1 text-[11px] font-semibold text-[var(--ink)]">
+                        {job.externalTechBill ? formatMoney(job.externalTechBill) : "UGX -"}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </summary>
 
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               {canSeeClient ? (
@@ -86,10 +112,6 @@ export function JobTable({
                   <p className="truncate font-medium text-[var(--ink)]">{job.assignedTo ?? "-"}</p>
                 </div>
               ) : null}
-              <div>
-                <p className="text-[var(--ink-muted)]">Received</p>
-                <p className="font-medium text-[var(--ink)]">{job.receivedAt.toLocaleDateString()}</p>
-              </div>
               {job.workflowReason && job.workflowReason !== "NONE" ? (
                 <div className="col-span-2">
                   <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
@@ -106,12 +128,12 @@ export function JobTable({
             </div>
 
             <div className="mt-3 flex gap-2">
-                <Link
-                  href={`/jobs/${job.id}`}
+              <Link
+                href={`/jobs/${job.id}`}
                 className="btn-premium flex-1 rounded-md px-3 py-1.5 text-center text-[13px] font-medium sm:py-2 sm:text-sm"
-                >
-                  Open
-                </Link>
+              >
+                Open
+              </Link>
               {canEditPage ? (
                 <Link
                   href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
@@ -129,8 +151,9 @@ export function JobTable({
                 </form>
               ) : null}
             </div>
-          </div>
-        ))}
+            </details>
+          ))}
+        </ProgressiveList>
       </div>
 
       <div className="hidden overflow-x-auto sm:block">

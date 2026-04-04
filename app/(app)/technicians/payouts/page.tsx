@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { getJobPayoutsByIds, hasJobPayoutColumns } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -81,6 +82,21 @@ export default async function TechnicianPayoutsPage({
 
   return (
     <div className="space-y-4">
+      <div className="panel-shadow sticky top-14 z-20 -mx-1 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
+        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
+          <p className="text-sm font-semibold">{formatMoney(total, currency)}</p>
+        </div>
+        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Paid</p>
+          <p className="text-sm font-semibold text-emerald-700">{formatMoney(paid, currency)}</p>
+        </div>
+        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Outstanding</p>
+          <p className="text-sm font-semibold text-amber-700">{formatMoney(unpaid, currency)}</p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           {!payoutColumnsReady ? (
@@ -92,7 +108,16 @@ export default async function TechnicianPayoutsPage({
         </Link>
       </div>
 
-      <form className="panel-shadow grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid-cols-4">
+      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+        <input
+          name="q"
+          defaultValue={filters.q}
+          placeholder="Search job # / device and press Enter"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+        />
+      </form>
+
+      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-4">
         <input
           name="q"
           defaultValue={filters.q}
@@ -122,7 +147,7 @@ export default async function TechnicianPayoutsPage({
         </div>
       </form>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="hidden gap-3 md:grid md:grid-cols-3">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Total in view</p>
           <p className="text-2xl font-semibold">{formatMoney(total, currency)}</p>
@@ -142,26 +167,41 @@ export default async function TechnicianPayoutsPage({
           <p className="text-sm text-[var(--ink-muted)]">No payout records found for these filters.</p>
         ) : (
           <ul className="space-y-2 text-sm">
-            {jobs.map((job) => (
-              <li key={job.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] py-2">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">{job.status} {job.completedAt ? `• completed ${job.completedAt.toLocaleDateString()}` : ""}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
-                  <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
-                    {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
-                  </p>
-                  {payouts.get(job.id)?.externalPaidAt ? (
-                    <p className="text-xs text-[var(--ink-muted)]">{payouts.get(job.id)?.externalPaidAt?.toLocaleDateString()}</p>
-                  ) : null}
-                  {payouts.get(job.id)?.externalPaymentRef ? (
-                    <p className="text-xs text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
-                  ) : null}
-                </div>
-              </li>
-            ))}
+            <ProgressiveList initialCount={5} step={5}>
+              {jobs.map((job) => (
+                <li key={job.id} className="border-b border-[var(--line)] py-2">
+                <details>
+                  <summary className="list-none">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{job.status} {job.completedAt ? `• completed ${job.completedAt.toLocaleDateString()}` : ""}</p>
+                        {payouts.get(job.id)?.externalPaymentRef ? (
+                          <p className="text-[11px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
+                        ) : null}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
+                        <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                          {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
+                        </p>
+                      </div>
+                    </div>
+                  </summary>
+                  <div className="mt-2 text-xs text-[var(--ink-muted)]">
+                    {payouts.get(job.id)?.externalPaidAt ? (
+                      <p>Paid on {payouts.get(job.id)?.externalPaidAt?.toLocaleDateString()}</p>
+                    ) : (
+                      <p>Pending payment</p>
+                    )}
+                    {payouts.get(job.id)?.externalPaymentRef ? (
+                      <p>Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
+                    ) : null}
+                  </div>
+                </details>
+                </li>
+              ))}
+            </ProgressiveList>
           </ul>
         )}
       </div>

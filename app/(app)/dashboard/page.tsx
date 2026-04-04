@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
+import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -34,6 +36,13 @@ function monthRange(year: number, month: number) {
 
 function monthLabel(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function asDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function monthOptions(count: number) {
@@ -107,23 +116,32 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+        <StickyKpiRow
+          items={[
+            { label: "Assigned", value: String(jobs.length), href: "/technicians" },
+            { label: "Open", value: String(openCount), href: "/technicians?ready=1", tone: "brand" },
+            { label: "Completed", value: String(completedCount), href: "/jobs?status=COMPLETED", tone: "success" },
+            { label: "Outstanding", value: formatMoney(outstandingTotal, currency), href: "/technicians/payouts", tone: "warning" },
+          ]}
+        />
+
+        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+          <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs</p>
-            <p className="mt-2 text-4xl font-semibold">{jobs.length}</p>
+            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{jobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open queue →</p>
           </Link>
-          <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>
-            <p className="mt-2 text-4xl font-semibold text-[var(--brand)]">{openCount}</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs needing action →</p>
           </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-            <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedCount}</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
           </Link>
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payout Outstanding</p>
             <p className="mt-2 text-3xl font-semibold text-amber-700">{formatMoney(outstandingTotal, currency)}</p>
             <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoney(paidTotal, currency)}</p>
@@ -133,14 +151,43 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <PersistedDisclosure
+          title="Recent Assigned Jobs"
+          storageKey="dashboard.external.recentAssigned"
+          groupName="mobile-dashboard-sections"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        >
+          {jobs.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {jobs.slice(0, 6).map((job) => (
+                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{job.jobNumber}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{job.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--ink-muted)]">Fee</p>
+                    <p className="font-medium">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
+                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                      {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PersistedDisclosure>
+
+        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {jobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {jobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex items-center justify-between gap-2 border-b border-[var(--line)] py-2">
+                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{job.jobNumber}</p>
                     <p className="text-xs text-[var(--ink-muted)]">{job.status}</p>
@@ -174,37 +221,66 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+        <StickyKpiRow
+          items={[
+            { label: "Assigned", value: String(assignedJobs.length), href: "/jobs" },
+            { label: "Diagnosing", value: String(diagnosing), href: "/jobs?status=DIAGNOSING", tone: "brand" },
+            { label: "In Repair", value: String(inRepair), href: "/jobs?status=IN_REPAIR", tone: "warning" },
+            { label: "Completed", value: String(completed), href: "/jobs?status=COMPLETED", tone: "success" },
+          ]}
+        />
+
+        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned</p>
-            <p className="mt-2 text-4xl font-semibold">{assignedJobs.length}</p>
+            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{assignedJobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">View my jobs →</p>
           </Link>
-          <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Diagnosing</p>
-            <p className="mt-2 text-4xl font-semibold text-[var(--brand)]">{diagnosing}</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{diagnosing}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Needs diagnosis work →</p>
           </Link>
-          <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair</p>
-            <p className="mt-2 text-4xl font-semibold text-amber-700">{inRepair}</p>
+            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{inRepair}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Active repairs →</p>
           </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-            <p className="mt-2 text-4xl font-semibold text-emerald-700">{completed}</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completed}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed repairs →</p>
           </Link>
         </div>
 
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <PersistedDisclosure
+          title="Recent Assigned Jobs"
+          storageKey="dashboard.internal.recentAssigned"
+          groupName="mobile-dashboard-sections"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        >
+          {assignedJobs.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {assignedJobs.slice(0, 6).map((job) => (
+                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
+                  <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
+                  <span className="text-xs text-[var(--ink-muted)]">{job.status}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PersistedDisclosure>
+
+        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {assignedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {assignedJobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex items-center justify-between gap-2 border-b border-[var(--line)] py-2">
+                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
                   <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
                   <span className="text-xs text-[var(--ink-muted)]">{job.status}</span>
                 </li>
@@ -233,11 +309,9 @@ export default async function DashboardPage({
       receivedPrevCount,
       closedSelectedCount,
       closedPrevCount,
-      openJobs,
       externalCount,
       inHouseCount,
       externalCompleted,
-      totalJobs,
     ] = await Promise.all([
       prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
       prisma.job.groupBy({ by: ["deviceType"], _count: { deviceType: true } }),
@@ -257,12 +331,6 @@ export default async function DashboardPage({
       prisma.job.count({ where: { receivedAt: { gte: prevRange.start, lte: prevRange.end } } }),
       prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
       prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: prevRange.start, lte: prevRange.end } } }),
-      prisma.job.findMany({
-        where: {
-          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR"] },
-        },
-        select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
-      }),
       prisma.job.count({ where: { repairPath: "EXTERNAL", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
       prisma.job.count({ where: { repairPath: "IN_HOUSE", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
       prisma.job.findMany({
@@ -274,12 +342,8 @@ export default async function DashboardPage({
         },
         select: { id: true },
       }),
-      prisma.job.count(),
     ]);
 
-    const openCount = openJobs.length;
-    const completedCount = statusGroup.find((s) => s.status === "COMPLETED")?._count.status ?? 0;
-    const awaitingApproval = statusGroup.find((s) => s.status === "AWAITING_APPROVAL")?._count.status ?? 0;
     const completedSelectedCount = completedSelected.length;
     const completedPrevCount = completedPrev.length;
 
@@ -312,6 +376,8 @@ export default async function DashboardPage({
 
     const selectedMonthString = monthLabel(selected.year, selected.month);
     const prevMonthString = monthLabel(prev.year, prev.month);
+    const selectedFrom = asDateInputValue(selectedRange.start);
+    const selectedTo = asDateInputValue(selectedRange.end);
     const totalPath = inHouseCount + externalCount;
     const externalRatio = totalPath > 0 ? (externalCount / totalPath) * 100 : 0;
     const selectableMonths = monthOptions(18);
@@ -321,51 +387,52 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs (All Time)</p>
-            <p className="mt-2 text-4xl font-semibold">{totalJobs}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View all jobs →</p>
-          </Link>
-          <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Queue (Now)</p>
-            <p className="mt-2 text-4xl font-semibold text-[var(--brand)]">{openCount}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Needs team action →</p>
-          </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed (All Time)</p>
-            <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedCount}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
-          </Link>
-          <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting Approval (Now)</p>
-            <p className="mt-2 text-4xl font-semibold text-amber-700">{awaitingApproval}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Client approvals →</p>
-          </Link>
-        </div>
+        <StickyKpiRow
+          items={[
+            { label: "Received", value: String(receivedSelectedCount), href: `/jobs?from=${selectedFrom}&to=${selectedTo}` },
+            { label: "Completed", value: String(completedSelectedCount), href: `/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`, tone: "success" },
+            { label: "Closed", value: String(closedSelectedCount), href: `/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`, tone: "warning" },
+            { label: "Revenue", value: formatMoney(revenueSelected, currency), href: `/reports?month=${selectedMonthString}`, tone: "brand" },
+          ]}
+        />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
-            <p className="mt-1 text-2xl font-semibold">{receivedSelectedCount}</p>
+        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
+            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{receivedSelectedCount}</p>
             <p className={`mt-1 text-xs ${receivedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-              {receivedDelta >= 0 ? "+" : ""}{receivedDelta} vs {prevMonthString}
+              {receivedDelta >= 0 ? "+" : ""}
+              {receivedDelta} vs {prevMonthString}
             </p>
-          </div>
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
-            <p className="mt-1 text-2xl font-semibold">{completedSelectedCount}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View monthly intake →</p>
+          </Link>
+          <Link href={`/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedSelectedCount}</p>
             <p className={`mt-1 text-xs ${completedDeltaCount >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-              {completedDeltaCount >= 0 ? "+" : ""}{completedDeltaCount} vs {prevMonthString}
+              {completedDeltaCount >= 0 ? "+" : ""}
+              {completedDeltaCount} vs {prevMonthString}
             </p>
-          </div>
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
-            <p className="mt-1 text-2xl font-semibold">{closedSelectedCount}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review monthly completion →</p>
+          </Link>
+          <Link href={`/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
+            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{closedSelectedCount}</p>
             <p className={`mt-1 text-xs ${closedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-              {closedDelta >= 0 ? "+" : ""}{closedDelta} vs {prevMonthString}
+              {closedDelta >= 0 ? "+" : ""}
+              {closedDelta} vs {prevMonthString}
             </p>
-          </div>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review monthly closures →</p>
+          </Link>
+          <Link href={`/reports?month=${selectedMonthString}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoney(revenueSelected, currency)}</p>
+            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {revenueDelta >= 0 ? "+" : "-"}
+              {formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
+            </p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open month report →</p>
+          </Link>
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -380,7 +447,36 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <PersistedDisclosure
+          title="Monthly Financial Signals"
+          defaultOpen
+          storageKey="dashboard.admin.monthlySignals"
+          groupName="mobile-dashboard-sections"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden"
+        >
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
+              <p className="text-sm font-semibold">{formatMoney(revenueSelected, currency)}</p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
+              <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {formatMoney(marginSelected, currency)}
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">External Ratio</p>
+              <p className="text-sm font-semibold">{externalRatio.toFixed(0)}%</p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
+              <p className="text-sm font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
+            </div>
+          </div>
+        </PersistedDisclosure>
+
+        <div className="hidden gap-4 md:grid md:grid-cols-4">
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
             <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
@@ -403,7 +499,19 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <ReportsCharts statusData={statusData} deviceData={deviceData} />
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm md:hidden">
+          <p className="font-semibold text-[var(--ink)]">Quick mobile briefing</p>
+          <p className="mt-1 text-[var(--ink-muted)]">
+            For full trend charts and downloadable packs, use the Reports workspace.
+          </p>
+          <Link href={`/reports?month=${selectedMonthString}`} className="mt-2 inline-block text-xs font-medium text-[var(--brand)] hover:underline">
+            Open Reports →
+          </Link>
+        </div>
+
+        <div className="hidden md:block">
+          <ReportsCharts statusData={statusData} deviceData={deviceData} />
+        </div>
 
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
           Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Download detailed CSV packs from <Link href={`/reports?month=${selectedMonthString}`} className="text-[var(--brand)] hover:underline">Reports</Link>.
@@ -451,23 +559,32 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+        <StickyKpiRow
+          items={[
+            { label: "Revenue", value: formatMoney(monthRevenue, currency), href: "/reports" },
+            { label: "Completed", value: String(completedThisMonth.length), href: "/jobs?status=COMPLETED", tone: "success" },
+            { label: "Pending", value: String(pendingBilling), href: "/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL", tone: "warning" },
+            { label: "Payouts", value: formatMoney(payoutOutstanding, currency), href: "/reports", tone: "brand" },
+          ]}
+        />
+
+        <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
+          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue this month</p>
             <p className="mt-2 text-3xl font-semibold">{formatMoney(monthRevenue, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open reports →</p>
           </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed this month</p>
-            <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedThisMonth.length}</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedThisMonth.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review completed jobs →</p>
           </Link>
-          <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Pending billing path</p>
-            <p className="mt-2 text-4xl font-semibold text-amber-700">{pendingBilling}</p>
+            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{pendingBilling}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs before completion →</p>
           </Link>
-          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+          <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
             <p className="mt-2 text-3xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>
@@ -485,28 +602,36 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]">
+      <StickyKpiRow
+        items={[
+          { label: "Total", value: String(totalJobs), href: "/jobs" },
+          { label: "Open", value: String(openJobs), href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP", tone: "brand" },
+          { label: "Completed", value: String(completedJobs), href: "/jobs?status=COMPLETED", tone: "success" },
+        ]}
+      />
+
+      <div className="hidden gap-3 md:grid md:grid-cols-3">
+        <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs</p>
-          <p className="mt-2 text-4xl font-semibold">{totalJobs}</p>
+          <p className="mt-2 text-3xl font-semibold sm:text-4xl">{totalJobs}</p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">All time recorded repairs</p>
           <p className="mt-3 text-xs font-medium text-[var(--brand)]">View all jobs →</p>
         </Link>
         <Link
           href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>
-          <p className="mt-2 text-4xl font-semibold text-[var(--brand)]">{openJobs}</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openJobs}</p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">Awaiting active team action</p>
           <p className="mt-3 text-xs font-medium text-[var(--brand)]">View open queue →</p>
         </Link>
         <Link
           href="/jobs?status=COMPLETED"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:-translate-y-[2px]"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-          <p className="mt-2 text-4xl font-semibold text-emerald-700">{completedJobs}</p>
+          <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedJobs}</p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">Delivered successfully</p>
           <p className="mt-3 text-xs font-medium text-[var(--brand)]">View completed jobs →</p>
         </Link>

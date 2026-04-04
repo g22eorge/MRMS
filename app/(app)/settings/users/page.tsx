@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { RoleActionButton, SubmitActionButton } from "@/components/settings/UserActionButtons";
@@ -189,14 +190,26 @@ export default async function UsersPage() {
       </form>
 
       <div className="space-y-2">
-        {users.map((u) => (
-          <div key={u.id} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="font-medium">
-                {u.name} <span className="text-sm text-slate-500">({u.email})</span>
-              </p>
-              <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs">{u.role.replaceAll("_", " ")}</span>
-            </div>
+        <ProgressiveList initialCount={4} step={4}>
+          {users.map((u) => (
+            <details key={u.id} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open>
+            <summary className="list-none sm:pointer-events-none">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {u.name} <span className="text-sm text-slate-500">({u.email})</span>
+                  </p>
+                  <p className="truncate text-xs text-[var(--ink-muted)]">{u.phone || "No phone"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs">{u.role.replaceAll("_", " ")}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
+                    {u.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <span className="text-[11px] text-[var(--ink-muted)] sm:hidden">Tap to fold</span>
+                </div>
+              </div>
+            </summary>
 
             <UserDetailsForm id={u.id} name={u.name} email={u.email} phone={u.phone} action={updateDetails} />
 
@@ -225,9 +238,10 @@ export default async function UsersPage() {
                 <span className="text-sm text-slate-500">Inactive</span>
               )}
             </div>
-          </div>
-        ))}
-        </div>
+            </details>
+          ))}
+        </ProgressiveList>
+      </div>
     </div>
   );
 }

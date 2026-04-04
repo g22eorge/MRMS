@@ -16,7 +16,7 @@ export function Header({ userName, role }: HeaderProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   return (
-    <header className="glass flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3 md:py-3">
+    <header className="glass sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3 md:py-3">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-muted)]">Signed in as</p>
         <p className="break-all text-sm font-semibold leading-snug md:break-normal">

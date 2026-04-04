@@ -5,17 +5,26 @@ import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+type NavGroup = "work" | "finance" | "admin" | "personal";
+
 const nav = [
-  { href: "/dashboard", label: "Dashboard", roles: "all" },
-  { href: "/jobs", label: "Jobs", roles: "all" },
-  { href: "/technicians/payouts", label: "Payouts", roles: ["TECHNICIAN_EXTERNAL"] },
-  { href: "/clients", label: "Clients", roles: ["ADMIN", "OPS"] },
-  { href: "/technicians", label: "Tech", roles: "all" },
-  { href: "/reports", label: "Reports", roles: ["ADMIN", "OPS"] },
-  { href: "/settings/users", label: "Users", roles: ["ADMIN"] },
-  { href: "/settings/branding", label: "Branding", roles: ["ADMIN"] },
-  { href: "/settings/profile", label: "Profile", roles: "all" },
+  { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
+  { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
+  { href: "/technicians", label: "Tech", group: "work", roles: "all" },
+  { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS"] },
+  { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
+  { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
+  { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
+  { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
+  { href: "/settings/profile", label: "Profile", group: "personal", roles: "all" },
 ] as const;
+
+const groupLabel: Record<NavGroup, string> = {
+  work: "Work",
+  finance: "Finance",
+  admin: "Admin",
+  personal: "Personal",
+};
 
 const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ADMIN: [
@@ -31,6 +40,13 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   OPS: ["/dashboard", "/jobs", "/clients", "/technicians", "/reports", "/settings/profile"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
+};
+
+const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
+  ADMIN: ["work", "finance", "admin", "personal"],
+  OPS: ["work", "finance", "personal"],
+  TECHNICIAN_INTERNAL: ["work", "personal"],
+  TECHNICIAN_EXTERNAL: ["work", "finance", "personal"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
@@ -152,10 +168,22 @@ function orderedNavForRole(role: Role) {
   return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
 }
 
+function groupedNavForRole(role: Role) {
+  const ordered = orderedNavForRole(role);
+  const groups = roleGroupOrder[role] ?? ["work", "personal"];
+  return groups
+    .map((group) => ({
+      group,
+      items: ordered.filter((item) => item.group === group),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const visibleNav = orderedNavForRole(role);
+  const groupedNav = groupedNavForRole(role);
   const mobilePrimary = visibleNav.slice(0, 4);
   const mobileMore = visibleNav.slice(4);
 
@@ -166,31 +194,36 @@ export function AppSidebar({ role }: { role: Role }) {
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">Eagle Info</p>
           <p className="text-base font-semibold">Repair Command Center</p>
         </div>
-        <nav className="flex flex-col gap-2 p-4">
-          {visibleNav.map((item) => {
-            const label = roleLabel(role, item.href, item.label);
-            const active = isActive(pathname, item.href);
-            return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-md px-3 py-2 text-sm font-medium ${
-                active
-                  ? "panel-shadow bg-[var(--brand)] text-white"
-                  : "text-[var(--ink)] hover:bg-[var(--panel)]"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
-                <span>{label}</span>
-              </span>
-            </Link>
-            );
-          })}
+        <nav className="flex flex-col gap-3 p-4">
+          {groupedNav.map((section) => (
+            <div key={section.group} className="space-y-1.5">
+              <p className="px-2 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>
+              {section.items.map((item) => {
+                const label = roleLabel(role, item.href, item.label);
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`rounded-md px-3 py-2 text-sm font-medium ${
+                      active
+                        ? "panel-shadow bg-[var(--brand)] text-white"
+                        : "text-[var(--ink)] hover:bg-[var(--panel)]"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
+                      <span>{label}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 
-      <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 md:hidden">
+      <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] md:hidden">
         {mobilePrimary.map((item) => {
           const label = roleLabel(role, item.href, item.label);
           const active = isActive(pathname, item.href);
@@ -198,12 +231,12 @@ export function AppSidebar({ role }: { role: Role }) {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex min-w-0 flex-1 items-center justify-center rounded-md px-2 py-2.5 text-xs font-medium ${
-              active
-                ? "bg-[var(--brand)] text-white"
-                : "text-[var(--ink-muted)]"
-            }`}
-          >
+              className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium ${
+                active
+                  ? "bg-[var(--brand)] text-white"
+                  : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+              }`}
+            >
             <span className="flex items-center gap-1.5 truncate">
               <span className={`nav-icon-premium h-5 w-5 rounded-md ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
               <span className="truncate">{mobileLabel(label)}</span>
@@ -215,7 +248,7 @@ export function AppSidebar({ role }: { role: Role }) {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex min-w-0 flex-1 items-center justify-center rounded-md px-2 py-2.5 text-xs font-medium text-[var(--ink-muted)]"
+            className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[var(--panel-strong)] px-2 py-2.5 text-xs font-medium text-[var(--ink-muted)]"
           >
             <span className="truncate">More</span>
           </button>
@@ -239,27 +272,38 @@ export function AppSidebar({ role }: { role: Role }) {
               </button>
             </div>
             <div className="grid gap-2">
-              {mobileMore.map((item) => {
-                const label = roleLabel(role, item.href, item.label);
-                const active = isActive(pathname, item.href);
-                return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMoreOpen(false)}
-                  className={`rounded-md px-3 py-2 text-sm font-medium ${
-                    active
-                      ? "bg-[var(--brand)] text-white"
-                      : "text-[var(--ink)] hover:bg-[var(--panel-strong)]"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
-                    <span>{label}</span>
-                  </span>
-                </Link>
-                );
-              })}
+              {groupedNav
+                .map((section) => ({
+                  group: section.group,
+                  items: section.items.filter((item) => mobileMore.some((mobileItem) => mobileItem.href === item.href)),
+                }))
+                .filter((section) => section.items.length > 0)
+                .map((section) => (
+                  <div key={`mobile-more-${section.group}`} className="space-y-1.5">
+                    <p className="px-1 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>
+                    {section.items.map((item) => {
+                      const label = roleLabel(role, item.href, item.label);
+                      const active = isActive(pathname, item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMoreOpen(false)}
+                          className={`rounded-md px-3 py-2 text-sm font-medium ${
+                            active
+                              ? "bg-[var(--brand)] text-white"
+                              : "text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
+                            <span>{label}</span>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
