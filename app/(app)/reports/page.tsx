@@ -13,6 +13,8 @@ import { getCurrentUserRole } from "@/lib/session";
 
 type SearchParams = {
   month?: string;
+  year?: string;
+  period?: string;
 };
 
 function parseMonth(monthParam?: string) {
@@ -31,6 +33,12 @@ function parseMonth(monthParam?: string) {
 function monthRange(year: number, month: number) {
   const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
   const end = new Date(year, month, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+
+function yearRange(year: number) {
+  const start = new Date(year, 0, 1, 0, 0, 0, 0);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
   return { start, end };
 }
 
@@ -62,6 +70,14 @@ function monthOptions(count: number) {
   });
 }
 
+function yearOptions(count: number) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const year = now.getFullYear() - index;
+    return { value: String(year), label: `${year} Annual Package` };
+  });
+}
+
 const statusLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
@@ -88,15 +104,18 @@ export default async function ReportsPage({
 }) {
   const filters = await searchParams;
   const { user } = await getCurrentUserRole();
+  const period: "month" | "year" = filters.period === "year" ? "year" : "month";
   if (user.role !== "ADMIN" && user.role !== "OPS") {
     redirect("/dashboard");
   }
 
-  const selected = parseMonth(filters.month);
-  const selectedRange = monthRange(selected.year, selected.month);
-  const prevMonthDate = new Date(selected.year, selected.month - 2, 1);
-  const prev = { year: prevMonthDate.getFullYear(), month: prevMonthDate.getMonth() + 1 };
-  const prevRange = monthRange(prev.year, prev.month);
+  const selectedMonth = parseMonth(filters.month);
+  const selectedYear = Number(filters.year) || new Date().getFullYear();
+  const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+  const prevRange =
+    period === "year"
+      ? yearRange(selectedYear - 1)
+      : monthRange(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
 
   const [
     statusGroup,
@@ -135,19 +154,20 @@ export default async function ReportsPage({
         repairPath: "EXTERNAL",
         assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
         status: "COMPLETED",
-        completedAt: { gte: selectedRange.start, lte: selectedRange.end },
       },
-      select: { id: true },
+      select: { id: true, externalTechBill: true },
     }),
   ]);
 
   const externalPayoutMap = await getJobPayoutsByIds(externalPayoutOutstandingJobs.map((job) => job.id));
   const unpaidPayouts = externalPayoutOutstandingJobs
-    .map((job) => externalPayoutMap.get(job.id))
-    .filter((payout): payout is NonNullable<typeof payout> => Boolean(payout && !payout.externalPaid && payout.externalTechFee != null));
+    .filter((job) => !externalPayoutMap.get(job.id)?.externalPaid)
+    .map((job) => ({
+      amount: externalPayoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0,
+    }));
 
   const externalPayoutOutstandingCount = unpaidPayouts.length;
-  const externalPayoutOutstandingTotal = unpaidPayouts.reduce((sum, payout) => sum + (payout.externalTechFee ?? 0), 0);
+  const externalPayoutOutstandingTotal = unpaidPayouts.reduce((sum, payout) => sum + payout.amount, 0);
 
   const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
   const statusData = JOB_STATUSES.map((status) => ({
@@ -228,11 +248,15 @@ export default async function ReportsPage({
     completed: statusData.find((s) => s.key === "COMPLETED")?.value ?? 0,
   };
 
-  const selectedMonthString = monthLabel(selected.year, selected.month);
-  const prevMonthString = monthLabel(prev.year, prev.month);
+  const selectedMonthString = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+  const prevMonthString =
+    period === "year"
+      ? String(selectedYear - 1)
+      : monthLabel(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
   const currency = getAppCurrency();
-  const selectableMonths = monthOptions(18);
-  const trendMonths = monthSequence(selected.year, selected.month, 6);
+  const selectableMonths = period === "year" ? yearOptions(6) : monthOptions(18);
+  const trendAnchor = selectedRange.end;
+  const trendMonths = monthSequence(trendAnchor.getFullYear(), trendAnchor.getMonth() + 1, 6);
 
   const trendJobs = await prisma.job.findMany({
     where: {
@@ -389,12 +413,41 @@ export default async function ReportsPage({
     },
   ];
 
+  const annualExportPackages = [
+    {
+      title: `${selectedYear} Annual Finance Package`,
+      caption: "Revenue variance, external payouts, and pipeline aging",
+      href: `/reports?period=year&year=${selectedYear}`,
+    },
+    {
+      title: `${selectedYear - 1} Annual Finance Package`,
+      caption: "Previous year comparison pack",
+      href: `/reports?period=year&year=${selectedYear - 1}`,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-end gap-3">
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/reports?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+            className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+          >
+            Monthly
+          </Link>
+          <Link
+            href={`/reports?period=year&year=${new Date().getFullYear()}`}
+            className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+          >
+            Annual
+          </Link>
+        </div>
         <MonthSelectForm
+          name={period === "year" ? "year" : "month"}
           value={selectedMonthString}
           options={selectableMonths}
+          hiddenFields={{ period }}
           className="flex items-center"
           selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
         />
@@ -427,6 +480,17 @@ export default async function ReportsPage({
               <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
             </a>
           ))}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Annual packages</p>
+            <div className="mt-2 grid gap-2">
+              {annualExportPackages.map((item) => (
+                <Link key={item.title} href={item.href} className="rounded-md border border-[var(--line)] bg-white p-2">
+                  <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </PersistedDisclosure>
 
@@ -452,6 +516,18 @@ export default async function ReportsPage({
               <p className="mt-2 text-xs font-medium text-[var(--brand)] group-hover:underline">Download CSV</p>
             </a>
           ))}
+        </div>
+        <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Annual packages</p>
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
+            {annualExportPackages.map((item) => (
+              <Link key={item.title} href={item.href} className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+                <p className="mt-2 text-xs font-medium text-[var(--brand)]">Open package view →</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -525,7 +601,7 @@ export default async function ReportsPage({
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External payouts due</p>
           <p className="mt-1 text-2xl font-semibold">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid ({selectedMonthString})</p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid (all months)</p>
         </div>
       </div>
 

@@ -13,6 +13,8 @@ import { getCurrentUserRole } from "@/lib/session";
 
 type SearchParams = {
   month?: string;
+  year?: string;
+  period?: string;
 };
 
 function parseMonth(monthParam?: string) {
@@ -31,6 +33,12 @@ function parseMonth(monthParam?: string) {
 function monthRange(year: number, month: number) {
   const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
   const end = new Date(year, month, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+
+function yearRange(year: number) {
+  const start = new Date(year, 0, 1, 0, 0, 0, 0);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
   return { start, end };
 }
 
@@ -55,6 +63,14 @@ function monthOptions(count: number) {
       year: "numeric",
     });
     return { value, label };
+  });
+}
+
+function yearOptions(count: number) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const year = now.getFullYear() - index;
+    return { value: String(year), label: `${year} Annual Package` };
   });
 }
 
@@ -84,10 +100,20 @@ export default async function DashboardPage({
 }) {
   const { session, user } = await getCurrentUserRole();
   const filters = await searchParams;
+  const period: "month" | "year" = filters.period === "year" ? "year" : "month";
 
   if (user.role === "TECHNICIAN_EXTERNAL") {
+    const selectedMonth = parseMonth(filters.month);
+    const selectedYear = Number(filters.year) || new Date().getFullYear();
+    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+    const selectedPeriodLabel = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+    const selectablePeriods = period === "year" ? yearOptions(6) : monthOptions(18);
+
     const jobs = await prisma.job.findMany({
-      where: { assignedToId: session.user.id },
+      where: {
+        assignedToId: session.user.id,
+        receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -116,6 +142,31 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Monthly
+            </Link>
+            <Link
+              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Annual
+            </Link>
+          </div>
+          <MonthSelectForm
+            name={period === "year" ? "year" : "month"}
+            value={selectedPeriodLabel}
+            options={selectablePeriods}
+            hiddenFields={{ period }}
+            className="flex items-center"
+            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          />
+        </div>
+
         <StickyKpiRow
           items={[
             { label: "Assigned", value: String(jobs.length), href: "/technicians" },
@@ -209,8 +260,17 @@ export default async function DashboardPage({
   }
 
   if (user.role === "TECHNICIAN_INTERNAL") {
+    const selectedMonth = parseMonth(filters.month);
+    const selectedYear = Number(filters.year) || new Date().getFullYear();
+    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+    const selectedPeriodLabel = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+    const selectablePeriods = period === "year" ? yearOptions(6) : monthOptions(18);
+
     const assignedJobs = await prisma.job.findMany({
-      where: { assignedToId: session.user.id },
+      where: {
+        assignedToId: session.user.id,
+        receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+      },
       orderBy: { updatedAt: "desc" },
       select: { id: true, jobNumber: true, status: true, brand: true, model: true },
     });
@@ -221,6 +281,31 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Monthly
+            </Link>
+            <Link
+              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Annual
+            </Link>
+          </div>
+          <MonthSelectForm
+            name={period === "year" ? "year" : "month"}
+            value={selectedPeriodLabel}
+            options={selectablePeriods}
+            hiddenFields={{ period }}
+            className="flex items-center"
+            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          />
+        </div>
+
         <StickyKpiRow
           items={[
             { label: "Assigned", value: String(assignedJobs.length), href: "/jobs" },
@@ -293,11 +378,13 @@ export default async function DashboardPage({
   }
 
   if (user.role === "ADMIN") {
-    const selected = parseMonth(filters.month);
-    const selectedRange = monthRange(selected.year, selected.month);
-    const prevMonthDate = new Date(selected.year, selected.month - 2, 1);
-    const prev = { year: prevMonthDate.getFullYear(), month: prevMonthDate.getMonth() + 1 };
-    const prevRange = monthRange(prev.year, prev.month);
+    const selectedMonth = parseMonth(filters.month);
+    const selectedYear = Number(filters.year) || new Date().getFullYear();
+    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+    const prevRange =
+      period === "year"
+        ? yearRange(selectedYear - 1)
+        : monthRange(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
     const currency = getAppCurrency();
 
     const [
@@ -338,9 +425,8 @@ export default async function DashboardPage({
           repairPath: "EXTERNAL",
           assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
           status: "COMPLETED",
-          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
         },
-        select: { id: true },
+        select: { id: true, externalTechBill: true },
       }),
     ]);
 
@@ -349,9 +435,8 @@ export default async function DashboardPage({
 
     const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
     const payoutOutstanding = externalCompleted
-      .map((job) => payoutMap.get(job.id))
-      .filter((row) => row && !row.externalPaid)
-      .reduce((sum, row) => sum + (row?.externalTechFee ?? 0), 0);
+      .filter((job) => !payoutMap.get(job.id)?.externalPaid)
+      .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
     const revenueFor = (jobs: typeof completedSelected) => jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
     const revenueSelected = revenueFor(completedSelected);
@@ -374,13 +459,16 @@ export default async function DashboardPage({
       value: d._count.deviceType,
     }));
 
-    const selectedMonthString = monthLabel(selected.year, selected.month);
-    const prevMonthString = monthLabel(prev.year, prev.month);
+    const selectedMonthString = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+    const prevMonthString =
+      period === "year"
+        ? String(selectedYear - 1)
+        : monthLabel(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
     const selectedFrom = asDateInputValue(selectedRange.start);
     const selectedTo = asDateInputValue(selectedRange.end);
     const totalPath = inHouseCount + externalCount;
     const externalRatio = totalPath > 0 ? (externalCount / totalPath) * 100 : 0;
-    const selectableMonths = monthOptions(18);
+    const selectableMonths = period === "year" ? yearOptions(6) : monthOptions(18);
     const receivedDelta = receivedSelectedCount - receivedPrevCount;
     const completedDeltaCount = completedSelectedCount - completedPrevCount;
     const closedDelta = closedSelectedCount - closedPrevCount;
@@ -436,9 +524,25 @@ export default async function DashboardPage({
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Monthly
+            </Link>
+            <Link
+              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Annual
+            </Link>
+          </div>
           <MonthSelectForm
+            name={period === "year" ? "year" : "month"}
             value={selectedMonthString}
             options={selectableMonths}
+            hiddenFields={{ period }}
             className="flex items-center"
             selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
           />
@@ -495,7 +599,7 @@ export default async function DashboardPage({
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Payouts Due</p>
             <p className="mt-1 text-2xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs ({selectedMonthString})</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs (all months)</p>
           </div>
         </div>
 
@@ -522,13 +626,15 @@ export default async function DashboardPage({
 
   if (user.role === "OPS") {
     const currency = getAppCurrency();
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const selectedMonth = parseMonth(filters.month);
+    const selectedYear = Number(filters.year) || new Date().getFullYear();
+    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+    const selectedPeriodLabel = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+    const selectablePeriods = period === "year" ? yearOptions(6) : monthOptions(18);
 
     const [completedThisMonth, pendingBilling, externalCompleted] = await Promise.all([
       prisma.job.findMany({
-        where: { status: "COMPLETED", completedAt: { gte: monthStart, lte: monthEnd } },
+        where: { status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
         select: { id: true, jobNumber: true, completedAt: true },
       }),
       prisma.job.count({
@@ -542,7 +648,7 @@ export default async function DashboardPage({
           repairPath: "EXTERNAL",
           assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
         },
-        select: { id: true },
+        select: { id: true, externalTechBill: true },
       }),
     ]);
 
@@ -553,12 +659,36 @@ export default async function DashboardPage({
 
     const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
     const payoutOutstanding = externalCompleted
-      .map((job) => payoutMap.get(job.id))
-      .filter((row) => row && !row.externalPaid)
-      .reduce((sum, row) => sum + (row?.externalTechFee ?? 0), 0);
+      .filter((job) => !payoutMap.get(job.id)?.externalPaid)
+      .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
     return (
       <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Monthly
+            </Link>
+            <Link
+              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Annual
+            </Link>
+          </div>
+          <MonthSelectForm
+            name={period === "year" ? "year" : "month"}
+            value={selectedPeriodLabel}
+            options={selectablePeriods}
+            hiddenFields={{ period }}
+            className="flex items-center"
+            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          />
+        </div>
+
         <StickyKpiRow
           items={[
             { label: "Revenue", value: formatMoney(monthRevenue, currency), href: "/reports" },
@@ -588,6 +718,96 @@ export default async function DashboardPage({
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
             <p className="mt-2 text-3xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role === "INTAKE") {
+    const selectedMonth = parseMonth(filters.month);
+    const selectedYear = Number(filters.year) || new Date().getFullYear();
+    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
+    const selectedPeriodLabel = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
+    const selectablePeriods = period === "year" ? yearOptions(6) : monthOptions(18);
+
+    const [capturedThisMonth, openFromIntake, awaitingApproval, readyForPickup] = await Promise.all([
+      prisma.job.count({
+        where: {
+          createdById: session.user.id,
+          receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        },
+      }),
+      prisma.job.count({
+        where: {
+          createdById: session.user.id,
+          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+        },
+      }),
+      prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
+      prisma.job.count({ where: { status: "READY_FOR_PICKUP" } }),
+    ]);
+
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Monthly
+            </Link>
+            <Link
+              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            >
+              Annual
+            </Link>
+          </div>
+          <MonthSelectForm
+            name={period === "year" ? "year" : "month"}
+            value={selectedPeriodLabel}
+            options={selectablePeriods}
+            hiddenFields={{ period }}
+            className="flex items-center"
+            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          />
+        </div>
+
+        <StickyKpiRow
+          items={[
+            { label: "Captured", value: String(capturedThisMonth), href: "/jobs/new" },
+            { label: "Open", value: String(openFromIntake), href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP", tone: "brand" },
+            { label: "Approval", value: String(awaitingApproval), href: "/jobs?status=AWAITING_APPROVAL", tone: "warning" },
+            { label: "Ready", value: String(readyForPickup), href: "/jobs?status=READY_FOR_PICKUP", tone: "success" },
+          ]}
+        />
+
+        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
+          <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Captured this month</p>
+            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{capturedThisMonth}</p>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">Jobs registered by front desk intake</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Create another intake →</p>
+          </Link>
+          <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open client queue</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openFromIntake}</p>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">Jobs still in progress after intake</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View open jobs →</p>
+          </Link>
+          <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting approval</p>
+            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{awaitingApproval}</p>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">Follow up with clients for decisions</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open approval queue →</p>
+          </Link>
+          <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Ready for pickup</p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{readyForPickup}</p>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">Clients to notify for collection</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open pickup list →</p>
           </Link>
         </div>
       </div>

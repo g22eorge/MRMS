@@ -64,6 +64,7 @@ export default async function TechnicianPayoutsPage({
       model: true,
       completedAt: true,
       receivedAt: true,
+      externalTechBill: true,
     },
     orderBy: { receivedAt: "desc" },
   });
@@ -72,13 +73,13 @@ export default async function TechnicianPayoutsPage({
   const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
 
   const currency = getAppCurrency();
-  const total = jobs.reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? 0), 0);
+  const total = jobs.reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
   const paid = jobs
     .filter((job) => payouts.get(job.id)?.externalPaid)
-    .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? 0), 0);
+    .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
   const unpaid = jobs
     .filter((job) => !payouts.get(job.id)?.externalPaid)
-    .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? 0), 0);
+    .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
   return (
     <div className="space-y-4">
@@ -181,7 +182,7 @@ export default async function TechnicianPayoutsPage({
                         ) : null}
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
+                        <p className="font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0, currency)}</p>
                         <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
                           {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
                         </p>
