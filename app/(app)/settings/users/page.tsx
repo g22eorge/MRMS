@@ -30,6 +30,11 @@ const updateDetailsSchema = z.object({
   phone: z.string().optional(),
 });
 
+const updatePasswordSchema = z.object({
+  id: z.string().min(1),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 type UserDetailsState = {
   error?: string;
   success?: string;
@@ -156,6 +161,42 @@ export default async function UsersPage() {
     revalidatePath("/settings/users");
   }
 
+  async function updatePassword(formData: FormData) {
+    "use server";
+    const { user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
+    const parsed = updatePasswordSchema.safeParse({
+      id: String(formData.get("id") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    });
+    if (!parsed.success) return;
+
+    const hashedPassword = await hashPassword(parsed.data.password);
+    const existingCredentialAccount = await prisma.account.findFirst({
+      where: { userId: parsed.data.id, providerId: "credential" },
+      select: { id: true },
+    });
+
+    if (existingCredentialAccount) {
+      await prisma.account.update({
+        where: { id: existingCredentialAccount.id },
+        data: { password: hashedPassword },
+      });
+    } else {
+      await prisma.account.create({
+        data: {
+          accountId: parsed.data.id,
+          providerId: "credential",
+          userId: parsed.data.id,
+          password: hashedPassword,
+        },
+      });
+    }
+
+    revalidatePath("/settings/users");
+  }
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -250,6 +291,22 @@ export default async function UsersPage() {
                     label={roleDisplay[role]}
                   />
                 ))}
+              </form>
+              <form action={updatePassword} className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 sm:grid-cols-[1fr_auto]">
+                <input type="hidden" name="id" value={u.id} />
+                <input
+                  required
+                  name="password"
+                  type="password"
+                  minLength={8}
+                  placeholder="Set new password (min 8 chars)"
+                  className="min-w-0 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+                />
+                <SubmitActionButton
+                  idleLabel="Update Password"
+                  pendingLabel="Updating..."
+                  className="btn-premium w-full rounded-md px-3 py-2 text-sm text-white sm:w-auto"
+                />
               </form>
               {u.isActive ? (
                 <form action={deactivate} className="sm:w-fit">

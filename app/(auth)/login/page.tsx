@@ -18,16 +18,16 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        <section className="relative overflow-hidden bg-[linear-gradient(140deg,#0b8f86_0%,#0f766e_42%,#164e63_100%)] px-8 py-10 text-white lg:px-12 lg:py-14">
+    <main className="min-h-dvh bg-slate-100">
+      <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[1.05fr_1fr]">
+        <section className="order-2 relative overflow-hidden bg-[linear-gradient(140deg,#0b8f86_0%,#0f766e_42%,#164e63_100%)] px-5 py-7 text-white sm:px-8 sm:py-10 lg:order-1 lg:px-12 lg:py-14">
           <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-cyan-200/20 blur-3xl" />
 
-          <div className="relative mx-auto max-w-xl space-y-7">
+          <div className="relative mx-auto max-w-xl space-y-6">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-white/80">Eagle Info Solutions</p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight lg:text-4xl">
+              <h1 className="mt-3 text-2xl font-semibold leading-tight sm:text-3xl lg:text-4xl">
                 Better Repair Management Starts with Better Communication
               </h1>
               <p className="mt-4 text-sm leading-6 text-white/90">
@@ -37,7 +37,7 @@ export default async function LoginPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               {[
                 "Client information stays controlled and role-protected",
                 "Device records and diagnostics are tracked with clarity",
@@ -60,10 +60,10 @@ export default async function LoginPage() {
           </div>
         </section>
 
-        <section className="flex items-center justify-center bg-slate-50 px-6 py-8 lg:px-10">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+        <section className="order-1 flex items-center justify-center bg-slate-50 px-4 py-5 sm:px-6 sm:py-8 lg:order-2 lg:px-10">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">MRMS</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Machine Repair Management System</h2>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">Machine Repair Management System</h2>
             <p className="mt-2 text-sm text-slate-600">Sign in to continue to your secure repair workspace.</p>
 
             <div className="mt-6">
