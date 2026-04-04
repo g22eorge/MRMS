@@ -74,7 +74,15 @@ const viewports = [
   { width: 1024, height: 1366 },
 ] as const;
 
-const paths = ["/dashboard", "/jobs", "/clients", "/technicians", "/reports"] as const;
+const paths = [
+  "/dashboard",
+  "/jobs",
+  "/clients",
+  "/technicians",
+  "/reports",
+  "/settings/users",
+  "/technicians/payouts",
+] as const;
 
 test("layout has no horizontal overflow across target viewports", async ({ page }) => {
   await login(page, adminEmail);
@@ -133,6 +141,56 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
       });
 
       expect(overflowReport, `${path} overflow at ${viewport.width}x${viewport.height}: ${overflowReport.join(" | ")}`).toEqual([]);
+    }
+
+    await page.goto("/clients");
+    await page.waitForLoadState("networkidle");
+    const firstClientLink = page.getByRole("link", { name: "Open" }).first();
+    if (await firstClientLink.isVisible()) {
+      await firstClientLink.click();
+      await page.waitForLoadState("networkidle");
+      const detailOverflow = await page.evaluate(() => {
+        const offenders: string[] = [];
+        const nodes = Array.from(document.querySelectorAll<HTMLElement>("body *"));
+
+        for (const node of nodes) {
+          const style = window.getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden") continue;
+          if (style.position === "fixed") continue;
+
+          const rect = node.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          if (rect.right <= window.innerWidth + 1) continue;
+
+          let allowOverflow = false;
+          let current: HTMLElement | null = node;
+          while (current) {
+            const currentStyle = window.getComputedStyle(current);
+            if (
+              currentStyle.overflowX === "auto" ||
+              currentStyle.overflowX === "scroll" ||
+              currentStyle.overflowX === "clip"
+            ) {
+              allowOverflow = true;
+              break;
+            }
+            current = current.parentElement;
+          }
+
+          if (!allowOverflow) {
+            if (node.closest("[class*='sm:block']")) continue;
+            if (typeof node.className === "string" && node.className.includes("min-w-")) continue;
+            const parentTable = node.closest("table");
+            if (parentTable && parentTable.className.includes("min-w-")) continue;
+            offenders.push(`${node.tagName.toLowerCase()}.${node.className}`.trim());
+            if (offenders.length >= 4) break;
+          }
+        }
+
+        return offenders;
+      });
+
+      expect(detailOverflow, `/clients/[id] overflow at ${viewport.width}x${viewport.height}: ${detailOverflow.join(" | ")}`).toEqual([]);
     }
   }
 });
