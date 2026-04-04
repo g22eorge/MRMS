@@ -346,230 +346,132 @@ async function main() {
 
   const [c1, c2, c3, c4, c5, c6, c7, c8] = clients;
 
-  const trainingJobs = await Promise.all([
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 1),
-      status: "RECEIVED",
-      clientId: c1.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "PHONE_IPHONE",
-      brand: "Apple",
-      model: "iPhone 13",
-      issueDescription: "Battery drains from 70% to 20% in one hour",
-      receivedAt: new Date(now - 2 * 60 * 60 * 1000),
+  const clientPool = [c1, c2, c3, c4, c5, c6, c7, c8];
+  const externalTechIds = [techExternal.id, ryan.id, dan.id];
+  const creators = [ops.id, ops.id, ops.id, opsExtended.id];
+  const statusCycle: JobStatus[] = [
+    "RECEIVED",
+    "DIAGNOSING",
+    "AWAITING_APPROVAL",
+    "IN_REPAIR",
+    "READY_FOR_PICKUP",
+    "COMPLETED",
+    "COMPLETED",
+    "CLOSED",
+    "IN_REPAIR",
+    "DIAGNOSING",
+  ];
+  const deviceCycle: Array<{ deviceType: DeviceType; brand: string; model: string }> = [
+    { deviceType: "PHONE_ANDROID", brand: "Samsung", model: "Galaxy A54" },
+    { deviceType: "PHONE_IPHONE", brand: "Apple", model: "iPhone 13" },
+    { deviceType: "WINDOWS_PC", brand: "Dell", model: "Latitude 5420" },
+    { deviceType: "MAC", brand: "Apple", model: "MacBook Pro 2020" },
+    { deviceType: "TABLET", brand: "Samsung", model: "Tab S8" },
+    { deviceType: "OTHER", brand: "Canon", model: "Pixma G3410" },
+    { deviceType: "WINDOWS_PC", brand: "Lenovo", model: "ThinkPad E14" },
+    { deviceType: "PHONE_ANDROID", brand: "Google", model: "Pixel 7" },
+  ];
+
+  const trainingJobs = await Promise.all(
+    Array.from({ length: 70 }, (_, index) => {
+      const sequence = index + 1;
+      const status = statusCycle[index % statusCycle.length];
+      const isExternal = index % 3 !== 1;
+      const selectedClient = clientPool[index % clientPool.length];
+      const selectedDevice = deviceCycle[index % deviceCycle.length];
+      const createdById = creators[index % creators.length];
+      const assignedToId = isExternal ? externalTechIds[index % externalTechIds.length] : techInternal.id;
+
+      const receivedAt = new Date(now - (90 - index) * 0.9 * day);
+      const completedAt =
+        status === "COMPLETED"
+          ? new Date(receivedAt.getTime() + (1 + (index % 4)) * day)
+          : undefined;
+      const closedAt =
+        status === "CLOSED"
+          ? new Date(receivedAt.getTime() + (2 + (index % 3)) * day)
+          : undefined;
+
+      const externalTechBill = 110000 + (index % 9) * 25000;
+      const clientBill = externalTechBill + 65000 + (index % 5) * 10000;
+      const externalTechFee = Math.max(externalTechBill - 20000, 70000);
+      const externalPaid = isExternal && status === "COMPLETED" ? index % 4 === 0 : false;
+
+      return ensureJob({
+        jobNumber: formatJobNumber(trainingDate, sequence),
+        status,
+        repairPath: isExternal ? "EXTERNAL" : "IN_HOUSE",
+        clientId: selectedClient.id,
+        createdById,
+        assignedToId,
+        deviceType: selectedDevice.deviceType,
+        brand: selectedDevice.brand,
+        model: selectedDevice.model,
+        issueDescription: isExternal
+          ? "Intermittent fault requiring specialist board-level diagnostics"
+          : "Device fails under normal usage and needs workshop diagnosis",
+        diagnosisNotes:
+          !isExternal && status !== "RECEIVED"
+            ? "Initial diagnostics captured by internal bench tests"
+            : undefined,
+        externalDiagnosis:
+          isExternal && status !== "RECEIVED"
+            ? "External specialist update recorded for workflow handoff"
+            : undefined,
+        externalTechBill,
+        clientBill: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(status) ? clientBill : undefined,
+        clientApproved: status === "AWAITING_APPROVAL" ? null : status === "CLOSED" ? false : true,
+        repairTimeline: status === "RECEIVED" ? undefined : isExternal ? "2-4 days" : "1-2 days",
+        timelineMinMinutes: status === "RECEIVED" ? undefined : isExternal ? 2 * 24 * 60 : 24 * 60,
+        timelineMaxMinutes: status === "RECEIVED" ? undefined : isExternal ? 4 * 24 * 60 : 2 * 24 * 60,
+        timelineConfidence: status === "RECEIVED" ? undefined : isExternal ? "ESTIMATED" : "FIRM",
+        timelineNote:
+          status === "IN_REPAIR" || status === "AWAITING_APPROVAL"
+            ? "Parts availability and client response monitored"
+            : undefined,
+        workDone:
+          status === "READY_FOR_PICKUP" || status === "COMPLETED"
+            ? "Repair completed and final quality checks passed"
+            : undefined,
+        partsReplaced:
+          status === "READY_FOR_PICKUP" || status === "COMPLETED"
+            ? isExternal
+              ? "Board-level components"
+              : "Display/Battery module"
+            : undefined,
+        externalTechFee: isExternal ? externalTechFee : undefined,
+        externalPaid,
+        externalPaidAt: externalPaid ? new Date((completedAt ?? receivedAt).getTime() + day) : undefined,
+        externalPaymentRef: externalPaid ? `TRN-EXT-${String(2000 + sequence)}` : undefined,
+        receivedAt,
+        completedAt,
+        closedAt,
+      });
     }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 2),
-      status: "DIAGNOSING",
-      clientId: c2.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "WINDOWS_PC",
-      brand: "Dell",
-      model: "Latitude 5410",
-      issueDescription: "Random shutdown during boot",
-      diagnosisNotes: "Power rail diagnostics in progress",
-      receivedAt: new Date(now - 1 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 3),
-      status: "AWAITING_APPROVAL",
-      repairPath: "EXTERNAL",
-      clientId: c3.id,
-      createdById: ops.id,
-      assignedToId: ryan.id,
-      deviceType: "MAC",
-      brand: "Apple",
-      model: "MacBook Pro 2020",
-      issueDescription: "Liquid spill near keyboard",
-      externalDiagnosis: "Top case and board repair required",
-      externalTechBill: 280000,
-      clientApproved: null,
-      repairTimeline: "3-4 days",
-      receivedAt: new Date(now - 2 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 4),
-      status: "IN_REPAIR",
-      repairPath: "IN_HOUSE",
-      clientId: c4.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "PHONE_ANDROID",
-      brand: "Samsung",
-      model: "Galaxy A34",
-      issueDescription: "Camera not focusing",
-      diagnosisNotes: "Camera module replacement ongoing",
-      clientApproved: true,
-      repairTimeline: "1-2 days",
-      receivedAt: new Date(now - 2 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 5),
-      status: "IN_REPAIR",
-      repairPath: "EXTERNAL",
-      clientId: c5.id,
-      createdById: ops.id,
-      assignedToId: dan.id,
-      deviceType: "TABLET",
-      brand: "Samsung",
-      model: "Tab S8",
-      issueDescription: "Charging port intermittently disconnected",
-      externalDiagnosis: "Port track repair in progress",
-      externalTechBill: 175000,
-      clientApproved: true,
-      repairTimeline: "2-3 days",
-      receivedAt: new Date(now - 3 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 6),
-      status: "READY_FOR_PICKUP",
-      repairPath: "IN_HOUSE",
-      clientId: c6.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "WINDOWS_PC",
-      brand: "Lenovo",
-      model: "ThinkPad E14",
-      issueDescription: "Keyboard keys failed after spill",
-      diagnosisNotes: "Keyboard replaced and tested",
-      clientBill: 165000,
-      clientApproved: true,
-      workDone: "Replaced keyboard and validated typing matrix",
-      partsReplaced: "Keyboard",
-      receivedAt: new Date(now - 4 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 7),
-      status: "COMPLETED",
-      repairPath: "EXTERNAL",
-      clientId: c7.id,
-      createdById: ops.id,
-      assignedToId: techExternal.id,
-      deviceType: "MAC",
-      brand: "Apple",
-      model: "MacBook Air M1",
-      issueDescription: "No display output",
-      externalDiagnosis: "Display flex and board fix completed",
-      externalTechBill: 320000,
-      externalTechFee: 290000,
-      externalPaid: false,
-      clientBill: 470000,
-      clientApproved: true,
-      receivedAt: new Date(now - 7 * day),
-      completedAt: new Date(now - 2 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 8),
-      status: "COMPLETED",
-      repairPath: "EXTERNAL",
-      clientId: c8.id,
-      createdById: ops.id,
-      assignedToId: ryan.id,
-      deviceType: "PHONE_ANDROID",
-      brand: "Google",
-      model: "Pixel 7",
-      issueDescription: "No network service",
-      externalDiagnosis: "RF section replaced and calibrated",
-      externalTechBill: 210000,
-      externalTechFee: 180000,
-      externalPaid: true,
-      externalPaidAt: new Date(now - day),
-      externalPaymentRef: "TRN-EXT-1008",
-      clientBill: 310000,
-      clientApproved: true,
-      receivedAt: new Date(now - 8 * day),
-      completedAt: new Date(now - 3 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 9),
-      status: "COMPLETED",
-      repairPath: "IN_HOUSE",
-      clientId: c1.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "PHONE_ANDROID",
-      brand: "Tecno",
-      model: "Camon 20",
-      issueDescription: "Screen touch not responding",
-      diagnosisNotes: "Display changed and touch tested",
-      externalTechBill: 115000,
-      clientBill: 165000,
-      clientApproved: true,
-      workDone: "Replaced display assembly and calibrated touch",
-      partsReplaced: "Display assembly",
-      receivedAt: new Date(now - 6 * day),
-      completedAt: new Date(now - day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 10),
-      status: "CLOSED",
-      repairPath: "EXTERNAL",
-      clientId: c2.id,
-      createdById: ops.id,
-      assignedToId: dan.id,
-      deviceType: "OTHER",
-      brand: "Epson",
-      model: "L3150",
-      issueDescription: "Motor failure and paper feed jam",
-      externalDiagnosis: "Replacement not economical for client",
-      externalTechBill: 130000,
-      clientApproved: false,
-      receivedAt: new Date(now - 9 * day),
-      closedAt: new Date(now - 5 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 11),
-      status: "READY_FOR_PICKUP",
-      repairPath: "EXTERNAL",
-      clientId: c3.id,
-      createdById: ops.id,
-      assignedToId: techExternal.id,
-      deviceType: "TABLET",
-      brand: "Apple",
-      model: "iPad 10th Gen",
-      issueDescription: "Ghost touches",
-      externalDiagnosis: "Digitizer replaced and QA complete",
-      externalTechBill: 195000,
-      externalTechFee: 170000,
-      clientBill: 285000,
-      clientApproved: true,
-      receivedAt: new Date(now - 5 * day),
-    }),
-    ensureJob({
-      jobNumber: formatJobNumber(trainingDate, 12),
-      status: "AWAITING_APPROVAL",
-      repairPath: "IN_HOUSE",
-      clientId: c4.id,
-      createdById: ops.id,
-      assignedToId: techInternal.id,
-      deviceType: "PHONE_IPHONE",
-      brand: "Apple",
-      model: "iPhone 11",
-      issueDescription: "Face ID unavailable",
-      diagnosisNotes: "Sensor flex replacement needed",
-      externalTechBill: 145000,
-      clientApproved: null,
-      repairTimeline: "1 day",
-      receivedAt: new Date(now - day),
-    }),
-  ]);
+  );
 
   for (const job of trainingJobs) {
-    await ensureAudit(job.id, admin.id, "JOB_CREATED", { seeded: true, training: true, jobNumber: job.jobNumber });
+    await ensureAudit(job.id, admin.id, "JOB_CREATED", {
+      seeded: true,
+      training: true,
+      jobNumber: job.jobNumber,
+    });
+
+    if (job.status === "DIAGNOSING" || job.status === "IN_REPAIR") {
+      await ensureAudit(job.id, job.assignedToId ?? techInternal.id, "TECHNICIAN_UPDATE", {
+        seeded: true,
+        note: "Technician training update recorded",
+      });
+    }
+    if (job.status === "AWAITING_APPROVAL") {
+      await ensureAudit(job.id, ops.id, "AWAITING_CLIENT_APPROVAL", {
+        seeded: true,
+        note: "Client contact logged for approval workflow",
+      });
+    }
   }
 
-  await ensureAudit(trainingJobs[4].id, dan.id, "EXTERNAL_DIAGNOSIS_ADDED", {
-    seeded: true,
-    note: "External technician posted live progress update",
-  });
-  await ensureAudit(trainingJobs[2].id, ops.id, "AWAITING_CLIENT_APPROVAL", {
-    seeded: true,
-    note: "Client contacted and pending decision",
-  });
-
-  console.log(`Prepared ${trainingJobs.length} fresh training jobs.`);
+  console.log(`Prepared ${trainingJobs.length} fresh training jobs for go-live rehearsal.`);
   console.log("Sample login password for seeded non-admin users:", defaultPassword);
 }
 

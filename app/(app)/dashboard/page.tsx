@@ -178,17 +178,17 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{jobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open queue →</p>
           </Link>
           <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs needing action →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
           </Link>
@@ -317,22 +317,22 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{assignedJobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">View my jobs →</p>
           </Link>
           <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Diagnosing</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{diagnosing}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Needs diagnosis work →</p>
           </Link>
           <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{inRepair}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Active repairs →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completed}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed repairs →</p>
           </Link>
@@ -492,7 +492,7 @@ export default async function DashboardPage({
               {receivedDelta >= 0 ? "+" : ""}
               {receivedDelta} vs {prevMonthString}
             </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View monthly intake →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open intake view →</p>
           </Link>
           <Link href={`/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
@@ -501,7 +501,7 @@ export default async function DashboardPage({
               {completedDeltaCount >= 0 ? "+" : ""}
               {completedDeltaCount} vs {prevMonthString}
             </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review monthly completion →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open completion view →</p>
           </Link>
           <Link href={`/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
@@ -510,7 +510,7 @@ export default async function DashboardPage({
               {closedDelta >= 0 ? "+" : ""}
               {closedDelta} vs {prevMonthString}
             </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review monthly closures →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open closure view →</p>
           </Link>
           <Link href={`/reports?month=${selectedMonthString}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
@@ -519,7 +519,7 @@ export default async function DashboardPage({
               {revenueDelta >= 0 ? "+" : "-"}
               {formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
             </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open month report →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open report workspace →</p>
           </Link>
         </div>
 
@@ -700,12 +700,12 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/reports" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue this month</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold">{formatMoney(monthRevenue, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open reports →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed this month</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedThisMonth.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review completed jobs →</p>
           </Link>
@@ -786,10 +786,10 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Captured this month</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Captured ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{capturedThisMonth}</p>
             <p className="mt-1 text-sm text-[var(--ink-muted)]">Jobs registered by front desk intake</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Create another intake →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open intake form →</p>
           </Link>
           <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open client queue</p>
