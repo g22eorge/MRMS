@@ -9,15 +9,11 @@ type SearchParams = {
   q?: string;
   status?: string;
   ready?: string;
+  dismiss?: string;
 };
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-function confidenceLabel(value: string | null) {
-  if (!value) return "ESTIMATED";
-  return value.replaceAll("_", " ");
 }
 
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
@@ -31,6 +27,38 @@ function shortText(value: string | null, max = 78) {
   if (!value) return "No issue summary provided";
   if (value.length <= max) return value;
   return `${value.slice(0, max).trimEnd()}...`;
+}
+
+function statusTone(status: JobStatus) {
+  if (status === "READY_FOR_PICKUP") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (status === "IN_REPAIR") return "bg-cyan-100 text-cyan-700 border-cyan-200";
+  if (status === "AWAITING_APPROVAL") return "bg-amber-100 text-amber-700 border-amber-200";
+  if (status === "DIAGNOSING") return "bg-violet-100 text-violet-700 border-violet-200";
+  if (status === "CLOSED") return "bg-slate-100 text-slate-700 border-slate-200";
+  return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
+function nextCourse(job: {
+  status: JobStatus;
+  ready: boolean;
+  clientApproved: boolean | null;
+  repairPath: "IN_HOUSE" | "EXTERNAL" | null;
+}) {
+  if (job.status === "RECEIVED") return "Start diagnosis and capture baseline findings.";
+  if (job.status === "DIAGNOSING") {
+    return job.repairPath === "EXTERNAL"
+      ? "Prepare referral notes and submit external handoff."
+      : "Finalize diagnosis and move job to internal repair.";
+  }
+  if (job.status === "REFERRED") return "Collect external estimate and confirm timeline.";
+  if (job.status === "AWAITING_APPROVAL") return "Await client approval before active repair work.";
+  if (job.status === "IN_REPAIR") {
+    if (job.ready) return "Run final checks and prepare pickup handoff.";
+    return job.clientApproved ? "Continue repair and keep timeline updated." : "Pause work until approval is confirmed.";
+  }
+  if (job.status === "READY_FOR_PICKUP") return "Notify client and complete pickup checklist.";
+  if (job.status === "COMPLETED") return "Close documentation and archive supporting notes.";
+  return "No pending action for this job.";
 }
 
 export default async function TechniciansPage({
@@ -103,7 +131,18 @@ export default async function TechniciansPage({
   const inRepairCount = normalized.filter((job) => job.status === "IN_REPAIR").length;
   const overdueCount = normalized.filter((job) => job.overdue).length;
   const awaitingApprovalCount = normalized.filter((job) => job.status === "AWAITING_APPROVAL").length;
-  const spotlightJobs = sortedJobs.slice(0, 3);
+  const dismissedSpotlightIds = new Set(
+    (filters.dismiss ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const spotlightCandidates = sortedJobs.filter(
+    (job) =>
+      !dismissedSpotlightIds.has(job.id) &&
+      ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
+  );
+  const spotlightJobs = spotlightCandidates.slice(0, 3);
   const statusCounts = [
     { key: "RECEIVED", count: normalized.filter((job) => job.status === "RECEIVED").length },
     { key: "DIAGNOSING", count: normalized.filter((job) => job.status === "DIAGNOSING").length },
@@ -119,7 +158,7 @@ export default async function TechniciansPage({
     ...(user.role === "TECHNICIAN_EXTERNAL"
       ? [{ href: "/technicians/payouts", label: "My Payouts" }]
       : [{ href: "/jobs?status=IN_REPAIR&returnTo=%2Ftechnicians", label: "Add Timeline Note" }]),
-  ];
+  ].slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -224,8 +263,10 @@ export default async function TechniciansPage({
         ))}
       </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Queue Map</p>
+      <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <summary className="list-none cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+          Queue Map
+        </summary>
         <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
           {statusCounts.map((status) => (
             <div key={`mobile-${status.key}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -242,105 +283,141 @@ export default async function TechniciansPage({
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
+      <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4" open>
+        <summary className="mb-2 flex list-none cursor-pointer items-center justify-between gap-2">
           <p className="text-sm font-semibold">Priority Spotlight</p>
           <span className="text-xs text-[var(--ink-muted)]">Top actionables</span>
-        </div>
+        </summary>
         {spotlightJobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">Nothing urgent right now.</p>
         ) : (
-          <div className="grid gap-2 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3">
             {spotlightJobs.map((job) => (
-              <div key={`spotlight-${job.id}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+              <article
+                key={`spotlight-${job.id}`}
+                className="overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(160deg,#ffffff_0%,#f4f9f8_52%,#eef6f5_100%)] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.05)]"
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="mono truncate text-xs font-semibold">{job.jobNumber}</p>
+                  <p className="mono truncate text-[11px] font-semibold text-[var(--ink-muted)]">{job.jobNumber}</p>
                   <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
                     {job.priority.label}
                   </span>
                 </div>
-                <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 72)}</p>
-                <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--ink-muted)]">
-                  <span className="rounded-full bg-white px-2 py-0.5">{job.status.replaceAll("_", " ")}</span>
-                  <span>Age {job.ageDays}d</span>
+                <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 86)}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>{job.status.replaceAll("_", " ")}</span>
+                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
+                    Assigned: {job.assignedTo?.name ?? "Unassigned"}
+                  </span>
+                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">Age {job.ageDays}d</span>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium flex-1 rounded-md px-2 py-1.5 text-center text-xs">
+
+                {typeof job.etaProgress === "number" ? (
+                  <div className="mt-2">
+                    <div className="h-1.5 rounded-full bg-slate-200">
+                      <div
+                        className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-amber-500" : "bg-[var(--brand)]"}`}
+                        style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="mt-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11px] text-[var(--ink-muted)]">
+                  Next: {nextCourse(job)}
+                </p>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/jobs/${job.id}?returnTo=${encodeURIComponent(`/technicians?dismiss=${job.id}`)}`}
+                    className="btn-premium flex-1 rounded-md px-2 py-1.5 text-center text-xs text-white"
+                  >
                     Open
                   </Link>
-                  <Link href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium-secondary flex-1 rounded-md px-2 py-1.5 text-center text-xs">
+                  <Link
+                    href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent(`/technicians?dismiss=${job.id}`)}`}
+                    className="btn-premium-secondary flex-1 rounded-md px-2 py-1.5 text-center text-xs"
+                  >
                     Update
                   </Link>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </details>
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="mb-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Work Queue</p>
         {sortedJobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No jobs in this queue. Try changing filters.</p>
         ) : (
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             <ProgressiveList initialCount={5} step={5}>
               {sortedJobs.map((job) => (
-                <li key={job.id} className="border-b border-[var(--line)] py-2">
-                <details className="rounded-lg sm:rounded-none">
-                  <summary className="list-none">
+                <li key={job.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
-                          {job.priority.label}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 88)}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">{job.status}</span>
-                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-700">
-                          Assigned: {job.assignedTo?.name ?? "Unassigned"}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">Age {job.ageDays}d</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">{confidenceLabel(job.timelineConfidence)}</span>
-                        {job.ready ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">Ready</span> : null}
-                        {job.overdue ? <span className="rounded-full bg-orange-100 px-2 py-0.5 text-orange-700">Overdue</span> : null}
-                        {job.repairTimeline ? <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-cyan-700">ETA {job.repairTimeline}</span> : null}
-                        {job.timelineNote ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">Delay: {job.timelineNote}</span>
-                        ) : null}
-                      </div>
-                      {typeof job.etaProgress === "number" ? (
-                        <div className="mt-2">
-                          <div className="h-1.5 rounded-full bg-slate-200">
-                            <div
-                              className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-amber-500" : "bg-[var(--brand)]"}`}
-                              style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
-                            />
-                          </div>
-                          <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
-                            Elapsed {Math.floor(job.elapsedMinutes / 60)}h of ETA budget
-                          </p>
-                        </div>
-                      ) : null}
+                      <p className="mono truncate text-[11px] font-semibold text-[var(--ink-muted)]">{job.jobNumber}</p>
+                      <p className="truncate text-sm font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
                     </div>
-                  </summary>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-xs text-[var(--ink-muted)]">
+                    <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
+                      {job.priority.label}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 104)}</p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>
+                      {job.status.replaceAll("_", " ")}
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
+                      Assigned: {job.assignedTo?.name ?? "Unassigned"}
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">Age {job.ageDays}d</span>
+                    {job.repairTimeline ? <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-cyan-700">ETA {job.repairTimeline}</span> : null}
+                    {job.overdue ? <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">Overdue</span> : null}
+                  </div>
+
+                  {typeof job.etaProgress === "number" ? (
+                    <div className="mt-2">
+                      <div className="h-1.5 rounded-full bg-slate-200">
+                        <div
+                          className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-amber-500" : "bg-[var(--brand)]"}`}
+                          style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-[var(--ink-muted)]">Elapsed {Math.floor(job.elapsedMinutes / 60)}h of ETA budget</p>
+                    </div>
+                  ) : null}
+
+                  <p className="mt-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11px] text-[var(--ink-muted)]">
+                    Next: {nextCourse(job)}
+                  </p>
+
+                  {job.timelineNote ? (
+                    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Delay note: {shortText(job.timelineNote, 88)}</p>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] text-[var(--ink-muted)]">
                       {user.role === "TECHNICIAN_EXTERNAL" ? "Use Work Order for estimate and timeline updates" : "Use Work Order for repair log and completion updates"}
-                    </div>
+                    </p>
                     <div className="flex gap-2">
-                      <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="text-teal-700 hover:underline">Open</Link>
+                      <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium-secondary rounded-md px-2.5 py-1 text-xs">
+                        Open
+                      </Link>
                       {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
-                        <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="text-emerald-700 hover:underline">Mark completed</Link>
+                        <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium rounded-md px-2.5 py-1 text-xs text-white">
+                          Complete
+                        </Link>
                       ) : null}
                     </div>
                   </div>
-                </details>
                 </li>
               ))}
             </ProgressiveList>

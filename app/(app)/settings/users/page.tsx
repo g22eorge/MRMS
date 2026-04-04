@@ -196,6 +196,18 @@ export default async function UsersPage() {
     revalidatePath("/settings/users");
   }
 
+  async function reactivate(formData: FormData) {
+    "use server";
+    const { user: currentUser } = await getCurrentUserRole();
+    if (currentUser.role !== "ADMIN") return;
+
+    const id = String(formData.get("id") ?? "");
+    if (!id) return;
+
+    await prisma.user.update({ where: { id }, data: { isActive: true } });
+    revalidatePath("/settings/users");
+  }
+
   async function deleteUser(formData: FormData) {
     "use server";
     const { session: currentSession, user: currentUser } = await getCurrentUserRole();
@@ -604,6 +616,14 @@ export default async function UsersPage() {
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-slate-500">Inactive</span>
+                  <form action={reactivate} className="sm:w-fit">
+                    <input type="hidden" name="id" value={u.id} />
+                    <SubmitActionButton
+                      idleLabel="Activate"
+                      pendingLabel="Activating..."
+                      className="btn-premium w-full rounded-md px-3 py-2 text-sm text-white sm:w-auto"
+                    />
+                  </form>
                   {u.id !== session.user.id && u.role !== "ADMIN" ? (
                     <form action={deleteUser} className="sm:w-fit">
                       <input type="hidden" name="id" value={u.id} />
