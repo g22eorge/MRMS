@@ -11,7 +11,7 @@ const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
   { href: "/technicians", label: "Tech", group: "work", roles: "all" },
-  { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS"] },
+  { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
@@ -40,6 +40,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   OPS: ["/dashboard", "/jobs", "/clients", "/technicians", "/reports", "/settings/profile"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
+  INTAKE: ["/dashboard", "/jobs", "/clients", "/settings/profile"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
@@ -47,6 +48,7 @@ const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
   OPS: ["work", "finance", "personal"],
   TECHNICIAN_INTERNAL: ["work", "personal"],
   TECHNICIAN_EXTERNAL: ["work", "finance", "personal"],
+  INTAKE: ["work", "personal"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
@@ -154,6 +156,9 @@ function roleLabel(role: Role, href: string, label: string) {
     if (href === "/jobs") return "Operations";
     if (href === "/reports") return "Finance";
   }
+  if (role === "INTAKE") {
+    if (href === "/jobs") return "Intake Queue";
+  }
   if (role === "ADMIN") {
     if (href === "/jobs") return "Operations";
     if (href === "/technicians") return "Technician Board";
@@ -185,6 +190,7 @@ function mobilePrimaryForRole(role: Role, items: ReturnType<typeof orderedNavFor
     OPS: ["/dashboard", "/jobs", "/reports"],
     TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians"],
     TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts"],
+    INTAKE: ["/dashboard", "/jobs", "/clients"],
   };
 
   const wanted = preferred[role] ?? items.map((item) => item.href).slice(0, 3);

@@ -305,6 +305,55 @@ export default async function ClientsPage({
             </ProgressiveList>
           </div>
 
+          <div className="hidden overflow-x-auto 2xl:block">
+            <table className="min-w-[920px] w-full border-collapse text-sm">
+              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                <tr>
+                  <th className="px-4 py-3">Client</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Organization</th>
+                  <th className="px-4 py-3">Jobs</th>
+                  <th className="px-4 py-3">Updated</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(clients as ClientRow[]).map((client) => (
+                  <tr key={`desktop-${client.id}`} className="align-middle text-[var(--ink)]">
+                    <td className="border-t border-[var(--line)] px-4 py-3 font-medium">{client.fullName}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">{client.phone}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">{client.email ?? "-"}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">{client.organization ?? "-"}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">{client._count.jobs}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">{client.updatedAt.toLocaleDateString()}</td>
+                    <td className="border-t border-[var(--line)] px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/clients/${client.id}`}
+                          className="btn-premium rounded-md px-3 py-1.5 text-[13px]"
+                        >
+                          Open
+                        </Link>
+                        {user.role === "ADMIN" ? (
+                          <form action={deleteClientAction}>
+                            <input type="hidden" name="id" value={client.id} />
+                            <button
+                              disabled={client._count.jobs > 0}
+                              className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       )}
 

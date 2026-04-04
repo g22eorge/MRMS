@@ -43,6 +43,7 @@ type UserDetailsState = {
 const roleChoices: Role[] = [
   Role.ADMIN,
   Role.OPS,
+  Role.INTAKE,
   Role.TECHNICIAN_INTERNAL,
   Role.TECHNICIAN_EXTERNAL,
 ];
@@ -50,6 +51,7 @@ const roleChoices: Role[] = [
 const roleDisplay: Record<Role, string> = {
   ADMIN: "Admin",
   OPS: "Ops",
+  INTAKE: "Intake",
   TECHNICIAN_INTERNAL: "Internal Tech",
   TECHNICIAN_EXTERNAL: "External Tech",
 };

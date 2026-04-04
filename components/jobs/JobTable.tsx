@@ -17,6 +17,7 @@ export type JobRow = {
   assignedTo?: string;
   receivedAt: Date;
   externalTechBill?: number | null;
+  clientBill?: number | null;
   workflowReason?: WorkflowReason | null;
 };
 
@@ -58,9 +59,10 @@ export function JobTable({
   returnTo?: string;
 }) {
   const canSeeClient = role !== "TECHNICIAN_EXTERNAL";
-  const canSeeCost = role === "ADMIN" || role === "OPS";
-  const canSeeAssignment = role === "ADMIN" || role === "OPS";
-  const canEditPage = role !== "TECHNICIAN_EXTERNAL";
+  const canSeeCost = role === "ADMIN" || role === "OPS" || role === "INTAKE";
+  const canSeeAssignment = role === "ADMIN" || role === "OPS" || role === "INTAKE";
+  const canEditPage = role !== "TECHNICIAN_EXTERNAL" && role !== "INTAKE";
+  const isIntake = role === "INTAKE";
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
@@ -92,7 +94,13 @@ export function JobTable({
                     <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</p>
                     {canSeeCost ? (
                       <p className="mt-1 text-[11px] font-semibold text-[var(--ink)]">
-                        {job.externalTechBill ? formatMoney(job.externalTechBill) : "UGX -"}
+                        {isIntake
+                          ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
+                            ? formatMoney(job.clientBill)
+                            : "Pending final"
+                          : job.externalTechBill
+                            ? formatMoney(job.externalTechBill)
+                            : "UGX -"}
                       </p>
                     ) : null}
                   </div>
@@ -121,8 +129,16 @@ export function JobTable({
               ) : null}
               {canSeeCost ? (
                 <div>
-                  <p className="text-[var(--ink-muted)]">External Bill</p>
-                  <p className="font-medium text-[var(--ink)]">{job.externalTechBill ? formatMoney(job.externalTechBill) : "UGX -"}</p>
+                  <p className="text-[var(--ink-muted)]">{isIntake ? "Client Cost" : "External Bill"}</p>
+                  <p className="font-medium text-[var(--ink)]">
+                    {isIntake
+                      ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
+                        ? formatMoney(job.clientBill)
+                        : "Pending final"
+                      : job.externalTechBill
+                        ? formatMoney(job.externalTechBill)
+                        : "UGX -"}
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -167,7 +183,7 @@ export function JobTable({
             {canSeeAssignment ? <th className="border-b border-[var(--line)] px-4 py-3">Assigned</th> : null}
             <th className="border-b border-[var(--line)] px-4 py-3">Flag</th>
             <th className="border-b border-[var(--line)] px-4 py-3">Received</th>
-            {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">External Bill</th> : null}
+            {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">{isIntake ? "Client Cost" : "External Bill"}</th> : null}
             <th className="border-b border-[var(--line)] px-4 py-3">Actions</th>
           </tr>
         </thead>
@@ -195,7 +211,17 @@ export function JobTable({
                 )}
               </td>
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.receivedAt.toLocaleDateString()}</td>
-              {canSeeCost ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.externalTechBill ? formatMoney(job.externalTechBill) : "-"}</td> : null}
+              {canSeeCost ? (
+                <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
+                  {isIntake
+                    ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
+                      ? formatMoney(job.clientBill)
+                      : "Pending final"
+                    : job.externalTechBill
+                      ? formatMoney(job.externalTechBill)
+                      : "-"}
+                </td>
+              ) : null}
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
                 <div className="inline-flex items-center gap-2">
                   <Link

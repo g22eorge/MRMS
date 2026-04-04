@@ -53,7 +53,7 @@ export async function generateJobNumber() {
 export async function createJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
 
-  if (!(user.role === "ADMIN" || user.role === "OPS")) {
+  if (!(user.role === "ADMIN" || user.role === "OPS" || user.role === "INTAKE")) {
     return { error: "You cannot create jobs." };
   }
 

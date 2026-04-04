@@ -76,6 +76,7 @@ enum Role {
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
   OPS
+  INTAKE
 }
 
 enum JobStatus {

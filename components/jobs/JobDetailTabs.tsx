@@ -118,11 +118,13 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
   }, [savedSection]);
   const canViewFinancials = role === "ADMIN" || role === "OPS";
   const canManageFinancials = role === "ADMIN";
+  const isIntake = role === "INTAKE";
 
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
     if (tab === "financials") return canViewFinancials;
-    if (tab === "timeline") return ["ADMIN", "OPS"].includes(role);
+    if (tab === "timeline") return ["ADMIN", "OPS", "INTAKE"].includes(role);
+    if ((tab === "diagnosis" || tab === "repair") && isIntake) return false;
     return true;
   });
 
@@ -389,6 +391,11 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
               <p className="text-sm text-slate-600">Workflow reason: {job.workflowReason.replaceAll("_", " ")}</p>
             ) : null}
             {job.statusNote ? <p className="text-sm text-slate-600">Workflow note: {job.statusNote}</p> : null}
+            {isIntake ? (
+              <p className="text-sm text-slate-700">
+                Client-facing cost: {typeof job.clientBill === "number" ? job.clientBill.toFixed(2) : "Pending final approval"}
+              </p>
+            ) : null}
           </div>
 
           {role === "ADMIN" || role === "OPS" ? (
@@ -654,7 +661,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
         </form>
       ) : null}
 
-      {active === "timeline" && ["ADMIN", "OPS"].includes(role) ? (
+      {active === "timeline" && ["ADMIN", "OPS", "INTAKE"].includes(role) ? (
         <AuditTimeline items={job.auditLogs} />
       ) : null}
 
@@ -673,7 +680,7 @@ export function JobDetailTabs({ role, job, technicians }: Props) {
         </a>
       ) : null}
 
-      {statusActions.length > 0 && !isTerminal ? (
+      {statusActions.length > 0 && !isTerminal && !isIntake ? (
         <form
           action={(formData) => {
             formData.set("jobId", job.id);

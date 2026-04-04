@@ -17,6 +17,9 @@ function pageMeta(pathname: string, role: Role) {
     if (role === "OPS") {
       return { title: "Dashboard", description: "Manage referrals, billing visibility, client approvals, and handoff into active repair." };
     }
+    if (role === "INTAKE") {
+      return { title: "Dashboard", description: "Capture new intake jobs and respond to client updates with read-only progress visibility." };
+    }
     if (role === "ADMIN") {
       return { title: "Dashboard", description: "Unified operations and financial control for repair performance." };
     }
@@ -62,6 +65,7 @@ function roleTag(role: Role) {
   if (role === "TECHNICIAN_INTERNAL") return "Internal Tech";
   if (role === "TECHNICIAN_EXTERNAL") return "External Tech";
   if (role === "OPS") return "Operations";
+  if (role === "INTAKE") return "Intake";
   return "Operations";
 }
 

@@ -268,7 +268,7 @@ export default async function ClientDetailPage({
           <p className="text-sm text-[var(--ink-muted)]">No jobs match this filter.</p>
         ) : (
           <>
-            <div className="space-y-2 2xl:hidden">
+            <div className="space-y-2">
               <ProgressiveList initialCount={4} step={4}>
                 {client.jobs.map((job: ClientDetail["jobs"][number]) => (
                   <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
@@ -286,33 +286,6 @@ export default async function ClientDetailPage({
                   </details>
                 ))}
               </ProgressiveList>
-            </div>
-
-            <div className="hidden overflow-x-auto 2xl:block">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                  <tr>
-                    <th className="px-3 py-2">Job #</th>
-                    <th className="px-3 py-2">Device</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Received</th>
-                    <th className="px-3 py-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {client.jobs.map((job: ClientDetail["jobs"][number]) => (
-                    <tr key={job.id} className="border-t border-[var(--line)]/70">
-                      <td className="px-3 py-2 font-semibold">{job.jobNumber}</td>
-                      <td className="px-3 py-2">{job.brand} {job.model}</td>
-                      <td className="px-3 py-2">{job.status}</td>
-                      <td className="px-3 py-2">{job.receivedAt.toLocaleDateString()}</td>
-                      <td className="px-3 py-2">
-                        <Link href={`/jobs/${job.id}`} className="text-[var(--brand)] hover:underline">Open</Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </>
         )}

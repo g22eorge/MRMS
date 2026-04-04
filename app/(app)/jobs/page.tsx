@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { JobTable, JobRow } from "@/components/jobs/JobTable";
 import { StatusFlowNotice } from "@/components/jobs/StatusFlowNotice";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
-import { getExternalTechBill } from "@/lib/billing";
+import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -74,6 +74,7 @@ export default async function JobsPage({
                 OR: [
                   { jobNumber: { contains: filters.q } },
                   { client: { fullName: { contains: filters.q } } },
+                  { client: { phone: { contains: filters.q } } },
                 ],
               }
             : {}),
@@ -122,6 +123,7 @@ export default async function JobsPage({
       assignedTo: job.assignedTo?.name,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
+      clientBill: getClientBill(job),
       workflowReason: withWorkflow.workflowReason ?? null,
     };
   });
@@ -229,7 +231,7 @@ export default async function JobsPage({
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder="Search job # or client and press Enter"
+              placeholder={user.role === "INTAKE" ? "Search job # or phone and press Enter" : "Search job # or client and press Enter"}
               className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
             />
             <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
@@ -272,7 +274,7 @@ export default async function JobsPage({
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder="Search job # or client"
+              placeholder={user.role === "INTAKE" ? "Search job # or phone" : "Search job # or client"}
               className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
             />
             <input

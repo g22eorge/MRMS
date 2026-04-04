@@ -85,6 +85,9 @@ function buildTimeline(payload: z.infer<typeof updateSchema>) {
 
 export async function updateJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
+  if (user.role === "INTAKE") {
+    return { error: "Intake is read-only after job creation." };
+  }
   const hasPartsNeededField = formData.has("partsNeeded");
   const hasStatusNoteField = formData.has("statusNote");
   const hasWorkflowReasonField = formData.has("workflowReason");

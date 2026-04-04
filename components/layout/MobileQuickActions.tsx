@@ -24,6 +24,13 @@ function roleActions(role: Role): QuickAction[] {
       { href: "/reports", label: "Reports" },
     ];
   }
+  if (role === "INTAKE") {
+    return [
+      { href: "/jobs/new", label: "New Intake" },
+      { href: "/jobs", label: "Lookup Jobs" },
+      { href: "/clients", label: "Clients" },
+    ];
+  }
   if (role === "TECHNICIAN_EXTERNAL") {
     return [
       { href: "/jobs", label: "Work Orders" },
