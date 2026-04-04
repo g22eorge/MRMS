@@ -47,14 +47,14 @@ export function MobileQuickActions({ role }: { role: Role }) {
   const actions = roleActions(role);
 
   return (
-    <div className="mobile-quick-actions glass sticky top-[var(--mobile-header-height)] z-20 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] px-2 py-2 md:hidden">
+    <div className="mobile-quick-actions glass sticky top-[var(--mobile-header-height)] z-20 grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] px-2 py-2 md:hidden">
       {actions.map((action) => {
         const active = isActive(pathname, action.href);
         return (
           <Link
             key={action.href}
             href={action.href}
-            className={`min-w-[112px] shrink-0 rounded-lg border px-3 py-2 text-center text-xs font-semibold tracking-[0.08em] ${
+            className={`min-w-0 rounded-lg border px-2 py-2 text-center text-[11px] font-semibold tracking-[0.08em] ${
               active
                 ? "border-transparent bg-[var(--brand)] text-white"
                 : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"

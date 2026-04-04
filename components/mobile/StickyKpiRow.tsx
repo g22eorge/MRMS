@@ -9,7 +9,7 @@ type StickyKpiItem = {
 
 export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]; className?: string }) {
   return (
-    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden ${className}`}>
+    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden ${className}`}>
       {items.map((item) => {
         const toneClass =
           item.tone === "brand"
@@ -32,7 +32,7 @@ export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]
             <Link
               key={item.label}
               href={item.href}
-              className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
+              className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
             >
               {content}
             </Link>
@@ -40,7 +40,7 @@ export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]
         }
 
         return (
-          <div key={item.label} className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+          <div key={item.label} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
             {content}
           </div>
         );

@@ -55,6 +55,7 @@ pre,
 .mobile-page-shell {
   display: grid;
   gap: var(--mobile-gap);
+  max-width: 100%;
 }
 
 .mobile-section {
@@ -248,6 +249,7 @@ a:active .nav-icon-premium {
   }
 
   body {
+    font-size: 16px;
     line-height: 1.45;
   }
 
@@ -269,8 +271,12 @@ a:active .nav-icon-premium {
     touch-action: manipulation;
   }
 
-  :where(button:active, a[role="button"]:active, a[href]:active) {
+  :where(button:active, a[role="button"]:active) {
     transform: scale(0.98);
+  }
+
+  :where(a[href]:active) {
+    transform: none;
   }
 }
 
