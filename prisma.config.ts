@@ -17,7 +17,7 @@ function normalizeLocalSqliteUrl(url: string) {
   return `file:${path.resolve(process.cwd(), rawPath)}`;
 }
 
-const defaultLocalDatabaseUrl = `file:${path.resolve(process.cwd(), "prisma/dev.db")}`;
+const defaultLocalDatabaseUrl = `file:${path.resolve(process.cwd(), "dev.db")}`;
 
 const databaseUrl =
   process.env.PROD === "true"

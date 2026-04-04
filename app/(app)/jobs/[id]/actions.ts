@@ -135,6 +135,17 @@ export async function updateJobAction(formData: FormData) {
 
   const roleCanTransition = (role: Role, nextStatus: JobStatus) => {
     if (role === "ADMIN") return true;
+    if (can.editDiagnosis(permissionUser)) {
+      return (
+        [
+          JobStatus.DIAGNOSING,
+          JobStatus.IN_REPAIR,
+          JobStatus.READY_FOR_PICKUP,
+          JobStatus.COMPLETED,
+          JobStatus.CLOSED,
+        ] as JobStatus[]
+      ).includes(nextStatus);
+    }
     if (role === "TECHNICIAN_INTERNAL") {
       return (
         [

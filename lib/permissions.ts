@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 
 export const EXTRA_PERMISSIONS = [
+  "can_run_internal_repairs",
   "can_intake",
   "can_search_jobs",
   "can_generate_job_cards",
@@ -22,6 +23,9 @@ type PermissionUser = {
 };
 
 function hasExtraPermission(user: PermissionUser, permission: ExtraPermission) {
+  if (user.role !== "TECHNICIAN_INTERNAL" && user.role !== "OPS") {
+    return false;
+  }
   return Boolean(user.permissions?.includes(permission));
 }
 
@@ -33,7 +37,7 @@ export const can = {
   createJob: (user: PermissionUser) =>
     ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_intake"),
   editDiagnosis: (user: PermissionUser) =>
-    ["ADMIN", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"].includes(user.role),
+    ["ADMIN", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"].includes(user.role) || hasExtraPermission(user, "can_run_internal_repairs"),
   manageUsers: (user: PermissionUser) => user.role === "ADMIN",
   approveWork: (user: PermissionUser) =>
     ["ADMIN", "OPS"].includes(user.role) || hasExtraPermission(user, "can_assign_jobs"),

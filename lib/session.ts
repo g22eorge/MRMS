@@ -42,11 +42,11 @@ export async function getCurrentUserRole() {
       isActive: true,
       name: true,
       email: true,
-      permissionGrants: { select: { permission: true } },
     },
   });
 
   let phone: string | null = null;
+  let permissions: string[] = [];
   if (baseUser) {
     try {
       const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
@@ -56,13 +56,24 @@ export async function getCurrentUserRole() {
     } catch {
       phone = null;
     }
+
+    try {
+      const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
+        SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
+      `;
+      permissions = permissionRows
+        .map((row) => row.permission)
+        .filter((permission): permission is string => typeof permission === "string" && permission.length > 0);
+    } catch {
+      permissions = [];
+    }
   }
 
   const user = baseUser
     ? {
         ...baseUser,
         phone,
-        permissions: baseUser.permissionGrants.map((grant) => grant.permission),
+        permissions,
       }
     : null;
 

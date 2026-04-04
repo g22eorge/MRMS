@@ -4,6 +4,7 @@ import { DeviceType, JobStatus, RepairPath, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const restExtendedPermissions = [
+  "can_run_internal_repairs",
   "can_intake",
   "can_search_jobs",
   "can_generate_job_cards",
@@ -246,7 +247,7 @@ async function main() {
     role: "TECHNICIAN_INTERNAL",
     password: defaultPassword,
   });
-  await ensureUserPermissions(techInternal.id, restExtendedPermissions);
+  await ensureUserPermissions(techInternal.id, []);
 
   const techExternal = await ensureUser({
     name: "Abdu",
@@ -262,6 +263,14 @@ async function main() {
     password: defaultPassword,
   });
   await ensureUserPermissions(ops.id, []);
+
+  const opsExtended = await ensureUser({
+    name: "Ops Extended",
+    email: "ops.extended@eagle.tech",
+    role: "OPS",
+    password: defaultPassword,
+  });
+  await ensureUserPermissions(opsExtended.id, restExtendedPermissions);
 
   const ryan = await ensureUser({
     name: "Ryan",
@@ -282,6 +291,19 @@ async function main() {
     "tech.internal@eagle.local",
     "tech.external@eagle.local",
   ]);
+
+  await prisma.user.updateMany({
+    where: { email: "ops@eagle.local" },
+    data: { name: "Ops Coordinator (Legacy)" },
+  });
+  await prisma.user.updateMany({
+    where: { email: "tech.internal@eagle.local" },
+    data: { name: "Internal Tech (Legacy)" },
+  });
+  await prisma.user.updateMany({
+    where: { email: "tech.external@eagle.local" },
+    data: { name: "External Tech (Legacy)" },
+  });
 
   console.log("Seeded users for all roles.");
 
