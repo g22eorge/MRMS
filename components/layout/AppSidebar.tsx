@@ -204,12 +204,12 @@ export function AppSidebar({ role }: { role: Role }) {
 
   return (
     <>
-      <aside className="glass hidden border-r border-[var(--line)] lg:flex lg:h-screen lg:w-72 lg:flex-col">
+      <aside className="glass hidden border-r border-[var(--line)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:flex-col">
         <div className="border-b border-[var(--line)] px-5 py-5">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">Eagle Info</p>
           <p className="text-base font-semibold">Repair Command Center</p>
         </div>
-        <nav className="flex flex-col gap-3 p-4">
+        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
           {groupedNav.map((section) => (
             <div key={section.group} className="space-y-1.5">
               <p className="px-2 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>

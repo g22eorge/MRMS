@@ -162,6 +162,19 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
         </section>
       ) : null}
 
+      <input type="hidden" name="fullName" value={form.fullName} />
+      <input type="hidden" name="phone" value={form.phone} />
+      <input type="hidden" name="email" value={form.email} />
+      <input type="hidden" name="organization" value={form.organization} />
+      <input type="hidden" name="deviceType" value={form.deviceType} />
+      <input type="hidden" name="brand" value={form.brand} />
+      <input type="hidden" name="model" value={form.model} />
+      <input type="hidden" name="serialOrImei" value={form.serialOrImei} />
+      <input type="hidden" name="accessories" value={form.accessories} />
+      <input type="hidden" name="physicalNotes" value={form.physicalNotes} />
+      <input type="hidden" name="issueDescription" value={form.issueDescription} />
+      <input type="hidden" name="receivedAt" value={form.receivedAt} />
+
       <div className="flex justify-between">
         <button
           type="button"
