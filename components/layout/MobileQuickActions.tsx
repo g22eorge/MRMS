@@ -47,7 +47,7 @@ export function MobileQuickActions({ role }: { role: Role }) {
   const actions = roleActions(role);
 
   return (
-    <div className="mobile-quick-actions glass sticky top-[var(--mobile-header-height)] z-20 grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] px-2 py-2 md:hidden">
+    <div className="mobile-quick-actions glass grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] px-2 py-2 md:hidden">
       {actions.map((action) => {
         const active = isActive(pathname, action.href);
         return (

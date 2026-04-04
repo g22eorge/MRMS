@@ -16,7 +16,7 @@
   --mobile-shell-bottom: 7rem;
   --mobile-header-height: 3.75rem;
   --mobile-quick-actions-height: 3.15rem;
-  --mobile-stack-offset: calc(var(--mobile-header-height) + var(--mobile-quick-actions-height));
+  --mobile-stack-offset: var(--mobile-header-height);
 }
 
 @theme inline {
@@ -197,10 +197,24 @@ pre,
 }
 
 .nav-icon-premium-active {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.14) 100%);
-  color: #ffffff;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 0 8px 14px rgba(0, 0, 0, 0.18);
+  border-color: rgba(15, 118, 110, 0.45);
+  background: linear-gradient(180deg, #ccfbf1 0%, #a7f3d0 100%);
+  color: #0f766e;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 8px 14px rgba(15, 118, 110, 0.16);
+}
+
+.sidebar-nav-icon {
+  box-shadow: none;
+  filter: none;
+  transition: none;
+  background: #d9f4ef;
+  border-color: rgba(15, 118, 110, 0.35);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sidebar-nav-icon svg {
+  transform: translateZ(0);
 }
 
 :where(button, a[class*="btn-premium"]) {
@@ -222,8 +236,10 @@ a:hover .nav-icon-premium {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.84) inset, 0 8px 14px rgba(15, 118, 110, 0.18);
 }
 
-a:active .nav-icon-premium {
-  transform: translateY(1px);
+@media (hover: hover) and (pointer: fine) {
+  a:active .nav-icon-premium {
+    transform: translateY(1px);
+  }
 }
 
 @keyframes fade-in-up {
@@ -245,7 +261,7 @@ a:active .nav-icon-premium {
     --mobile-shell-bottom: 7.2rem;
     --mobile-header-height: 3.6rem;
     --mobile-quick-actions-height: 3rem;
-    --mobile-stack-offset: calc(var(--mobile-header-height) + var(--mobile-quick-actions-height));
+    --mobile-stack-offset: var(--mobile-header-height);
   }
 
   body {
@@ -277,6 +293,27 @@ a:active .nav-icon-premium {
 
   :where(a[href]:active) {
     transform: none;
+  }
+
+  a:active .nav-icon-premium {
+    transform: none;
+  }
+
+  body:has(input:focus),
+  body:has(textarea:focus),
+  body:has(select:focus) {
+    --mobile-shell-bottom: 1rem;
+  }
+
+  body:has(input:focus) .mobile-bottom-nav,
+  body:has(textarea:focus) .mobile-bottom-nav,
+  body:has(select:focus) .mobile-bottom-nav,
+  body:has(input:focus) .mobile-quick-actions,
+  body:has(textarea:focus) .mobile-quick-actions,
+  body:has(select:focus) .mobile-quick-actions {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
   }
 }
 

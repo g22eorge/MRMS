@@ -179,13 +179,28 @@ function groupedNavForRole(role: Role) {
     .filter((section) => section.items.length > 0);
 }
 
+function mobilePrimaryForRole(role: Role, items: ReturnType<typeof orderedNavForRole>) {
+  const preferred: Partial<Record<Role, readonly string[]>> = {
+    ADMIN: ["/dashboard", "/jobs", "/reports"],
+    OPS: ["/dashboard", "/jobs", "/reports"],
+    TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians"],
+    TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts"],
+  };
+
+  const wanted = preferred[role] ?? items.map((item) => item.href).slice(0, 3);
+  return wanted
+    .map((href) => items.find((item) => item.href === href))
+    .filter((item): item is (typeof items)[number] => Boolean(item));
+}
+
 export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const visibleNav = orderedNavForRole(role);
   const groupedNav = groupedNavForRole(role);
-  const mobilePrimary = visibleNav.slice(0, 4);
-  const mobileMore = visibleNav.slice(4);
+  const mobilePrimary = mobilePrimaryForRole(role, visibleNav);
+  const mobileMore = visibleNav.filter((item) => !mobilePrimary.some((primary) => primary.href === item.href));
+  const moreActive = mobileMore.some((item) => isActive(pathname, item.href));
 
   return (
     <>
@@ -205,14 +220,14 @@ export function AppSidebar({ role }: { role: Role }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`rounded-md px-3 py-2 text-sm font-medium ${
+                    className={`block w-full rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
                       active
-                        ? "panel-shadow bg-[var(--brand)] text-white"
+                        ? "panel-shadow border border-[var(--brand)] bg-[var(--panel-strong)] text-[var(--ink)]"
                         : "text-[var(--ink)] hover:bg-[var(--panel)]"
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
+                      <span className="flex items-center gap-2">
+                      <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
                       <span>{label}</span>
                     </span>
                   </Link>
@@ -223,7 +238,7 @@ export function AppSidebar({ role }: { role: Role }) {
         </nav>
       </aside>
 
-      <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] md:hidden">
+      <nav className="mobile-bottom-nav glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] md:hidden">
         {mobilePrimary.map((item) => {
           const label = roleLabel(role, item.href, item.label);
           const active = isActive(pathname, item.href);
@@ -231,14 +246,14 @@ export function AppSidebar({ role }: { role: Role }) {
           <Link
             key={item.href}
             href={item.href}
-              className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium ${
+              className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-1 ${
                 active
                   ? "bg-[var(--brand)] text-white"
                   : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
               }`}
             >
             <span className="flex items-center gap-1.5 truncate">
-              <span className={`nav-icon-premium h-5 w-5 rounded-md ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
+              <span className="nav-icon-premium sidebar-nav-icon h-5 w-5 rounded-md">{navIcon(item.href)}</span>
               <span className="truncate">{mobileLabel(label)}</span>
             </span>
           </Link>
@@ -248,7 +263,11 @@ export function AppSidebar({ role }: { role: Role }) {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[var(--panel-strong)] px-2 py-2.5 text-xs font-medium text-[var(--ink-muted)]"
+            className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium ${
+              moreActive
+                ? "bg-[var(--brand)] text-white"
+                : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+            }`}
           >
             <span className="truncate">More</span>
           </button>
@@ -289,14 +308,14 @@ export function AppSidebar({ role }: { role: Role }) {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMoreOpen(false)}
-                          className={`rounded-md px-3 py-2 text-sm font-medium ${
+                          className={`block w-full rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
                             active
-                              ? "bg-[var(--brand)] text-white"
+                              ? "border border-[var(--brand)] bg-[var(--panel-strong)] text-[var(--ink)]"
                               : "text-[var(--ink)] hover:bg-[var(--panel-strong)]"
                           }`}
                         >
                           <span className="flex items-center gap-2">
-                            <span className={`nav-icon-premium ${active ? "nav-icon-premium-active" : ""}`}>{navIcon(item.href)}</span>
+                            <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
                             <span>{label}</span>
                           </span>
                         </Link>
