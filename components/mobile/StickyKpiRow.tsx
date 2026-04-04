@@ -9,7 +9,7 @@ type StickyKpiItem = {
 
 export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]; className?: string }) {
   return (
-    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden ${className}`}>
+    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden ${className}`}>
       {items.map((item) => {
         const toneClass =
           item.tone === "brand"

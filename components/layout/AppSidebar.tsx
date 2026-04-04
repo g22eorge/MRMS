@@ -204,7 +204,7 @@ export function AppSidebar({ role }: { role: Role }) {
 
   return (
     <>
-      <aside className="glass hidden border-r border-[var(--line)] md:flex md:h-screen md:w-72 md:flex-col">
+      <aside className="glass hidden border-r border-[var(--line)] lg:flex lg:h-screen lg:w-72 lg:flex-col">
         <div className="border-b border-[var(--line)] px-5 py-5">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">Eagle Info</p>
           <p className="text-base font-semibold">Repair Command Center</p>
@@ -238,7 +238,7 @@ export function AppSidebar({ role }: { role: Role }) {
         </nav>
       </aside>
 
-      <nav className="mobile-bottom-nav glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] md:hidden">
+      <nav className="mobile-bottom-nav glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] lg:hidden">
         {mobilePrimary.map((item) => {
           const label = roleLabel(role, item.href, item.label);
           const active = isActive(pathname, item.href);
@@ -275,7 +275,7 @@ export function AppSidebar({ role }: { role: Role }) {
       </nav>
 
       {moreOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 md:hidden" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-slate-900/40 lg:hidden" onClick={() => setMoreOpen(false)}>
           <div
             className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-[var(--line)] bg-white p-4"
             onClick={(event) => event.stopPropagation()}

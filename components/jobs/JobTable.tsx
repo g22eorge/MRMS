@@ -64,7 +64,7 @@ export function JobTable({
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-      <div className="space-y-3 p-3 sm:hidden">
+      <div className="space-y-3 p-3 2xl:hidden">
         <ProgressiveList initialCount={4} step={6}>
           {jobs.map((job) => (
             <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
@@ -156,7 +156,7 @@ export function JobTable({
         </ProgressiveList>
       </div>
 
-      <div className="hidden overflow-x-auto sm:block">
+      <div className="hidden overflow-x-auto 2xl:block">
         <table className="min-w-[1080px] w-full border-collapse text-sm">
         <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>

@@ -82,16 +82,16 @@ export default async function TechnicianPayoutsPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 -mx-1 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
-        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
           <p className="text-sm font-semibold">{formatMoney(total, currency)}</p>
         </div>
-        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Paid</p>
           <p className="text-sm font-semibold text-emerald-700">{formatMoney(paid, currency)}</p>
         </div>
-        <div className="min-w-[118px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="col-span-2 min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Outstanding</p>
           <p className="text-sm font-semibold text-amber-700">{formatMoney(unpaid, currency)}</p>
         </div>

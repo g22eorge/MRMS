@@ -138,26 +138,26 @@ export default async function ClientsPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 -mx-1 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 sm:hidden">
-        <div className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 2xl:hidden">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
           <p className="text-sm font-semibold">{totalClients}</p>
         </div>
-        <div className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active</p>
           <p className="text-sm font-semibold text-[var(--brand)]">{activeClients}</p>
         </div>
-        <div className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">No Job</p>
           <p className="text-sm font-semibold">{newClients}</p>
         </div>
-        <div className="min-w-[112px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">3+ Jobs</p>
           <p className="text-sm font-semibold text-emerald-700">{withManyJobs}</p>
         </div>
       </div>
 
-      <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4">
+      <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Total clients</p>
           <p className="text-2xl font-semibold">{totalClients}</p>
@@ -178,7 +178,7 @@ export default async function ClientsPage({
 
       {(user.role === "ADMIN" || user.role === "OPS") ? (
         <>
-          <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:hidden" open>
+          <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:hidden" open>
             <summary className="list-none">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick Create Client</p>
@@ -199,7 +199,7 @@ export default async function ClientsPage({
             </form>
           </details>
 
-          <form action={createClientAction} className="panel-shadow hidden space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:block">
+          <form action={createClientAction} className="panel-shadow hidden space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:block">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create client</p>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
               <input required name="fullName" placeholder="Full name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
@@ -212,7 +212,7 @@ export default async function ClientsPage({
         </>
       ) : null}
 
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:hidden">
+      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:hidden">
         <input
           name="q"
           defaultValue={filters.q}
@@ -222,7 +222,7 @@ export default async function ClientsPage({
         />
       </form>
 
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:grid sm:grid-cols-3">
+      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:grid 2xl:grid-cols-3">
         <input
           name="q"
           defaultValue={filters.q}
@@ -251,7 +251,7 @@ export default async function ClientsPage({
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No clients match this view.</div>
       ) : (
         <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="space-y-3 p-3 sm:hidden">
+          <div className="space-y-3 p-3 2xl:hidden">
             <ProgressiveList initialCount={5} step={5}>
               {(clients as ClientRow[]).map((client) => (
                 <details key={client.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
@@ -305,49 +305,6 @@ export default async function ClientsPage({
             </ProgressiveList>
           </div>
 
-          <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Organization</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Jobs</th>
-                  <th className="px-4 py-3">Updated</th>
-                  <th className="px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(clients as ClientRow[]).map((client) => (
-                  <tr key={client.id} className="border-t border-[var(--line)]/70 transition hover:bg-[var(--panel-strong)]/70">
-                    <td className="px-4 py-3 font-semibold">{client.fullName}</td>
-                    <td className="px-4 py-3">{client.phone}</td>
-                    <td className="px-4 py-3">{client.organization ?? "-"}</td>
-                    <td className="px-4 py-3">{client.email ?? "-"}</td>
-                    <td className="px-4 py-3">{client._count.jobs}</td>
-                    <td className="px-4 py-3">{client.updatedAt.toLocaleDateString()}</td>
-                    <td className="px-4 py-3">
-                      <Link href={`/clients/${client.id}`} className="text-[var(--brand)] hover:underline">
-                        Open
-                      </Link>
-                      {user.role === "ADMIN" ? (
-                        <form action={deleteClientAction} className="ml-3 inline">
-                          <input type="hidden" name="id" value={client.id} />
-                          <button
-                            disabled={client._count.jobs > 0}
-                            className="text-rose-700 hover:underline disabled:text-slate-400"
-                          >
-                            Delete
-                          </button>
-                        </form>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 

@@ -100,9 +100,16 @@ export function PageThemeHeader({ role }: { role: Role }) {
 
   return (
     <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#0f766e_0%,#115e59_52%,#164e63_100%)] p-4 text-white md:p-5">
-      <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">{roleTag(role)} Workspace</p>
-      <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{meta.title}</h1>
-      {subtitle ? <p className="mt-1 text-xs text-white/75">{subtitle}</p> : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">{roleTag(role)} Workspace</p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{meta.title}</h1>
+          {subtitle ? <p className="mt-1 truncate text-xs text-white/75">{subtitle}</p> : null}
+        </div>
+        <span className="rounded-full border border-white/25 bg-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85">
+          Live
+        </span>
+      </div>
       {meta.description ? <p className="mt-2 max-w-3xl text-sm text-white/85">{meta.description}</p> : null}
     </section>
   );

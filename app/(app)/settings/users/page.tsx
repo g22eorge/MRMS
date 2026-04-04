@@ -42,6 +42,13 @@ const roleChoices: Role[] = [
   Role.TECHNICIAN_EXTERNAL,
 ];
 
+const roleDisplay: Record<Role, string> = {
+  ADMIN: "Admin",
+  OPS: "Ops",
+  TECHNICIAN_INTERNAL: "Internal Tech",
+  TECHNICIAN_EXTERNAL: "External Tech",
+};
+
 export default async function UsersPage() {
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
@@ -165,14 +172,34 @@ export default async function UsersPage() {
     <div className="space-y-4">
       <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
-        <div className="grid gap-2 md:grid-cols-4">
+        <div className="grid gap-2 md:hidden">
+          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+          <div className="grid grid-cols-2 gap-2">
+            <input required name="password" type="password" placeholder="Password" className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+              {roleChoices.map((role) => (
+                <option key={`mobile-${role}`} value={role}>{role.replaceAll("_", " ")}</option>
+              ))}
+            </select>
+          </div>
+          <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Optional details</summary>
+            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2" />
+          </details>
+        </div>
+
+        <div className="hidden gap-2 md:grid md:grid-cols-4">
           <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input name="phone" placeholder="Phone (optional)" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
           <input required name="password" type="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
         </div>
-        <fieldset className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-          <legend className="px-1 text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Role</legend>
+
+        <div className="hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:block">
+          <label htmlFor="create-user-role" className="mb-1 block text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            Role
+          </label>
           <div className="grid gap-2 md:grid-cols-4">
             {roleChoices.map((role) => (
               <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
@@ -181,7 +208,7 @@ export default async function UsersPage() {
               </label>
             ))}
           </div>
-        </fieldset>
+        </div>
         <SubmitActionButton
           idleLabel="Create User"
           pendingLabel="Creating..."
@@ -196,13 +223,12 @@ export default async function UsersPage() {
             <summary className="list-none sm:pointer-events-none">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {u.name} <span className="text-sm text-slate-500">({u.email})</span>
-                  </p>
+                  <p className="truncate font-medium">{u.name}</p>
+                  <p className="truncate text-xs text-[var(--ink-muted)]">{u.email}</p>
                   <p className="truncate text-xs text-[var(--ink-muted)]">{u.phone || "No phone"}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs">{u.role.replaceAll("_", " ")}</span>
+                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleDisplay[u.role]}</span>
                   <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
                     {u.isActive ? "Active" : "Inactive"}
                   </span>
@@ -213,20 +239,20 @@ export default async function UsersPage() {
 
             <UserDetailsForm id={u.id} name={u.name} email={u.email} phone={u.phone} action={updateDetails} />
 
-            <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-              <form action={updateRole} className="flex flex-wrap gap-2">
+            <div className="grid gap-2">
+              <form action={updateRole} className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 <input type="hidden" name="id" value={u.id} />
                 {roleChoices.map((role) => (
                   <RoleActionButton
                     key={role}
                     role={role}
                     currentRole={u.role}
-                    label={role.replaceAll("_", " ")}
+                    label={roleDisplay[role]}
                   />
                 ))}
               </form>
               {u.isActive ? (
-                <form action={deactivate}>
+                <form action={deactivate} className="sm:w-fit">
                   <input type="hidden" name="id" value={u.id} />
                   <SubmitActionButton
                     idleLabel="Deactivate"

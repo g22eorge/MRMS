@@ -123,20 +123,20 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 -mx-1 flex gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
-        <Link href="/technicians" className="min-w-[110px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 md:hidden">
+        <Link href="/technicians" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Assigned</p>
           <p className="text-sm font-semibold">{assignedCount}</p>
         </Link>
-        <Link href="/technicians?ready=1" className="min-w-[110px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Ready</p>
           <p className="text-sm font-semibold text-emerald-700">{readyCount}</p>
         </Link>
-        <Link href="/technicians?status=IN_REPAIR" className="min-w-[110px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <Link href="/technicians?status=IN_REPAIR" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">In Repair</p>
           <p className="text-sm font-semibold text-[var(--brand)]">{inRepairCount}</p>
         </Link>
-        <Link href="/technicians?ready=1" className="min-w-[110px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue</p>
           <p className="text-sm font-semibold text-amber-700">{overdueCount}</p>
         </Link>

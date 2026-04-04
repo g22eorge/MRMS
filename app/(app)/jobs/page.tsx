@@ -131,9 +131,34 @@ export default async function JobsPage({
   ) as Record<string, string>;
   const returnToQuery = new URLSearchParams(preserved).toString();
   const returnTo = returnToQuery ? `/jobs?${returnToQuery}` : "/jobs";
+  const openNow = rows.filter((row) => row.status !== "COMPLETED" && row.status !== "CLOSED").length;
+  const readyForPickup = rows.filter((row) => row.status === "READY_FOR_PICKUP").length;
+  const awaitingApproval = rows.filter((row) => row.status === "AWAITING_APPROVAL").length;
 
   return (
     <div className="space-y-5">
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:hidden">
+        <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Pulse</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] text-[var(--ink-muted)]">Results</p>
+            <p className="text-lg font-semibold">{total}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] text-[var(--ink-muted)]">Open Now</p>
+            <p className="text-lg font-semibold text-[var(--brand)]">{openNow}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] text-[var(--ink-muted)]">Awaiting Approval</p>
+            <p className="text-lg font-semibold text-amber-700">{awaitingApproval}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+            <p className="text-[11px] text-[var(--ink-muted)]">Ready Pickup</p>
+            <p className="text-lg font-semibold text-emerald-700">{readyForPickup}</p>
+          </div>
+        </div>
+      </div>
+
       {can.createJob(user.role) ? (
         <div className="flex justify-end">
           <Link
@@ -154,6 +179,25 @@ export default async function JobsPage({
               placeholder="Search job # and press Enter"
               className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
             />
+            <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
+              <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+              <div className="mt-2 grid gap-2">
+                <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <option value="">All statuses</option>
+                  {JOB_STATUSES.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+                <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <option value="received_desc">Newest received</option>
+                  <option value="job_number_desc">Job number desc</option>
+                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                  <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                </div>
+              </div>
+            </details>
           </form>
           <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-5">
             <input
@@ -188,6 +232,41 @@ export default async function JobsPage({
               placeholder="Search job # or client and press Enter"
               className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
             />
+            <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
+              <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+              <div className="mt-2 grid gap-2">
+                <input
+                  name="status"
+                  defaultValue={filters.status}
+                  placeholder="Status list (csv)"
+                  className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <select name="deviceType" defaultValue={filters.deviceType} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                    <option value="">All devices</option>
+                    <option value="PHONE_ANDROID">Android</option>
+                    <option value="PHONE_IPHONE">iPhone</option>
+                    <option value="TABLET">Tablet</option>
+                    <option value="WINDOWS_PC">Windows PC</option>
+                    <option value="MAC">Mac</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <select name="repairPath" defaultValue={filters.repairPath} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                    <option value="">All paths</option>
+                    <option value="IN_HOUSE">In-house</option>
+                    <option value="EXTERNAL">External</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                  <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                </div>
+                <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <option value="received_desc">Newest received</option>
+                  <option value="job_number_desc">Job number desc</option>
+                </select>
+              </div>
+            </details>
           </form>
           <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:grid md:grid-cols-6">
             <input

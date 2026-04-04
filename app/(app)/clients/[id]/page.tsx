@@ -268,7 +268,7 @@ export default async function ClientDetailPage({
           <p className="text-sm text-[var(--ink-muted)]">No jobs match this filter.</p>
         ) : (
           <>
-            <div className="space-y-2 sm:hidden">
+            <div className="space-y-2 2xl:hidden">
               <ProgressiveList initialCount={4} step={4}>
                 {client.jobs.map((job: ClientDetail["jobs"][number]) => (
                   <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
@@ -288,7 +288,7 @@ export default async function ClientDetailPage({
               </ProgressiveList>
             </div>
 
-            <div className="hidden overflow-x-auto sm:block">
+            <div className="hidden overflow-x-auto 2xl:block">
               <table className="w-full text-sm">
                 <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                   <tr>

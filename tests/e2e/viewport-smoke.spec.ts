@@ -101,6 +101,7 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
           const style = window.getComputedStyle(node);
           if (style.display === "none" || style.visibility === "hidden") continue;
           if (style.position === "fixed") continue;
+          if (node.getClientRects().length === 0) continue;
 
           const rect = node.getBoundingClientRect();
           if (rect.width <= 0 || rect.height <= 0) continue;
@@ -157,6 +158,7 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
           const style = window.getComputedStyle(node);
           if (style.display === "none" || style.visibility === "hidden") continue;
           if (style.position === "fixed") continue;
+          if (node.getClientRects().length === 0) continue;
 
           const rect = node.getBoundingClientRect();
           if (rect.width <= 0 || rect.height <= 0) continue;

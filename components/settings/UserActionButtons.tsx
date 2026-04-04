@@ -35,10 +35,10 @@ export function RoleActionButton({ role, currentRole, label }: RoleActionButtonP
       name="role"
       value={role}
       className={clsx(
-        "rounded-full border px-3 py-1.5 text-xs",
+        "w-full rounded-lg border px-3 py-2 text-center text-xs font-medium transition",
         currentRole === role
-          ? "btn-premium border-transparent text-white"
-          : "btn-premium-secondary border-[var(--line)] bg-white text-[var(--ink)]",
+          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+          : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--brand)]",
       )}
     >
       {pending ? "Updating..." : label}
