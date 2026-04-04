@@ -123,7 +123,7 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
+      <div className="panel-shadow grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
         <Link href="/technicians" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Assigned</p>
           <p className="text-sm font-semibold">{assignedCount}</p>
@@ -168,6 +168,25 @@ export default async function TechniciansPage({
           placeholder="Search job # / device and press Enter"
           className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
         />
+        <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
+          <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+          <div className="mt-2 grid gap-2">
+            <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+              <option value="">All statuses</option>
+              <option value="RECEIVED">RECEIVED</option>
+              <option value="DIAGNOSING">DIAGNOSING</option>
+              <option value="AWAITING_APPROVAL">AWAITING_APPROVAL</option>
+              <option value="IN_REPAIR">IN_REPAIR</option>
+              <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
+              <option value="COMPLETED">COMPLETED</option>
+              <option value="CLOSED">CLOSED</option>
+            </select>
+            <select name="ready" defaultValue={filters.ready} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+              <option value="">All queue</option>
+              <option value="1">Ready only</option>
+            </select>
+          </div>
+        </details>
       </form>
 
       <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-4">
@@ -197,9 +216,9 @@ export default async function TechniciansPage({
         </div>
       </form>
 
-      <div className="panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 flex flex-wrap gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 lg:top-24">
+      <div className="panel-shadow grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 lg:flex lg:flex-wrap">
         {quickActions.map((action) => (
-          <Link key={action.href} href={action.href} className="btn-premium-secondary rounded-md px-3 py-1.5 text-xs">
+          <Link key={action.href} href={action.href} className="btn-premium-secondary rounded-md px-3 py-1.5 text-center text-xs">
             {action.label}
           </Link>
         ))}

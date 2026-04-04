@@ -217,7 +217,7 @@ export default async function BrandingPage({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-sm font-semibold">Document Studio</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Manage logo, numbering, VAT defaults, terms, signatures, and quotation wording.
@@ -227,9 +227,10 @@ export default async function BrandingPage({
         {params.error ? <p className="mt-2 text-sm text-rose-700">{params.error.replaceAll("+", " ")}</p> : null}
       </div>
 
-      <form action={saveBrandingAction} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="mb-3 text-sm font-semibold">Company & Numbering</p>
-        <div className="grid gap-2 md:grid-cols-2">
+      <form action={saveBrandingAction} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3" open>
+          <summary className="text-sm font-semibold text-[var(--ink)]">Company & Numbering</summary>
+          <div className="mt-3 grid gap-2 lg:grid-cols-2">
           <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="companyAddressLine1" defaultValue={settings.companyAddressLine1} placeholder="Address line 1" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
@@ -240,15 +241,17 @@ export default async function BrandingPage({
           <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <p className="text-xs text-[var(--ink-muted)]">
+            <p className="text-xs text-[var(--ink-muted)] lg:col-span-2">
             Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
           </p>
           <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-        </div>
+          </div>
+        </details>
 
-        <p className="mb-2 mt-4 text-sm font-semibold">VAT & Sign-off</p>
-        <div className="grid gap-2 md:grid-cols-2">
+        <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+          <summary className="text-sm font-semibold text-[var(--ink)]">VAT & Sign-off</summary>
+          <div className="mt-3 grid gap-2 lg:grid-cols-2">
           <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
             <option value="true">VAT default: applicable</option>
             <option value="false">VAT default: not applicable</option>
@@ -257,20 +260,25 @@ export default async function BrandingPage({
           <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-        </div>
+          </div>
+        </details>
 
-        <p className="mb-2 mt-4 text-sm font-semibold">Terms & Footer</p>
-        <textarea name="termsText" defaultValue={settings.termsText} className="min-h-28 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-        <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+        <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+          <summary className="text-sm font-semibold text-[var(--ink)]">Terms & Footer</summary>
+          <div className="mt-3 grid gap-2">
+            <textarea name="termsText" defaultValue={settings.termsText} className="min-h-28 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+            <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          </div>
+        </details>
 
-        <button className="btn-premium mt-3 rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Save Document Settings</button>
+        <button className="btn-premium w-full rounded-md px-3 py-2 text-sm lg:w-auto">Save Document Settings</button>
       </form>
 
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="mb-2 text-sm font-semibold">Invoice Logo</p>
         <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG, WEBP (max 5MB). Recommended wide aspect ratio.</p>
 
-        <form action={uploadLogoAction} className="mt-3 flex flex-wrap items-end gap-2">
+        <form action={uploadLogoAction} className="mt-3 grid gap-2 lg:flex lg:flex-wrap lg:items-end">
           <input
             type="file"
             name="logo"
@@ -278,7 +286,7 @@ export default async function BrandingPage({
             className="rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-sm"
             required
           />
-          <button className="btn-premium rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Upload Logo</button>
+          <button className="btn-premium rounded-md px-3 py-2 text-sm lg:px-3 lg:py-1.5">Upload Logo</button>
         </form>
 
         <div className="mt-3">
