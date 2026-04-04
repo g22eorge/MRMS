@@ -73,6 +73,25 @@ export default async function TechniciansPage({
     ? (filters.status as JobStatus)
     : undefined;
 
+  function routeWith(next: Partial<Record<keyof SearchParams, string>>) {
+    const params = new URLSearchParams();
+    const entries: Array<[keyof SearchParams, string | undefined]> = [
+      ["q", filters.q],
+      ["status", filters.status],
+      ["ready", filters.ready],
+      ["dismiss", filters.dismiss],
+    ];
+    for (const [key, value] of entries) {
+      const update = next[key];
+      const finalValue = update !== undefined ? update : value;
+      if (finalValue && finalValue.trim().length > 0) {
+        params.set(key, finalValue);
+      }
+    }
+    const query = params.toString();
+    return query ? `/technicians?${query}` : "/technicians";
+  }
+
   const where =
     user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
       ? { assignedToId: session.user.id }
@@ -143,6 +162,8 @@ export default async function TechniciansPage({
       ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
   );
   const spotlightJobs = spotlightCandidates.slice(0, 3);
+  const boardReturnTo = routeWith({});
+  const hasActiveFilters = Boolean(filters.q || filters.status || filters.ready);
   const statusCounts = [
     { key: "RECEIVED", count: normalized.filter((job) => job.status === "RECEIVED").length },
     { key: "DIAGNOSING", count: normalized.filter((job) => job.status === "DIAGNOSING").length },
@@ -152,13 +173,15 @@ export default async function TechniciansPage({
   ];
 
   const quickActions = [
-    ...(readyCount > 0 ? [{ href: "/technicians?ready=1", label: "Ready Queue" }] : []),
-    ...(inRepairCount > 0 ? [{ href: "/technicians?status=IN_REPAIR", label: "In Repair" }] : []),
-    ...(awaitingApprovalCount > 0 ? [{ href: "/technicians?status=AWAITING_APPROVAL", label: "Awaiting Approval" }] : []),
-    ...(user.role === "TECHNICIAN_EXTERNAL"
-      ? [{ href: "/technicians/payouts", label: "My Payouts" }]
-      : [{ href: "/jobs?status=IN_REPAIR&returnTo=%2Ftechnicians", label: "Add Timeline Note" }]),
-  ].slice(0, 3);
+    { href: routeWith({ ready: "1", status: "" }), label: "Ready", count: readyCount, active: filters.ready === "1" },
+    { href: routeWith({ status: "IN_REPAIR", ready: "" }), label: "In Repair", count: inRepairCount, active: filters.status === "IN_REPAIR" && filters.ready !== "1" },
+    { href: routeWith({ status: "AWAITING_APPROVAL", ready: "" }), label: "Approval", count: awaitingApprovalCount, active: filters.status === "AWAITING_APPROVAL" },
+  ];
+
+  function dismissSpotlightReturnTo(jobId: string) {
+    const merged = new Set([...dismissedSpotlightIds, jobId]);
+    return routeWith({ dismiss: Array.from(merged).join(",") });
+  }
 
   return (
     <div className="space-y-4">
@@ -255,12 +278,47 @@ export default async function TechniciansPage({
         </div>
       </form>
 
-      <div className="panel-shadow grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 lg:flex lg:flex-wrap">
+      {hasActiveFilters ? (
+        <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active filters</span>
+          {filters.q ? (
+            <Link href={routeWith({ q: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
+              Search: {filters.q} x
+            </Link>
+          ) : null}
+          {filters.status ? (
+            <Link href={routeWith({ status: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
+              Status: {filters.status.replaceAll("_", " ")} x
+            </Link>
+          ) : null}
+          {filters.ready === "1" ? (
+            <Link href={routeWith({ ready: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
+              Ready only x
+            </Link>
+          ) : null}
+          <Link href="/technicians" className="btn-premium-secondary rounded-md px-2 py-1 text-[11px]">Clear all</Link>
+        </div>
+      ) : null}
+
+      <div className="panel-shadow grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2">
         {quickActions.map((action) => (
-          <Link key={action.href} href={action.href} className="btn-premium-secondary rounded-md px-3 py-1.5 text-center text-xs">
-            {action.label}
+          <Link
+            key={action.label}
+            href={action.href}
+            className={`rounded-md px-3 py-1.5 text-center text-xs ${action.active ? "btn-premium text-white" : "btn-premium-secondary"}`}
+          >
+            {action.label} ({action.count})
           </Link>
         ))}
+      </div>
+
+      <div className="flex">
+        <Link
+          href={user.role === "TECHNICIAN_EXTERNAL" ? "/technicians/payouts" : `/jobs?status=IN_REPAIR&returnTo=${encodeURIComponent(boardReturnTo)}`}
+          className="btn-premium-secondary rounded-md px-3 py-1.5 text-xs"
+        >
+          {user.role === "TECHNICIAN_EXTERNAL" ? "My Payouts" : "Add Timeline Note"}
+        </Link>
       </div>
 
       <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -332,13 +390,13 @@ export default async function TechniciansPage({
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
-                    href={`/jobs/${job.id}?returnTo=${encodeURIComponent(`/technicians?dismiss=${job.id}`)}`}
+                    href={`/jobs/${job.id}?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
                     className="btn-premium flex-1 rounded-md px-2 py-1.5 text-center text-xs text-white"
                   >
                     Open
                   </Link>
                   <Link
-                    href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent(`/technicians?dismiss=${job.id}`)}`}
+                    href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
                     className="btn-premium-secondary flex-1 rounded-md px-2 py-1.5 text-center text-xs"
                   >
                     Update
@@ -408,11 +466,11 @@ export default async function TechniciansPage({
                       {user.role === "TECHNICIAN_EXTERNAL" ? "Use Work Order for estimate and timeline updates" : "Use Work Order for repair log and completion updates"}
                     </p>
                     <div className="flex gap-2">
-                      <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium-secondary rounded-md px-2.5 py-1 text-xs">
+                      <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`} className="btn-premium-secondary rounded-md px-2.5 py-1 text-xs">
                         Open
                       </Link>
                       {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
-                        <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent("/technicians")}`} className="btn-premium rounded-md px-2.5 py-1 text-xs text-white">
+                        <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`} className="btn-premium rounded-md px-2.5 py-1 text-xs text-white">
                           Complete
                         </Link>
                       ) : null}
