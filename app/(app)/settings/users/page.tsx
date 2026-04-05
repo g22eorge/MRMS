@@ -410,17 +410,28 @@ export default async function UsersPage() {
       }),
     ).values(),
   );
+  const controlClass =
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
 
   return (
     <div className="space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">User Access Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
+            Manage user lifecycle, role posture, and extended permissions from one workspace.
+          </p>
+        </div>
+      </div>
+
       <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
         <div className="grid gap-2 lg:hidden">
-          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+          <input required name="name" placeholder="Name" className={controlClass} />
+          <input required type="email" name="email" placeholder="Email" className={controlClass} />
           <div className="grid grid-cols-2 gap-2">
-            <input required name="password" type="password" placeholder="Password" className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+            <input required name="password" type="password" placeholder="Password" className={`min-w-0 ${controlClass}`} />
+            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100">
               {safeRoleChoices.map((role) => (
                 <option key={`mobile-${role}`} value={role}>{prettyRole(role)}</option>
               ))}
@@ -428,15 +439,15 @@ export default async function UsersPage() {
           </div>
           <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Optional details</summary>
-            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2" />
+            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
           </details>
         </div>
 
         <div className="hidden gap-2 lg:grid lg:grid-cols-4">
-          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-          <input name="phone" placeholder="Phone (optional)" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-          <input required name="password" type="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+          <input required name="name" placeholder="Name" className={controlClass} />
+          <input required type="email" name="email" placeholder="Email" className={controlClass} />
+          <input name="phone" placeholder="Phone (optional)" className={controlClass} />
+          <input required name="password" type="password" placeholder="Password" className={controlClass} />
         </div>
 
         <div className="hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 lg:block">
@@ -455,7 +466,7 @@ export default async function UsersPage() {
         <SubmitActionButton
           idleLabel="Create User"
           pendingLabel="Creating..."
-          className="btn-premium w-full rounded-md px-3 py-2 text-white md:w-auto"
+          className="btn-premium w-full rounded-lg px-3 py-2 text-white md:w-auto"
         />
       </form>
 

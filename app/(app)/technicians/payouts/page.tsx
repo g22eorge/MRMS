@@ -13,6 +13,16 @@ type SearchParams = {
   month?: string;
 };
 
+const statusOptionLabel = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  AWAITING_APPROVAL: "Awaiting Approval",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+} as const;
+
 function parseMonth(monthParam?: string) {
   if (!monthParam) return null;
   const [yearRaw, monthRaw] = monthParam.split("-");
@@ -80,9 +90,22 @@ export default async function TechnicianPayoutsPage({
   const unpaid = jobs
     .filter((job) => !payouts.get(job.id)?.externalPaid)
     .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
+  const hasPayoutFilters = Boolean(filters.q || filters.paid || filters.month);
+  const payoutBrief = hasPayoutFilters
+    ? "Filtered payout view is active. Use the amount cards below for live totals and reset filters to return to the complete payout queue."
+    : "Use this payout board to reconcile external technician dues, confirm payment references, and clear outstanding balances.";
+  const controlClass =
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
 
   return (
     <div className="space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Payout Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{payoutBrief}</p>
+        </div>
+      </div>
+
       <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
         <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
@@ -104,7 +127,7 @@ export default async function TechnicianPayoutsPage({
             <p className="mt-1 text-xs text-amber-700">Payout columns are not migrated yet in this environment. Run latest Prisma migrations.</p>
           ) : null}
         </div>
-        <Link href="/dashboard" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+        <Link href="/dashboard" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
           Back to dashboard
         </Link>
       </div>
@@ -114,7 +137,7 @@ export default async function TechnicianPayoutsPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device and press Enter"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
       </form>
 
@@ -123,12 +146,12 @@ export default async function TechnicianPayoutsPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device"
-          className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+          className={controlClass}
         />
         <select
           name="paid"
           defaultValue={filters.paid}
-          className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+          className={controlClass}
         >
           <option value="">All statuses</option>
           <option value="paid">Paid only</option>
@@ -138,11 +161,11 @@ export default async function TechnicianPayoutsPage({
           type="month"
           name="month"
           defaultValue={filters.month}
-          className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+          className={controlClass}
         />
         <div className="flex gap-2">
-          <button className="rounded-md border border-[var(--line)] bg-white px-3 py-2">Apply</button>
-          <Link href="/technicians/payouts" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+          <button className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
+          <Link href="/technicians/payouts" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
             Reset
           </Link>
         </div>
@@ -176,7 +199,7 @@ export default async function TechnicianPayoutsPage({
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">{job.status} {job.completedAt ? `• completed ${job.completedAt.toLocaleDateString()}` : ""}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${job.completedAt.toLocaleDateString()}` : ""}</p>
                         {payouts.get(job.id)?.externalPaymentRef ? (
                           <p className="text-[11px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
                         ) : null}

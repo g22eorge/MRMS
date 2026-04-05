@@ -20,6 +20,16 @@ const ACTIVE_BOARD_STATUSES = [
   "READY_FOR_PICKUP",
 ];
 
+const statusOptionLabel: Record<JobStatus, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  AWAITING_APPROVAL: "Awaiting Approval",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -44,6 +54,10 @@ function statusTone(status: JobStatus) {
   if (status === "DIAGNOSING") return "bg-violet-100 text-violet-700 border-violet-200";
   if (status === "CLOSED") return "bg-slate-100 text-slate-700 border-slate-200";
   return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
+function statusLabel(status: JobStatus) {
+  return statusOptionLabel[status];
 }
 
 function nextCourse(job: {
@@ -189,6 +203,13 @@ export default async function TechniciansPage({
     { href: routeWith({ status: "IN_REPAIR", ready: "" }), label: "In Repair", count: inRepairCount, active: filters.status === "IN_REPAIR" && filters.ready !== "1" },
     { href: routeWith({ status: "AWAITING_APPROVAL", ready: "" }), label: "Approval", count: awaitingApprovalCount, active: filters.status === "AWAITING_APPROVAL" },
   ];
+  const controlClass =
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const mobileControlClass =
+    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const boardBrief = hasActiveFilters
+    ? "Filtered queue view is active. Use the KPI cards below for live counts and clear filters to return to the full technician board."
+    : "Use this board to triage work by readiness, approvals, and aging risk. KPI cards below provide live queue totals at a glance.";
 
   function dismissSpotlightReturnTo(jobId: string) {
     const merged = new Set([...dismissedSpotlightIds, jobId]);
@@ -197,6 +218,13 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Board Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{boardBrief}</p>
+        </div>
+      </div>
+
       <div className="panel-shadow grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
         <Link href="/technicians" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Assigned</p>
@@ -240,22 +268,23 @@ export default async function TechniciansPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device and press Enter"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
-        <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
-          <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+        <details className="mt-2 rounded-lg border border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] p-2">
+          <summary className="list-none">
+            <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+              <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
+              <span className="text-xs text-cyan-700">Status + Queue</span>
+            </div>
+          </summary>
           <div className="mt-2 grid gap-2">
-            <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+            <select name="status" defaultValue={filters.status} className={mobileControlClass}>
               <option value="">All statuses</option>
-              <option value="RECEIVED">RECEIVED</option>
-              <option value="DIAGNOSING">DIAGNOSING</option>
-              <option value="AWAITING_APPROVAL">AWAITING_APPROVAL</option>
-              <option value="IN_REPAIR">IN_REPAIR</option>
-              <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
-              <option value="COMPLETED">COMPLETED</option>
-              <option value="CLOSED">CLOSED</option>
+              {JOB_STATUSES.map((status) => (
+                <option key={status} value={status}>{statusOptionLabel[status]}</option>
+              ))}
             </select>
-            <select name="ready" defaultValue={filters.ready} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+            <select name="ready" defaultValue={filters.ready} className={mobileControlClass}>
               <option value="">All queue</option>
               <option value="1">Ready only</option>
             </select>
@@ -268,25 +297,21 @@ export default async function TechniciansPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device"
-          className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+          className={controlClass}
         />
-        <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
+        <select name="status" defaultValue={filters.status} className={controlClass}>
           <option value="">All statuses</option>
-          <option value="RECEIVED">RECEIVED</option>
-          <option value="DIAGNOSING">DIAGNOSING</option>
-          <option value="AWAITING_APPROVAL">AWAITING_APPROVAL</option>
-          <option value="IN_REPAIR">IN_REPAIR</option>
-          <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
-          <option value="COMPLETED">COMPLETED</option>
-          <option value="CLOSED">CLOSED</option>
+          {JOB_STATUSES.map((status) => (
+            <option key={status} value={status}>{statusOptionLabel[status]}</option>
+          ))}
         </select>
-        <select name="ready" defaultValue={filters.ready} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
+        <select name="ready" defaultValue={filters.ready} className={controlClass}>
           <option value="">All queue</option>
           <option value="1">Ready only</option>
         </select>
         <div className="flex gap-2">
-          <button className="rounded-md border border-[var(--line)] bg-white px-3 py-2">Apply</button>
-          <Link href="/technicians" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">Reset</Link>
+          <button className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
+          <Link href="/technicians" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Reset</Link>
         </div>
       </form>
 
@@ -300,7 +325,7 @@ export default async function TechniciansPage({
           ) : null}
           {filters.status ? (
             <Link href={routeWith({ status: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-              Status: {filters.status.replaceAll("_", " ")} x
+              Status: {statusOptionLabel[filters.status as JobStatus] ?? filters.status} x
             </Link>
           ) : null}
           {filters.ready === "1" ? (
@@ -340,7 +365,7 @@ export default async function TechniciansPage({
         <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
           {statusCounts.map((status) => (
             <div key={`mobile-${status.key}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{status.key.replaceAll("_", " ")}</p>
+              <p className="text-[11px] text-[var(--ink-muted)]">{statusOptionLabel[status.key as JobStatus]}</p>
               <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
             </div>
           ))}
@@ -348,7 +373,7 @@ export default async function TechniciansPage({
         <div className="mt-2 hidden gap-2 lg:grid lg:grid-cols-5">
           {statusCounts.map((status) => (
             <div key={status.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{status.key.replaceAll("_", " ")}</p>
+              <p className="text-[11px] text-[var(--ink-muted)]">{statusOptionLabel[status.key as JobStatus]}</p>
               <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
             </div>
           ))}
@@ -378,7 +403,7 @@ export default async function TechniciansPage({
                 <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 86)}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>{job.status.replaceAll("_", " ")}</span>
+                    <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>{statusLabel(job.status)}</span>
                   <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
                     Assigned: {job.assignedTo?.name ?? "Unassigned"}
                   </span>
@@ -443,7 +468,7 @@ export default async function TechniciansPage({
 
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
                     <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>
-                      {job.status.replaceAll("_", " ")}
+                      {statusLabel(job.status)}
                     </span>
                     <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
                       Assigned: {job.assignedTo?.name ?? "Unassigned"}

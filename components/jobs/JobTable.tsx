@@ -70,10 +70,21 @@ export function JobTable({
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="flex items-center justify-between border-b border-[var(--line)] bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] px-3 py-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Job Results</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-[var(--ink-muted)]">{jobs.length} in this page</p>
+          {jobs.length > 0 ? (
+            <Link href={`/jobs/${jobs[0].id}`} className="btn-premium-secondary rounded-lg px-2 py-1 text-[11px]">
+              Open
+            </Link>
+          ) : null}
+        </div>
+      </div>
       <div className="space-y-3 p-3 2xl:hidden">
         <ProgressiveList initialCount={4} step={6}>
           {jobs.map((job) => (
-            <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
+            <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:border-cyan-200 hover:bg-white max-[360px]:p-2.5">
               <summary className="list-none">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -178,7 +189,7 @@ export function JobTable({
 
       <div className="hidden overflow-x-auto 2xl:block">
         <table className="min-w-[1080px] w-full border-collapse text-sm">
-        <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+        <thead className="bg-[linear-gradient(180deg,rgba(236,254,255,0.75),rgba(241,245,249,0.95))] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>
             <th className="border-b border-[var(--line)] px-4 py-3">Job #</th>
             <th className="border-b border-[var(--line)] px-4 py-3">Device</th>
@@ -193,7 +204,7 @@ export function JobTable({
         </thead>
         <tbody>
           {jobs.map((job) => (
-            <tr key={job.id} className="transition hover:bg-[var(--panel-strong)]/60">
+            <tr key={job.id} className="transition even:bg-[var(--panel-strong)]/35 hover:bg-[var(--panel-strong)]/75">
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle font-semibold">
                 <p className="mono max-w-[12rem] truncate">{job.jobNumber}</p>
               </td>
@@ -230,14 +241,14 @@ export function JobTable({
                 <div className="inline-flex items-center gap-2">
                   <Link
                     href={`/jobs/${job.id}`}
-                    className="btn-premium inline-block rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+                    className="btn-premium inline-block rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
                   >
                     Open
                   </Link>
                   {canEditPage ? (
                     <Link
                       href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                      className="btn-premium-secondary inline-block rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+                      className="btn-premium-secondary inline-block rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
                     >
                       Edit
                     </Link>
@@ -245,7 +256,7 @@ export function JobTable({
                   {canDelete && deleteAction ? (
                     <form action={deleteAction} className="inline">
                       <input type="hidden" name="id" value={job.id} />
-                      <button className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Delete</button>
+                      <button className="btn-premium-danger rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Delete</button>
                     </form>
                   ) : null}
                 </div>

@@ -22,6 +22,16 @@ const addNoteSchema = z.object({
   body: z.string().min(2),
 });
 
+const statusOptionLabel: Record<JobStatus, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  AWAITING_APPROVAL: "Awaiting Approval",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
 export default async function ClientDetailPage({
   params,
   searchParams,
@@ -163,9 +173,22 @@ export default async function ClientDetailPage({
   const completedJobs = client.jobs.filter((job: ClientDetail["jobs"][number]) => job.status === "COMPLETED").length;
   const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
   const latestActivity = client.jobs[0]?.updatedAt ?? client.updatedAt;
+  const hasHistoryFilters = Boolean(filters.q || filters.status);
+  const clientBrief = hasHistoryFilters
+    ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
+    : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
+  const controlClass =
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100 disabled:opacity-70";
 
   return (
     <div className="space-y-5">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Client Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
+        </div>
+      </div>
+
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -212,7 +235,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="fullName"
               defaultValue={client.fullName}
-              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 disabled:opacity-70"
+              className={controlClass}
             />
           </label>
 
@@ -222,7 +245,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="email"
               defaultValue={client.email ?? ""}
-              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 disabled:opacity-70"
+              className={controlClass}
             />
           </label>
 
@@ -232,7 +255,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="organization"
               defaultValue={client.organization ?? ""}
-              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 disabled:opacity-70"
+              className={controlClass}
             />
           </label>
 
@@ -242,26 +265,26 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="notes"
               defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 disabled:opacity-70"
+              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100 disabled:opacity-70"
             />
           </label>
         </div>
 
-        {canEdit ? <button className="rounded-md bg-[var(--brand)] px-3 py-2 text-white">Save Client</button> : null}
+        {canEdit ? <button className="btn-premium rounded-lg px-3 py-2 text-white">Save Client</button> : null}
       </form>
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Job History</h2>
           <form className="flex flex-wrap gap-2">
-            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm" />
-            <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm">
+            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
+            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100">
               <option value="">All statuses</option>
               {JOB_STATUSES.map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status}>{statusOptionLabel[status]}</option>
               ))}
             </select>
-            <button className="rounded-md border border-[var(--line)] px-3 py-1 text-sm">Filter</button>
+            <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Filter</button>
           </form>
         </div>
 
@@ -276,12 +299,12 @@ export default async function ClientDetailPage({
                   <summary className="list-none">
                     <div className="flex items-center justify-between gap-2">
                       <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{job.status}</span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]}</span>
                     </div>
                     <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
                     <p className="text-xs text-[var(--ink-muted)]">Received {job.receivedAt.toLocaleDateString()}</p>
                   </summary>
-                  <Link href={`/jobs/${job.id}`} className="mt-2 inline-block rounded-md bg-[var(--brand)] px-3 py-2 text-sm font-medium text-white max-[360px]:w-full max-[360px]:text-center">
+                  <Link href={`/jobs/${job.id}`} className="btn-premium mt-2 inline-block rounded-lg px-3 py-2 text-sm font-medium text-white max-[360px]:w-full max-[360px]:text-center">
                     Open
                   </Link>
                   </details>
@@ -295,8 +318,8 @@ export default async function ClientDetailPage({
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <h2 className="font-semibold">Client Notes</h2>
         <form action={addClientNote} className="mt-3 flex flex-col gap-2">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-          <button disabled={!notesFeatureAvailable} className="self-start rounded-md bg-[var(--brand)] px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
+          <button disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 
         {!notesFeatureAvailable ? (

@@ -64,10 +64,16 @@ export function ExternalTechJobView({
     { label: "1-2d", min: "1", max: "2", unit: "DAY" },
     { label: "3-5d", min: "3", max: "5", unit: "DAY" },
   ];
+  const fieldClass =
+    "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="mb-3 rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-800">External Work Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)]">Update diagnosis, required parts, and ETA only. Client identity remains hidden in this workspace.</p>
+        </div>
         <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
         {job.status === "IN_REPAIR" && job.clientApproved ? (
           <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -102,20 +108,20 @@ export function ExternalTechJobView({
             router.refresh();
           });
         }}
-        className="space-y-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 [&_*]:min-w-0"
+        className="panel-shadow space-y-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 [&_*]:min-w-0"
       >
         <h3 className="font-semibold">External Diagnosis</h3>
         <textarea
           name="externalDiagnosis"
           defaultValue={job.externalDiagnosis ?? ""}
           placeholder="Diagnosis summary"
-          className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
         <textarea
           name="partsNeeded"
           defaultValue={job.partsNeeded ?? ""}
           placeholder="Parts needed"
-          className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
         <input
           name="externalTechBill"
@@ -123,10 +129,10 @@ export function ExternalTechJobView({
           step="0.01"
           defaultValue={job.externalTechBill ?? undefined}
           placeholder="External tech bill"
-          className="w-full rounded-md border border-slate-300 px-3 py-2"
+          className={fieldClass}
         />
 
-        <div className="space-y-2 rounded-md border border-slate-200 p-3">
+        <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
           <p className="text-sm font-medium">Timeline Builder</p>
           <div className="flex flex-wrap gap-2">
             {quickChips.map((chip) => (
@@ -138,7 +144,7 @@ export function ExternalTechJobView({
                   setMinValue(chip.min);
                   setMaxValue(chip.max);
                 }}
-                className="rounded-full border border-slate-300 px-2 py-1 text-xs hover:border-teal-600"
+                className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs transition hover:border-cyan-400"
               >
                 {chip.label}
               </button>
@@ -154,7 +160,7 @@ export function ExternalTechJobView({
               value={minValue}
               onChange={(event) => setMinValue(event.target.value)}
               placeholder="Min"
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={fieldClass}
             />
             <input
               name="timelineMaxValue"
@@ -164,13 +170,13 @@ export function ExternalTechJobView({
               value={maxValue}
               onChange={(event) => setMaxValue(event.target.value)}
               placeholder="Max"
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={fieldClass}
             />
             <select
               name="timelineUnit"
               value={unit}
               onChange={(event) => setUnit(event.target.value as Unit)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={fieldClass}
             >
               <option value="HOUR">Hours</option>
               <option value="DAY">Days</option>
@@ -178,27 +184,27 @@ export function ExternalTechJobView({
             </select>
           </div>
 
-          <select
-            name="timelineConfidence"
-            defaultValue={job.timelineConfidence ?? "ESTIMATED"}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-          >
+            <select
+              name="timelineConfidence"
+              defaultValue={job.timelineConfidence ?? "ESTIMATED"}
+              className={fieldClass}
+            >
             <option value="FIRM">Firm</option>
             <option value="ESTIMATED">Estimated</option>
             <option value="PARTS_DEPENDENT">Parts dependent</option>
           </select>
 
-          <textarea
-            name="timelineNote"
-            defaultValue={job.timelineNote ?? ""}
-            placeholder="Delay reason (optional)"
-            className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2"
-          />
+            <textarea
+              name="timelineNote"
+              defaultValue={job.timelineNote ?? ""}
+              placeholder="Delay reason (optional)"
+              className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+            />
 
-          <input type="hidden" name="repairTimeline" value={timelinePreview === "No timeline selected" ? "" : timelinePreview} />
-          <p className="rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            ETA Preview: <span className="font-medium">{timelinePreview}</span>
-          </p>
+            <input type="hidden" name="repairTimeline" value={timelinePreview === "No timeline selected" ? "" : timelinePreview} />
+            <p className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm text-slate-700">
+              ETA Preview: <span className="font-medium">{timelinePreview}</span>
+            </p>
           {job.repairTimeline ? (
             <p className="text-xs text-slate-500">Current saved ETA: {job.repairTimeline}</p>
           ) : null}

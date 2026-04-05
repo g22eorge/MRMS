@@ -28,6 +28,16 @@ type JobWithoutClient = Prisma.JobGetPayload<{
   include: { assignedTo: true };
 }>;
 
+const statusOptionLabel: Record<JobStatus, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  AWAITING_APPROVAL: "Awaiting Approval",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready for Pickup",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
 export default async function JobsPage({
   searchParams,
 }: {
@@ -96,6 +106,12 @@ export default async function JobsPage({
   ]);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, total);
+  const prevPage = Math.max(page - 1, 1);
+  const nextPage = Math.min(page + 1, totalPages);
+  const isPrevDisabled = page <= 1;
+  const isNextDisabled = page >= totalPages;
   const isExternalTech = user.role === "TECHNICIAN_EXTERNAL";
   const lookupByPhone = can.viewClientInfo(user);
 
@@ -150,6 +166,77 @@ export default async function JobsPage({
   }
 
   const activeStatusKey = statuses.join(",");
+  const staleThresholdHours = 24;
+  const staleCutoff = new Date();
+  staleCutoff.setHours(staleCutoff.getHours() - staleThresholdHours);
+  const openStatuses: JobStatus[] = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"];
+  const staleOpenCount = jobs.filter((job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff).length;
+  const unassignedOpenCount = jobs.filter(
+    (job) => openStatuses.includes(job.status as JobStatus) && !job.assignedToId,
+  ).length;
+  const completedCount = rows.filter((row) => row.status === "COMPLETED").length;
+  const hasJobsFilters = Boolean(
+    filters.q || filters.status || filters.deviceType || filters.repairPath || filters.from || filters.to || sort === "job_number_desc",
+  );
+  const briefing = hasJobsFilters
+    ? "Filtered queue view is active. Use the signal cards below for live totals and open any work order to apply diagnosis, approval, and repair updates."
+    : "Use the signal cards below to monitor queue health, then open each work order to move repairs forward with consistent handoffs.";
+  const briefingWithWatch =
+    staleOpenCount > 0
+      ? `${briefing} Review the Watch card for jobs that have gone ${staleThresholdHours}+ hours without an update.`
+      : briefing;
+  const quickCards = [
+    {
+      label: "Active Queue",
+      value: String(openNow),
+      href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR"),
+      accent: "border-teal-200 bg-teal-50",
+      tone: "text-teal-800",
+    },
+    {
+      label: "Awaiting Approval",
+      value: String(awaitingApproval),
+      href: pulseHref("AWAITING_APPROVAL"),
+      accent: awaitingApproval > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50",
+      tone: awaitingApproval > 0 ? "text-amber-800" : "text-slate-700",
+    },
+    {
+      label: "Ready for Pickup",
+      value: String(readyForPickup),
+      href: pulseHref("READY_FOR_PICKUP"),
+      accent: readyForPickup > 0 ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50",
+      tone: readyForPickup > 0 ? "text-emerald-800" : "text-slate-700",
+    },
+    {
+      label: "Watch (24h+)",
+      value: String(staleOpenCount),
+      href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"),
+      accent: staleOpenCount > 0 ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50",
+      tone: staleOpenCount > 0 ? "text-rose-800" : "text-slate-700",
+    },
+    {
+      label: "Unassigned Open",
+      value: String(unassignedOpenCount),
+      href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"),
+      accent: unassignedOpenCount > 0 ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50",
+      tone: unassignedOpenCount > 0 ? "text-indigo-800" : "text-slate-700",
+    },
+    {
+      label: "Completed",
+      value: String(completedCount),
+      href: pulseHref("COMPLETED"),
+      accent: "border-emerald-200 bg-emerald-50",
+      tone: "text-emerald-800",
+    },
+  ];
+  const searchInputClass =
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/90 px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const selectControlClass =
+    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const desktopControlClass =
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const advancedWrapClass =
+    "mt-2 rounded-lg border border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] p-2";
 
   return (
     <div className="space-y-5">
@@ -201,57 +288,102 @@ export default async function JobsPage({
         </div>
       ) : null}
 
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Executive Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{briefingWithWatch}</p>
+        </div>
+        <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-6">
+          {quickCards.map((card) => (
+            <Link key={card.label} href={card.href} className={`rounded-lg border px-3 py-2 transition hover:-translate-y-[1px] ${card.accent}`}>
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">{card.label}</p>
+              <p className={`mt-1 text-lg font-semibold ${card.tone}`}>{card.value}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick Filters</p>
+        <p className="text-[11px] text-[var(--ink-muted)]">Keep essentials visible, expand advanced only when needed</p>
+      </div>
+
       {isExternalTech ? (
         <>
+          <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2 text-xs text-cyan-800">
+            External Diagnosis and timeline updates are available inside each work order.
+          </div>
           <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder="Search job # and press Enter"
-              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+              placeholder="Search job #"
+              className={searchInputClass}
             />
-            <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
-              <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <select name="status" defaultValue={filters.status} className={selectControlClass}>
+                <option value="">All statuses</option>
+                {JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>{statusOptionLabel[status]}</option>
+                ))}
+              </select>
+              <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Apply</button>
+            </div>
+            <div className="mt-2 flex justify-end">
+              <Link href="/jobs" className="text-xs text-[var(--ink-muted)] underline-offset-2 hover:underline">Reset</Link>
+            </div>
+            <details className={advancedWrapClass}>
+              <summary className="list-none">
+                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
+                  <span className="text-xs text-cyan-700">Sort + Date</span>
+                </div>
+              </summary>
               <div className="mt-2 grid gap-2">
-                <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
-                  <option value="">All statuses</option>
-                  {JOB_STATUSES.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
-                <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                <select name="sort" defaultValue={sort} className={selectControlClass}>
                   <option value="received_desc">Newest received</option>
                   <option value="job_number_desc">Job number desc</option>
                 </select>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-                  <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                  <input type="date" name="from" defaultValue={filters.from} className={selectControlClass} />
+                  <input type="date" name="to" defaultValue={filters.to} className={selectControlClass} />
                 </div>
               </div>
             </details>
           </form>
-          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-5">
-            <input
-              name="q"
-              defaultValue={filters.q}
-              placeholder="Search job #"
-              className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
-            />
-            <select name="status" defaultValue={filters.status} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-              <option value="">All statuses</option>
-              {JOB_STATUSES.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-            <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-              <option value="received_desc">Newest received</option>
-              <option value="job_number_desc">Job number desc</option>
-            </select>
-            <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-            <div className="flex gap-2">
-              <button className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-              <Link href="/jobs" className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Reset</Link>
+          <form className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
+            <div className="grid grid-cols-12 gap-2">
+              <input
+                name="q"
+                defaultValue={filters.q}
+                placeholder="Search job #"
+                className={`col-span-6 ${desktopControlClass}`}
+              />
+              <select name="status" defaultValue={filters.status} className={`col-span-3 ${desktopControlClass}`}>
+                <option value="">All statuses</option>
+                {JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>{statusOptionLabel[status]}</option>
+                ))}
+              </select>
+              <button className="btn-premium-secondary col-span-1 rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
+              <Link href="/jobs" className="btn-premium-secondary col-span-2 rounded-lg px-3 py-1.5 text-center text-[13px] sm:py-2 sm:text-sm">Reset</Link>
             </div>
+            <details className={advancedWrapClass}>
+              <summary className="list-none">
+                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
+                  <span className="text-xs text-cyan-700">Sort + Date</span>
+                </div>
+              </summary>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <select name="sort" defaultValue={sort} className={selectControlClass}>
+                  <option value="received_desc">Newest received</option>
+                  <option value="job_number_desc">Job number desc</option>
+                </select>
+                <input type="date" name="from" defaultValue={filters.from} className={selectControlClass} />
+                <input type="date" name="to" defaultValue={filters.to} className={selectControlClass} />
+              </div>
+            </details>
           </form>
         </>
       ) : (
@@ -260,20 +392,31 @@ export default async function JobsPage({
             <input
               name="q"
               defaultValue={filters.q}
-              placeholder={lookupByPhone ? "Search job # or phone and press Enter" : "Search job # or client and press Enter"}
-              className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+              placeholder={lookupByPhone ? "Search job # or phone" : "Search job # or client"}
+              className={searchInputClass}
             />
-            <details className="mt-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
-              <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</summary>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <select name="status" defaultValue={filters.status} className={selectControlClass}>
+                <option value="">All statuses</option>
+                {JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>{statusOptionLabel[status]}</option>
+                ))}
+              </select>
+              <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Apply</button>
+            </div>
+            <div className="mt-2 flex justify-end">
+              <Link href="/jobs" className="text-xs text-[var(--ink-muted)] underline-offset-2 hover:underline">Reset</Link>
+            </div>
+            <details className={advancedWrapClass}>
+              <summary className="list-none">
+                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
+                  <span className="text-xs text-cyan-700">Device + Path + Date</span>
+                </div>
+              </summary>
               <div className="mt-2 grid gap-2">
-                <input
-                  name="status"
-                  defaultValue={filters.status}
-                  placeholder="Status list (csv)"
-                  className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-                />
                 <div className="grid grid-cols-2 gap-2">
-                  <select name="deviceType" defaultValue={filters.deviceType} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <select name="deviceType" defaultValue={filters.deviceType} className={selectControlClass}>
                     <option value="">All devices</option>
                     <option value="PHONE_ANDROID">Android</option>
                     <option value="PHONE_IPHONE">iPhone</option>
@@ -282,75 +425,94 @@ export default async function JobsPage({
                     <option value="MAC">Mac</option>
                     <option value="OTHER">Other</option>
                   </select>
-                  <select name="repairPath" defaultValue={filters.repairPath} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <select name="repairPath" defaultValue={filters.repairPath} className={selectControlClass}>
                     <option value="">All paths</option>
                     <option value="IN_HOUSE">In-house</option>
                     <option value="EXTERNAL">External</option>
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-                  <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+                  <input type="date" name="from" defaultValue={filters.from} className={selectControlClass} />
+                  <input type="date" name="to" defaultValue={filters.to} className={selectControlClass} />
                 </div>
-                <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                <select name="sort" defaultValue={sort} className={selectControlClass}>
                   <option value="received_desc">Newest received</option>
                   <option value="job_number_desc">Job number desc</option>
                 </select>
               </div>
             </details>
           </form>
-          <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-6">
-            <input
-              name="q"
-              defaultValue={filters.q}
-              placeholder={lookupByPhone ? "Search job # or phone" : "Search job # or client"}
-              className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
-            />
-            <input
-              name="status"
-              defaultValue={filters.status}
-              placeholder="Status list (csv)"
-              className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
-            />
-            <select name="deviceType" defaultValue={filters.deviceType} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-              <option value="">All devices</option>
-              <option value="PHONE_ANDROID">Phone Android</option>
-              <option value="PHONE_IPHONE">Phone iPhone</option>
-              <option value="TABLET">Tablet</option>
-              <option value="WINDOWS_PC">Windows PC</option>
-              <option value="MAC">Mac</option>
-              <option value="OTHER">Other</option>
-            </select>
-            <select name="repairPath" defaultValue={filters.repairPath} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-              <option value="">All paths</option>
-              <option value="IN_HOUSE">In-house</option>
-              <option value="EXTERNAL">External</option>
-            </select>
-            <select name="sort" defaultValue={sort} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
-              <option value="received_desc">Newest received</option>
-              <option value="job_number_desc">Job number desc</option>
-            </select>
-            <input type="date" name="from" defaultValue={filters.from} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-            <input type="date" name="to" defaultValue={filters.to} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-            <button className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-            <p className="mono lg:col-span-6 text-[11px] text-[var(--ink-muted)]">Tip: `RECEIVED,IN_REPAIR,COMPLETED`</p>
+          <form className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
+            <div className="grid grid-cols-12 gap-2">
+              <input
+                name="q"
+                defaultValue={filters.q}
+                placeholder={lookupByPhone ? "Search job # or phone" : "Search job # or client"}
+                className={`col-span-6 ${desktopControlClass}`}
+              />
+              <select name="status" defaultValue={filters.status} className={`col-span-3 ${desktopControlClass}`}>
+                <option value="">All statuses</option>
+                {JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>{statusOptionLabel[status]}</option>
+                ))}
+              </select>
+              <button className="btn-premium-secondary col-span-1 rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
+              <Link href="/jobs" className="btn-premium-secondary col-span-2 rounded-lg px-3 py-1.5 text-center text-[13px] sm:py-2 sm:text-sm">Reset</Link>
+            </div>
+            <details className={advancedWrapClass}>
+              <summary className="list-none">
+                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
+                  <span className="text-xs text-cyan-700">Device + Path + Date</span>
+                </div>
+              </summary>
+              <div className="mt-2 grid grid-cols-5 gap-2">
+                <select name="deviceType" defaultValue={filters.deviceType} className={selectControlClass}>
+                  <option value="">All devices</option>
+                  <option value="PHONE_ANDROID">Phone Android</option>
+                  <option value="PHONE_IPHONE">Phone iPhone</option>
+                  <option value="TABLET">Tablet</option>
+                  <option value="WINDOWS_PC">Windows PC</option>
+                  <option value="MAC">Mac</option>
+                  <option value="OTHER">Other</option>
+                </select>
+                <select name="repairPath" defaultValue={filters.repairPath} className={selectControlClass}>
+                  <option value="">All paths</option>
+                  <option value="IN_HOUSE">In-house</option>
+                  <option value="EXTERNAL">External</option>
+                </select>
+                <select name="sort" defaultValue={sort} className={selectControlClass}>
+                  <option value="received_desc">Newest received</option>
+                  <option value="job_number_desc">Job number desc</option>
+                </select>
+                <input type="date" name="from" defaultValue={filters.from} className={selectControlClass} />
+                <input type="date" name="to" defaultValue={filters.to} className={selectControlClass} />
+              </div>
+            </details>
           </form>
           <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> AWAITING_APPROVAL -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED or CLOSED. Use job workflow notes for parts pending, specialist escalation, or closure reason." />
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm text-[var(--ink-muted)]">
-        <p>Page {page} of {totalPages}</p>
+      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-sm text-[var(--ink-muted)]">
+        <p>
+          Showing <span className="font-semibold text-[var(--ink)]">{pageStart}-{pageEnd}</span> of <span className="font-semibold text-[var(--ink)]">{total}</span>
+        </p>
         <div className="flex gap-2">
           <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(Math.max(page - 1, 1)) }).toString()}`}
-            className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
+            aria-disabled={isPrevDisabled}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isPrevDisabled ? "pointer-events-none opacity-50" : ""}`}
           >
             Prev
           </Link>
+          <span className="inline-flex items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-xs font-medium text-[var(--ink-muted)]">
+            Page {page} / {totalPages}
+          </span>
           <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(Math.min(page + 1, totalPages)) }).toString()}`}
-            className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
+            aria-disabled={isNextDisabled}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isNextDisabled ? "pointer-events-none opacity-50" : ""}`}
           >
             Next
           </Link>

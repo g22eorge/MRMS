@@ -13,7 +13,7 @@ function SaveButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+      className="btn-premium rounded-lg px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
     >
       {pending ? "Saving..." : "Save changes"}
     </button>
@@ -41,10 +41,18 @@ export function ProfileForm({
     }
   }, [router, state.success]);
 
+  const fieldClass =
+    "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-800">Profile Summary</p>
+        <p className="mt-1 text-sm text-[var(--ink)]">Keep your contact details current so internal handoffs and approvals remain accurate.</p>
+      </div>
+
       <div>
-        <label htmlFor="name" className="mb-1 block text-sm text-slate-500">
+        <label htmlFor="name" className="mb-1 block text-sm text-[var(--ink-muted)]">
           Name
         </label>
         <input
@@ -54,12 +62,12 @@ export function ProfileForm({
           required
           minLength={2}
           maxLength={80}
-          className="w-full rounded-md border border-slate-300 px-3 py-2"
+          className={fieldClass}
         />
       </div>
 
       <div>
-        <label htmlFor="phone" className="mb-1 block text-sm text-slate-500">
+        <label htmlFor="phone" className="mb-1 block text-sm text-[var(--ink-muted)]">
           Phone
         </label>
         <input
@@ -68,18 +76,19 @@ export function ProfileForm({
           defaultValue={phone ?? ""}
           maxLength={30}
           placeholder="e.g. +2567..."
-          className="w-full rounded-md border border-slate-300 px-3 py-2"
+          className={fieldClass}
         />
       </div>
 
-      <div>
-        <p className="mb-1 text-sm text-slate-500">Email</p>
-        <p className="font-medium">{email}</p>
-      </div>
-
-      <div>
-        <p className="mb-1 text-sm text-slate-500">Role</p>
-        <p className="font-medium">{role}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
+          <p className="mt-1 text-sm font-medium text-[var(--ink)]">{email}</p>
+        </div>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Role</p>
+          <p className="mt-1 text-sm font-medium text-[var(--ink)]">{role}</p>
+        </div>
       </div>
 
       {state.error ? <p className="text-sm text-rose-700">{state.error}</p> : null}

@@ -73,6 +73,12 @@ export default async function ClientsPage({
 
   const total = segmentedClients.length;
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, total);
+  const prevPage = Math.max(page - 1, 1);
+  const nextPage = Math.min(page + 1, totalPages);
+  const isPrevDisabled = page <= 1;
+  const isNextDisabled = page >= totalPages;
   const clients = segmentedClients.slice((page - 1) * pageSize, page * pageSize);
   const totalClients = allCounts.length;
   const activeClients = allCounts.filter((c) => c._count.jobs > 0).length;
@@ -136,9 +142,24 @@ export default async function ClientsPage({
   const preserved = Object.fromEntries(
     Object.entries(filters).filter(([, value]) => typeof value === "string" && value.length > 0),
   ) as Record<string, string>;
+  const hasClientFilters = Boolean(filters.q || segment !== "all");
+  const clientBrief = hasClientFilters
+    ? "Filtered client directory view is active. Use the KPI cards below for live totals and reset filters to return to the full book."
+    : "Use this directory to maintain accurate contact records, monitor client activity, and quickly open each customer timeline.";
+  const controlClass =
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  const fieldClass =
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
 
   return (
     <div className="space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Client Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
+        </div>
+      </div>
+
       <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 2xl:hidden">
         <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
@@ -187,27 +208,27 @@ export default async function ClientsPage({
               </div>
             </summary>
             <form action={createClientAction} className="mt-3 space-y-2">
-              <input required name="fullName" placeholder="Full name" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
-              <input required name="phone" placeholder="Phone" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2" />
+              <input required name="fullName" placeholder="Full name" className={fieldClass} />
+              <input required name="phone" placeholder="Phone" className={fieldClass} />
               <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
                 <summary className="list-none text-xs font-medium text-[var(--ink-muted)]">Optional details</summary>
                 <div className="mt-2 grid gap-2">
-                  <input name="email" placeholder="Email" className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2" />
-                  <input name="organization" placeholder="Organization" className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2" />
+                  <input name="email" placeholder="Email" className={fieldClass} />
+                  <input name="organization" placeholder="Organization" className={fieldClass} />
                 </div>
               </details>
-              <button className="btn-premium w-full rounded-md px-3 py-2 text-sm">Create Client</button>
+              <button className="btn-premium w-full rounded-lg px-3 py-2 text-sm">Create Client</button>
             </form>
           </details>
 
           <form action={createClientAction} className="panel-shadow hidden space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:block">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create client</p>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
-              <input required name="fullName" placeholder="Full name" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-              <input required name="phone" placeholder="Phone" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-              <input name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-              <input name="organization" placeholder="Organization" className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1" />
-              <button className="btn-premium justify-self-start rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Create</button>
+              <input required name="fullName" placeholder="Full name" className={controlClass} />
+              <input required name="phone" placeholder="Phone" className={controlClass} />
+              <input name="email" placeholder="Email" className={controlClass} />
+              <input name="organization" placeholder="Organization" className={controlClass} />
+              <button className="btn-premium justify-self-start rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Create</button>
             </div>
           </form>
         </>
@@ -219,7 +240,7 @@ export default async function ClientsPage({
           defaultValue={filters.q}
           aria-label="Search clients"
           placeholder="Search clients and press Enter"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2"
+          className={fieldClass}
         />
       </form>
 
@@ -229,16 +250,16 @@ export default async function ClientsPage({
           defaultValue={filters.q}
           aria-label="Search clients"
           placeholder="Search by name, phone, email, or organization"
-          className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1"
+          className={controlClass}
         />
-        <select name="segment" defaultValue={segment} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1">
+        <select name="segment" defaultValue={segment} className={controlClass}>
           <option value="all">All clients</option>
           <option value="active">Active clients</option>
           <option value="new">No-job clients</option>
           <option value="high">3+ jobs clients</option>
         </select>
-        <button className="btn-premium-secondary justify-self-start rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-        <Link href="/clients" className="btn-premium-secondary justify-self-start rounded-md px-3 py-1.5 text-[13px] text-center sm:py-2 sm:text-sm">Reset</Link>
+        <button className="btn-premium-secondary justify-self-start rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
+        <Link href="/clients" className="btn-premium-secondary justify-self-start rounded-lg px-3 py-1.5 text-[13px] text-center sm:py-2 sm:text-sm">Reset</Link>
       </form>
 
       <div className="flex flex-wrap gap-2 text-xs max-[360px]:grid max-[360px]:grid-cols-2">
@@ -358,18 +379,25 @@ export default async function ClientsPage({
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm text-[var(--ink-muted)]">
-        <p>Page {page} of {totalPages}</p>
+      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-sm text-[var(--ink-muted)]">
+        <p>
+          Showing <span className="font-semibold text-[var(--ink)]">{pageStart}-{pageEnd}</span> of <span className="font-semibold text-[var(--ink)]">{total}</span>
+        </p>
         <div className="flex gap-2">
           <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(Math.max(page - 1, 1)) }).toString()}`}
-            className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
+            aria-disabled={isPrevDisabled}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isPrevDisabled ? "pointer-events-none opacity-50" : ""}`}
           >
             Prev
           </Link>
+          <span className="inline-flex items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-xs font-medium text-[var(--ink-muted)]">
+            Page {page} / {totalPages}
+          </span>
           <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(Math.min(page + 1, totalPages)) }).toString()}`}
-            className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
+            aria-disabled={isNextDisabled}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isNextDisabled ? "pointer-events-none opacity-50" : ""}`}
           >
             Next
           </Link>

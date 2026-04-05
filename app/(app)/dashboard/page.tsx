@@ -93,6 +93,44 @@ const deviceLabel: Record<string, string> = {
   OTHER: "Other",
 };
 
+const repairFlowReference = [
+  { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-sky-200 bg-sky-50 text-sky-800" },
+  { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-indigo-200 bg-indigo-50 text-indigo-800" },
+  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-amber-200 bg-amber-50 text-amber-800" },
+  { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-orange-200 bg-orange-50 text-orange-800" },
+  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-emerald-300 bg-emerald-100 text-emerald-900" },
+  { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-slate-200 bg-slate-100 text-slate-700" },
+] as const;
+
+function RepairStatusReference({
+  title,
+  guidance,
+}: {
+  title: string;
+  guidance: string;
+}) {
+  return (
+    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(8,145,178,0.06),rgba(14,116,144,0.02))]">
+      <div className="border-b border-[var(--line)] px-4 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repair Status Guide</p>
+        <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{title}</p>
+        <p className="mt-1 text-xs text-[var(--ink-muted)]">{guidance}</p>
+      </div>
+      <div className="flex snap-x gap-2 overflow-x-auto px-3 py-3 [scrollbar-width:thin]">
+        {repairFlowReference.map((step, index) => (
+          <div key={step.key} className="flex shrink-0 items-center gap-2">
+            <Link href={step.href} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition hover:-translate-y-[1px] ${step.tone}`}>
+              {step.label}
+            </Link>
+            {index < repairFlowReference.length - 1 ? <span className="text-[10px] text-[var(--ink-muted)]">→</span> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -313,6 +351,11 @@ export default async function DashboardPage({
             { label: "In Repair", value: String(inRepair), href: "/jobs?status=IN_REPAIR", tone: "warning" },
             { label: "Completed", value: String(completed), href: "/jobs?status=COMPLETED", tone: "success" },
           ]}
+        />
+
+        <RepairStatusReference
+          title="Full Repair Journey"
+          guidance="Use this quick lane map while updating jobs so each handoff follows the standard process."
         />
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
@@ -790,6 +833,11 @@ export default async function DashboardPage({
             { label: "Approval", value: String(awaitingApproval), href: "/jobs?status=AWAITING_APPROVAL", tone: "warning" },
             { label: "Ready", value: String(readyForPickup), href: "/jobs?status=READY_FOR_PICKUP", tone: "success" },
           ]}
+        />
+
+        <RepairStatusReference
+          title="Intake to Delivery Flow"
+          guidance="Keep this sequence in view when briefing clients so status updates are clear and consistent."
         />
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
