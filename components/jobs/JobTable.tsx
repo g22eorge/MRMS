@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
+import { formatEATDate } from "@/lib/date-eat";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
@@ -112,7 +113,7 @@ export function JobTable({
                   </div>
                   <div className="shrink-0 text-right">
                     <JobStatusBadge status={job.status} />
-                    <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</p>
+                    <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{formatEATDate(job.receivedAt)}</p>
                     {canSeeCost ? (
                       <p className="mt-1 text-[11px] font-semibold text-[var(--ink)]">
                         {showClientFacingCostOnly
@@ -277,7 +278,7 @@ export function JobTable({
                   </span>
                 )}
               </td>
-              <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.receivedAt.toLocaleDateString()}</td>
+              <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{formatEATDate(job.receivedAt)}</td>
               {canSeeCost ? (
                 <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
                   {showClientFacingCostOnly

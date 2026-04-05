@@ -6,6 +6,7 @@ import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { formatEATMonthLabel } from "@/lib/date-eat";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
@@ -59,10 +60,7 @@ function monthOptions(count: number) {
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
     const value = monthLabel(date.getFullYear(), date.getMonth() + 1);
-    const label = date.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
+    const label = formatEATMonthLabel(date.getFullYear(), date.getMonth() + 1);
     return { value, label };
   });
 }

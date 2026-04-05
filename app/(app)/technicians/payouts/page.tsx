@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { formatEATDate } from "@/lib/date-eat";
 import { getJobPayoutsByIds, hasJobPayoutColumns } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -199,7 +200,7 @@ export default async function TechnicianPayoutsPage({
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${job.completedAt.toLocaleDateString()}` : ""}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${formatEATDate(job.completedAt)}` : ""}</p>
                         {payouts.get(job.id)?.externalPaymentRef ? (
                           <p className="text-[11px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
                         ) : null}
@@ -214,7 +215,7 @@ export default async function TechnicianPayoutsPage({
                   </summary>
                   <div className="mt-2 text-xs text-[var(--ink-muted)]">
                     {payouts.get(job.id)?.externalPaidAt ? (
-                      <p>Paid on {payouts.get(job.id)?.externalPaidAt?.toLocaleDateString()}</p>
+                      <p>Paid on {formatEATDate(new Date(payouts.get(job.id)!.externalPaidAt!))}</p>
                     ) : (
                       <p>Pending payment</p>
                     )}

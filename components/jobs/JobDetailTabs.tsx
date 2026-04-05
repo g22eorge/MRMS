@@ -9,15 +9,14 @@ import { updateJobAction } from "@/app/(app)/jobs/[id]/actions";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
+import { formatEATDateTime } from "@/lib/date-eat";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "timeline", "photos"] as const;
 
 function formatUtcDateTime(value: Date | string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return `${date.toISOString().slice(0, 19).replace("T", " ")} UTC`;
+  return formatEATDateTime(value);
 }
 
 function formatBillAmount(value: number) {

@@ -177,7 +177,6 @@ export default async function JobsPage({
     return query ? `/jobs?${query}` : "/jobs";
   }
 
-  const activeStatusKey = statuses.join(",");
   const staleThresholdHours = 24;
   const staleCutoff = new Date();
   staleCutoff.setHours(staleCutoff.getHours() - staleThresholdHours);
@@ -252,60 +251,12 @@ export default async function JobsPage({
 
   return (
     <div className="space-y-5">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs Pulse</p>
-          <span className="text-[11px] text-[var(--ink-muted)]">Tap to filter</span>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Link
-            href={pulseHref()}
-            className={`rounded-lg border px-3 py-2 ${!activeStatusKey ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
-          >
-            <p className="text-[11px] text-[var(--ink-muted)]">Results</p>
-            <p className="text-lg font-semibold">{total}</p>
-          </Link>
-          <Link
-            href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
-            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
-          >
-            <p className="text-[11px] text-[var(--ink-muted)]">Active Queue</p>
-            <p className="text-lg font-semibold text-[var(--brand)]">{openNow}</p>
-          </Link>
-          <Link
-            href={pulseHref("AWAITING_APPROVAL")}
-            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "AWAITING_APPROVAL" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
-          >
-            <p className="text-[11px] text-[var(--ink-muted)]">Awaiting Approval</p>
-            <p className="text-lg font-semibold text-amber-700">{awaitingApproval}</p>
-          </Link>
-          <Link
-            href={pulseHref("READY_FOR_PICKUP")}
-            className={`rounded-lg border px-3 py-2 ${activeStatusKey === "READY_FOR_PICKUP" ? "border-[var(--brand)] bg-white" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}
-          >
-            <p className="text-[11px] text-[var(--ink-muted)]">Ready Pickup</p>
-            <p className="text-lg font-semibold text-emerald-700">{readyForPickup}</p>
-          </Link>
-        </div>
-      </div>
-
-      {can.createJob(user) ? (
-        <div className="flex justify-end">
-          <Link
-            href="/jobs/new"
-            className="btn-premium rounded-md px-3 py-1.5 text-[13px] font-medium sm:py-2 sm:text-sm"
-          >
-            New Job
-          </Link>
-        </div>
-      ) : null}
-
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Executive Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{briefingWithWatch}</p>
         </div>
-        <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-2 p-3 grid-cols-2 xl:grid-cols-6">
           {quickCards.map((card) => (
             <Link key={card.label} href={card.href} className={`rounded-lg border px-3 py-2 transition hover:-translate-y-[1px] ${card.accent}`}>
               <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">{card.label}</p>
@@ -314,6 +265,17 @@ export default async function JobsPage({
           ))}
         </div>
       </section>
+
+      {can.createJob(user) ? (
+        <div className="flex justify-end">
+          <Link
+            href="/jobs/new"
+            className="btn-premium rounded-lg px-3 py-1.5 text-[13px] font-medium sm:py-2 sm:text-sm"
+          >
+            New Job
+          </Link>
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick Filters</p>

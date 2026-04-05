@@ -119,7 +119,7 @@ export function AuditTimeline({ items }: { items: AuditItem[] }) {
                 </span>
                 {formatActionLabel(item.action)}
               </p>
-              <p className="text-xs text-slate-500">{item.createdAt.toLocaleString()}</p>
+              <p className="text-xs text-slate-500">{item.createdAt.toLocaleString("en-GB", { timeZone: "Africa/Nairobi" })}</p>
             </div>
             <p className="text-xs text-slate-500">by {item.user.name}</p>
             {trainingSummary ? (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { updateJobAction } from "@/app/(app)/jobs/[id]/actions";
+import { formatEATDateTime } from "@/lib/date-eat";
 
 type ExternalJob = {
   id: string;
@@ -78,7 +79,7 @@ export function ExternalTechJobView({
         {job.status === "IN_REPAIR" && job.clientApproved ? (
           <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
             Client approved. You can proceed with repair now.
-            {job.approvalDate ? ` Approved on ${new Date(job.approvalDate).toLocaleString()}.` : ""}
+            {job.approvalDate ? ` Approved on ${formatEATDateTime(job.approvalDate)}.` : ""}
           </div>
         ) : null}
         {job.status === "AWAITING_APPROVAL" ? (

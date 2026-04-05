@@ -20,6 +20,7 @@ function formatInvoiceDate(value: Date) {
     day: "2-digit",
     month: "short",
     year: "2-digit",
+    timeZone: "Africa/Nairobi",
   });
 }
 

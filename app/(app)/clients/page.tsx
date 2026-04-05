@@ -9,6 +9,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
+import { formatEATDate } from "@/lib/date-eat";
 
 const createClientSchema = z.object({
   fullName: z.string().min(2),
@@ -299,7 +300,7 @@ export default async function ClientsPage({
                   </div>
                   <div>
                     <p className="text-[var(--ink-muted)]">Updated</p>
-                    <p className="font-medium text-[var(--ink)]">{client.updatedAt.toLocaleDateString()}</p>
+                    <p className="font-medium text-[var(--ink)]">{formatEATDate(client.updatedAt)}</p>
                   </div>
                 </div>
 

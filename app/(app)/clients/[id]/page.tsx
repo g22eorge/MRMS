@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
+import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 
 const updateClientSchema = z.object({
   fullName: z.string().min(2),
@@ -199,7 +200,7 @@ export default async function ClientDetailPage({
             </p>
           </div>
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
-            Last activity: {new Date(latestActivity).toLocaleString()}
+            Last activity: {formatEATDateTime(latestActivity)}
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -302,7 +303,7 @@ export default async function ClientDetailPage({
                       <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]}</span>
                     </div>
                     <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">Received {job.receivedAt.toLocaleDateString()}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">Received {formatEATDate(job.receivedAt)}</p>
                   </summary>
                   <Link href={`/jobs/${job.id}`} className="btn-premium mt-2 inline-block rounded-lg px-3 py-2 text-sm font-medium text-white max-[360px]:w-full max-[360px]:text-center">
                     Open
@@ -334,7 +335,7 @@ export default async function ClientDetailPage({
               <div key={note.id} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-sm">{note.body}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                  {note.author.name} • {new Date(note.createdAt).toLocaleString()}
+                  {note.author.name} • {formatEATDateTime(note.createdAt)}
                 </p>
               </div>
             ))
