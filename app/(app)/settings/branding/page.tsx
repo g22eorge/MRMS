@@ -52,10 +52,7 @@ function normalizeOptionalEmail(value: FormDataEntryValue | null) {
 function normalizeOptionalWebsite(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   if (!text) return undefined;
-  if (text.startsWith("http://") || text.startsWith("https://")) {
-    return text;
-  }
-  return `https://${text}`;
+  return text.replace(/^https?:\/\//, "");
 }
 
 function renderQuotePreview(prefix: string, format: string, padLength: number) {

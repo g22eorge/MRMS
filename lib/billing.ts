@@ -7,7 +7,6 @@ type LegacyOrCurrentJob = {
 
 export function getExternalTechBill(job: LegacyOrCurrentJob) {
   if (typeof job.externalTechBill === "number") return job.externalTechBill;
-  if (typeof job.costEstimate === "number") return job.costEstimate;
   return null;
 }
 
