@@ -24,8 +24,9 @@ export default async function JobDetailPage({
       : "/jobs";
 
   const canOverseeExternal = user.permissions.includes("can_view_external_updates") || user.permissions.includes("can_view_external_quotes");
+  const canAccessAllForPricing = can.approveInvoices(user);
   const where =
-    user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !canOverseeExternal)
+    user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !canOverseeExternal && !canAccessAllForPricing)
       ? { id, assignedToId: session.user.id }
       : { id };
 

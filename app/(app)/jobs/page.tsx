@@ -12,6 +12,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 type SearchParams = {
   status?: string;
+  pricing?: string;
   deviceType?: string;
   repairPath?: string;
   q?: string;
@@ -49,17 +50,28 @@ export default async function JobsPage({
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean) as JobStatus[];
+  const pricingFilter = filters.pricing === "needs" || filters.pricing === "priced" ? filters.pricing : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   const pageSize = 20;
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
   const orderBy = sort === "job_number_desc" ? { jobNumber: "desc" as const } : { receivedAt: "desc" as const };
-  const internalCanSearchAll = user.role === "TECHNICIAN_INTERNAL" && can.searchJobs(user);
+  const internalCanSearchAll =
+    user.role === "TECHNICIAN_INTERNAL"
+    && (can.searchJobs(user) || can.approveInvoices(user));
 
   const whereBase = {
     ...(user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !internalCanSearchAll)
       ? { assignedToId: session.user.id }
       : {}),
     ...(statuses.length > 0 ? { status: { in: statuses } } : {}),
+    ...(pricingFilter === "needs"
+      ? {
+          clientBill: null,
+          status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[] },
+        }
+      : pricingFilter === "priced"
+        ? { clientBill: { not: null } }
+        : {}),
     ...(filters.deviceType ? { deviceType: filters.deviceType as never } : {}),
     ...(filters.repairPath ? { repairPath: filters.repairPath as never } : {}),
     ...(filters.from || filters.to
@@ -176,7 +188,7 @@ export default async function JobsPage({
   ).length;
   const completedCount = rows.filter((row) => row.status === "COMPLETED").length;
   const hasJobsFilters = Boolean(
-    filters.q || filters.status || filters.deviceType || filters.repairPath || filters.from || filters.to || sort === "job_number_desc",
+    filters.q || filters.status || filters.pricing || filters.deviceType || filters.repairPath || filters.from || filters.to || sort === "job_number_desc",
   );
   const briefing = hasJobsFilters
     ? "Filtered queue view is active. Use the signal cards below for live totals and open any work order to apply diagnosis, approval, and repair updates."
@@ -308,6 +320,29 @@ export default async function JobsPage({
         <p className="text-[11px] text-[var(--ink-muted)]">Keep essentials visible, expand advanced only when needed</p>
       </div>
 
+      {!isExternalTech && can.approveInvoices(user) ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[var(--ink-muted)]">Pricing View:</span>
+          <Link
+            href="/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
+            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "needs" ? "border-amber-300 bg-amber-50 text-amber-800" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
+          >
+            Needs pricing
+          </Link>
+          <Link
+            href="/jobs?pricing=priced"
+            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "priced" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
+          >
+            Priced
+          </Link>
+          {pricingFilter ? (
+            <Link href="/jobs" className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[var(--ink-muted)]">
+              Clear pricing
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       {isExternalTech ? (
         <>
           <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2 text-xs text-cyan-800">
@@ -430,6 +465,13 @@ export default async function JobsPage({
                     <option value="IN_HOUSE">In-house</option>
                     <option value="EXTERNAL">External</option>
                   </select>
+                  {can.approveInvoices(user) ? (
+                    <select name="pricing" defaultValue={pricingFilter} className={selectControlClass}>
+                      <option value="">All pricing</option>
+                      <option value="needs">Needs pricing</option>
+                      <option value="priced">Priced</option>
+                    </select>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <input type="date" name="from" defaultValue={filters.from} className={selectControlClass} />
@@ -466,7 +508,7 @@ export default async function JobsPage({
                   <span className="text-xs text-cyan-700">Device + Path + Date</span>
                 </div>
               </summary>
-              <div className="mt-2 grid grid-cols-5 gap-2">
+              <div className={`mt-2 grid gap-2 ${can.approveInvoices(user) ? "grid-cols-6" : "grid-cols-5"}`}>
                 <select name="deviceType" defaultValue={filters.deviceType} className={selectControlClass}>
                   <option value="">All devices</option>
                   <option value="PHONE_ANDROID">Phone Android</option>
@@ -481,6 +523,13 @@ export default async function JobsPage({
                   <option value="IN_HOUSE">In-house</option>
                   <option value="EXTERNAL">External</option>
                 </select>
+                {can.approveInvoices(user) ? (
+                  <select name="pricing" defaultValue={pricingFilter} className={selectControlClass}>
+                    <option value="">All pricing</option>
+                    <option value="needs">Needs pricing</option>
+                    <option value="priced">Priced</option>
+                  </select>
+                ) : null}
                 <select name="sort" defaultValue={sort} className={selectControlClass}>
                   <option value="received_desc">Newest received</option>
                   <option value="job_number_desc">Job number desc</option>

@@ -33,7 +33,9 @@ export const can = {
   viewClientInfo: (user: PermissionUser) =>
     ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_intake"),
   viewFinancials: (user: PermissionUser) =>
-    ["ADMIN", "OPS"].includes(user.role) || hasExtraPermission(user, "can_review_external_bills"),
+    ["ADMIN", "OPS"].includes(user.role)
+    || hasExtraPermission(user, "can_review_external_bills")
+    || hasExtraPermission(user, "can_approve_invoices"),
   createJob: (user: PermissionUser) =>
     ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_intake"),
   editDiagnosis: (user: PermissionUser) =>

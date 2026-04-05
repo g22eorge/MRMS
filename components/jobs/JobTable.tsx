@@ -63,10 +63,16 @@ export function JobTable({
 }) {
   const permissionUser = { role, permissions };
   const canSeeClient = role !== "TECHNICIAN_EXTERNAL";
-  const canSeeCost = can.viewApprovedCost(permissionUser) || can.reviewExternalBills(permissionUser);
+  const canSeeCost =
+    can.viewApprovedCost(permissionUser)
+    || can.reviewExternalBills(permissionUser)
+    || can.approveInvoices(permissionUser);
   const canSeeAssignment = can.assignJobs(permissionUser) || role === "ADMIN" || role === "OPS";
   const canEditPage = role !== "TECHNICIAN_EXTERNAL" && !can.createJob(permissionUser);
-  const showClientFacingCostOnly = can.viewApprovedCost(permissionUser) && !can.reviewExternalBills(permissionUser);
+  const canManagePricing = can.approveInvoices(permissionUser);
+  const showClientFacingCostOnly =
+    (can.viewApprovedCost(permissionUser) || canManagePricing)
+    && !can.reviewExternalBills(permissionUser);
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
@@ -139,6 +145,25 @@ export function JobTable({
                 <div className="col-span-2">
                   <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
                     {workflowReasonLabel(job.workflowReason)}
+                  </span>
+                </div>
+              ) : null}
+              {canManagePricing ? (
+                <div className="col-span-2">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      typeof job.clientBill === "number"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {typeof job.clientBill === "number"
+                      ? "Priced"
+                      : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                        ? "Needs pricing"
+                        : "Pricing n/a"}
                   </span>
                 </div>
               ) : null}
@@ -218,11 +243,38 @@ export function JobTable({
               {canSeeAssignment ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><p className="max-w-[14rem] truncate">{job.assignedTo ?? "-"}</p></td> : null}
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle">
                 {job.workflowReason && job.workflowReason !== "NONE" ? (
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
-                    {workflowReasonLabel(job.workflowReason)}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
+                      {workflowReasonLabel(job.workflowReason)}
+                    </span>
+                    {canManagePricing ? (
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          typeof job.clientBill === "number"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {typeof job.clientBill === "number"
+                          ? "Priced"
+                          : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                            ? "Needs pricing"
+                            : "Pricing n/a"}
+                      </span>
+                    ) : null}
+                  </div>
                 ) : (
-                  <span className="text-xs text-[var(--ink-muted)]">-</span>
+                  <span className="text-xs text-[var(--ink-muted)]">
+                    {canManagePricing
+                      ? typeof job.clientBill === "number"
+                        ? "Priced"
+                        : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                          ? "Needs pricing"
+                          : "-"
+                      : "-"}
+                  </span>
                 )}
               </td>
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">{job.receivedAt.toLocaleDateString()}</td>

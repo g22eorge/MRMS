@@ -7,6 +7,7 @@ import path from "node:path";
 import { getClientBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { can } from "@/lib/permissions";
 import { InvoiceDocument } from "@/lib/pdf/InvoiceDocument";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -135,7 +136,7 @@ export async function GET(
   const { id } = await context.params;
   const { user } = await getCurrentUserRole();
 
-  if (!["ADMIN", "OPS"].includes(user.role)) {
+  if (!( ["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user) )) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -159,6 +160,12 @@ export async function GET(
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
   const logoUrl = await resolveInvoiceLogo();
+  const normalizedFooterText =
+    branding.footerText
+      .replace("Eagle InfoSolutions SMC Limited", "Eagle Info Solutions SMC Limited")
+      .trim() === "Built by Almeida 2026. All rights reserved."
+      ? "Built by Almeida 2026. All rights reserved. Copyrighted to Eagle Info Solutions SMC Limited."
+      : branding.footerText.replace("Eagle InfoSolutions SMC Limited", "Eagle Info Solutions SMC Limited");
   const quotationNumber = formatQuotationNumber(
     job.jobNumber,
     issuedAtDate,
@@ -212,12 +219,14 @@ export async function GET(
         : job.clientApproved === false
           ? "Declined"
           : "Awaiting Approval",
-    recommendation: compactListText(prettyEnum(job.recommendationOption), 120),
+    recommendation: job.recommendationOption
+      ? compactListText(prettyEnum(job.recommendationOption), 120)
+      : "",
     notes: compactListText(job.clientConversationNote, 180),
     status: prettyEnum(job.status),
     currency,
     termsText: branding.termsText,
-    footerText: branding.footerText,
+    footerText: normalizedFooterText,
     signatureCompanyLabel: branding.signatureCompanyLabel,
     signatureClientLabel: branding.signatureClientLabel,
   });

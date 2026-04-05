@@ -212,13 +212,19 @@ pre,
   box-shadow: none;
   filter: none;
   transition: none;
-  background: #d9f4ef;
-  border-color: rgba(15, 118, 110, 0.35);
+  height: 1.2rem;
+  width: 1.2rem;
+  border-radius: 0.42rem;
+  background: linear-gradient(180deg, #edfdfa 0%, #d7f7ef 100%);
+  border-color: rgba(15, 118, 110, 0.28);
+  color: #0f766e;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
 .sidebar-nav-icon svg {
+  width: 0.75rem;
+  height: 0.75rem;
   transform: translateZ(0);
 }
 

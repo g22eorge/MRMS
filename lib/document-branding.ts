@@ -19,7 +19,7 @@ export const defaultBranding = {
   vatLabel: "VAT",
   termsText:
     "Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.",
-  footerText: "Built by Almeida 2026. All rights reserved.",
+  footerText: "Built by Almeida 2026. All rights reserved. Copyrighted to Eagle Info Solutions SMC Limited.",
   signatureCompanyLabel: "Signed by: Eagle Info Solutions",
   signatureClientLabel: "Signed by: Client",
 };

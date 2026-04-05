@@ -177,12 +177,15 @@ export default async function ReportsPage({
     value: statusCount.get(status) ?? 0,
   }));
 
+  const pricedSubset = <T extends typeof completedSelected[number]>(jobs: T[]) =>
+    jobs.filter((job) => getClientBill(job) !== null);
+
   const revenueFor = (jobs: typeof completedSelected) =>
-    jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
+    pricedSubset(jobs).reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
   const revenueSelected = revenueFor(completedSelected);
   const revenuePrev = revenueFor(completedPrev);
   const revenueDelta = revenueSelected - revenuePrev;
-  const marginSelected = completedSelected.reduce(
+  const marginSelected = pricedSubset(completedSelected).reduce(
     (sum, job) => sum + ((getClientBill(job) ?? 0) - (getExternalTechBill(job) ?? 0)),
     0,
   );
@@ -348,10 +351,12 @@ export default async function ReportsPage({
           bucket.turnaroundHoursSum += (job.completedAt.getTime() - job.receivedAt.getTime()) / 36e5;
           bucket.turnaroundCount += 1;
         }
-        const clientBill = getClientBill(job) ?? 0;
-        const extBill = getExternalTechBill(job) ?? 0;
-        bucket.revenue += clientBill;
-        bucket.margin += clientBill - extBill;
+        const clientBill = getClientBill(job);
+        if (typeof clientBill === "number") {
+          const extBill = getExternalTechBill(job) ?? 0;
+          bucket.revenue += clientBill;
+          bucket.margin += clientBill - extBill;
+        }
       }
       if (job.status === "CLOSED") {
         bucket.cancelledOrClosed += 1;

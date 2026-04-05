@@ -198,9 +198,11 @@ export async function updateJobAction(formData: FormData) {
     }
   }
 
+  const canBypassAssignmentForPricing = can.approveInvoices(permissionUser);
   if (
     (user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL") &&
-    existing.assignedToId !== session.user.id
+    existing.assignedToId !== session.user.id &&
+    !canBypassAssignmentForPricing
   ) {
     return { error: "Forbidden" };
   }

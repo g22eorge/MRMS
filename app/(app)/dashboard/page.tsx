@@ -7,6 +7,7 @@ import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -131,12 +132,101 @@ function RepairStatusReference({
   );
 }
 
+function DashboardPeriodBar({
+  period,
+  monthHref,
+  yearHref,
+  selectorName,
+  selectorValue,
+  selectorOptions,
+  actionHref,
+  actionLabel,
+}: {
+  period: "month" | "year";
+  monthHref: string;
+  yearHref: string;
+  selectorName: "month" | "year";
+  selectorValue: string;
+  selectorOptions: Array<{ value: string; label: string }>;
+  actionHref?: string;
+  actionLabel?: string;
+}) {
+  return (
+    <div className="panel-shadow flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(236,254,255,0.65),rgba(248,250,252,0.95))] p-3">
+      <div className="flex items-center gap-2">
+        <Link
+          href={monthHref}
+          className={`rounded-lg px-2.5 py-1.5 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+        >
+          Monthly
+        </Link>
+        <Link
+          href={yearHref}
+          className={`rounded-lg px-2.5 py-1.5 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+        >
+          Annual
+        </Link>
+      </div>
+      <MonthSelectForm
+        name={selectorName}
+        value={selectorValue}
+        options={selectorOptions}
+        hiddenFields={{ period }}
+        className="flex items-center"
+        selectClassName="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-sm"
+      />
+      {actionHref && actionLabel ? (
+        <Link href={actionHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+          {actionLabel}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function DashboardHero({
+  title,
+  summary,
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
+}: {
+  title: string;
+  summary: string;
+  primaryHref: string;
+  primaryLabel: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}) {
+  return (
+    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(2,132,199,0.12),rgba(15,23,42,0.02),rgba(16,185,129,0.08))]">
+      <div className="px-4 py-4 sm:px-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Operations Snapshot</p>
+        <p className="mt-1 text-base font-semibold text-[var(--ink)]">{title}</p>
+        <p className="mt-1 text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">{summary}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-sm text-white">
+            {primaryLabel}
+          </Link>
+          {secondaryHref && secondaryLabel ? (
+            <Link href={secondaryHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+              {secondaryLabel}
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const { session, user } = await getCurrentUserRole();
+  const permissionUser = { role: user.role, permissions: user.permissions };
   const filters = await searchParams;
   const period: "month" | "year" = filters.period === "year" ? "year" : "month";
 
@@ -150,7 +240,11 @@ export default async function DashboardPage({
     const jobs = await prisma.job.findMany({
       where: {
         assignedToId: session.user.id,
-        receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        OR: [
+          { receivedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+          { updatedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+          { completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+        ],
       },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -180,30 +274,23 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="flex flex-wrap items-end justify-end gap-3">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Monthly
-            </Link>
-            <Link
-              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Annual
-            </Link>
-          </div>
-          <MonthSelectForm
-            name={period === "year" ? "year" : "month"}
-            value={selectedPeriodLabel}
-            options={selectablePeriods}
-            hiddenFields={{ period }}
-            className="flex items-center"
-            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-        </div>
+        <DashboardPeriodBar
+          period={period}
+          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+          selectorName={period === "year" ? "year" : "month"}
+          selectorValue={selectedPeriodLabel}
+          selectorOptions={selectablePeriods}
+        />
+
+        <DashboardHero
+          title="External Technician Control Board"
+          summary="Use this board to progress active work orders quickly and keep payout clearance in sync from one workspace."
+          primaryHref="/technicians"
+          primaryLabel="Open Work Queue"
+          secondaryHref="/technicians/payouts"
+          secondaryLabel="Review Payouts"
+        />
 
         <StickyKpiRow
           items={[
@@ -254,7 +341,7 @@ export default async function DashboardPage({
                 <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{job.jobNumber}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">{job.status}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
@@ -279,7 +366,7 @@ export default async function DashboardPage({
                 <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{job.jobNumber}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">{job.status}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
@@ -307,7 +394,11 @@ export default async function DashboardPage({
     const assignedJobs = await prisma.job.findMany({
       where: {
         assignedToId: session.user.id,
-        receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        OR: [
+          { receivedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+          { updatedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+          { completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+        ],
       },
       orderBy: { updatedAt: "desc" },
       select: { id: true, jobNumber: true, status: true, brand: true, model: true },
@@ -316,33 +407,62 @@ export default async function DashboardPage({
     const diagnosing = assignedJobs.filter((job) => job.status === "DIAGNOSING").length;
     const inRepair = assignedJobs.filter((job) => job.status === "IN_REPAIR").length;
     const completed = assignedJobs.filter((job) => job.status === "COMPLETED").length;
+    const canUpdatePricing = can.approveInvoices(permissionUser);
+    const pricingScopeWhere = {
+      ...(canUpdatePricing ? {} : { assignedToId: session.user.id }),
+    };
+    const [pricingPendingCount, pricedCount, assignedFinancials] = canUpdatePricing
+      ? await Promise.all([
+          prisma.job.count({
+            where: {
+              ...pricingScopeWhere,
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+              clientBill: null,
+            },
+          }),
+          prisma.job.count({
+            where: {
+              ...pricingScopeWhere,
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
+              clientBill: { not: null },
+            },
+          }),
+          prisma.job.findMany({
+            where: {
+              ...pricingScopeWhere,
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
+              clientBill: { not: null },
+            },
+            select: {
+              clientBill: true,
+              externalTechBill: true,
+            },
+          }),
+        ])
+      : [0, 0, []];
+    const clientBillingTotal = assignedFinancials.reduce((sum, job) => sum + (job.clientBill ?? 0), 0);
+    const externalCostTotal = assignedFinancials.reduce((sum, job) => sum + (job.externalTechBill ?? 0), 0);
+    const marginTotal = clientBillingTotal - externalCostTotal;
 
     return (
       <div className="space-y-5">
-        <div className="flex flex-wrap items-end justify-end gap-3">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Monthly
-            </Link>
-            <Link
-              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Annual
-            </Link>
-          </div>
-          <MonthSelectForm
-            name={period === "year" ? "year" : "month"}
-            value={selectedPeriodLabel}
-            options={selectablePeriods}
-            hiddenFields={{ period }}
-            className="flex items-center"
-            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-        </div>
+        <DashboardPeriodBar
+          period={period}
+          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+          selectorName={period === "year" ? "year" : "month"}
+          selectorValue={selectedPeriodLabel}
+          selectorOptions={selectablePeriods}
+        />
+
+        <DashboardHero
+          title="Internal Bench Workspace"
+          summary="Keep diagnostics, repairs, and handoffs flowing from this workspace, then jump directly into the next action queue."
+          primaryHref="/jobs"
+          primaryLabel="Open Assigned Jobs"
+          secondaryHref={canUpdatePricing ? "/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" : "/jobs?status=DIAGNOSING"}
+          secondaryLabel={canUpdatePricing ? "Resolve Pricing Queue" : "Focus Diagnosis Queue"}
+        />
 
         <StickyKpiRow
           items={[
@@ -357,6 +477,45 @@ export default async function DashboardPage({
           title="Full Repair Journey"
           guidance="Use this quick lane map while updating jobs so each handoff follows the standard process."
         />
+
+        {canUpdatePricing ? (
+          <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Pricing Controls</p>
+              <p className="mt-1 text-sm text-[var(--ink)]">You can update client pricing directly from job Financials. Totals below reflect all currently priced jobs.</p>
+            </div>
+            <div className="grid gap-2 p-3 sm:grid-cols-3">
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-amber-800">Needs Pricing</p>
+                <p className="mt-1 text-lg font-semibold text-amber-900">{pricingPendingCount}</p>
+              </Link>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-800">Priced Jobs</p>
+                <p className="mt-1 text-lg font-semibold text-emerald-900">{pricedCount}</p>
+              </Link>
+              <Link href="/jobs" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Go to Financials</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">Open Work Orders</p>
+              </Link>
+            </div>
+            <div className="grid gap-2 border-t border-[var(--line)] p-3 sm:grid-cols-3">
+              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Client Billing</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{formatMoney(clientBillingTotal, getAppCurrency())}</p>
+              </Link>
+              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">External Cost</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{formatMoney(externalCostTotal, getAppCurrency())}</p>
+              </Link>
+              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin Snapshot</p>
+                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                  {marginTotal >= 0 ? "+" : ""}{formatMoney(marginTotal, getAppCurrency())}
+                </p>
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
@@ -394,7 +553,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
                   <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                  <span className="text-xs text-[var(--ink-muted)]">{job.status}</span>
+                  <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
                 </li>
               ))}
             </ul>
@@ -410,7 +569,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
                   <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                  <span className="text-xs text-[var(--ink-muted)]">{job.status}</span>
+                  <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
                 </li>
               ))}
             </ul>
@@ -481,11 +640,14 @@ export default async function DashboardPage({
       .filter((job) => !payoutMap.get(job.id)?.externalPaid)
       .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
-    const revenueFor = (jobs: typeof completedSelected) => jobs.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
+    const pricedSubset = <T extends typeof completedSelected[number]>(jobs: T[]) =>
+      jobs.filter((job) => getClientBill(job) !== null);
+
+    const revenueFor = (jobs: typeof completedSelected) => pricedSubset(jobs).reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
     const revenueSelected = revenueFor(completedSelected);
     const revenuePrev = revenueFor(completedPrev);
     const revenueDelta = revenueSelected - revenuePrev;
-    const marginSelected = completedSelected.reduce(
+    const marginSelected = pricedSubset(completedSelected).reduce(
       (sum, job) => sum + ((getClientBill(job) ?? 0) - (getExternalTechBill(job) ?? 0)),
       0,
     );
@@ -522,6 +684,15 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
+        <DashboardHero
+          title="Executive Command Center"
+          summary="Monitor operational momentum, financial health, and conversion trends here before drilling into detailed reports."
+          primaryHref="/reports"
+          primaryLabel="Open Reports"
+          secondaryHref={`/jobs?from=${selectedFrom}&to=${selectedTo}`}
+          secondaryLabel="Open Period Queue"
+        />
+
         <StickyKpiRow
           items={[
             { label: "Received", value: String(receivedSelectedCount), href: `/jobs?from=${selectedFrom}&to=${selectedTo}` },
@@ -570,33 +741,16 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Monthly
-            </Link>
-            <Link
-              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Annual
-            </Link>
-          </div>
-          <MonthSelectForm
-            name={period === "year" ? "year" : "month"}
-            value={selectedMonthString}
-            options={selectableMonths}
-            hiddenFields={{ period }}
-            className="flex items-center"
-            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-          <Link href={reportHref} className="btn-premium-secondary rounded-md px-3 py-1.5 text-sm">
-            Open Report Downloads
-          </Link>
-        </div>
+        <DashboardPeriodBar
+          period={period}
+          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+          selectorName={period === "year" ? "year" : "month"}
+          selectorValue={selectedMonthString}
+          selectorOptions={selectableMonths}
+          actionHref={reportHref}
+          actionLabel="Open Report Downloads"
+        />
 
         <PersistedDisclosure
           title="Monthly Financial Signals"
@@ -715,30 +869,23 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="flex flex-wrap items-end justify-end gap-3">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Monthly
-            </Link>
-            <Link
-              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Annual
-            </Link>
-          </div>
-          <MonthSelectForm
-            name={period === "year" ? "year" : "month"}
-            value={selectedPeriodLabel}
-            options={selectablePeriods}
-            hiddenFields={{ period }}
-            className="flex items-center"
-            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-        </div>
+        <DashboardPeriodBar
+          period={period}
+          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+          selectorName={period === "year" ? "year" : "month"}
+          selectorValue={selectedPeriodLabel}
+          selectorOptions={selectablePeriods}
+        />
+
+        <DashboardHero
+          title="Operations Billing Monitor"
+          summary="Use this workspace to close billing loops, coordinate payout checks, and keep completion flow moving without backlog."
+          primaryHref={reportHref}
+          primaryLabel="Open Reports"
+          secondaryHref="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL"
+          secondaryLabel="Open Pending Billing"
+        />
 
         <StickyKpiRow
           items={[
@@ -801,30 +948,23 @@ export default async function DashboardPage({
 
     return (
       <div className="space-y-5">
-        <div className="flex flex-wrap items-end justify-end gap-3">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Monthly
-            </Link>
-            <Link
-              href={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-              className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
-            >
-              Annual
-            </Link>
-          </div>
-          <MonthSelectForm
-            name={period === "year" ? "year" : "month"}
-            value={selectedPeriodLabel}
-            options={selectablePeriods}
-            hiddenFields={{ period }}
-            className="flex items-center"
-            selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
-          />
-        </div>
+        <DashboardPeriodBar
+          period={period}
+          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
+          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
+          selectorName={period === "year" ? "year" : "month"}
+          selectorValue={selectedPeriodLabel}
+          selectorOptions={selectablePeriods}
+        />
+
+        <DashboardHero
+          title="Client Intake Console"
+          summary="Capture requests quickly, keep client communication consistent, and move each intake through approval to handover."
+          primaryHref="/jobs/new"
+          primaryLabel="Capture New Job"
+          secondaryHref="/jobs?status=AWAITING_APPROVAL"
+          secondaryLabel="Open Approval Queue"
+        />
 
         <StickyKpiRow
           items={[
@@ -878,6 +1018,15 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-5">
+      <DashboardHero
+        title="System Overview"
+        summary="Use this overview to orient team focus, then open the queue and reporting workspaces for deeper action."
+        primaryHref="/jobs"
+        primaryLabel="Open Jobs"
+        secondaryHref="/reports"
+        secondaryLabel="Open Reports"
+      />
+
       <StickyKpiRow
         items={[
           { label: "Total", value: String(totalJobs), href: "/jobs" },

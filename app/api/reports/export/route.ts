@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
+import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 
@@ -60,14 +61,14 @@ function parseMonth(value: string | null) {
   return { start: startOfMonth(date), end: endOfMonth(date), label: `${year}-${String(month).padStart(2, "0")}` };
 }
 
-function allowedForType(role: Role, type: ExportType) {
+function allowedForType(user: { role: Role; permissions: string[] }, type: ExportType) {
   if (type === "revenue-variance") {
-    return role === "ADMIN";
+    return user.role === "ADMIN" || can.approveInvoices(user);
   }
   if (type === "external-payouts") {
-    return role === "ADMIN";
+    return user.role === "ADMIN" || can.reviewExternalBills(user) || can.approveInvoices(user);
   }
-  return role === "ADMIN" || role === "OPS";
+  return can.viewAccountsSummary(user);
 }
 
 export async function GET(req: NextRequest) {
@@ -85,12 +86,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let permissions: string[] = [];
+  try {
+    const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
+      SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
+    `;
+    permissions = permissionRows
+      .map((row) => row.permission)
+      .filter((permission): permission is string => typeof permission === "string" && permission.length > 0);
+  } catch {
+    permissions = [];
+  }
+
+  const permissionUser = { role: user.role, permissions };
+
   const type = (req.nextUrl.searchParams.get("type") ?? "") as ExportType;
   if (!["pipeline-aging", "revenue-variance", "technician-performance", "external-payouts", "device-performance"].includes(type)) {
     return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
   }
 
-  if (!allowedForType(user.role, type)) {
+  if (!allowedForType(permissionUser, type)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

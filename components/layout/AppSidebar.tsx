@@ -12,7 +12,7 @@ type NavGroup = "work" | "finance" | "admin" | "personal";
 const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
-  { href: "/technicians", label: "Tech", group: "work", roles: "all" },
+  { href: "/technicians", label: "Board", group: "work", roles: "all" },
   { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
@@ -147,6 +147,7 @@ function roleLabel(role: Role, href: string, label: string) {
   if (role === "TECHNICIAN_EXTERNAL") {
     if (href === "/dashboard") return "Overview";
     if (href === "/jobs") return "Work Orders";
+    if (href === "/technicians") return "Tech Board";
     if (href === "/technicians/payouts") return "My Payouts";
     if (href === "/settings/profile") return "Profile";
   }
@@ -235,13 +236,13 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`block w-full rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
+                    className={`block w-full rounded-lg px-2.5 py-1.5 text-[15px] font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
                       active
-                        ? "panel-shadow border border-[var(--brand)] bg-[var(--panel-strong)] text-[var(--ink)]"
+                        ? "panel-shadow border border-[var(--brand)]/85 bg-[linear-gradient(180deg,rgba(236,254,255,0.85),rgba(204,251,241,0.7))] text-[var(--ink)]"
                         : "text-[var(--ink)] hover:bg-[var(--panel)]"
                     }`}
                   >
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2.5">
                       <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
                       <span>{label}</span>
                     </span>

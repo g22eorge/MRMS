@@ -263,7 +263,7 @@ async function main() {
     role: "TECHNICIAN_INTERNAL",
     password: defaultPassword,
   });
-  await ensureUserPermissions(techInternal.id, []);
+  await ensureUserPermissions(techInternal.id, ["can_approve_invoices"]);
 
   const techExternal = await ensureUser({
     name: "Abdu",
