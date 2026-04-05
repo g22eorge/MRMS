@@ -394,7 +394,7 @@ async function main() {
 
       const externalTechBill = 110000 + (index % 9) * 25000;
       const clientBill = externalTechBill + 65000 + (index % 5) * 10000;
-      const externalTechFee = Math.max(externalTechBill - 20000, 70000);
+      const externalTechFee = externalTechBill;
       const externalPaid = isExternal && status === "COMPLETED" ? index % 4 === 0 : false;
 
       return ensureJob({
