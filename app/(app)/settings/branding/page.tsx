@@ -29,7 +29,7 @@ const brandingSchema = z.object({
   companyAddressLine2: z.string().min(3).max(180),
   companyContacts: z.string().min(3).max(180),
   companyEmail: z.string().email().optional(),
-  companyWebsite: z.string().url().optional(),
+  companyWebsite: z.string().max(200).optional(),
   documentTitle: z.string().min(2).max(60),
   quotePrefix: z.string().min(2).max(12),
   quoteFormat: z.string().min(8).max(80),
