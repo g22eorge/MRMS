@@ -471,10 +471,12 @@ export default async function DashboardPage({
           ]}
         />
 
-        <RepairStatusReference
-          title="Full Repair Journey"
-          guidance="Use this quick lane map while updating jobs so each handoff follows the standard process."
-        />
+        <div className="hidden lg:block">
+          <RepairStatusReference
+            title="Full Repair Journey"
+            guidance="Use this quick lane map while updating jobs so each handoff follows the standard process."
+          />
+        </div>
 
         {canUpdatePricing ? (
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -482,24 +484,69 @@ export default async function DashboardPage({
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800 sm:text-[11px]">Pricing Controls</p>
               <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
             </div>
-            <div className="grid gap-2 p-3 grid-cols-3">
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.06em] text-amber-800 sm:text-[10px]">Needs</p>
-                <p className="mt-0.5 text-base font-semibold text-amber-900 sm:text-lg">{pricingPendingCount}</p>
+            <div className="grid gap-2 p-3 grid-cols-2 sm:grid-cols-3">
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-amber-800">Needs Pricing</p>
+                <p className="mt-1 text-lg font-semibold text-amber-900">{pricingPendingCount}</p>
               </Link>
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.06em] text-emerald-800 sm:text-[10px]">Priced</p>
-                <p className="mt-0.5 text-base font-semibold text-emerald-900 sm:text-lg">{pricedCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-emerald-800">Priced Jobs</p>
+                <p className="mt-1 text-lg font-semibold text-emerald-900">{pricedCount}</p>
               </Link>
-              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.06em] text-[var(--ink-muted)] sm:text-[10px]">Margin</p>
-                <p className={`mt-0.5 text-sm font-semibold sm:text-base ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-center col-span-2 sm:col-span-1">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
+                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                   {marginTotal >= 0 ? "+" : ""}{formatMoney(marginTotal, getAppCurrency())}
                 </p>
               </Link>
             </div>
           </section>
         ) : null}
+
+        <PersistedDisclosure
+          title="Recent Assigned Jobs"
+          storageKey="dashboard.internal.recentAssigned"
+          groupName="mobile-dashboard-sections"
+          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
+        >
+          {assignedJobs.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {assignedJobs.slice(0, 6).map((job) => (
+                <li key={job.id} className="border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
+                  <Link href={`/jobs/${job.id}`} className="flex items-center justify-between gap-2 group">
+                    <p className="truncate text-xs font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber}</p>
+                    <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PersistedDisclosure>
+
+        <div className="grid grid-cols-2 gap-3 lg:hidden">
+          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned</p>
+            <p className="mt-1 text-3xl font-semibold">{assignedJobs.length}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">View my jobs →</p>
+          </Link>
+          <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--brand)]">{diagnosing}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Needs work →</p>
+          </Link>
+          <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair</p>
+            <p className="mt-1 text-3xl font-semibold text-amber-700">{inRepair}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Active →</p>
+          </Link>
+          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed</p>
+            <p className="mt-1 text-3xl font-semibold text-emerald-700">{completed}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Done →</p>
+          </Link>
+        </div>
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
@@ -524,26 +571,6 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        <PersistedDisclosure
-          title="Recent Assigned Jobs"
-          storageKey="dashboard.internal.recentAssigned"
-          groupName="mobile-dashboard-sections"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
-        >
-          {assignedJobs.length === 0 ? (
-            <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {assignedJobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
-                  <p className="truncate text-xs font-medium">{job.jobNumber}</p>
-                  <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </PersistedDisclosure>
-
         <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {assignedJobs.length === 0 ? (
@@ -551,9 +578,11 @@ export default async function DashboardPage({
           ) : (
             <ul className="space-y-2 text-sm">
               {assignedJobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
-                  <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                  <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
+                  <Link href={`/jobs/${job.id}`} className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center group">
+                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber} - {job.brand} {job.model}</p>
+                    <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
