@@ -199,16 +199,16 @@ function DashboardHero({
 }) {
   return (
     <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(2,132,199,0.12),rgba(15,23,42,0.02),rgba(16,185,129,0.08))]">
-      <div className="px-4 py-4 sm:px-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Operations Snapshot</p>
-        <p className="mt-1 text-base font-semibold text-[var(--ink)]">{title}</p>
-        <p className="mt-1 text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">{summary}</p>
+      <div className="px-3 py-3 sm:px-5 sm:py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] sm:text-[11px]">Operations Snapshot</p>
+        <p className="mt-1 text-sm font-semibold text-[var(--ink)] sm:text-base">{title}</p>
+        <p className="mt-1 text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere] sm:text-sm">{summary}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-sm text-white">
+          <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-xs text-white sm:text-sm">
             {primaryLabel}
           </Link>
           {secondaryHref && secondaryLabel ? (
-            <Link href={secondaryHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+            <Link href={secondaryHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs sm:text-sm">
               {secondaryLabel}
             </Link>
           ) : null}
@@ -443,7 +443,7 @@ export default async function DashboardPage({
     const marginTotal = clientBillingTotal - externalCostTotal;
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-3 sm:space-y-5">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -478,36 +478,22 @@ export default async function DashboardPage({
 
         {canUpdatePricing ? (
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Pricing Controls</p>
-              <p className="mt-1 text-sm text-[var(--ink)]">You can update client pricing directly from job Financials. Totals below reflect all currently priced jobs.</p>
+            <div className="border-b border-cyan-200 bg-cyan-50/70 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800 sm:text-[11px]">Pricing Controls</p>
+              <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
             </div>
-            <div className="grid gap-2 p-3 sm:grid-cols-3">
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-amber-800">Needs Pricing</p>
-                <p className="mt-1 text-lg font-semibold text-amber-900">{pricingPendingCount}</p>
+            <div className="grid gap-2 p-3 grid-cols-3">
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.06em] text-amber-800 sm:text-[10px]">Needs</p>
+                <p className="mt-0.5 text-base font-semibold text-amber-900 sm:text-lg">{pricingPendingCount}</p>
               </Link>
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-800">Priced Jobs</p>
-                <p className="mt-1 text-lg font-semibold text-emerald-900">{pricedCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.06em] text-emerald-800 sm:text-[10px]">Priced</p>
+                <p className="mt-0.5 text-base font-semibold text-emerald-900 sm:text-lg">{pricedCount}</p>
               </Link>
-              <Link href="/jobs" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Go to Financials</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">Open Work Orders</p>
-              </Link>
-            </div>
-            <div className="grid gap-2 border-t border-[var(--line)] p-3 sm:grid-cols-3">
-              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Client Billing</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{formatMoney(clientBillingTotal, getAppCurrency())}</p>
-              </Link>
-              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">External Cost</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{formatMoney(externalCostTotal, getAppCurrency())}</p>
-              </Link>
-              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:-translate-y-[1px]">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin Snapshot</p>
-                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.06em] text-[var(--ink-muted)] sm:text-[10px]">Margin</p>
+                <p className={`mt-0.5 text-sm font-semibold sm:text-base ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                   {marginTotal >= 0 ? "+" : ""}{formatMoney(marginTotal, getAppCurrency())}
                 </p>
               </Link>
@@ -547,11 +533,11 @@ export default async function DashboardPage({
           {assignedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
           ) : (
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1.5 text-sm">
               {assignedJobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
-                  <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                  <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                <li key={job.id} className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
+                  <p className="truncate text-xs font-medium">{job.jobNumber}</p>
+                  <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
                 </li>
               ))}
             </ul>
@@ -1014,8 +1000,8 @@ export default async function DashboardPage({
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 
-  return (
-    <div className="space-y-5">
+    return (
+      <div className="space-y-4">
       <DashboardHero
         title="System Overview"
         summary="Use this overview to orient team focus, then open the queue and reporting workspaces for deeper action."
