@@ -378,6 +378,8 @@ async function main() {
     { deviceType: "PHONE_ANDROID", brand: "Google", model: "Pixel 7" },
   ];
 
+  let extCounter = 0;
+
   const trainingJobs = await Promise.all(
     Array.from({ length: 70 }, (_, index) => {
       const sequence = index + 1;
@@ -386,16 +388,16 @@ async function main() {
       const selectedClient = clientPool[index % clientPool.length];
       const selectedDevice = deviceCycle[index % deviceCycle.length];
       const createdById = creators[index % creators.length];
-      const assignedToId = isExternal ? externalTechIds[index % externalTechIds.length] : techInternal.id;
+      const assignedToId = isExternal ? externalTechIds[extCounter++ % externalTechIds.length] : techInternal.id;
 
-      const receivedAt = new Date(now - (90 - index) * 0.9 * day);
+      const receivedAt = new Date(Date.UTC(2026, 3, 1 + (index % 20)));
       const completedAt =
         status === "COMPLETED"
-          ? new Date(receivedAt.getTime() + (1 + (index % 4)) * day)
+          ? new Date(Date.UTC(2026, 3, 3 + (index % 20)))
           : undefined;
       const closedAt =
         status === "CLOSED"
-          ? new Date(receivedAt.getTime() + (2 + (index % 3)) * day)
+          ? new Date(Date.UTC(2026, 3, 4 + (index % 20)))
           : undefined;
 
       const externalTechBill = 110000 + (index % 9) * 25000;
