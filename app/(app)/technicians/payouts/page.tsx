@@ -99,26 +99,22 @@ export default async function TechnicianPayoutsPage({
     "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Payout Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{payoutBrief}</p>
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-3 py-2.5 sm:px-4 sm:py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800 sm:text-[11px]">Payout Brief</p>
+          <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">{payoutBrief}</p>
         </div>
       </div>
 
-      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+      <div className="grid grid-cols-2 gap-2 lg:hidden">
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-center">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
-          <p className="text-sm font-semibold">{formatMoney(total, currency)}</p>
+          <p className="mt-1 text-2xl font-semibold">{formatMoney(total, currency)}</p>
         </div>
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Paid</p>
-          <p className="text-sm font-semibold text-emerald-700">{formatMoney(paid, currency)}</p>
-        </div>
-        <div className="col-span-2 min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-center">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Outstanding</p>
-          <p className="text-sm font-semibold text-amber-700">{formatMoney(unpaid, currency)}</p>
+          <p className="mt-1 text-2xl font-semibold text-amber-700">{formatMoney(unpaid, currency)}</p>
         </div>
       </div>
 
@@ -137,7 +133,7 @@ export default async function TechnicianPayoutsPage({
         <input
           name="q"
           defaultValue={filters.q}
-          placeholder="Search job # / device and press Enter"
+          placeholder="Search job # / device"
           className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
       </form>
@@ -187,27 +183,27 @@ export default async function TechnicianPayoutsPage({
         </div>
       </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:p-4">
         {jobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No payout records found for these filters.</p>
         ) : (
           <ul className="space-y-2 text-sm">
             <ProgressiveList initialCount={5} step={5}>
               {jobs.map((job) => (
-                <li key={job.id} className="border-b border-[var(--line)] py-2">
+                <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
                 <details>
-                  <summary className="list-none">
+                  <summary className="list-none cursor-pointer">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-medium">{job.jobNumber} - {job.brand} {job.model}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${formatEATDate(job.completedAt)}` : ""}</p>
+                        <p className="truncate text-xs font-medium sm:text-sm">{job.jobNumber} - {job.brand} {job.model}</p>
+                        <p className="text-[10px] text-[var(--ink-muted)] sm:text-xs">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${formatEATDate(job.completedAt)}` : ""}</p>
                         {payouts.get(job.id)?.externalPaymentRef ? (
-                          <p className="text-[11px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
+                          <p className="text-[10px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
                         ) : null}
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0, currency)}</p>
-                        <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold">{formatMoney(payouts.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0, currency)}</p>
+                        <p className={`text-[10px] ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
                           {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
                         </p>
                       </div>
