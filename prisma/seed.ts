@@ -23,7 +23,13 @@ async function ensureCredentialAccount(userId: string, password: string) {
     where: { userId, providerId: "credential" },
   });
 
-  if (existing) return;
+  if (existing) {
+    await prisma.account.update({
+      where: { id: existing.id },
+      data: { password: await hashPassword(password) },
+    });
+    return;
+  }
 
   await prisma.account.create({
     data: {
