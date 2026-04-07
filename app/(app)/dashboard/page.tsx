@@ -462,15 +462,6 @@ export default async function DashboardPage({
           secondaryLabel={canUpdatePricing ? "Resolve Pricing Queue" : "Focus Diagnosis Queue"}
         />
 
-        <StickyKpiRow
-          items={[
-            { label: "Assigned", value: String(assignedJobs.length), href: "/jobs" },
-            { label: "Diagnosing", value: String(diagnosing), href: "/jobs?status=DIAGNOSING", tone: "brand" },
-            { label: "In Repair", value: String(inRepair), href: "/jobs?status=IN_REPAIR", tone: "warning" },
-            { label: "Completed", value: String(completed), href: "/jobs?status=COMPLETED", tone: "success" },
-          ]}
-        />
-
         <div className="hidden lg:block">
           <RepairStatusReference
             title="Full Repair Journey"
@@ -524,29 +515,6 @@ export default async function DashboardPage({
             </ul>
           )}
         </PersistedDisclosure>
-
-        <div className="grid grid-cols-2 gap-3 lg:hidden">
-          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned</p>
-            <p className="mt-1 text-3xl font-semibold">{assignedJobs.length}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">View my jobs →</p>
-          </Link>
-          <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing</p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--brand)]">{diagnosing}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Needs work →</p>
-          </Link>
-          <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair</p>
-            <p className="mt-1 text-3xl font-semibold text-amber-700">{inRepair}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Active →</p>
-          </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed</p>
-            <p className="mt-1 text-3xl font-semibold text-emerald-700">{completed}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Done →</p>
-          </Link>
-        </div>
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
@@ -960,7 +928,7 @@ export default async function DashboardPage({
     ]);
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-3 sm:space-y-5">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -979,19 +947,35 @@ export default async function DashboardPage({
           secondaryLabel="Open Approval Queue"
         />
 
-        <StickyKpiRow
-          items={[
-            { label: "Captured", value: String(capturedThisMonth), href: "/jobs/new" },
-            { label: "Open", value: String(openFromIntake), href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP", tone: "brand" },
-            { label: "Approval", value: String(awaitingApproval), href: "/jobs?status=AWAITING_APPROVAL", tone: "warning" },
-            { label: "Ready", value: String(readyForPickup), href: "/jobs?status=READY_FOR_PICKUP", tone: "success" },
-          ]}
-        />
+        <div className="hidden lg:block">
+          <RepairStatusReference
+            title="Intake to Delivery Flow"
+            guidance="Keep this sequence in view when briefing clients so status updates are clear and consistent."
+          />
+        </div>
 
-        <RepairStatusReference
-          title="Intake to Delivery Flow"
-          guidance="Keep this sequence in view when briefing clients so status updates are clear and consistent."
-        />
+        <div className="grid grid-cols-2 gap-3 lg:hidden">
+          <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Captured</p>
+            <p className="mt-1 text-3xl font-semibold">{capturedThisMonth}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">New intake →</p>
+          </Link>
+          <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--brand)]">{openFromIntake}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">In progress →</p>
+          </Link>
+          <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Approval</p>
+            <p className="mt-1 text-3xl font-semibold text-amber-700">{awaitingApproval}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Follow up →</p>
+          </Link>
+          <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Ready</p>
+            <p className="mt-1 text-3xl font-semibold text-emerald-700">{readyForPickup}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Pickup →</p>
+          </Link>
+        </div>
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">

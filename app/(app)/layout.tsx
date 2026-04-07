@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
 import { MobileQuickActions } from "@/components/layout/MobileQuickActions";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
@@ -23,6 +24,7 @@ export default async function AppLayout({
           {children}
         </main>
       </div>
+      <BottomNav role={user.role} permissions={user.permissions} />
     </div>
   );
 }
