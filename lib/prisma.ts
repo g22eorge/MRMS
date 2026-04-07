@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type User } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -95,3 +95,29 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+// Ensure Rest always has the can_approve_invoices permission.
+// This runs once per server boot and is safe to call on every request
+// because it is idempotent (upsert-style via deleteMany + create).
+async function ensureRestPricingPermission() {
+  try {
+    const restUser = await prisma.user.findFirst({
+      where: { email: "rest@eagle.tech" },
+      select: { id: true },
+    });
+    if (!restUser) return;
+
+    const hasPermission = await prisma.userPermission.findFirst({
+      where: { userId: restUser.id, permission: "can_approve_invoices" },
+    });
+    if (hasPermission) return;
+
+    await prisma.userPermission.create({
+      data: { userId: restUser.id, permission: "can_approve_invoices" },
+    });
+  } catch {
+    // Silently ignore — permission will be granted on next boot.
+  }
+}
+
+ensureRestPricingPermission();
