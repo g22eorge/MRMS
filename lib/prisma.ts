@@ -1,4 +1,4 @@
-import { PrismaClient, type User } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
