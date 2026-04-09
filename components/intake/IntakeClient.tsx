@@ -142,6 +142,20 @@ function RequestDrawer({
           </div>
         </div>
 
+        {/* converted — open job banner */}
+        {isConverted && req.linkedJobId && (
+          <div className="px-6 py-3 border-b border-blue-100 bg-blue-50 flex items-center justify-between gap-3">
+            <p className="text-xs text-blue-700 font-medium">This request was converted to a job.</p>
+            <a
+              href={`/jobs/${req.linkedJobId}`}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open Job
+            </a>
+          </div>
+        )}
+
         {/* actions bar */}
         {!isConverted && !isRejected && (
           <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-2 flex-wrap">
@@ -312,6 +326,17 @@ function RowActions({
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           Convert to Job
         </button>
+      )}
+      {req.requestStatus === "CONVERTED_TO_JOB" && req.linkedJobId && (
+        <a
+          href={`/jobs/${req.linkedJobId}`}
+          onClick={(e) => e.stopPropagation()}
+          title="Open Job"
+          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open Job
+        </a>
       )}
       <button
         onClick={(e) => { e.stopPropagation(); onView(); }}

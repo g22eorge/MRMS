@@ -318,6 +318,9 @@ model RepairRequest {
   alternateContactPhone String?
   pickupNotes       String?
   
+  // Linked job (set when converted to a job)
+  linkedJobId String?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

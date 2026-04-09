@@ -91,10 +91,10 @@ export async function PATCH(
       },
     });
 
-    // 4. Mark request as converted
+    // 4. Mark request as converted and store linked job ID
     await prisma.repairRequest.update({
       where: { id },
-      data: { requestStatus: "CONVERTED_TO_JOB" },
+      data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
     });
 
     return NextResponse.json({
