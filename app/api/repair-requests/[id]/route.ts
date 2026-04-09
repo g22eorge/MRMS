@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getCurrentUserRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 const ALLOWED_STATUSES = ["APPROVED", "REJECTED", "CONVERTED_TO_JOB"] as const;
 type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
@@ -9,9 +10,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { user } = await getCurrentUserRole();
+  if (!can.viewClientInfo(user)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const { id } = await params;

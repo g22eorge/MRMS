@@ -12,7 +12,7 @@ type NavGroup = "work" | "finance" | "admin" | "personal";
 const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
-  { href: "/intake", label: "Requests", group: "work", roles: "all" },
+  { href: "/intake", label: "Requests", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/technicians", label: "Board", group: "work", roles: "all" },
   { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
@@ -42,8 +42,8 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/profile",
   ],
   OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile"],
-  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/settings/profile"],
-  TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians/payouts", "/settings/profile"],
+  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
+  TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/settings/profile"],
 };
 
