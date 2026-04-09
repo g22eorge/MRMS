@@ -54,7 +54,7 @@ export async function createRepairRequest(
         phone: input.phone,
         email: input.email,
         preferredContactMethod: input.preferredContactMethod || "WHATSAPP",
-        deviceType: input.deviceType,
+        deviceType: input.deviceType as import("@prisma/client").DeviceType,
         brand: input.brand,
         model: input.model || "",
         serialNumber: input.serialNumber,
