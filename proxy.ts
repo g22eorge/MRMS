@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/api/auth", "/api/repair-requests"];
 
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   if (PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p))) {
     return NextResponse.next();
   }
