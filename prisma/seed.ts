@@ -336,7 +336,6 @@ async function main() {
   await prisma.client.deleteMany({});
 
   const trainingDate = new Date();
-  const now = Date.now();
   const day = 1000 * 60 * 60 * 24;
 
   const clients = await Promise.all([

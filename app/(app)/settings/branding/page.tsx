@@ -20,14 +20,14 @@ export default async function BrandingPage({ searchParams }: { searchParams: Pro
   const { user } = await getCurrentUserRole();
   if (!can.manageUsers(user)) redirect("/dashboard");
 
-const logoFiles = [
-  { name: "eagle-info-logo.png", type: "image/png" },
-  { name: "eagle-info-logo.jpg", type: "image/jpeg" },
-  { name: "eagle-info-logo.jpeg", type: "image/jpeg" },
-  { name: "eagle-info-logo.webp", type: "image/webp" },
-];
+  const logoFiles = [
+    { name: "eagle-info-logo.png", type: "image/png" },
+    { name: "eagle-info-logo.jpg", type: "image/jpeg" },
+    { name: "eagle-info-logo.jpeg", type: "image/jpeg" },
+    { name: "eagle-info-logo.webp", type: "image/webp" },
+  ];
 
-const brandingSchema = z.object({
+  const brandingSchema = z.object({
   companyName: z.string().min(2).max(120),
   companyTagline: z.string().max(120).optional(),
   companyAddressLine1: z.string().min(3).max(180),

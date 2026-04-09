@@ -56,16 +56,13 @@ function validatePayload(body: Record<string, unknown>): string[] {
   const errors: string[] = [];
 
   // Support both website format and MRMS format
-  const customerName = body.customer_name || body.customer_name;
   const phone = body.phone || body.customer_phone;
-  const email = body.email || body.customer_email;
   const deviceType = body.device_type;
   const brand = body.brand || body.device_brand;
-  const model = body.model || body.device_model;
   const problemDescription = body.problem_description || body.issue_description;
   const handoverMethod = body.handover_method || "SELF_DROPOFF"; // website doesn't send this
 
-  if (!customerName?.toString().trim()) errors.push("Customer name is required");
+  if (!body.customer_name?.toString().trim() && !body.customer_name?.toString().trim()) errors.push("Customer name is required");
   if (!phone?.toString().trim()) errors.push("Phone is required");
   if (!deviceType?.toString().trim()) errors.push("Device type is required");
   if (!brand?.toString().trim()) errors.push("Device brand is required");

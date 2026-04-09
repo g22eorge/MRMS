@@ -393,7 +393,7 @@ function MobileCard({
 /* ── main ── */
 export function IntakeClient({
   initialRequests,
-  pending: initialPending,
+  pending,
 }: {
   initialRequests: RepairRequest[];
   pending: number;
