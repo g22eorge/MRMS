@@ -321,6 +321,9 @@ model RepairRequest {
   // Linked job (set when converted to a job)
   linkedJobId String?
 
+  // Anti-spam
+  submissionIp String?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

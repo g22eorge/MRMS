@@ -29,6 +29,7 @@ interface CreateRepairRequestInput {
   alternateContactPerson?: string;
   alternateContactPhone?: string;
   pickupNotes?: string;
+  submissionIp?: string;
 }
 
 async function generateRequestNumber(): Promise<string> {
@@ -76,6 +77,7 @@ export async function createRepairRequest(
         alternateContactPerson: input.alternateContactPerson,
         alternateContactPhone: input.alternateContactPhone,
         pickupNotes: input.pickupNotes,
+        submissionIp: input.submissionIp,
       },
     });
 

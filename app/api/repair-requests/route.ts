@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
+import { prisma } from "@/lib/prisma";
 
 const ALLOWED_ORIGINS = [
   process.env.ALLOWED_ORIGIN_1 || "https://www.eagleinfosolutions.com",
@@ -99,12 +100,31 @@ function validatePayload(body: Record<string, unknown>): string[] {
   return errors;
 }
 
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
   try {
     const body = await request.json();
+
+    // ── Honeypot check ──────────────────────────────────────────────────────
+    // Bots fill hidden fields; real users never see or touch this field.
+    if (typeof body._hp === "string" && body._hp.trim().length > 0) {
+      // Silently accept so bots don't know they've been blocked.
+      return NextResponse.json(
+        { success: true, request_number: `REQ-${Date.now()}`, message: "Your repair request has been submitted successfully. We'll contact you shortly." },
+        { headers: corsHeaders }
+      );
+    }
+
     const errors = validatePayload(body);
 
     if (errors.length > 0) {
@@ -112,6 +132,39 @@ export async function POST(request: NextRequest) {
         { success: false, errors },
         { status: 400, headers: corsHeaders }
       );
+    }
+
+    // ── Rate limiting ────────────────────────────────────────────────────────
+    const ip = getClientIp(request);
+    const rawPhone = (body.phone || body.customer_phone || "") as string;
+    const normalizedPhoneForCheck = normalizeUgandaPhone(rawPhone);
+
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    // Max 3 submissions per phone per 24 h
+    const phoneCount = await prisma.repairRequest.count({
+      where: { phone: normalizedPhoneForCheck, createdAt: { gte: oneDayAgo } },
+    });
+    if (phoneCount >= 3) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests from this number. Please wait 24 hours before submitting again, or call us directly on +256 772 006 344." },
+        { status: 429, headers: corsHeaders }
+      );
+    }
+
+    // Max 10 submissions per IP per hour
+    if (ip !== "unknown") {
+      const ipCount = await prisma.repairRequest.count({
+        where: { submissionIp: ip, createdAt: { gte: oneHourAgo } },
+      });
+      if (ipCount >= 10) {
+        return NextResponse.json(
+          { success: false, error: "Too many requests from your network. Please try again later." },
+          { status: 429, headers: corsHeaders }
+        );
+      }
     }
 
     const deviceType = (body.device_type as string).toUpperCase();
@@ -164,6 +217,7 @@ export async function POST(request: NextRequest) {
       alternateContactPerson: body.alternate_contact_person ? sanitizeOptionalText(body.alternate_contact_person as string) ?? undefined : undefined,
       alternateContactPhone: body.alternate_contact_phone ? normalizeUgandaPhone(body.alternate_contact_phone as string) : undefined,
       pickupNotes: body.pickup_notes ? sanitizeOptionalText(body.pickup_notes as string) ?? undefined : undefined,
+      submissionIp: ip,
     });
 
     if (!result.success) {
