@@ -272,3 +272,79 @@ model DocumentBrandingSettings {
   signatureClientLabel String   @default("Signed by: Client")
   updatedAt            DateTime @updatedAt
 }
+
+// REPAIR REQUEST INTAKE MODELS
+model RepairRequest {
+  id            String   @id @default(cuid())
+  requestNumber String   @unique
+  requestStatus RepairRequestStatus @default(PENDING_INTAKE)
+  handoverStatus RepairHandoverStatus @default(PENDING)
+  
+  // Customer info
+  customerName String
+  phone        String
+  email        String?
+  preferredContactMethod ContactMethod @default(WHATSAPP)
+  
+  // Device info
+  deviceType   DeviceType
+  brand       String
+  model       String?
+  serialNumber String?
+  
+  // Problem description
+  problemDescription String
+  
+  // Handover method specific fields
+  handoverMethod    HandoverMethod
+  preferredDropoffDate String?
+  preferredDropoffTime String?
+  dropoffNotes        String?
+  
+  deliveryPersonName  String?
+  deliveryPersonPhone String?
+  deliveryCompany     String?
+  dispatchDate        String?
+  expectedArrivalTime String?
+  deliveryTrackingReference String?
+  deliveryFeeResponsibility String?
+  deliveryNotes       String?
+  
+  pickupAddress     String?
+  pickupLandmark    String?
+  preferredPickupDate String?
+  preferredPickupTime String?
+  alternateContactPerson String?
+  alternateContactPhone String?
+  pickupNotes       String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum RepairRequestStatus {
+  PENDING_INTAKE
+  APPROVED
+  REJECTED
+  CONVERTED_TO_JOB
+}
+
+enum RepairHandoverStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ContactMethod {
+  WHATSAPP
+  PHONE
+  EMAIL
+  SMS
+}
+
+enum HandoverMethod {
+  SELF_DROPOFF
+  SEND_WITH_DELIVERY_PERSON
+  REQUEST_PICKUP
+}
