@@ -3,39 +3,38 @@ import path from "node:path";
 
 import { defineConfig } from "prisma/config";
 
-function normalizeLocalSqliteUrl(url: string) {
-  if (!url || url === "./dev.db" || url === "dev.db") {
-    return `file:${path.resolve(process.cwd(), "dev.db")}`;
+// This runs at build time - need to ensure DATABASE_URL is available
+// Vercel injects env vars at runtime, but prisma generate runs at build
+
+function getDatabaseUrl() {
+  // For production on Vercel, use TURSO_DATABASE_URL if set
+  if (process.env.PROD === "true") {
+    if (process.env.TURSO_DATABASE_URL) {
+      const token = process.env.TURSO_AUTH_TOKEN;
+      if (token) {
+        const separator = process.env.TURSO_DATABASE_URL.includes("?") ? "&" : "?";
+        return `${process.env.TURSO_DATABASE_URL}${separator}authToken=${encodeURIComponent(token)}`;
+      }
+      return process.env.TURSO_DATABASE_URL;
+    }
   }
-  if (url.startsWith("file:")) return url;
-  // Handle relative paths
-  if (!url.startsWith("/")) {
+
+  // For local/development
+  const url = process.env.DATABASE_URL || `file:${path.resolve(process.cwd(), "dev.db")}`;
+  
+  // Ensure file: prefix for local SQLite
+  if (!url.startsWith("file:") && !url.startsWith("prisma://") && !url.startsWith("postgres")) {
+    if (url.includes("://")) {
+      return url;
+    }
     return `file:${path.resolve(process.cwd(), url)}`;
   }
-  return `file:${url}`;
+  
+  return url;
 }
 
-const defaultLocalDatabaseUrl = `file:${path.resolve(process.cwd(), "dev.db")}`;
-
-// Get the database URL from environment or use default
-let databaseUrl = process.env.DATABASE_URL || defaultLocalDatabaseUrl;
-
-// Handle Turso/Postgres in production
-if (process.env.PROD === "true") {
-  if (process.env.TURSO_DATABASE_URL) {
-    const token = process.env.TURSO_AUTH_TOKEN;
-    const separator = process.env.TURSO_DATABASE_URL.includes("?") ? "&" : "?";
-    databaseUrl = token 
-      ? `${process.env.TURSO_DATABASE_URL}${separator}authToken=${encodeURIComponent(token)}`
-      : process.env.TURSO_DATABASE_URL;
-  }
-} else {
-  // Ensure local SQLite has file: prefix
-  databaseUrl = normalizeLocalSqliteUrl(databaseUrl);
-}
-
-// Always set DATABASE_URL for the schema
-process.env.DATABASE_URL = databaseUrl;
+// Set the env var so prisma schema can use it
+process.env.DATABASE_URL = getDatabaseUrl();
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -43,6 +42,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: databaseUrl,
+    url: getDatabaseUrl(),
   },
 });
