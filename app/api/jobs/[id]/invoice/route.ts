@@ -164,8 +164,8 @@ export async function GET(
   const normalizedFooterText =
     branding.footerText
       .replace("Eagle InfoSolutions SMC Limited", "Eagle Info Solutions SMC Limited")
-      .trim() === "Built by Almeida 2026. All rights reserved."
-      ? "Built by Almeida 2026. All rights reserved. Copyrighted to Eagle Info Solutions SMC Limited."
+      .trim() === "Built by EIS 2026. All rights reserved."
+      ? "Built by EIS 2026. All rights reserved."
       : branding.footerText.replace("Eagle InfoSolutions SMC Limited", "Eagle Info Solutions SMC Limited");
   const quotationNumber = formatQuotationNumber(
     job.jobNumber,
