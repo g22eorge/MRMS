@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { RepairRequest } from "@prisma/client";
+import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -97,7 +97,7 @@ function RequestDrawer({
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
-        setLocalStatus(status);
+        setLocalStatus(status as RepairRequestStatus);
         onStatusChange(req.id, status);
       }
     });
@@ -316,11 +316,12 @@ export function IntakeClient({ initialRequests }: { initialRequests: RepairReque
   const [filter, setFilter] = useState<string>("ALL");
 
   function handleStatusChange(id: string, status: string) {
+    const s = status as RepairRequestStatus;
     setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, requestStatus: status } : r))
+      prev.map((r) => (r.id === id ? { ...r, requestStatus: s } : r))
     );
     if (selected?.id === id) {
-      setSelected((prev) => prev ? { ...prev, requestStatus: status } : null);
+      setSelected((prev) => prev ? { ...prev, requestStatus: s } : null);
     }
   }
 
