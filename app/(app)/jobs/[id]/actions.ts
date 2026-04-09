@@ -88,7 +88,14 @@ function buildTimeline(payload: z.infer<typeof updateSchema>) {
 export async function updateJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
   const permissionUser = { role: user.role, permissions: user.permissions };
-  const isReadOnlyIntake = user.role === "INTAKE" && !can.editDiagnosis(permissionUser);
+  // INTAKE users are read-only by default (they create jobs, not edit them).
+  // Exception: users who have been granted specific elevated permissions
+  // (billing entry or technician assignment) pass through to those gates.
+  const isReadOnlyIntake =
+    user.role === "INTAKE" &&
+    !can.editDiagnosis(permissionUser) &&
+    !can.approveInvoices(permissionUser) &&
+    !can.assignJobs(permissionUser);
   if (isReadOnlyIntake) {
     return { error: "Intake is read-only after job creation." };
   }

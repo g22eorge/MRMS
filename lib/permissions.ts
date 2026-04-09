@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 export const EXTRA_PERMISSIONS = [
   "can_run_internal_repairs",
   "can_intake",
+  "can_manage_intake",
   "can_search_jobs",
   "can_generate_job_cards",
   "can_view_job_progress",
@@ -57,6 +58,10 @@ export const can = {
     ["ADMIN", "OPS"].includes(user.role) || hasExtraPermission(user, "can_view_accounts_summary"),
   approveInvoices: (user: PermissionUser) =>
     user.role === "ADMIN" || hasExtraPermission(user, "can_approve_invoices"),
+  manageIntake: (user: PermissionUser) =>
+    ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_manage_intake"),
+  viewIntake: (user: PermissionUser) =>
+    ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_intake") || hasExtraPermission(user, "can_manage_intake"),
 };
 
 export function asPermissionUser(role: Role, permissions?: string[]): PermissionUser {

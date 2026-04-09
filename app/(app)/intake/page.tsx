@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function IntakePage() {
   const { user } = await getCurrentUserRole();
-  if (!can.viewClientInfo(user)) redirect("/dashboard");
+  if (!can.viewIntake(user)) redirect("/dashboard");
 
   const requests = await prisma.repairRequest.findMany({
     orderBy: { createdAt: "desc" },

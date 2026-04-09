@@ -118,7 +118,11 @@ function getExtraItems(role: Role, permissions: string[]): NavItem[] {
     // has can_intake — board wasn't in primary
     items.push(ITEMS.clients, ITEMS.board);
   }
-  // TECHNICIAN_EXTERNAL and plain TECHNICIAN_INTERNAL have no extra items
+  // TECHNICIAN_EXTERNAL: payouts is in primary; board goes in More
+  if (role === "TECHNICIAN_EXTERNAL") {
+    items.push(ITEMS.board);
+  }
+  // Plain TECHNICIAN_INTERNAL (no can_intake): no extra items needed
 
   return items;
 }

@@ -8,12 +8,17 @@ import { z } from "zod";
 import { defaultBranding, getDocumentBrandingSettings, saveDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 type SearchParams = {
   saved?: string;
   error?: string;
   profileSaved?: string;
 };
+
+export default async function BrandingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { user } = await getCurrentUserRole();
+  if (!can.manageUsers(user)) redirect("/dashboard");
 
 const logoFiles = [
   { name: "eagle-info-logo.png", type: "image/png" },
