@@ -439,8 +439,18 @@ export default async function ReportsPage({
     },
   ];
 
+  const financeBrief = period === "year"
+    ? `Annual financial package for ${selectedYear}. Review full-year revenue, margin, external payouts, and pipeline aging. Switch to Monthly for period-by-period detail.`
+    : `Monthly financial snapshot for ${formatEATMonthLabel(parseMonth(filters.month).year, parseMonth(filters.month).month)}. Track revenue, margin, completed jobs, and outstanding external payouts. Export reports using the Export Centre below.`;
+
   return (
     <div className="space-y-4">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Finance Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{financeBrief}</p>
+        </div>
+      </div>
       <div className="flex flex-wrap items-end justify-end gap-3">
         <div className="flex items-center gap-2">
           <Link

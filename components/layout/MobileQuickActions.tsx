@@ -13,45 +13,54 @@ type QuickAction = {
 
 function roleActions(role: Role, permissions: string[]): QuickAction[] {
   const permissionUser = { role, permissions };
-  if (role === "TECHNICIAN_INTERNAL" && can.createJob(permissionUser)) {
-    return [
-      { href: "/jobs/new", label: "New Intake" },
-      { href: "/jobs", label: "Lookup Jobs" },
-      { href: "/dashboard", label: "Overview" },
-    ];
-  }
+
   if (role === "ADMIN") {
     return [
-      { href: "/jobs/new", label: "New Job" },
-      { href: "/clients", label: "Clients" },
-      { href: "/reports", label: "Reports" },
+      { href: "/jobs/new",  label: "New Job" },
+      { href: "/intake",    label: "Requests" },
+      { href: "/reports",   label: "Reports" },
     ];
   }
   if (role === "OPS") {
     return [
-      { href: "/jobs/new", label: "New Job" },
-      { href: "/clients", label: "Clients" },
-      { href: "/reports", label: "Reports" },
+      { href: "/jobs/new",  label: "New Job" },
+      { href: "/intake",    label: "Requests" },
+      { href: "/clients",   label: "Clients" },
     ];
   }
   if (role === "INTAKE") {
     return [
-      { href: "/jobs/new", label: "New Intake" },
-      { href: "/jobs", label: "Lookup Jobs" },
-      { href: "/clients", label: "Clients" },
+      { href: "/jobs/new",  label: "New Job" },
+      { href: "/intake",    label: "Requests" },
+      { href: "/clients",   label: "Clients" },
+    ];
+  }
+  if (role === "TECHNICIAN_INTERNAL" && can.viewClientInfo(permissionUser)) {
+    // has can_intake
+    return [
+      { href: "/jobs/new",  label: "New Intake" },
+      { href: "/intake",    label: "Requests" },
+      { href: "/jobs",      label: "Work Queue" },
+    ];
+  }
+  if (role === "TECHNICIAN_INTERNAL") {
+    return [
+      { href: "/jobs",        label: "Work Queue" },
+      { href: "/technicians", label: "Tech Board" },
+      { href: "/dashboard",   label: "Overview" },
     ];
   }
   if (role === "TECHNICIAN_EXTERNAL") {
     return [
-      { href: "/jobs", label: "Work Orders" },
-      { href: "/technicians/payouts", label: "Payouts" },
-      { href: "/dashboard", label: "Overview" },
+      { href: "/jobs",                  label: "Work Orders" },
+      { href: "/technicians/payouts",   label: "Payouts" },
+      { href: "/dashboard",             label: "Overview" },
     ];
   }
   return [
-    { href: "/jobs", label: "Work Queue" },
-    { href: "/technicians", label: "Tech Board" },
+    { href: "/jobs",      label: "Work Queue" },
     { href: "/dashboard", label: "Overview" },
+    { href: "/technicians", label: "Board" },
   ];
 }
 

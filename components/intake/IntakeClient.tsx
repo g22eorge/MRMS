@@ -6,16 +6,16 @@ import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  PENDING_INTAKE: { label: "Pending Intake", cls: "bg-amber-100 text-amber-800" },
-  APPROVED:       { label: "Approved",        cls: "bg-emerald-100 text-emerald-800" },
-  REJECTED:       { label: "Rejected",        cls: "bg-rose-100 text-rose-800" },
-  CONVERTED_TO_JOB: { label: "Converted to Job", cls: "bg-blue-100 text-blue-800" },
+  PENDING_INTAKE:   { label: "Pending",       cls: "bg-amber-100 text-amber-800" },
+  APPROVED:         { label: "Approved",       cls: "bg-emerald-100 text-emerald-800" },
+  REJECTED:         { label: "Rejected",       cls: "bg-rose-100 text-rose-800" },
+  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-blue-100 text-blue-800" },
 };
 
 const HANDOVER_LABEL: Record<string, string> = {
-  SELF_DROPOFF:             "Self Drop-off",
-  SEND_WITH_DELIVERY_PERSON: "Delivery Person",
-  REQUEST_PICKUP:           "Pickup Requested",
+  SELF_DROPOFF:              "Drop-off",
+  SEND_WITH_DELIVERY_PERSON: "Delivery",
+  REQUEST_PICKUP:            "Pickup",
 };
 
 const DEVICE_LABEL: Record<string, string> = {
@@ -118,10 +118,7 @@ function RequestDrawer({
   return (
     <>
       {/* backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={onClose} />
 
       {/* drawer */}
       <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
@@ -194,7 +191,6 @@ function RequestDrawer({
 
         {/* body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-
           <Section title="Customer">
             <DRow label="Name"              value={req.customerName} />
             <DRow label="Phone"             value={req.phone} />
@@ -215,7 +211,6 @@ function RequestDrawer({
 
           <Section title="Handover">
             <DRow label="Method" value={HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod} />
-
             {req.handoverMethod === "SELF_DROPOFF" && (
               <>
                 <DRow label="Preferred Date" value={req.preferredDropoffDate} />
@@ -223,36 +218,34 @@ function RequestDrawer({
                 <DRow label="Notes"          value={req.dropoffNotes} />
               </>
             )}
-
             {req.handoverMethod === "SEND_WITH_DELIVERY_PERSON" && (
               <>
-                <DRow label="Delivery Person"  value={req.deliveryPersonName} />
-                <DRow label="Delivery Phone"   value={req.deliveryPersonPhone} />
-                <DRow label="Courier Company"  value={req.deliveryCompany} />
-                <DRow label="Dispatch Date"    value={req.dispatchDate} />
-                <DRow label="Expected Arrival" value={req.expectedArrivalTime} />
-                <DRow label="Tracking Ref"     value={req.deliveryTrackingReference} />
+                <DRow label="Delivery Person"    value={req.deliveryPersonName} />
+                <DRow label="Delivery Phone"     value={req.deliveryPersonPhone} />
+                <DRow label="Courier Company"    value={req.deliveryCompany} />
+                <DRow label="Dispatch Date"      value={req.dispatchDate} />
+                <DRow label="Expected Arrival"   value={req.expectedArrivalTime} />
+                <DRow label="Tracking Ref"       value={req.deliveryTrackingReference} />
                 <DRow label="Fee Responsibility" value={req.deliveryFeeResponsibility} />
-                <DRow label="Notes"            value={req.deliveryNotes} />
+                <DRow label="Notes"              value={req.deliveryNotes} />
               </>
             )}
-
             {req.handoverMethod === "REQUEST_PICKUP" && (
               <>
-                <DRow label="Address"          value={req.pickupAddress} />
-                <DRow label="Landmark"         value={req.pickupLandmark} />
-                <DRow label="Preferred Date"   value={req.preferredPickupDate} />
-                <DRow label="Preferred Time"   value={req.preferredPickupTime} />
-                <DRow label="Alt. Contact"     value={req.alternateContactPerson} />
-                <DRow label="Alt. Phone"       value={req.alternateContactPhone} />
-                <DRow label="Pickup Notes"     value={req.pickupNotes} />
+                <DRow label="Address"        value={req.pickupAddress} />
+                <DRow label="Landmark"       value={req.pickupLandmark} />
+                <DRow label="Preferred Date" value={req.preferredPickupDate} />
+                <DRow label="Preferred Time" value={req.preferredPickupTime} />
+                <DRow label="Alt. Contact"   value={req.alternateContactPerson} />
+                <DRow label="Alt. Phone"     value={req.alternateContactPhone} />
+                <DRow label="Pickup Notes"   value={req.pickupNotes} />
               </>
             )}
           </Section>
 
           <Section title="Meta">
-            <DRow label="Submitted"  value={fmt(req.createdAt)} />
-            <DRow label="Request #"  value={req.requestNumber} />
+            <DRow label="Submitted" value={fmt(req.createdAt)} />
+            <DRow label="Request #" value={req.requestNumber} />
           </Section>
         </div>
       </div>
@@ -260,7 +253,7 @@ function RequestDrawer({
   );
 }
 
-/* ── inline row actions ── */
+/* ── inline row actions (table + card) ── */
 function RowActions({
   req,
   onStatusChange,
@@ -293,7 +286,7 @@ function RowActions({
   }
 
   return (
-    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
       {req.requestStatus === "PENDING_INTAKE" && (
         <>
           <button
@@ -338,6 +331,7 @@ function RowActions({
           Open Job
         </a>
       )}
+      {/* view icon — table only, omit from mobile cards */}
       <button
         onClick={(e) => { e.stopPropagation(); onView(); }}
         title="View details"
@@ -349,11 +343,64 @@ function RowActions({
   );
 }
 
-/* ── main table ── */
-export function IntakeClient({ initialRequests }: { initialRequests: RepairRequest[] }) {
+/* ── mobile card ── */
+function MobileCard({
+  req,
+  onStatusChange,
+  onSelect,
+}: {
+  req: RepairRequest;
+  onStatusChange: (id: string, status: string) => void;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      onClick={onSelect}
+      className="rounded-xl border border-slate-200 bg-white shadow-sm cursor-pointer transition-colors hover:border-slate-300 active:bg-slate-50 overflow-hidden"
+    >
+      {/* header: req # + status */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <span className="font-mono text-[11px] font-semibold text-slate-400 tracking-wide">{req.requestNumber}</span>
+        <StatusBadge status={req.requestStatus} />
+      </div>
+
+      {/* body: customer + device info */}
+      <div className="px-4 pb-3">
+        <p className="text-sm font-semibold text-slate-800 truncate">{req.customerName}</p>
+        <p className="text-xs text-slate-400 mb-1.5">{req.phone}</p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+          <span className="font-medium">{req.brand}{req.model ? ` ${req.model}` : ""}</span>
+          <span className="text-slate-300">·</span>
+          <span>{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</span>
+          <span className="text-slate-300">·</span>
+          <span>{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
+          <span className="text-slate-300">·</span>
+          <span>{fmt(req.createdAt)}</span>
+        </div>
+      </div>
+
+      {/* footer: action buttons */}
+      <div
+        className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <RowActions req={req} onStatusChange={onStatusChange} onView={onSelect} />
+      </div>
+    </div>
+  );
+}
+
+/* ── main ── */
+export function IntakeClient({
+  initialRequests,
+  pending: initialPending,
+}: {
+  initialRequests: RepairRequest[];
+  pending: number;
+}) {
   const [requests, setRequests] = useState(initialRequests);
-  const [selected, setSelected] = useState<RepairRequest | null>(null);
-  const [filter, setFilter] = useState<string>("ALL");
+  const [selected, setSelected]   = useState<RepairRequest | null>(null);
+  const [filter, setFilter]       = useState<string>("ALL");
 
   function handleStatusChange(id: string, status: string) {
     const s = status as RepairRequestStatus;
@@ -380,14 +427,27 @@ export function IntakeClient({ initialRequests }: { initialRequests: RepairReque
     { key: "CONVERTED_TO_JOB", label: "Converted" },
   ];
 
+  const pendingCount = counts["PENDING_INTAKE"] ?? 0;
+  const brief = filter !== "ALL"
+    ? `Showing ${STATUS_META[filter]?.label ?? filter} requests. Tap a card or row to open the full detail and take action.`
+    : pendingCount > 0
+      ? `${pendingCount} request${pendingCount !== 1 ? "s" : ""} awaiting review. Approve to queue for conversion, reject to close, or convert an approved request directly to a job.`
+      : "All incoming website repair requests appear here. Review each submission, approve or reject, then convert approved requests to jobs.";
+
   return (
     <>
+      {/* brief */}
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] mb-5">
+        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Intake Brief</p>
+          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{brief}</p>
+        </div>
+      </div>
+
       {/* filter tabs */}
-      <div className="flex gap-1 mb-5 flex-wrap">
+      <div className="flex gap-1.5 mb-4 flex-wrap">
         {tabs.map((tab) => {
-          const count = tab.key === "ALL"
-            ? requests.length
-            : (counts[tab.key] ?? 0);
+          const count = tab.key === "ALL" ? requests.length : (counts[tab.key] ?? 0);
           const active = filter === tab.key;
           return (
             <button
@@ -415,58 +475,73 @@ export function IntakeClient({ initialRequests }: { initialRequests: RepairReque
           No requests in this category.
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <table className="min-w-full divide-y divide-slate-100">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Request #</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Device</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Handover</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((req) => (
-                <tr
-                  key={req.id}
-                  onClick={() => setSelected(req)}
-                  className="hover:bg-slate-50 cursor-pointer transition-colors group"
-                >
-                  <td className="px-4 py-3 text-sm font-mono font-semibold text-slate-700 whitespace-nowrap">
-                    {req.requestNumber}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-slate-800">{req.customerName}</div>
-                    <div className="text-xs text-slate-400">{req.phone}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-slate-800">{req.brand} {req.model && <span className="text-slate-500">{req.model}</span>}</div>
-                    <div className="text-xs text-slate-400">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-xs text-slate-600">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <StatusBadge status={req.requestStatus} />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">
-                    {fmt(req.createdAt)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right">
-                    <RowActions
-                      req={req}
-                      onStatusChange={handleStatusChange}
-                      onView={() => setSelected(req)}
-                    />
-                  </td>
+        <>
+          {/* ── MOBILE CARD VIEW ── */}
+          <div className="space-y-3 lg:hidden">
+            {filtered.map((req) => (
+              <MobileCard
+                key={req.id}
+                req={req}
+                onStatusChange={handleStatusChange}
+                onSelect={() => setSelected(req)}
+              />
+            ))}
+          </div>
+
+          {/* ── DESKTOP TABLE VIEW ── */}
+          <div className="hidden lg:block rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Request #</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Device</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Handover</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((req) => (
+                  <tr
+                    key={req.id}
+                    onClick={() => setSelected(req)}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                  >
+                    <td className="px-4 py-3 text-sm font-mono font-semibold text-slate-700 whitespace-nowrap">
+                      {req.requestNumber}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-slate-800">{req.customerName}</div>
+                      <div className="text-xs text-slate-400">{req.phone}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-slate-800">{req.brand}{req.model && <span className="text-slate-500"> {req.model}</span>}</div>
+                      <div className="text-xs text-slate-400">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs text-slate-600">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <StatusBadge status={req.requestStatus} />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">
+                      {fmt(req.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      <RowActions
+                        req={req}
+                        onStatusChange={handleStatusChange}
+                        onView={() => setSelected(req)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {selected && (
