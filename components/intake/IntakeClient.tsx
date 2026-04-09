@@ -390,6 +390,7 @@ function MobileCard({
   );
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* ── main ── */
 export function IntakeClient({
   initialRequests,
