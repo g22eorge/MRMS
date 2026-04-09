@@ -42,7 +42,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/profile",
   ],
   OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile"],
-  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians", "/settings/profile"],
+  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/settings/profile"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/settings/profile"],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/settings/profile"],
 };
@@ -174,6 +174,9 @@ function roleLabel(role: Role, href: string, label: string) {
 function orderedNavForRole(role: Role, permissions: string[]) {
   const visible = nav.filter((item) => isVisible(role, item.roles));
   const permissionUser = { role, permissions };
+  if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/intake")) {
+    visible.push(nav.find((item) => item.href === "/intake")!);
+  }
   if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/clients")) {
     visible.push(nav.find((item) => item.href === "/clients")!);
   }
