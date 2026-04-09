@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     const result = await createRepairRequest({
       customerName: sanitizeText((body.customer_name as string) || ""),
       phone: normalizedPhone,
-      email: email ? sanitizeOptionalText(email as string) : undefined,
+      email: email ? (sanitizeOptionalText(email as string) ?? undefined) : undefined,
       deviceType: deviceType,
       brand: sanitizeText((body.brand as string) || (body.device_brand as string) || ""),
       model: (body.model || body.device_model) ? sanitizeOptionalText((body.model as string) || (body.device_model as string)) : undefined,
