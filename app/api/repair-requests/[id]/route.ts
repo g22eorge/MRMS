@@ -5,6 +5,7 @@ import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { generateJobNumber } from "@/app/(app)/jobs/new/actions";
+import { sendIntakeApprovalNotification, sendIntakeRejectionNotification, sendJobCreatedNotification } from "@/lib/notifications/whatsapp";
 
 const ALLOWED_STATUSES = ["APPROVED", "REJECTED", "CONVERTED_TO_JOB"] as const;
 type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
@@ -97,6 +98,11 @@ export async function PATCH(
       data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
     });
 
+    // Send WhatsApp notification (non-blocking)
+    sendJobCreatedNotification(req.phone, req.customerName, job.jobNumber).catch((err) =>
+      console.error("[Intake] WhatsApp notification failed:", err)
+    );
+
     return NextResponse.json({
       success: true,
       requestStatus: "CONVERTED_TO_JOB",
@@ -110,6 +116,22 @@ export async function PATCH(
     where: { id },
     data: { requestStatus: status as AllowedStatus },
   });
+
+  // Send WhatsApp notification (non-blocking)
+  if (status === "APPROVED") {
+    sendIntakeApprovalNotification(
+      updated.phone,
+      updated.customerName,
+      updated.requestNumber,
+      updated.preferredDropoffDate
+    ).catch((err) => console.error("[Intake] WhatsApp notification failed:", err));
+  } else if (status === "REJECTED") {
+    sendIntakeRejectionNotification(
+      updated.phone,
+      updated.customerName,
+      updated.requestNumber
+    ).catch((err) => console.error("[Intake] WhatsApp notification failed:", err));
+  }
 
   return NextResponse.json({ success: true, requestStatus: updated.requestStatus });
 }

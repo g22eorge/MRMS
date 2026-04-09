@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
 import { prisma } from "@/lib/prisma";
+import { sendRepairRequestConfirmation } from "@/lib/notifications/whatsapp";
 
 const ALLOWED_ORIGINS = [
   process.env.ALLOWED_ORIGIN_1 || "https://www.eagleinfosolutions.com",
@@ -225,6 +226,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[RepairRequest] Created:", result.requestNumber);
+
+    // Send WhatsApp confirmation (non-blocking)
+    const phone = body.phone || body.customer_phone;
+    const customerName = sanitizeText((body.customer_name as string) || "Customer");
+    if (phone) {
+      sendRepairRequestConfirmation(phone as string, customerName, result.requestNumber).catch((err) => {
+        console.error("[RepairRequest] WhatsApp notification failed:", err);
+      });
+    }
 
     return NextResponse.json({
       success: true,
