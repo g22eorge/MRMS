@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
 /* ── helpers ── */
@@ -88,6 +89,7 @@ function RequestDrawer({
 }) {
   const [pending, startTransition] = useTransition();
   const [localStatus, setLocalStatus] = useState(req.requestStatus);
+  const router = useRouter();
 
   function act(status: string) {
     startTransition(async () => {
@@ -97,6 +99,11 @@ function RequestDrawer({
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.jobId) {
+          router.push(`/jobs/${data.jobId}`);
+          return;
+        }
         setLocalStatus(status as RepairRequestStatus);
         onStatusChange(req.id, status);
       }
@@ -250,6 +257,7 @@ function RowActions({
   onView: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function act(status: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -259,7 +267,14 @@ function RowActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) onStatusChange(req.id, status);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobId) {
+          router.push(`/jobs/${data.jobId}`);
+          return;
+        }
+        onStatusChange(req.id, status);
+      }
     });
   }
 
