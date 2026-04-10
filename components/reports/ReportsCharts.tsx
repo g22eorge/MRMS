@@ -46,7 +46,7 @@ export function ReportsCharts({
               {deviceData.map((entry, index) => (
                 <Cell
                   key={entry.name}
-                  fill={["#0f766e", "#0369a1", "#047857", "#0891b2", "#0284c7", "#0d9488"][index % 6]}
+                  fill={["#000000", "#D4AF37", "#666666", "#000000", "#D4AF37", "#666666"][index % 6]}
                 />
               ))}
             </Pie>

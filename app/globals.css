@@ -79,16 +79,16 @@ pre,
 }
 
 .btn-premium {
-  border: 1px solid rgba(15, 118, 110, 0.8);
-  background: linear-gradient(180deg, #149089 0%, #0f766e 100%);
+  border: 1px solid rgba(212, 175, 55, 0.8);
+  background: linear-gradient(180deg, #D4AF37 0%, #B8960C 100%);
   color: #fff;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(15, 118, 110, 0.22);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(212, 175, 55, 0.22);
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease, border-color 120ms ease;
 }
 
 .btn-premium:hover {
   filter: brightness(1.03);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 12px 22px rgba(15, 118, 110, 0.26);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 12px 22px rgba(212, 175, 55, 0.26);
 }
 
 .btn-premium:active {
@@ -191,18 +191,18 @@ pre,
   height: 1.5rem;
   width: 1.5rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(15, 118, 110, 0.35);
-  background: linear-gradient(180deg, #ecfeff 0%, #ccfbf1 100%);
-  color: #0f766e;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 6px 12px rgba(15, 118, 110, 0.14);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+  color: #D4AF37;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 6px 12px rgba(212, 175, 55, 0.14);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease;
 }
 
 .nav-icon-premium-active {
-  border-color: rgba(15, 118, 110, 0.45);
-  background: linear-gradient(180deg, #ccfbf1 0%, #a7f3d0 100%);
-  color: #0f766e;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 8px 14px rgba(15, 118, 110, 0.16);
+  border-color: rgba(212, 175, 55, 0.45);
+  background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+  color: #D4AF37;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 8px 14px rgba(212, 175, 55, 0.16);
 }
 
 .sidebar-nav-icon {
@@ -212,9 +212,9 @@ pre,
   height: 1.2rem;
   width: 1.2rem;
   border-radius: 0.42rem;
-  background: linear-gradient(180deg, #edfdfa 0%, #d7f7ef 100%);
-  border-color: rgba(15, 118, 110, 0.28);
-  color: #0f766e;
+  background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: rgba(212, 175, 55, 0.28);
+  color: #D4AF37;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
 }

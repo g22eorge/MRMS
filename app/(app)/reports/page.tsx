@@ -784,7 +784,7 @@ export default async function ReportsPage({
                                 return `${x},${y}`;
                               })
                               .join(" ");
-                            return <polyline points={points} fill="none" stroke="#0f766e" strokeWidth="2" />;
+                            return <polyline points={points} fill="none" stroke="#D4AF37" strokeWidth="2" />;
                           })()}
                         </svg>
                         <span className={`text-xs ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>

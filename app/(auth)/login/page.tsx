@@ -20,7 +20,7 @@ export default async function LoginPage() {
   return (
     <main className="min-h-dvh bg-slate-100">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[1.05fr_1fr]">
-        <section className="order-2 relative overflow-hidden bg-[linear-gradient(140deg,#0b8f86_0%,#0f766e_42%,#164e63_100%)] px-5 py-7 text-white sm:px-8 sm:py-10 lg:order-1 lg:px-12 lg:py-14">
+        <section className="order-2 relative overflow-hidden bg-[linear-gradient(140deg,#000000_0%,#1a1a1a_40%,#D4AF37_100%)] px-5 py-7 text-white sm:px-8 sm:py-10 lg:order-1 lg:px-12 lg:py-14">
           <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-cyan-200/20 blur-3xl" />
 
