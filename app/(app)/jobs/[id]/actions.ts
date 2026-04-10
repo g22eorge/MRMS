@@ -15,6 +15,14 @@ import { can } from "@/lib/permissions";
 import { hasJobPayoutColumns } from "@/lib/payouts";
 import { sanitizeOptionalText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
+import {
+  notifyStatusChange,
+  notifyApprovalNeeded,
+  notifyJobAssigned,
+  notifyEstimateSubmitted,
+  notifyTimelineUpdate,
+  notifyDelayNote,
+} from "@/lib/notifications";
 
 const workflowReasonValues = [
   "NONE",
@@ -440,6 +448,65 @@ export async function updateJobAction(formData: FormData) {
       detail: JSON.stringify(payload),
     },
   });
+
+  const job = await prisma.job.findUnique({
+    where: { id: payload.jobId },
+    include: { client: true, assignedTo: true },
+  });
+
+  if (!job) {
+    return { success: true };
+  }
+
+  if (payload.nextStatus && payload.nextStatus !== job.status) {
+    await notifyStatusChange(
+      job.id,
+      job.status,
+      payload.nextStatus,
+      job.jobNumber,
+      job.client.fullName
+    );
+  }
+
+  if (
+    payload.costEstimate !== undefined &&
+    job.status === JobStatus.AWAITING_APPROVAL &&
+    payload.clientApproved === true
+  ) {
+    await notifyApprovalNeeded(
+      job.id,
+      job.jobNumber,
+      job.client.fullName,
+      payload.costEstimate
+    );
+  }
+
+  if (payload.assignedToId && payload.assignedToId !== job.assignedToId) {
+    await notifyJobAssigned(
+      job.id,
+      job.jobNumber,
+      `${job.brand} ${job.model}`,
+      payload.assignedToId
+    );
+  }
+
+  if (payload.repairTimeline) {
+    await notifyTimelineUpdate(
+      job.id,
+      job.jobNumber,
+      `${job.brand} ${job.model}`,
+      payload.repairTimeline
+    );
+  }
+
+  if (payload.timelineNote) {
+    await notifyDelayNote(
+      job.id,
+      job.jobNumber,
+      `${job.brand} ${job.model}`,
+      payload.timelineNote
+    );
+  }
 
   revalidatePath(`/jobs/${payload.jobId}`);
   revalidatePath("/jobs");

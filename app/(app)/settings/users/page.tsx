@@ -411,13 +411,13 @@ export default async function UsersPage() {
     ).values(),
   );
   const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
 
   return (
     <div className="space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">User Access Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">User Access Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
             Manage user lifecycle, role posture, and extended permissions from one workspace.
           </p>
@@ -431,7 +431,7 @@ export default async function UsersPage() {
           <input required type="email" name="email" placeholder="Email" className={controlClass} />
           <div className="grid grid-cols-2 gap-2">
             <input required name="password" type="password" placeholder="Password" className={`min-w-0 ${controlClass}`} />
-            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100">
+            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20">
               {safeRoleChoices.map((role) => (
                 <option key={`mobile-${role}`} value={role}>{prettyRole(role)}</option>
               ))}
@@ -439,7 +439,7 @@ export default async function UsersPage() {
           </div>
           <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Optional details</summary>
-            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
+            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
           </details>
         </div>
 
@@ -491,11 +491,11 @@ export default async function UsersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleLabel(u.role)}</span>
-                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
+                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-slate-200 text-slate-700"}`}>
                     {u.isActive ? "Account: Active" : "Account: Inactive"}
                   </span>
                   {hasLinkedRecords ? (
-                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">Has history</span>
+                    <span className="rounded-full bg-slate-300 px-2 py-1 text-xs text-slate-800">Has history</span>
                   ) : null}
                   <span className="text-[11px] text-[var(--ink-muted)] sm:hidden">Tap to expand</span>
                 </div>
@@ -567,7 +567,7 @@ export default async function UsersPage() {
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {u.permissionGrants.length > 0 ? (
                         u.permissionGrants.map((grant) => (
-                          <span key={`${u.id}-chip-${grant.permission}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
+                          <span key={`${u.id}-chip-${grant.permission}`} className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[11px] text-[#D4AF37]">
                             {grant.permission.replaceAll("_", " ")}
                           </span>
                         ))
@@ -585,7 +585,7 @@ export default async function UsersPage() {
                             <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
                             <button className="w-full text-left text-xs">
                               <p className="font-semibold text-[var(--ink)]">{permission.replaceAll("_", " ")}</p>
-                              <p className={`mt-1 ${enabled ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>{enabled ? "Enabled" : "Disabled"}</p>
+                              <p className={`mt-1 ${enabled ? "text-[#D4AF37]" : "text-[var(--ink-muted)]"}`}>{enabled ? "Enabled" : "Disabled"}</p>
                             </button>
                           </form>
                         );

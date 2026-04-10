@@ -35,11 +35,11 @@ type WorkflowReason =
 type HighlightReason = Exclude<WorkflowReason, "NONE">;
 
 const workflowReasonTone: Record<HighlightReason, string> = {
-  PARTS_PENDING: "bg-amber-100 text-amber-800",
-  SPECIALIST_ESCALATION: "bg-cyan-100 text-cyan-800",
-  CLIENT_DECLINED: "bg-rose-100 text-rose-800",
-  UNREPAIRABLE: "bg-red-100 text-red-800",
-  CUSTOMER_CANCELLED: "bg-zinc-200 text-zinc-800",
+  PARTS_PENDING: "bg-slate-300 text-slate-800",
+  SPECIALIST_ESCALATION: "bg-[#D4AF37] text-white",
+  CLIENT_DECLINED: "bg-black text-white",
+  UNREPAIRABLE: "bg-black text-white",
+  CUSTOMER_CANCELLED: "bg-slate-200 text-slate-600",
   OTHER: "bg-slate-100 text-slate-700",
 };
 
@@ -77,7 +77,7 @@ export function JobTable({
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-      <div className="flex items-center justify-between border-b border-[var(--line)] bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] px-3 py-2.5">
+      <div className="flex items-center justify-between border-b border-[var(--line)] bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] px-3 py-2.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Job Results</p>
         <div className="flex items-center gap-2">
           <p className="text-xs text-[var(--ink-muted)]">{jobs.length} in this page</p>
@@ -91,7 +91,7 @@ export function JobTable({
       <div className="space-y-3 p-3 2xl:hidden">
         <ProgressiveList initialCount={4} step={6}>
           {jobs.map((job) => (
-            <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:border-cyan-200 hover:bg-white max-[360px]:p-2.5">
+            <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:border-[#D4AF37]/50 hover:bg-white max-[360px]:p-2.5">
               <summary className="list-none">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -154,9 +154,9 @@ export function JobTable({
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       typeof job.clientBill === "number"
-                        ? "bg-emerald-100 text-emerald-800"
+                        ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                         : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
-                          ? "bg-amber-100 text-amber-800"
+                          ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                           : "bg-slate-100 text-slate-700"
                     }`}
                   >
@@ -215,7 +215,7 @@ export function JobTable({
 
       <div className="hidden overflow-x-auto 2xl:block">
         <table className="min-w-[1080px] w-full border-collapse text-sm">
-        <thead className="bg-[linear-gradient(180deg,rgba(236,254,255,0.75),rgba(241,245,249,0.95))] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+        <thead className="bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(240,240,240,0.95))] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>
             <th className="border-b border-[var(--line)] px-4 py-3">Job #</th>
             <th className="border-b border-[var(--line)] px-4 py-3">Device</th>
@@ -252,9 +252,9 @@ export function JobTable({
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                           typeof job.clientBill === "number"
-                            ? "bg-emerald-100 text-emerald-800"
+                            ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                             : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
-                              ? "bg-amber-100 text-amber-800"
+                              ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                               : "bg-slate-100 text-slate-700"
                         }`}
                       >

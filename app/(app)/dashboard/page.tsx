@@ -93,13 +93,13 @@ const deviceLabel: Record<string, string> = {
 };
 
 const repairFlowReference = [
-  { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-sky-200 bg-sky-50 text-sky-800" },
-  { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-indigo-200 bg-indigo-50 text-indigo-800" },
-  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-amber-200 bg-amber-50 text-amber-800" },
-  { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-orange-200 bg-orange-50 text-orange-800" },
-  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
-  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-emerald-300 bg-emerald-100 text-emerald-900" },
-  { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-slate-200 bg-slate-100 text-slate-700" },
+  { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-slate-300 bg-slate-100 text-slate-700" },
+  { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-slate-300 bg-slate-100 text-slate-700" },
+  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
+  { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-slate-300 bg-slate-100 text-slate-700" },
+  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
+  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
+  { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-slate-200 bg-slate-100 text-slate-500" },
 ] as const;
 
 function RepairStatusReference({
@@ -110,7 +110,7 @@ function RepairStatusReference({
   guidance: string;
 }) {
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(8,145,178,0.06),rgba(14,116,144,0.02))]">
+    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(212,175,55,0.06),rgba(212,175,55,0.02))]">
       <div className="border-b border-[var(--line)] px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repair Status Guide</p>
         <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{title}</p>
@@ -150,7 +150,7 @@ function DashboardPeriodBar({
   actionLabel?: string;
 }) {
   return (
-    <div className="panel-shadow flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(236,254,255,0.65),rgba(248,250,252,0.95))] p-3">
+    <div className="panel-shadow flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.95))] p-3">
       <div className="flex items-center gap-2">
         <Link
           href={monthHref}
@@ -198,7 +198,7 @@ function DashboardHero({
   secondaryLabel?: string;
 }) {
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(2,132,199,0.12),rgba(15,23,42,0.02),rgba(16,185,129,0.08))]">
+    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(15,23,42,0.02),rgba(212,175,55,0.08))]">
       <div className="px-3 py-3 sm:px-5 sm:py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] sm:text-[11px]">Operations Snapshot</p>
         <p className="mt-1 text-sm font-semibold text-[var(--ink)] sm:text-base">{title}</p>
@@ -312,12 +312,12 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedCount}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
           </Link>
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payout Outstanding</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700">{formatMoney(outstandingTotal, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{formatMoney(outstandingTotal, currency)}</p>
             <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoney(paidTotal, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">
               <Link href="/technicians/payouts">View payout breakdown →</Link>
@@ -344,7 +344,7 @@ export default async function DashboardPage({
                   <div>
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
                     <p className="font-medium">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
-                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
                       {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
                     </p>
                   </div>
@@ -353,8 +353,6 @@ export default async function DashboardPage({
             </ul>
           )}
         </PersistedDisclosure>
-
-        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {jobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -369,7 +367,7 @@ export default async function DashboardPage({
                   <div className="text-right">
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
                     <p className="font-medium">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
-                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
                       {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
                     </p>
                   </div>
@@ -471,22 +469,22 @@ export default async function DashboardPage({
 
         {canUpdatePricing ? (
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-cyan-200 bg-cyan-50/70 px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800 sm:text-[11px]">Pricing Controls</p>
+            <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37] sm:text-[11px]">Pricing Controls</p>
               <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
             </div>
             <div className="grid gap-2 p-3 grid-cols-2 sm:grid-cols-3">
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-amber-800">Needs Pricing</p>
-                <p className="mt-1 text-lg font-semibold text-amber-900">{pricingPendingCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#D4AF37]">Needs Pricing</p>
+                <p className="mt-1 text-lg font-semibold text-[#D4AF37]">{pricingPendingCount}</p>
               </Link>
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-emerald-800">Priced Jobs</p>
-                <p className="mt-1 text-lg font-semibold text-emerald-900">{pricedCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#D4AF37]">Priced Jobs</p>
+                <p className="mt-1 text-lg font-semibold text-[#D4AF37]">{pricedCount}</p>
               </Link>
               <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-center col-span-2 sm:col-span-1">
                 <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
-                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
                   {marginTotal >= 0 ? "+" : ""}{formatMoney(marginTotal, getAppCurrency())}
                 </p>
               </Link>
@@ -529,12 +527,12 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{inRepair}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{inRepair}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Active repairs →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completed}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completed}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed repairs →</p>
           </Link>
         </div>
@@ -687,7 +685,7 @@ export default async function DashboardPage({
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{receivedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${receivedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className={`mt-1 text-xs ${receivedDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {receivedDelta >= 0 ? "+" : ""}
               {receivedDelta} vs {prevMonthString}
             </p>
@@ -695,8 +693,8 @@ export default async function DashboardPage({
           </Link>
           <Link href={`/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${completedDeltaCount >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedSelectedCount}</p>
+            <p className={`mt-1 text-xs ${completedDeltaCount >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {completedDeltaCount >= 0 ? "+" : ""}
               {completedDeltaCount} vs {prevMonthString}
             </p>
@@ -704,8 +702,8 @@ export default async function DashboardPage({
           </Link>
           <Link href={`/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{closedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${closedDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{closedSelectedCount}</p>
+            <p className={`mt-1 text-xs ${closedDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {closedDelta >= 0 ? "+" : ""}
               {closedDelta} vs {prevMonthString}
             </p>
@@ -714,7 +712,7 @@ export default async function DashboardPage({
           <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoney(revenueSelected, currency)}</p>
-            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {revenueDelta >= 0 ? "+" : "-"}
               {formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
             </p>
@@ -747,7 +745,7 @@ export default async function DashboardPage({
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
-              <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
                 {formatMoney(marginSelected, currency)}
               </p>
             </div>
@@ -757,7 +755,7 @@ export default async function DashboardPage({
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-              <p className="text-sm font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
+              <p className="text-sm font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
             </div>
           </div>
         </PersistedDisclosure>
@@ -766,11 +764,11 @@ export default async function DashboardPage({
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
             <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
-            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
+            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair Margin</p>
-            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatMoney(marginSelected, currency)}</p>
+            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{formatMoney(marginSelected, currency)}</p>
             <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -780,7 +778,7 @@ export default async function DashboardPage({
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Payouts Due</p>
-            <p className="mt-1 text-2xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
+            <p className="mt-1 text-2xl font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
             <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs (all months)</p>
           </div>
         </div>
@@ -885,17 +883,17 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedThisMonth.length}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedThisMonth.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review completed jobs →</p>
           </Link>
           <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Pending billing path</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{pendingBilling}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{pendingBilling}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs before completion →</p>
           </Link>
           <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
-            <p className="mt-2 text-3xl font-semibold text-rose-700">{formatMoney(payoutOutstanding, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>
           </Link>
         </div>
@@ -967,12 +965,12 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Approval</p>
-            <p className="mt-1 text-3xl font-semibold text-amber-700">{awaitingApproval}</p>
+            <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{awaitingApproval}</p>
             <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Follow up →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Ready</p>
-            <p className="mt-1 text-3xl font-semibold text-emerald-700">{readyForPickup}</p>
+            <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{readyForPickup}</p>
             <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Pickup →</p>
           </Link>
         </div>
@@ -992,13 +990,13 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting approval</p>
-            <p className="mt-2 text-3xl font-semibold text-amber-700 sm:text-4xl">{awaitingApproval}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{awaitingApproval}</p>
             <p className="mt-1 text-sm text-[var(--ink-muted)]">Follow up with clients for decisions</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open approval queue →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Ready for pickup</p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{readyForPickup}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{readyForPickup}</p>
             <p className="mt-1 text-sm text-[var(--ink-muted)]">Clients to notify for collection</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open pickup list →</p>
           </Link>
@@ -1053,7 +1051,7 @@ export default async function DashboardPage({
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-700 sm:text-4xl">{completedJobs}</p>
+          <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedJobs}</p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">Delivered successfully</p>
           <p className="mt-3 text-xs font-medium text-[var(--brand)]">View completed jobs →</p>
         </Link>

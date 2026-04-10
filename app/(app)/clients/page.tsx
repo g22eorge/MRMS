@@ -148,15 +148,15 @@ export default async function ClientsPage({
     ? "Filtered client directory view is active. Use the KPI cards below for live totals and reset filters to return to the full book."
     : "Use this directory to maintain accurate contact records, monitor client activity, and quickly open each customer timeline.";
   const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const fieldClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
 
   return (
     <div className="space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Client Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Client Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export default async function ClientsPage({
         </div>
         <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">3+ Jobs</p>
-          <p className="text-sm font-semibold text-emerald-700">{withManyJobs}</p>
+          <p className="text-sm font-semibold text-[#D4AF37]">{withManyJobs}</p>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ export default async function ClientsPage({
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">3+ jobs</p>
-          <p className="text-2xl font-semibold text-emerald-700">{withManyJobs}</p>
+          <p className="text-2xl font-semibold text-[#D4AF37]">{withManyJobs}</p>
         </div>
       </div>
 

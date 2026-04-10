@@ -16,29 +16,29 @@ function getActionMeta(action: string): ActionMeta {
   if (action.includes("CREATED")) {
     return {
       icon: "+",
-      chipClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      panelClass: "border-emerald-200/70",
+      chipClass: "bg-[#D4AF37] text-white border-[#D4AF37]",
+      panelClass: "border-[#D4AF37]",
     };
   }
   if (action.includes("STATUS") || action.includes("UPDATE")) {
     return {
       icon: "~",
-      chipClass: "bg-sky-100 text-sky-800 border-sky-200",
-      panelClass: "border-sky-200/70",
+      chipClass: "bg-slate-300 text-slate-800 border-slate-400",
+      panelClass: "border-slate-300",
     };
   }
   if (action.includes("PAY") || action.includes("BILL") || action.includes("INVOICE") || action.includes("COST")) {
     return {
       icon: "$",
-      chipClass: "bg-amber-100 text-amber-800 border-amber-200",
-      panelClass: "border-amber-200/70",
+      chipClass: "bg-black text-white border-black",
+      panelClass: "border-black",
     };
   }
   if (action.includes("CLOSED") || action.includes("DECLINED")) {
     return {
       icon: "x",
-      chipClass: "bg-rose-100 text-rose-800 border-rose-200",
-      panelClass: "border-rose-200/70",
+      chipClass: "bg-slate-200 text-slate-500 border-slate-300",
+      panelClass: "border-slate-200",
     };
   }
   return {
@@ -123,7 +123,7 @@ export function AuditTimeline({ items }: { items: AuditItem[] }) {
             </div>
             <p className="text-xs text-slate-500">by {item.user.name}</p>
             {trainingSummary ? (
-              <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800">{trainingSummary}</p>
+              <p className="mt-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-1 text-xs text-[#D4AF37]">{trainingSummary}</p>
             ) : null}
             {detailEntries.length > 0 ? (
               <dl className="mt-2 grid gap-2 sm:grid-cols-2">

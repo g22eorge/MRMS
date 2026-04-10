@@ -42,12 +42,12 @@ export function ProfileForm({
   }, [router, state.success]);
 
   const fieldClass =
-    "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
 
   return (
     <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-      <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-800">Profile Summary</p>
+      <div className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#D4AF37]">Profile Summary</p>
         <p className="mt-1 text-sm text-[var(--ink)]">Keep your contact details current so internal handoffs and approvals remain accurate.</p>
       </div>
 
@@ -91,8 +91,8 @@ export function ProfileForm({
         </div>
       </div>
 
-      {state.error ? <p className="text-sm text-rose-700">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
+      {state.error ? <p className="text-sm text-black md:col-span-2">{state.error}</p> : null}
+      {state.success ? <p className="text-sm text-[#D4AF37]">{state.success}</p> : null}
 
       <SaveButton />
     </form>

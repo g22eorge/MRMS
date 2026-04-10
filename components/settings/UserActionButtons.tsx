@@ -37,7 +37,7 @@ export function RoleActionButton({ role, currentRole, label }: RoleActionButtonP
       className={clsx(
         "w-full rounded-lg border px-3 py-2 text-center text-xs font-medium transition",
         currentRole === role
-          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+          ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
           : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--brand)]",
       )}
     >

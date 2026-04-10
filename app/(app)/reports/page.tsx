@@ -446,8 +446,8 @@ export default async function ReportsPage({
   return (
     <div className="space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Finance Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Finance Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{financeBrief}</p>
         </div>
       </div>
@@ -568,7 +568,7 @@ export default async function ReportsPage({
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
-            <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {formatMoney(marginSelected, currency)}
             </p>
           </div>
@@ -586,7 +586,7 @@ export default async function ReportsPage({
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-            <p className="text-sm font-semibold text-amber-700">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
+            <p className="text-sm font-semibold text-[#D4AF37]">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
           </div>
         </div>
       </PersistedDisclosure>
@@ -595,13 +595,13 @@ export default async function ReportsPage({
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
           <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
-          <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+          <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
             {revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
           </p>
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair margin ({selectedMonthString})</p>
-          <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+          <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
             {formatMoney(marginSelected, currency)}
           </p>
           <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
@@ -637,18 +637,18 @@ export default async function ReportsPage({
         <div className="grid gap-2">
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completion Momentum</p>
-            <p className={`text-sm font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className={`text-sm font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {completionMomentum >= 0 ? "+" : ""}
               {completionMomentum}
             </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Queue Pressure</p>
-            <p className="text-sm font-semibold text-amber-700">{queuePressure}</p>
+            <p className="text-sm font-semibold text-[#D4AF37]">{queuePressure}</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Aging Risk</p>
-            <p className={`text-sm font-semibold ${delayedJobs.length > 0 ? "text-rose-700" : "text-emerald-700"}`}>{delayedJobs.length}</p>
+            <p className={`text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>{delayedJobs.length}</p>
           </div>
         </div>
       </PersistedDisclosure>
@@ -656,7 +656,7 @@ export default async function ReportsPage({
       <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completion Momentum</p>
-          <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+          <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
             {completionMomentum >= 0 ? "+" : ""}
             {completionMomentum}
           </p>
@@ -664,12 +664,12 @@ export default async function ReportsPage({
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Queue Pressure</p>
-          <p className="mt-2 text-3xl font-semibold text-amber-700">{queuePressure}</p>
+          <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{queuePressure}</p>
           <p className="mt-2 text-xs text-[var(--ink-muted)]">Diagnosing + awaiting approval + in repair</p>
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Aging Risk</p>
-          <p className={`mt-2 text-3xl font-semibold ${delayedJobs.length > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+          <p className={`mt-2 text-3xl font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>
             {delayedJobs.length}
           </p>
           <p className="mt-2 text-xs text-[var(--ink-muted)]">Open jobs older than 3 days</p>
@@ -766,7 +766,7 @@ export default async function ReportsPage({
                     <td className="px-2 py-2">{row.completionRate.toFixed(1)}%</td>
                     <td className="px-2 py-2">{row.avgTurnaroundHours.toFixed(1)}h</td>
                     <td className="px-2 py-2">{formatMoney(row.revenue, currency)}</td>
-                    <td className={`px-2 py-2 ${row.margin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    <td className={`px-2 py-2 ${row.margin >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
                       {formatMoney(row.margin, currency)}
                     </td>
                     <td className="px-2 py-2">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
@@ -787,7 +787,7 @@ export default async function ReportsPage({
                             return <polyline points={points} fill="none" stroke="#D4AF37" strokeWidth="2" />;
                           })()}
                         </svg>
-                        <span className={`text-xs ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                        <span className={`text-xs ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "+" : ""}
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0)}
                         </span>
@@ -830,7 +830,7 @@ export default async function ReportsPage({
               <div className="flex items-center justify-between"><span>Awaiting approval</span><span className="font-semibold">{funnel.awaitingApproval}</span></div>
               <div className="flex items-center justify-between"><span>In repair</span><span className="font-semibold">{funnel.inRepair}</span></div>
               <div className="flex items-center justify-between"><span>Ready for pickup</span><span className="font-semibold">{funnel.readyForPickup}</span></div>
-              <div className="flex items-center justify-between"><span>Completed</span><span className="font-semibold text-emerald-700">{funnel.completed}</span></div>
+              <div className="flex items-center justify-between"><span>Completed</span><span className="font-semibold text-[#D4AF37]">{funnel.completed}</span></div>
             </div>
           </div>
         </div>
@@ -879,7 +879,7 @@ export default async function ReportsPage({
             </div>
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <span>Completed</span>
-              <span className="font-semibold text-emerald-700">{funnel.completed}</span>
+              <span className="font-semibold text-[#D4AF37]">{funnel.completed}</span>
             </div>
           </div>
         </div>

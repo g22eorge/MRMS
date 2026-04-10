@@ -15,9 +15,9 @@ export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]
           item.tone === "brand"
             ? "text-[var(--brand)]"
             : item.tone === "success"
-              ? "text-emerald-700"
+              ? "text-[#D4AF37]"
               : item.tone === "warning"
-                ? "text-amber-700"
+                ? "text-black"
                 : "text-[var(--ink)]";
 
         const content = (

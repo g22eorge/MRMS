@@ -103,7 +103,7 @@ export function PageThemeHeader({ role }: { role: Role }) {
   const subtitle = resolvedSubtitle?.path === pathname ? resolvedSubtitle.text : meta.subtitle;
 
   return (
-    <section className="panel-shadow rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#000000_0%,#1a1a1a_40%,#D4AF37_100%)] p-4 text-white md:p-5">
+    <section className="panel-shadow relative rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#000000_0%,#1a1a1a_40%,#D4AF37_100%)] p-4 text-white md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">{roleTag(role)} Workspace</p>

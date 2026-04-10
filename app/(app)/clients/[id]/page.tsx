@@ -179,13 +179,13 @@ export default async function ClientDetailPage({
     ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
     : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
   const controlClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100 disabled:opacity-70";
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-70";
 
   return (
     <div className="space-y-5">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Client Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Client Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default async function ClientDetailPage({
           </div>
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completed</p>
-            <p className="text-xl font-semibold text-emerald-700">{completedJobs}</p>
+            <p className="text-xl font-semibold text-[#D4AF37]">{completedJobs}</p>
           </div>
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completion rate</p>
@@ -266,7 +266,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="notes"
               defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100 disabled:opacity-70"
+              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-70"
             />
           </label>
         </div>
@@ -278,8 +278,8 @@ export default async function ClientDetailPage({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Job History</h2>
           <form className="flex flex-wrap gap-2">
-            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
-            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100">
+            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
+            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20">
               <option value="">All statuses</option>
               {JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{statusOptionLabel[status]}</option>
@@ -319,12 +319,12 @@ export default async function ClientDetailPage({
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <h2 className="font-semibold">Client Notes</h2>
         <form action={addClientNote} className="mt-3 flex flex-col gap-2">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100" />
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
           <button disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 
         {!notesFeatureAvailable ? (
-          <p className="mt-2 text-xs text-amber-700">Notes timeline needs latest DB migration. Run `bunx prisma migrate dev` and restart dev server.</p>
+          <p className="mt-2 text-xs text-slate-600">Notes timeline needs latest DB migration. Run `bunx prisma migrate dev` and restart dev server.</p>
         ) : null}
 
         <div className="mt-4 space-y-2">

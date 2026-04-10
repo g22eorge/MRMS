@@ -1,16 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { ChangeEvent, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useFormState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
 const steps = ["Client Info", "Device Info", "Issue", "Review"] as const;
 
+const initialState = { error: null as string | null };
+
 export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   const [step, setStep] = useState(0);
-  const [isPending, startTransition] = useTransition();
+  const [formState, formAction] = useFormState(async (prevState: typeof initialState, formData: FormData) => {
+    try {
+      await createJobAction(formData);
+      return { error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create job";
+      return { error: message };
+    }
+  }, initialState);
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -30,7 +39,6 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     email: string | null;
     organization: string | null;
   }>(null);
-  const router = useRouter();
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
 
@@ -40,21 +48,12 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   };
 
   return (
-    <form
-      action={(formData) => {
-        startTransition(async () => {
-          const res = await createJobAction(formData);
-          if (res.error) {
-            toast.error(res.error);
-            return;
-          }
-          toast.success("Job created");
-          router.push(`/jobs/${res.id}`);
-          router.refresh();
-        });
-      }}
-      className="space-y-4"
-    >
+    <form action={formAction} className="space-y-4">
+      {formState?.error && (
+        <div className="rounded-md border border-black bg-black p-3 text-sm text-white">
+          {formState.error}
+        </div>
+      )}
       <div className="flex gap-2 overflow-x-auto">
         {steps.map((label, idx) => (
           <button
@@ -62,7 +61,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             type="button"
             onClick={() => setStep(idx)}
             className={`rounded-full px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${
-              idx === step ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-700"
+              idx === step ? "bg-[#D4AF37] text-white" : "bg-slate-200 text-slate-700"
             }`}
           >
             {idx + 1}. {label}
@@ -94,7 +93,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <input name="email" value={form.email} onChange={onInput} placeholder="Email" className="rounded-md border border-slate-300 px-3 py-2" />
           <input name="organization" value={form.organization} onChange={onInput} placeholder="Organization" className="rounded-md border border-slate-300 px-3 py-2" />
           {existingClient ? (
-            <p className="text-xs text-amber-700 md:col-span-2">
+            <p className="text-xs text-[#D4AF37] md:col-span-2">
               Existing client found by phone: {existingClient.fullName}. Submitting will update this client profile.
             </p>
           ) : null}

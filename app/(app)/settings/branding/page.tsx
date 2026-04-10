@@ -238,9 +238,9 @@ export default async function BrandingPage({
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Manage logo, numbering, VAT defaults, terms, signatures, and quotation wording.
         </p>
-        {params.profileSaved ? <p className="mt-2 text-sm text-emerald-700">Branding settings saved.</p> : null}
-        {params.saved ? <p className="mt-2 text-sm text-emerald-700">Logo updated successfully.</p> : null}
-        {params.error ? <p className="mt-2 text-sm text-rose-700">{params.error.replaceAll("+", " ")}</p> : null}
+        {params.profileSaved ? <p className="mt-2 text-sm text-[#D4AF37]">Branding settings saved.</p> : null}
+        {params.saved ? <p className="mt-2 text-sm text-[#D4AF37]">Logo updated successfully.</p> : null}
+        {params.error ? <p className="mt-2 text-sm text-black">{params.error.replaceAll("+", " ")}</p> : null}
       </div>
 
       <form action={saveBrandingAction} className="panel-shadow space-y-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 [&_*]:min-w-0">

@@ -49,7 +49,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
           placeholder="you@eagleinfo.com"
         />
       </div>
@@ -63,7 +63,7 @@ export function LoginForm() {
             name="password"
             type={showPassword ? "text" : "password"}
             required
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-24 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-24 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
             placeholder="Enter your password"
           />
           <button
@@ -78,10 +78,10 @@ export function LoginForm() {
 
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-slate-600">
-          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border-slate-300 text-teal-700" />
+          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border-slate-300 text-[#D4AF37]" />
           Remember me
         </label>
-        <a href="mailto:support@eagleinfo.com" className="text-teal-700 hover:underline">
+        <a href="mailto:support@eagleinfo.com" className="text-[#D4AF37] hover:underline">
           Forgot password?
         </a>
       </div>

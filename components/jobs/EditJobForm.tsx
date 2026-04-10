@@ -82,7 +82,7 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
         <div className="md:col-span-2 flex gap-2">
           <button
             disabled={isPending}
-            className="rounded-md bg-teal-700 px-3 py-2 text-white disabled:opacity-60"
+            className="rounded-md bg-[#D4AF37] px-3 py-2 text-white disabled:opacity-60"
           >
             {isPending ? "Saving..." : "Save"}
           </button>

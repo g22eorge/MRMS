@@ -20,6 +20,7 @@ const nav = [
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/profile", label: "Profile", group: "personal", roles: "all" },
+  { href: "/settings/notifications", label: "Notifications", group: "personal", roles: "all" },
 ] as const;
 
 const groupLabel: Record<NavGroup, string> = {
@@ -40,11 +41,12 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/users",
     "/settings/branding",
     "/settings/profile",
+    "/settings/notifications",
   ],
-  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile"],
-  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/settings/profile"],
-  TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile"],
-  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/settings/profile"],
+  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile", "/settings/notifications"],
+  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/settings/profile", "/settings/notifications"],
+  TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
+  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/settings/profile", "/settings/notifications"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
@@ -251,7 +253,7 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
                     href={item.href}
                     className={`block w-full rounded-lg px-2.5 py-1.5 text-[15px] font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
                       active
-                        ? "panel-shadow border border-[var(--brand)]/85 bg-[linear-gradient(180deg,rgba(236,254,255,0.85),rgba(204,251,241,0.7))] text-[var(--ink)]"
+                        ? "panel-shadow border border-[var(--brand)]/85 bg-[linear-gradient(180deg,rgba(212,175,55,0.15),rgba(212,175,55,0.1))] text-[var(--ink)]"
                         : "text-[var(--ink)] hover:bg-[var(--panel)]"
                     }`}
                   >

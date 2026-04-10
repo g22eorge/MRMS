@@ -201,59 +201,59 @@ export default async function JobsPage({
       label: "Active Queue",
       value: String(openNow),
       href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR"),
-      accent: "border-teal-200 bg-teal-50",
-      tone: "text-teal-800",
+      accent: "border-[#D4AF37]/30 bg-[#D4AF37]/10",
+      tone: "text-[#D4AF37]",
     },
     {
       label: "Awaiting Approval",
       value: String(awaitingApproval),
       href: pulseHref("AWAITING_APPROVAL"),
-      accent: awaitingApproval > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50",
-      tone: awaitingApproval > 0 ? "text-amber-800" : "text-slate-700",
+      accent: awaitingApproval > 0 ? "border-[#D4AF37]/30 bg-[#D4AF37]/10" : "border-slate-200 bg-slate-50",
+      tone: awaitingApproval > 0 ? "text-[#D4AF37]" : "text-slate-700",
     },
     {
       label: "Ready for Pickup",
       value: String(readyForPickup),
       href: pulseHref("READY_FOR_PICKUP"),
-      accent: readyForPickup > 0 ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50",
-      tone: readyForPickup > 0 ? "text-emerald-800" : "text-slate-700",
+      accent: readyForPickup > 0 ? "border-[#D4AF37] bg-[#D4AF37]" : "border-slate-200 bg-slate-50",
+      tone: readyForPickup > 0 ? "text-white" : "text-slate-700",
     },
     {
       label: "Watch (24h+)",
       value: String(staleOpenCount),
       href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"),
-      accent: staleOpenCount > 0 ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50",
-      tone: staleOpenCount > 0 ? "text-rose-800" : "text-slate-700",
+      accent: staleOpenCount > 0 ? "border-[#000] bg-[#000]" : "border-slate-200 bg-slate-50",
+      tone: staleOpenCount > 0 ? "text-white" : "text-slate-700",
     },
     {
       label: "Unassigned Open",
       value: String(unassignedOpenCount),
       href: pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"),
-      accent: unassignedOpenCount > 0 ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50",
-      tone: unassignedOpenCount > 0 ? "text-indigo-800" : "text-slate-700",
+      accent: unassignedOpenCount > 0 ? "border-slate-400 bg-slate-200" : "border-slate-200 bg-slate-50",
+      tone: unassignedOpenCount > 0 ? "text-slate-800" : "text-slate-700",
     },
     {
       label: "Completed",
       value: String(completedCount),
       href: pulseHref("COMPLETED"),
-      accent: "border-emerald-200 bg-emerald-50",
-      tone: "text-emerald-800",
+      accent: "border-[#D4AF37]/30 bg-[#D4AF37]/10",
+      tone: "text-[#D4AF37]",
     },
   ];
   const searchInputClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/90 px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/90 px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const selectControlClass =
-    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const desktopControlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const advancedWrapClass =
-    "mt-2 rounded-lg border border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] p-2";
+    "mt-2 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] p-2";
 
   return (
     <div className="space-y-5">
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Executive Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Executive Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{briefingWithWatch}</p>
         </div>
         <div className="grid gap-2 p-3 grid-cols-2 xl:grid-cols-6">
@@ -287,13 +287,13 @@ export default async function JobsPage({
           <span className="text-[var(--ink-muted)]">Pricing View:</span>
           <Link
             href="/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
-            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "needs" ? "border-amber-300 bg-amber-50 text-amber-800" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
+            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "needs" ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
           >
             Needs pricing
           </Link>
           <Link
             href="/jobs?pricing=priced"
-            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "priced" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
+            className={`rounded-full border px-2.5 py-1 ${pricingFilter === "priced" ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}
           >
             Priced
           </Link>
@@ -307,7 +307,7 @@ export default async function JobsPage({
 
       {isExternalTech ? (
         <>
-          <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2 text-xs text-cyan-800">
+          <div className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-xs text-[#D4AF37]">
             External Diagnosis and timeline updates are available inside each work order.
           </div>
           <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
@@ -331,9 +331,9 @@ export default async function JobsPage({
             </div>
             <details className={advancedWrapClass}>
               <summary className="list-none">
-                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 bg-white/70 px-2 py-1.5">
                   <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-                  <span className="text-xs text-cyan-700">Sort + Date</span>
+                  <span className="text-xs text-[#D4AF37]">Sort + Date</span>
                 </div>
               </summary>
               <div className="mt-2 grid gap-2">
@@ -367,9 +367,9 @@ export default async function JobsPage({
             </div>
             <details className={advancedWrapClass}>
               <summary className="list-none">
-                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 bg-white/70 px-2 py-1.5">
                   <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-                  <span className="text-xs text-cyan-700">Sort + Date</span>
+                  <span className="text-xs text-[#D4AF37]">Sort + Date</span>
                 </div>
               </summary>
               <div className="mt-2 grid grid-cols-3 gap-2">
@@ -406,9 +406,9 @@ export default async function JobsPage({
             </div>
             <details className={advancedWrapClass}>
               <summary className="list-none">
-                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 bg-white/70 px-2 py-1.5">
                   <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-                  <span className="text-xs text-cyan-700">Device + Path + Date</span>
+                  <span className="text-xs text-[#D4AF37]">Device + Path + Date</span>
                 </div>
               </summary>
               <div className="mt-2 grid gap-2">
@@ -465,9 +465,9 @@ export default async function JobsPage({
             </div>
             <details className={advancedWrapClass}>
               <summary className="list-none">
-                <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+                <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 bg-white/70 px-2 py-1.5">
                   <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-                  <span className="text-xs text-cyan-700">Device + Path + Date</span>
+                  <span className="text-xs text-[#D4AF37]">Device + Path + Date</span>
                 </div>
               </summary>
               <div className={`mt-2 grid gap-2 ${can.approveInvoices(user) ? "grid-cols-6" : "grid-cols-5"}`}>

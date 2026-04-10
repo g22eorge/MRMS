@@ -69,9 +69,9 @@ const panelShellClass =
 const softSectionClass =
   "space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/70 p-3";
 const fieldClass =
-  "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
 const areaClass =
-  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
 
 type Props = {
   role: Role;
@@ -284,24 +284,24 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
       key: "status",
       label: "Current Status",
       value: prettyEnum(job.status),
-      tone: "text-teal-800",
-      accent: "bg-teal-50 border-teal-200",
+      tone: "text-[#D4AF37]",
+      accent: "bg-[#D4AF37]/10 border-[#D4AF37]/30",
       priority: 90,
     },
     {
       key: "watch",
       label: "Watch",
       value: watchLabel ? `${watchLabel} (${statusAgeHours}h)` : `Healthy (${statusAgeHours}h in state)`,
-      tone: watchLabel ? "text-amber-800" : "text-emerald-700",
-      accent: watchLabel ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200",
+      tone: watchLabel ? "text-black" : "text-[#D4AF37]",
+      accent: watchLabel ? "bg-slate-200 border-slate-300" : "bg-[#D4AF37]/10 border-[#D4AF37]/30",
       priority: watchLabel ? 88 : 40,
     },
     {
       key: "assigned",
       label: "Assigned Tech",
       value: job.assignedTo?.name ?? "Unassigned",
-      tone: job.assignedTo?.name ? "text-slate-800" : "text-rose-700",
-      accent: job.assignedTo?.name ? "bg-slate-50 border-slate-200" : "bg-rose-50 border-rose-200",
+      tone: job.assignedTo?.name ? "text-slate-800" : "text-black",
+      accent: job.assignedTo?.name ? "bg-slate-50 border-slate-200" : "bg-slate-200 border-slate-300",
       priority: job.assignedTo?.name ? 70 : 95,
     },
     {
@@ -332,8 +332,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
       key: "nextAction",
       label: "Next Action",
       value: nextActionByStatus[job.status],
-      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-slate-700" : "text-amber-800",
-      accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200",
+      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-slate-700" : "text-black",
+      accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-slate-50 border-slate-200" : "bg-slate-200 border-slate-300",
       priority: 84,
     },
     {
@@ -390,8 +390,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             onClick={() => setActive(tab)}
             className={`w-full rounded-lg border px-3 py-2.5 text-sm capitalize transition sm:w-auto ${
               active === tab
-                ? "border-cyan-700 bg-cyan-700 text-white"
-                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-cyan-200"
+                ? "border-[#D4AF37] bg-[#D4AF37] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[#D4AF37]/50"
             }`}
           >
             {tab}
@@ -412,9 +412,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                     key={label}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
                       isCurrent
-                        ? "border-teal-700 bg-teal-700 text-white"
+                        ? "border-[#D4AF37] bg-[#D4AF37] text-white"
                         : isDone
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                          ? "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]"
                           : "border-slate-200 bg-slate-50 text-slate-600"
                     }`}
                   >
@@ -423,15 +423,15 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 );
               })}
               {job.status === "CLOSED" ? (
-                <span className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-800">
+                <span className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-black">
                   Closed
                 </span>
               ) : null}
             </div>
           </div>
 
-          <div className="mb-4 rounded-md border border-cyan-200 bg-cyan-50/70 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-800">Executive Brief</p>
+          <div className="mb-4 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#D4AF37]">Executive Brief</p>
             <p className="mt-1 text-sm text-slate-800 [overflow-wrap:anywhere]">{narrativeBits.join(" ")}</p>
           </div>
 
@@ -512,7 +512,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                   Save Assignment
                 </button>
                 {savedSection === "assignment" ? (
-                  <p className="text-xs text-emerald-700">Saved</p>
+                  <p className="text-xs text-[#D4AF37]">Saved</p>
                 ) : null}
             </form>
           ) : null}
@@ -565,7 +565,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 name="clientConversationNote"
                 defaultValue={job.clientConversationNote ?? ""}
                 placeholder="Client communication note"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
               />
               {job.lastClientContactAt ? (
                 <p className="text-xs text-slate-600">
@@ -580,7 +580,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 Save Communication
               </button>
               {savedSection === "communication" ? (
-                <p className="text-xs text-emerald-700">Saved</p>
+                <p className="text-xs text-[#D4AF37]">Saved</p>
               ) : null}
             </form>
           ) : null}
@@ -643,7 +643,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 name="statusNote"
                 defaultValue={job.statusNote ?? ""}
                 placeholder="Context note (optional)"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
               />
               <button
                 type="submit"
@@ -653,7 +653,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 Save Context
               </button>
               {savedSection === "context" ? (
-                <p className="text-xs text-emerald-700">Saved</p>
+                <p className="text-xs text-[#D4AF37]">Saved</p>
               ) : null}
             </form>
           ) : null}
@@ -734,7 +734,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
               Save
             </button>
-          {savedSection === "diagnosis" ? <p className="text-xs text-emerald-700">Saved</p> : null}
+          {savedSection === "diagnosis" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -759,7 +759,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Work done" className={areaClass} />
           <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="Parts replaced" className={areaClass} />
           <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
-          {savedSection === "repair" ? <p className="text-xs text-emerald-700">Saved</p> : null}
+          {savedSection === "repair" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -823,7 +823,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             </p>
           ) : null}
           {canManageFinancials ? (
-              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
                 Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${formatBillAmount(existingMargin)}`}
               </p>
           ) : null}
@@ -833,7 +833,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               <div className="rounded-lg border border-[var(--line)] bg-white p-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-slate-600">Payout status</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[#D4AF37] text-white" : "bg-slate-300 text-slate-800"}`}>
                     {job.externalPaid ? "Paid" : "Not paid"}
                   </span>
                 </div>
@@ -860,7 +860,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 placeholder="Payment reference (optional)"
                 className={fieldClass}
               />
-              <p className={`text-xs ${job.externalPaid ? "text-emerald-700" : "text-amber-700"}`}>
+              <p className={`text-xs ${job.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
                 {job.externalPaidAt
                   ? `Paid on ${formatUtcDateTime(job.externalPaidAt)}`
                   : "Not yet marked as paid"}
@@ -918,7 +918,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               Save Billing
             </button>
           ) : null}
-          {savedSection === "financials" ? <p className="text-xs text-emerald-700">Saved</p> : null}
+          {savedSection === "financials" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -991,7 +991,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               Set {prettyEnum(status)}
             </button>
           ))}
-          {savedSection === "status" ? <p className="text-xs text-emerald-700">Saved</p> : null}
+          {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}
     </div>

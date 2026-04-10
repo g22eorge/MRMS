@@ -32,6 +32,8 @@ model User {
   payoutsMarked Job[]     @relation("PayoutMarkedBy")
   auditLogs    AuditLog[]
   clientNotes  ClientNote[]
+  notifications Notification[]
+  notificationPreferences NotificationPreferences?
 }
 
 model UserPermission {
@@ -227,6 +229,7 @@ model Job {
 
   photos    Photo[]
   auditLogs AuditLog[]
+  notifications Notification[]
 }
 
 model Photo {
@@ -247,6 +250,62 @@ model AuditLog {
   action    String
   detail    String?
   createdAt DateTime @default(now())
+}
+
+enum NotificationType {
+  STATUS_CHANGE
+  APPROVAL_NEEDED
+  JOB_ASSIGNED
+  ESTIMATE_SUBMITTED
+  PAYMENT_RECEIVED
+  PAYOUT_GENERATED
+  TIMELINE_UPDATED
+  DELAY_NOTE_ADDED
+}
+
+enum NotificationChannel {
+  DASHBOARD
+  WHATSAPP
+  EMAIL
+}
+
+model Notification {
+  id          String            @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  jobId       String?
+  job         Job?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel     NotificationChannel @default(DASHBOARD)
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  
+  @@index([userId, isRead])
+  @@index([jobId])
+}
+
+model NotificationPreferences {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  notifyStatusChange  Boolean  @default(true)
+  notifyApprovalNeeded Boolean @default(true)
+  notifyJobAssigned   Boolean  @default(true)
+  notifyEstimateSubmitted Boolean @default(true)
+  notifyPaymentReceived Boolean @default(true)
+  notifyPayoutGenerated Boolean @default(true)
+  notifyTimelineUpdated Boolean @default(true)
+  notifyDelayNote    Boolean  @default(true)
+  
+  whatsappEnabled     Boolean  @default(true)
+  emailEnabled        Boolean  @default(false)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model DocumentBrandingSettings {

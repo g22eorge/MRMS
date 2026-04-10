@@ -79,7 +79,7 @@ export function PhotoUploader({
                         event.preventDefault();
                       }
                     }}
-                    className="text-xs text-rose-700"
+                    className="text-xs text-black underline"
                   >
                     Delete
                   </button>

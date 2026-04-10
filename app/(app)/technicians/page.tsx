@@ -35,10 +35,19 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
-  if (overdue) return { label: "Attention", tone: "bg-orange-100 text-orange-700 border-orange-200" };
-  if (ready) return { label: "High", tone: "bg-amber-100 text-amber-700 border-amber-200" };
-  if (ageDays >= 2) return { label: "Medium", tone: "bg-cyan-100 text-cyan-700 border-cyan-200" };
+  if (overdue) return { label: "Attention", tone: "bg-black text-white border-black" };
+  if (ready) return { label: "High", tone: "bg-[#D4AF37] text-white border-[#D4AF37]" };
+  if (ageDays >= 2) return { label: "Medium", tone: "bg-slate-300 text-slate-800 border-slate-400" };
   return { label: "Normal", tone: "bg-slate-100 text-slate-700 border-slate-200" };
+}
+
+function statusTone(status: JobStatus) {
+  if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37] text-white border-[#D4AF37]";
+  if (status === "IN_REPAIR") return "bg-black text-white border-black";
+  if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
+  if (status === "DIAGNOSING") return "bg-slate-300 text-slate-800 border-slate-400";
+  if (status === "CLOSED") return "bg-slate-100 text-slate-500 border-slate-200";
+  return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
 function shortText(value: string | null, max = 78) {
@@ -48,10 +57,10 @@ function shortText(value: string | null, max = 78) {
 }
 
 function statusTone(status: JobStatus) {
-  if (status === "READY_FOR_PICKUP") return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  if (status === "IN_REPAIR") return "bg-cyan-100 text-cyan-700 border-cyan-200";
-  if (status === "AWAITING_APPROVAL") return "bg-amber-100 text-amber-700 border-amber-200";
-  if (status === "DIAGNOSING") return "bg-violet-100 text-violet-700 border-violet-200";
+  if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
+  if (status === "IN_REPAIR") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
+  if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37] text-white border-[#D4AF37]";
+  if (status === "DIAGNOSING") return "bg-slate-300 text-slate-800 border-slate-400";
   if (status === "CLOSED") return "bg-slate-100 text-slate-700 border-slate-200";
   return "bg-slate-100 text-slate-700 border-slate-200";
 }
@@ -204,9 +213,9 @@ export default async function TechniciansPage({
     { href: routeWith({ status: "AWAITING_APPROVAL", ready: "" }), label: "Approval", count: awaitingApprovalCount, active: filters.status === "AWAITING_APPROVAL" },
   ];
   const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const mobileControlClass =
-    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100";
+    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const boardBrief = hasActiveFilters
     ? "Filtered queue view is active. Use the KPI cards below for live counts and clear filters to return to the full technician board."
     : "Use this board to triage work by readiness, approvals, and aging risk. KPI cards below provide live queue totals at a glance.";
@@ -219,8 +228,8 @@ export default async function TechniciansPage({
   return (
     <div className="space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Board Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Board Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{boardBrief}</p>
         </div>
       </div>
@@ -232,7 +241,7 @@ export default async function TechniciansPage({
         </Link>
         <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Ready</p>
-          <p className="text-sm font-semibold text-emerald-700">{readyCount}</p>
+          <p className="text-sm font-semibold text-[#D4AF37]">{readyCount}</p>
         </Link>
         <Link href="/technicians?status=IN_REPAIR" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">In Repair</p>
@@ -240,7 +249,7 @@ export default async function TechniciansPage({
         </Link>
         <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue</p>
-          <p className="text-sm font-semibold text-amber-700">{overdueCount}</p>
+          <p className="text-sm font-semibold text-[#D4AF37]">{overdueCount}</p>
         </Link>
       </div>
 
@@ -251,7 +260,7 @@ export default async function TechniciansPage({
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Ready</p>
-          <p className="text-2xl font-semibold text-emerald-700">{readyCount}</p>
+          <p className="text-2xl font-semibold text-[#D4AF37]">{readyCount}</p>
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">In Repair</p>
@@ -259,7 +268,7 @@ export default async function TechniciansPage({
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-xs text-[var(--ink-muted)]">Overdue</p>
-          <p className="text-2xl font-semibold text-amber-700">{overdueCount}</p>
+          <p className="text-2xl font-semibold text-[#D4AF37]">{overdueCount}</p>
         </div>
       </div>
 
@@ -268,13 +277,13 @@ export default async function TechniciansPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device and press Enter"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
         />
-        <details className="mt-2 rounded-lg border border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.7),rgba(248,250,252,0.9))] p-2">
+        <details className="mt-2 rounded-lg border border-[#D4AF37]/30 bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] p-2">
           <summary className="list-none">
-            <div className="flex items-center justify-between rounded-md border border-cyan-100 bg-white/70 px-2 py-1.5">
+            <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-white/70 px-2 py-1.5">
               <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-              <span className="text-xs text-cyan-700">Status + Queue</span>
+              <span className="text-xs text-[#D4AF37]">Status + Queue</span>
             </div>
           </summary>
           <div className="mt-2 grid gap-2">
@@ -414,7 +423,7 @@ export default async function TechniciansPage({
                   <div className="mt-2">
                     <div className="h-1.5 rounded-full bg-slate-200">
                       <div
-                        className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-amber-500" : "bg-[var(--brand)]"}`}
+                        className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
                         style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
                       />
                     </div>
@@ -474,15 +483,15 @@ export default async function TechniciansPage({
                       Assigned: {job.assignedTo?.name ?? "Unassigned"}
                     </span>
                     <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">Age {job.ageDays}d</span>
-                    {job.repairTimeline ? <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-cyan-700">ETA {job.repairTimeline}</span> : null}
-                    {job.overdue ? <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">Overdue</span> : null}
+                    {job.repairTimeline ? <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[#D4AF37]">ETA {job.repairTimeline}</span> : null}
+                    {job.overdue ? <span className="rounded-full border border-black bg-black px-2 py-0.5 text-white">Overdue</span> : null}
                   </div>
 
                   {typeof job.etaProgress === "number" ? (
                     <div className="mt-2">
                       <div className="h-1.5 rounded-full bg-slate-200">
                         <div
-                          className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-amber-500" : "bg-[var(--brand)]"}`}
+className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
                           style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
                         />
                       </div>
@@ -495,7 +504,7 @@ export default async function TechniciansPage({
                   </p>
 
                   {job.timelineNote ? (
-                    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Delay note: {shortText(job.timelineNote, 88)}</p>
+                    <p className="mt-2 rounded-md border border-black bg-black px-2 py-1 text-[11px] text-white">Delay note: {shortText(job.timelineNote, 88)}</p>
                   ) : null}
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

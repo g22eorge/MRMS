@@ -96,44 +96,44 @@ pre,
 }
 
 .btn-premium-secondary {
-  border: 1px solid #c9d5e2;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
-  color: #1e293b;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 5px 12px rgba(15, 23, 33, 0.09);
+  border: 1px solid #cccccc;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+  color: #000000;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 5px 12px rgba(0, 0, 0, 0.09);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .btn-premium-secondary:hover {
-  border-color: #9fb2c7;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 8px 16px rgba(15, 23, 33, 0.14);
+  border-color: #999999;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 8px 16px rgba(0, 0, 0, 0.14);
 }
 
 .btn-premium-danger {
-  border: 1px solid #fda4af;
-  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
-  color: #be123c;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 16px rgba(225, 29, 72, 0.14);
+  border: 1px solid #000000;
+  background: linear-gradient(180deg, #333333 0%, #000000 100%);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 16px rgba(0, 0, 0, 0.14);
 }
 
 .btn-premium-success {
-  border: 1px solid #059669;
-  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border: 1px solid #D4AF37;
+  background: linear-gradient(180deg, #D4AF37 0%, #B8960C 100%);
   color: #fff;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(5, 150, 105, 0.24);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(212, 175, 55, 0.24);
 }
 
 .btn-premium-warning {
-  border: 1px solid #b45309;
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  border: 1px solid #000000;
+  background: linear-gradient(180deg, #333333 0%, #000000 100%);
   color: #fff;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(180, 83, 9, 0.24);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 18px rgba(0, 0, 0, 0.24);
 }
 
 .btn-premium-dark {
-  border: 1px solid #1e293b;
-  background: linear-gradient(180deg, #1f2937 0%, #0f172a 100%);
+  border: 1px solid #000000;
+  background: linear-gradient(180deg, #333333 0%, #000000 100%);
   color: #fff;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 10px 18px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 10px 18px rgba(0, 0, 0, 0.24);
 }
 
 .btn-premium,
@@ -154,7 +154,7 @@ pre,
   outline: none;
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 4px rgba(13, 118, 110, 0.45),
+    0 0 0 4px rgba(212, 175, 55, 0.45),
     0 8px 16px rgba(15, 23, 42, 0.2);
 }
 
@@ -246,8 +246,8 @@ pre,
 
 :where(input, select, textarea):focus {
   outline: none;
-  border-color: rgba(13, 118, 110, 0.55);
-  box-shadow: 0 0 0 2px rgba(13, 118, 110, 0.14);
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.14);
   background: #ffffff;
 }
 
@@ -267,8 +267,8 @@ pre,
 }
 
 a:hover .nav-icon-premium {
-  border-color: rgba(15, 118, 110, 0.5);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.84) inset, 0 8px 14px rgba(15, 118, 110, 0.18);
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.84) inset, 0 8px 14px rgba(212, 175, 55, 0.18);
 }
 
 @media (hover: hover) and (pointer: fine) {

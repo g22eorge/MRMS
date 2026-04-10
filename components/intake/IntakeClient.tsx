@@ -6,10 +6,10 @@ import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  PENDING_INTAKE:   { label: "Pending",       cls: "bg-amber-100 text-amber-800" },
-  APPROVED:         { label: "Approved",       cls: "bg-emerald-100 text-emerald-800" },
-  REJECTED:         { label: "Rejected",       cls: "bg-rose-100 text-rose-800" },
-  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-blue-100 text-blue-800" },
+  PENDING_INTAKE:   { label: "Pending",       cls: "bg-slate-200 text-slate-700" },
+  APPROVED:         { label: "Approved",       cls: "bg-[#D4AF37] text-white" },
+  REJECTED:         { label: "Rejected",       cls: "bg-black text-white" },
+  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-slate-400 text-white" },
 };
 
 const HANDOVER_LABEL: Record<string, string> = {
@@ -33,7 +33,7 @@ function fmt(d: Date | string) {
 
 /* ── status badge ── */
 function StatusBadge({ status }: { status: string }) {
-  const meta = STATUS_META[status] ?? { label: status, cls: "bg-slate-100 text-slate-700" };
+  const meta = STATUS_META[status] ?? { label: status, cls: "bg-slate-200 text-slate-600" };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.cls}`}>
       {meta.label}
@@ -141,11 +141,11 @@ function RequestDrawer({
 
         {/* converted — open job banner */}
         {isConverted && req.linkedJobId && (
-          <div className="px-6 py-3 border-b border-blue-100 bg-blue-50 flex items-center justify-between gap-3">
-            <p className="text-xs text-blue-700 font-medium">This request was converted to a job.</p>
+          <div className="px-6 py-3 border-b border-slate-300 bg-slate-100 flex items-center justify-between gap-3">
+            <p className="text-xs text-slate-700 font-medium">This request was converted to a job.</p>
             <a
               href={`/jobs/${req.linkedJobId}`}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90 transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open Job
@@ -161,14 +161,14 @@ function RequestDrawer({
                 <ActionBtn
                   label="Approve"
                   disabled={pending}
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90"
                   onClick={() => act("APPROVED")}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
                 />
                 <ActionBtn
                   label="Reject"
                   disabled={pending}
-                  className="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                  className="bg-black text-white border border-black hover:bg-black/80"
                   onClick={() => act("REJECTED")}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>}
                 />
@@ -178,7 +178,7 @@ function RequestDrawer({
               <ActionBtn
                 label="Convert to Job"
                 disabled={pending}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90"
                 onClick={() => act("CONVERTED_TO_JOB")}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
               />
@@ -293,7 +293,7 @@ function RowActions({
             disabled={pending}
             onClick={(e) => act("APPROVED", e)}
             title="Approve"
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 hover:bg-[#D4AF37]/30 disabled:opacity-40 transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             Approve
@@ -302,7 +302,7 @@ function RowActions({
             disabled={pending}
             onClick={(e) => act("REJECTED", e)}
             title="Reject"
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-40 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-black text-white border border-black hover:bg-black/80 disabled:opacity-40 transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
             Reject
@@ -314,7 +314,7 @@ function RowActions({
           disabled={pending}
           onClick={(e) => act("CONVERTED_TO_JOB", e)}
           title="Convert to Job"
-          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-slate-200 text-slate-600 border border-slate-300 hover:bg-slate-300 disabled:opacity-40 transition-colors"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           Convert to Job
@@ -325,7 +325,7 @@ function RowActions({
           href={`/jobs/${req.linkedJobId}`}
           onClick={(e) => e.stopPropagation()}
           title="Open Job"
-          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-slate-200 text-slate-600 border border-slate-300 hover:bg-slate-300 transition-colors"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Open Job
@@ -439,8 +439,8 @@ export function IntakeClient({
     <>
       {/* brief */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] mb-5">
-        <div className="border-b border-cyan-200 bg-cyan-50/70 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-800">Intake Brief</p>
+        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Intake Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{brief}</p>
         </div>
       </div>

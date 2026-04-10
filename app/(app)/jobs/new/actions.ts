@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -55,14 +56,14 @@ export async function createJobAction(formData: FormData) {
   const { session, user } = await getCurrentUserRole();
 
   if (!can.createJob(user)) {
-    return { error: "You cannot create jobs." };
+    throw new Error("You cannot create jobs.");
   }
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = newJobSchema.safeParse(raw);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid form values" };
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid form values");
   }
 
   const client = await prisma.client.upsert({
@@ -115,7 +116,7 @@ export async function createJobAction(formData: FormData) {
   }
 
   if (!job) {
-    return { error: "Could not allocate unique job number. Please retry." };
+    throw new Error("Could not allocate unique job number. Please retry.");
   }
 
   await prisma.auditLog.create({
@@ -156,5 +157,5 @@ export async function createJobAction(formData: FormData) {
     }
   }
 
-  return { success: true, id: job.id };
+  redirect(`/jobs/${job.id}`);
 }
