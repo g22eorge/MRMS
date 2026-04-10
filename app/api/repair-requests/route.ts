@@ -229,9 +229,9 @@ export async function POST(request: NextRequest) {
 
     // Send WhatsApp confirmation (non-blocking)
     const phoneValue = String(body.phone || body.customer_phone || "");
-    const customerName = String(body.customer_name || "Customer");
-    if (phoneValue && phoneValue !== "") {
-      sendRepairRequestConfirmation(phoneValue, customerName, result.requestNumber).catch((err) => {
+    const customerName = String(body.customer_name ?? "Customer") as string;
+    if (phoneValue && phoneValue !== "" && customerName) {
+      sendRepairRequestConfirmation(phoneValue, customerName as string, result.requestNumber).catch((err) => {
         console.error("[RepairRequest] WhatsApp notification failed:", err);
       });
     }
