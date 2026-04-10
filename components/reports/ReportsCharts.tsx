@@ -34,7 +34,7 @@ export function ReportsCharts({
             <XAxis dataKey="name" interval={0} tick={{ fontSize: 11 }} />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="value" fill="#666666" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="value" fill="#D4AF37" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

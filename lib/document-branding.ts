@@ -22,10 +22,10 @@ export const defaultBranding = {
   footerText: "System built by Almeida @ 2026 all rights reserved.",
   signatureCompanyLabel: "Signed by: Eagle Info Solutions",
   signatureClientLabel: "Signed by: Client",
-  // Color scheme - Black & White
+  // Color scheme - Black, Gold & White
   primaryColor: "#000000",
-  secondaryColor: "#666666",
-  accentColor: "#666666",
+  secondaryColor: "#D4AF37",
+  accentColor: "#D4AF37",
   backgroundColor: "#FFFFFF",
   surfaceColor: "#F5F5F5",
   borderColor: "#E5E5E5",
