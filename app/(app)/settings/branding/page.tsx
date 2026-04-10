@@ -41,8 +41,14 @@ const brandingSchema = z.object({
   vatLabel: z.string().min(2).max(30),
   termsText: z.string().min(10).max(2000),
   footerText: z.string().min(6).max(180),
-  signatureCompanyLabel: z.string().min(6).max(120),
-  signatureClientLabel: z.string().min(6).max(120),
+  signatureCompanyLabel: z.string().min(2).max(120),
+  signatureClientLabel: z.string().min(2).max(120),
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#000000"),
+  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#666666"),
+  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#333333"),
+  backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#FFFFFF"),
+  surfaceColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#F5F5F5"),
+  borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#E5E5E5"),
 });
 
 function normalizeOptionalEmail(value: FormDataEntryValue | null) {
@@ -179,6 +185,12 @@ export default async function BrandingPage({
       footerText: String(formData.get("footerText") ?? ""),
       signatureCompanyLabel: String(formData.get("signatureCompanyLabel") ?? ""),
       signatureClientLabel: String(formData.get("signatureClientLabel") ?? ""),
+      primaryColor: String(formData.get("primaryColor") ?? "#000000"),
+      secondaryColor: String(formData.get("secondaryColor") ?? "#666666"),
+      accentColor: String(formData.get("accentColor") ?? "#333333"),
+      backgroundColor: String(formData.get("backgroundColor") ?? "#FFFFFF"),
+      surfaceColor: String(formData.get("surfaceColor") ?? "#F5F5F5"),
+      borderColor: String(formData.get("borderColor") ?? "#E5E5E5"),
     });
 
     if (!parsed.success) {
@@ -207,6 +219,12 @@ export default async function BrandingPage({
       footerText: sanitizeText(parsed.data.footerText),
       signatureCompanyLabel: sanitizeText(parsed.data.signatureCompanyLabel),
       signatureClientLabel: sanitizeText(parsed.data.signatureClientLabel),
+      primaryColor: parsed.data.primaryColor,
+      secondaryColor: parsed.data.secondaryColor,
+      accentColor: parsed.data.accentColor,
+      backgroundColor: parsed.data.backgroundColor,
+      surfaceColor: parsed.data.surfaceColor,
+      borderColor: parsed.data.borderColor,
     });
 
     revalidatePath("/settings/branding");
@@ -256,8 +274,38 @@ export default async function BrandingPage({
           </select>
           <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
           <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+            <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+            <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          </div>
+        </details>
+
+        <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+          <summary className="text-sm font-semibold text-[var(--ink)]">Colors</summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-center gap-2">
+              <input type="color" name="primaryColor" defaultValue={settings.primaryColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Primary</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" name="secondaryColor" defaultValue={settings.secondaryColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Secondary</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" name="accentColor" defaultValue={settings.accentColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Accent</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" name="backgroundColor" defaultValue={settings.backgroundColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Background</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" name="surfaceColor" defaultValue={settings.surfaceColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Surface</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" name="borderColor" defaultValue={settings.borderColor} className="h-9 w-12 rounded border cursor-pointer" />
+              <span className="text-xs text-[var(--ink-muted)]">Border</span>
+            </div>
           </div>
         </details>
 

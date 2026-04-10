@@ -270,6 +270,12 @@ model DocumentBrandingSettings {
   footerText           String   @default("System built by Almeida @ 2026 all rights reserved.")
   signatureCompanyLabel String  @default("Signed by: Eagle Info Solutions")
   signatureClientLabel String   @default("Signed by: Client")
+  primaryColor         String   @default("#000000")
+  secondaryColor       String   @default("#666666")
+  accentColor          String   @default("#333333")
+  backgroundColor      String   @default("#FFFFFF")
+  surfaceColor         String   @default("#F5F5F5")
+  borderColor          String   @default("#E5E5E5")
   updatedAt            DateTime @updatedAt
 }
 

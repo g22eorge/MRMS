@@ -22,6 +22,13 @@ export const defaultBranding = {
   footerText: "System built by Almeida @ 2026 all rights reserved.",
   signatureCompanyLabel: "Signed by: Eagle Info Solutions",
   signatureClientLabel: "Signed by: Client",
+  // Color scheme - Premium monochrome ICT
+  primaryColor: "#000000",
+  secondaryColor: "#666666",
+  accentColor: "#333333",
+  backgroundColor: "#FFFFFF",
+  surfaceColor: "#F5F5F5",
+  borderColor: "#E5E5E5",
 };
 
 type BrandingSettings = typeof defaultBranding;
