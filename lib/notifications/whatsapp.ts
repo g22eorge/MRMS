@@ -25,10 +25,13 @@ function getConfig(): WhatsAppConfig | null {
 }
 
 export async function sendRepairRequestConfirmation(
-  phone: string,
-  customerName: string,
-  requestNumber: string
+  phone?: string,
+  customerName?: string,
+  requestNumber?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!phone || !customerName || !requestNumber) {
+    return { success: false, error: "Missing required parameters" };
+  }
   const config = getConfig();
   if (!config) {
     return { success: false, error: "WhatsApp not configured" };
@@ -125,9 +128,12 @@ async function sendWhatsAppMessage({
   to,
   message,
 }: {
-  to: string;
-  message: string;
+  to?: string;
+  message?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!to || !message) {
+    return { success: false, error: "Missing to or message" };
+  }
   const config = getConfig();
   if (!config) {
     return { success: false, error: "WhatsApp not configured" };
