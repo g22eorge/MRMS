@@ -47,22 +47,13 @@ function statusTone(status: JobStatus) {
   if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
   if (status === "DIAGNOSING") return "bg-slate-300 text-slate-800 border-slate-400";
   if (status === "CLOSED") return "bg-slate-100 text-slate-500 border-slate-200";
-  return "bg-slate-100 text-slate-700 border-slate-200";
+return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
 function shortText(value: string | null, max = 78) {
   if (!value) return "No issue summary provided";
   if (value.length <= max) return value;
   return `${value.slice(0, max).trimEnd()}...`;
-}
-
-function statusTone(status: JobStatus) {
-  if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
-  if (status === "IN_REPAIR") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
-  if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37] text-white border-[#D4AF37]";
-  if (status === "DIAGNOSING") return "bg-slate-300 text-slate-800 border-slate-400";
-  if (status === "CLOSED") return "bg-slate-100 text-slate-700 border-slate-200";
-  return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
 function statusLabel(status: JobStatus) {

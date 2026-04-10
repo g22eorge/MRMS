@@ -1,25 +1,16 @@
 "use client";
 
-import { useFormState } from "react";
-import { ChangeEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
 const steps = ["Client Info", "Device Info", "Issue", "Review"] as const;
 
-const initialState = { error: null as string | null };
-
 export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   const [step, setStep] = useState(0);
-  const [formState, formAction] = useFormState(async (prevState: typeof initialState, formData: FormData) => {
-    try {
-      await createJobAction(formData);
-      return { error: null };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create job";
-      return { error: message };
-    }
-  }, initialState);
+  const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -39,6 +30,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     email: string | null;
     organization: string | null;
   }>(null);
+  const router = useRouter();
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
 
@@ -48,12 +40,14 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   };
 
   return (
-    <form action={formAction} className="space-y-4">
-      {formState?.error && (
-        <div className="rounded-md border border-black bg-black p-3 text-sm text-white">
-          {formState.error}
-        </div>
-      )}
+    <form
+      action={(formData) => {
+        startTransition(async () => {
+          await createJobAction(formData);
+        });
+      }}
+      className="space-y-4"
+    >
       <div className="flex gap-2 overflow-x-auto">
         {steps.map((label, idx) => (
           <button

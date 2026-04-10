@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserRole } from "@/lib/session";
 import { markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notifications";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getCurrentUser();
-  if (!session?.user?.id) {
+  const { user } = await getCurrentUserRole();
+  if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -15,7 +15,7 @@ export async function POST(
     const { id } = await params;
     
     if (id === "read-all") {
-      await markAllNotificationsAsRead(session.user.id);
+      await markAllNotificationsAsRead(user.id);
       return NextResponse.json({ success: true });
     }
 

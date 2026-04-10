@@ -39,10 +39,7 @@ export async function sendRepairRequestConfirmation(
 
   const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
 
-  return sendWhatsAppMessage({
-    to: phone,
-    message,
-  });
+  return sendCustomWhatsAppMessage(phone, message);
 }
 
 export async function sendIntakeApprovalNotification(
@@ -64,10 +61,7 @@ export async function sendIntakeApprovalNotification(
   
   message += `Please bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
 
-  return sendWhatsAppMessage({
-    to: phone,
-    message,
-  });
+  return sendCustomWhatsAppMessage(phone, message);
 }
 
 export async function sendIntakeRejectionNotification(
@@ -82,10 +76,7 @@ export async function sendIntakeRejectionNotification(
 
   const message = `Hello ${customerName},\n\nUnfortunately, we are unable to process your repair request (${requestNumber}) at this time.\n\nPlease contact us for more information.\n\nBest regards,\nEagle Info Solutions`;
 
-  return sendWhatsAppMessage({
-    to: phone,
-    message,
-  });
+  return sendCustomWhatsAppMessage(phone, message);
 }
 
 export async function sendJobCreatedNotification(
@@ -100,10 +91,7 @@ export async function sendJobCreatedNotification(
 
   const message = `Hello ${customerName},\n\nYour device has been registered as Job #${jobNumber}.\n\nWe will update you as the repair progresses.\n\nBest regards,\nEagle Info Solutions`;
 
-  return sendWhatsAppMessage({
-    to: phone,
-    message,
-  });
+  return sendCustomWhatsAppMessage(phone, message);
 }
 
 export async function sendJobCompletionNotification(
@@ -118,13 +106,17 @@ export async function sendJobCompletionNotification(
 
   const message = `Hello ${customerName},\n\nGreat news! Your device (Job #${jobNumber}) is ready for pickup.\n\nPlease visit our shop to collect your device.\n\nBest regards,\nEagle Info Solutions`;
 
-  return sendWhatsAppMessage({
-    to: phone,
-    message,
-  });
+  return sendCustomWhatsAppMessage(phone, message);
 }
 
-async function sendWhatsAppMessage({
+export async function sendCustomWhatsAppMessage(
+  to: string,
+  message: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  return sendWhatsAppMessageInternal({ to, message });
+}
+
+async function sendWhatsAppMessageInternal({
   to,
   message,
 }: {

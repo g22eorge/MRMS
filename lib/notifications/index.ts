@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NotificationType, NotificationChannel, JobStatus } from "@prisma/client";
-import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
+import { sendCustomWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 interface CreateNotificationParams {
   type: NotificationType;
@@ -206,10 +206,10 @@ export async function notifyStatusChange(
     });
 
     if (client?.phone) {
-      await sendWhatsAppMessage({
-        to: client.phone,
-        message: `Hi ${client.fullName}, your device for job ${jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`,
-      });
+      await sendCustomWhatsAppMessage(
+        client.phone,
+        `Hi ${client.fullName}, your device for job ${jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`
+      );
     }
   }
 }
@@ -237,10 +237,10 @@ export async function notifyApprovalNeeded(
   });
 
   if (client?.phone) {
-    await sendWhatsAppMessage({
-      to: client.phone,
-      message: `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: UGX ${costEstimate.toLocaleString()}. Please confirm to proceed. - Eagle Info Solutions`,
-    });
+    await sendCustomWhatsAppMessage(
+      client.phone,
+      `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: UGX ${costEstimate.toLocaleString()}. Please confirm to proceed. - Eagle Info Solutions`
+    );
   }
 }
 

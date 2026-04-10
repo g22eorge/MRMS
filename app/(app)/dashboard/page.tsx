@@ -353,29 +353,6 @@ export default async function DashboardPage({
             </ul>
           )}
         </PersistedDisclosure>
-          <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
-          {jobs.length === 0 ? (
-            <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {jobs.slice(0, 6).map((job) => (
-                <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{job.jobNumber}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-[var(--ink-muted)]">Fee</p>
-                    <p className="font-medium">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
-                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
-                      {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
     );
   }

@@ -468,18 +468,6 @@ export async function updateJobAction(formData: FormData) {
     );
   }
 
-  if (
-    payload.costEstimate !== undefined &&
-    job.status === JobStatus.AWAITING_APPROVAL &&
-    payload.clientApproved === true
-  ) {
-    await notifyApprovalNeeded(
-      job.id,
-      job.jobNumber,
-      job.client.fullName,
-      payload.costEstimate
-    );
-  }
 
   if (payload.assignedToId && payload.assignedToId !== job.assignedToId) {
     await notifyJobAssigned(

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserRole } from "@/lib/session";
 import { getUnreadNotifications, getAllNotifications, getUnreadCount } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
-  const session = await getCurrentUser();
-  if (!session?.user?.id) {
+  const { user } = await getCurrentUserRole();
+  if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const notifications = all
-      ? await getAllNotifications(session.user.id, limit)
-      : await getUnreadNotifications(session.user.id, limit);
-    const unreadCount = await getUnreadCount(session.user.id);
+      ? await getAllNotifications(user.id, limit)
+      : await getUnreadNotifications(user.id, limit);
+    const unreadCount = await getUnreadCount(user.id);
 
     return NextResponse.json({
       notifications: notifications.map((n) => ({
