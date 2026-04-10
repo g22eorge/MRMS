@@ -61,6 +61,12 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     footerText: String(row.footerText ?? defaultBranding.footerText),
     signatureCompanyLabel: String(row.signatureCompanyLabel ?? defaultBranding.signatureCompanyLabel),
     signatureClientLabel: String(row.signatureClientLabel ?? defaultBranding.signatureClientLabel),
+    primaryColor: String(row.primaryColor ?? defaultBranding.primaryColor),
+    secondaryColor: String(row.secondaryColor ?? defaultBranding.secondaryColor),
+    accentColor: String(row.accentColor ?? defaultBranding.accentColor),
+    backgroundColor: String(row.backgroundColor ?? defaultBranding.backgroundColor),
+    surfaceColor: String(row.surfaceColor ?? defaultBranding.surfaceColor),
+    borderColor: String(row.borderColor ?? defaultBranding.borderColor),
   };
 }
 
