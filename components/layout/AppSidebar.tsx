@@ -172,6 +172,14 @@ function roleLabel(role: Role, href: string, label: string) {
 }
 
 function orderedNavForRole(role: Role, permissions: string[]) {
+  // For OPS role, always show all main links regardless of permissions
+  if (role === "OPS") {
+    const opsLinks = nav.filter((item) => 
+      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile"].includes(item.href)
+    );
+    return opsLinks;
+  }
+
   const visible = nav.filter((item) => isVisible(role, item.roles));
   const permissionUser = { role, permissions };
   if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/intake")) {
