@@ -58,6 +58,42 @@ export async function GET() {
     }),
   );
 
+  // Dashboard-specific query patterns that can break on libsql adapters
+  await run("dashboard:externalCompletedRelationFilter", async () =>
+    prisma.job.findMany({
+      take: 3,
+      where: {
+        status: "COMPLETED",
+        repairPath: "EXTERNAL",
+        assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
+      },
+      select: { id: true, jobNumber: true },
+    }),
+  );
+
+  await run("dashboard:assignedToInclude", async () =>
+    prisma.job.findMany({
+      take: 3,
+      where: { assignedToId: { not: null } },
+      include: { assignedTo: true },
+    }),
+  );
+
+  // Jobs list query pattern: relation filters (client name/phone search)
+  await run("jobs:clientRelationFilterSearch", async () =>
+    prisma.job.findMany({
+      take: 3,
+      where: {
+        OR: [
+          { jobNumber: { contains: "EIS" } },
+          { client: { fullName: { contains: "a" } } },
+          { client: { phone: { contains: "7" } } },
+        ],
+      },
+      include: { client: true, assignedTo: true },
+    }),
+  );
+
   // Notifications (these were missing in prod)
   await run("notification:count", async () => prisma.notification.count());
   await run("notificationPreferences:count", async () => prisma.notificationPreferences.count());
