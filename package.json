@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "export DATABASE_URL=\"file:./dev.db\"; bunx prisma db push --skip-generate && bunx prisma generate && next dev --webpack",
-    "build": "export DATABASE_URL=\"file:./dev.db\"; bunx prisma db push --skip-generate && bunx prisma generate && next build",
-    "vercel-build": "export DATABASE_URL=\"file:./dev.db\"; bunx prisma db push --skip-generate && bunx prisma generate && next build",
+    "dev": "export DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\"; bunx prisma db push --skip-generate && bunx prisma generate && next dev --webpack",
+    "build": "export DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\"; bunx prisma db push --skip-generate && bunx prisma generate && next build",
+    "vercel-build": "export DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\"; bunx prisma db push --skip-generate && bunx prisma generate && next build",
     "start": "if [ -f .next/standalone/server.js ]; then PORT=${PORT:-3000} HOSTNAME=0.0.0.0 node .next/standalone/server.js; else next start; fi",
     "lint": "eslint",
     "check:links": "node scripts/check-links.mjs",
     "report:revenue": "node scripts/revenue-report.mjs",
-    "qa:data-integrity": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && node scripts/qa-data-integrity.mjs",
-    "qa:concurrency": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && node scripts/qa-concurrency.mjs",
+    "qa:data-integrity": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && node scripts/qa-data-integrity.mjs",
+    "qa:concurrency": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && node scripts/qa-concurrency.mjs",
     "qa:perf": "node scripts/qa-perf.mjs",
     "qa:http-security": "node scripts/qa-http-security.mjs",
     "qa:e2e": "playwright test",
@@ -22,9 +22,9 @@
     "predeploy:ci": "REQUIRE_HTTPS=1 REQUIRE_QA_HTTP=1 REQUIRE_E2E=1 node scripts/predeploy-check.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "bunx prisma migrate dev",
-    "seed": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bun run prisma/seed.ts",
-    "seed:base": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bun run prisma/seed-base.ts",
-    "seed:demo": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bun run prisma/seed.ts"
+    "seed": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun run prisma/seed.ts",
+    "seed:base": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun run prisma/seed-base.ts",
+    "seed:demo": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun run prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
