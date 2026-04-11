@@ -164,7 +164,29 @@ model Client {
   updatedAt    DateTime @updatedAt
 
   jobs         Job[]
+  devices      Device[]
   notesEntries ClientNote[]
+}
+
+model Device {
+  id           String     @id @default(cuid())
+  clientId     String
+  client       Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  deviceType   DeviceType
+  brand        String
+  model        String
+  serialOrImei String?
+  accessories  String?
+  physicalNotes String?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  jobs         Job[]
+
+  @@index([clientId])
+  @@index([serialOrImei])
 }
 
 model ClientNote {
@@ -184,6 +206,8 @@ model Job {
   repairPath    RepairPath?
   clientId      String
   client        Client     @relation(fields: [clientId], references: [id])
+  deviceId      String?
+  device        Device?    @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   createdById   String
   createdBy     User       @relation("CreatedBy", fields: [createdById], references: [id])
   assignedToId  String?
@@ -240,6 +264,8 @@ model Job {
   photos    Photo[]
   auditLogs AuditLog[]
   notifications Notification[]
+
+  @@index([deviceId])
 }
 
 model Photo {

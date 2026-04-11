@@ -17,7 +17,7 @@ export async function GET() {
   </head>
   <body style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px;">
     <h1 style="margin: 0 0 8px;">MRMS DB Fix</h1>
-    <p style="margin: 0 0 16px;">Runs a one-time schema repair (delivery columns + notification tables). Admin only.</p>
+    <p style="margin: 0 0 16px;">Runs a one-time schema repair (delivery + notifications + branding + devices). Admin only.</p>
     <button id="run" style="padding: 10px 14px; border: 1px solid #000; background: #000; color: #fff; border-radius: 8px; cursor: pointer;">Run Fix</button>
     <pre id="out" style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; white-space: pre-wrap;"></pre>
     <script>
@@ -75,8 +75,38 @@ export async function POST() {
 
   const changes: Array<{ kind: string; detail: string }> = [];
 
-  // Delivery columns
+  // Devices
+  const hasDevice = await tableExists("Device");
+  if (!hasDevice) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Device" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "clientId" TEXT NOT NULL,
+        "deviceType" TEXT NOT NULL,
+        "brand" TEXT NOT NULL,
+        "model" TEXT NOT NULL,
+        "serialOrImei" TEXT,
+        "accessories" TEXT,
+        "physicalNotes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Device_clientId_idx" ON "Device"("clientId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Device_serialOrImei_idx" ON "Device"("serialOrImei")');
+    changes.push({ kind: "create_table", detail: "Created Device + indexes" });
+  }
+
+  // Job columns
   const cols = await jobColumns();
+  if (!cols.has("deviceId")) {
+    await prisma.$executeRawUnsafe('ALTER TABLE "Job" ADD COLUMN "deviceId" TEXT');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Job_deviceId_idx" ON "Job"("deviceId")');
+    changes.push({ kind: "alter_table", detail: "Added Job.deviceId (+ index)" });
+  }
+
+  // Delivery columns
   if (!cols.has("deliveredAt")) {
     await prisma.$executeRawUnsafe('ALTER TABLE "Job" ADD COLUMN "deliveredAt" DATETIME');
     changes.push({ kind: "alter_table", detail: "Added Job.deliveredAt" });
@@ -165,10 +195,11 @@ export async function POST() {
   return NextResponse.json({
     ok: true,
     applied: changes,
-    jobColumnsNow: ["deliveredAt", "deliveryMethod", "deliveredTo"].map((c) => ({ c, present: finalCols.has(c) })),
+    jobColumnsNow: ["deviceId", "deliveredAt", "deliveryMethod", "deliveredTo"].map((c) => ({ c, present: finalCols.has(c) })),
     tablesNow: {
       Notification: await tableExists("Notification"),
       NotificationPreferences: await tableExists("NotificationPreferences"),
+      Device: await tableExists("Device"),
     },
   });
 }

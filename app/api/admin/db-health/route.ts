@@ -12,6 +12,7 @@ const TABLES_TO_CHECK = [
   "Verification",
   "UserPermission",
   "Client",
+  "Device",
   "Job",
   "Photo",
   "AuditLog",
@@ -23,6 +24,7 @@ const TABLES_TO_CHECK = [
 
 const JOB_COLUMNS_TO_CHECK = [
   "status",
+  "deviceId",
   "deliveredAt",
   "deliveryMethod",
   "deliveredTo",

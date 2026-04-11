@@ -6,6 +6,28 @@ import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
 const steps = ["Client Info", "Device Info", "Issue", "Review"] as const;
 
+type DeviceDraft = {
+  deviceType: string;
+  brand: string;
+  model: string;
+  serialOrImei: string;
+  accessories: string;
+  physicalNotes: string;
+  issueDescription: string;
+};
+
+function blankDevice(): DeviceDraft {
+  return {
+    deviceType: "",
+    brand: "",
+    model: "",
+    serialOrImei: "",
+    accessories: "",
+    physicalNotes: "",
+    issueDescription: "",
+  };
+}
+
 export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   const [step, setStep] = useState(0);
   const [isPending, startTransition] = useTransition();
@@ -14,15 +36,9 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     phone: "",
     email: "",
     organization: "",
-    deviceType: "",
-    brand: "",
-    model: "",
-    serialOrImei: "",
-    accessories: "",
-    physicalNotes: "",
-    issueDescription: "",
     receivedAt: "",
   });
+  const [devices, setDevices] = useState<DeviceDraft[]>([blankDevice()]);
   const [existingClient, setExistingClient] = useState<null | {
     fullName: string;
     email: string | null;
@@ -36,15 +52,24 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const onDeviceInput = (index: number, field: keyof DeviceDraft, value: string) => {
+    setDevices((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
   return (
-    <form
-      action={(formData) => {
-        startTransition(async () => {
-          await createJobAction(formData);
-        });
-      }}
-      className="space-y-4"
-    >
+      <form
+        action={(formData) => {
+          startTransition(async () => {
+            formData.set("devicesJson", JSON.stringify(devices));
+            await createJobAction(formData);
+          });
+        }}
+        className="space-y-4"
+      >
       <div className="flex gap-2 overflow-x-auto">
         {steps.map((label, idx) => (
           <button
@@ -92,38 +117,108 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       ) : null}
 
       {step === 1 ? (
-        <section className="grid gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 md:grid-cols-2">
-          <select name="deviceType" value={form.deviceType} onChange={onInput} required className="rounded-md border border-[var(--line)] px-3 py-2">
-            <option value="">Device Type</option>
-            <option value="PHONE_ANDROID">Phone Android</option>
-            <option value="PHONE_IPHONE">Phone iPhone</option>
-            <option value="TABLET">Tablet</option>
-            <option value="WINDOWS_PC">Windows PC</option>
-            <option value="MAC">Mac</option>
-            <option value="OTHER">Other</option>
-          </select>
-          <input name="brand" value={form.brand} onChange={onInput} required placeholder="Brand" className="rounded-md border border-[var(--line)] px-3 py-2" />
-          <input name="model" value={form.model} onChange={onInput} required placeholder="Model" className="rounded-md border border-[var(--line)] px-3 py-2" />
-          <input name="serialOrImei" value={form.serialOrImei} onChange={onInput} placeholder="Serial / IMEI" className="rounded-md border border-[var(--line)] px-3 py-2" />
-          <textarea name="accessories" value={form.accessories} onChange={onInput} placeholder="Accessories" className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2" />
-          <textarea name="physicalNotes" value={form.physicalNotes} onChange={onInput} placeholder="Physical notes" className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2" />
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Before Repair Photos</label>
-            <input name="photos" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+        <section className="space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-[var(--ink)]">Devices</p>
+            <button
+              type="button"
+              onClick={() => setDevices((prev) => [...prev, blankDevice()])}
+              className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px]"
+            >
+              Add another device
+            </button>
+          </div>
+
+          <div className="grid gap-3">
+            {devices.map((device, idx) => (
+              <div key={idx} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Device {idx + 1}</p>
+                  <button
+                    type="button"
+                    disabled={devices.length === 1}
+                    onClick={() => setDevices((prev) => prev.filter((_, i) => i !== idx))}
+                    className="text-xs text-black disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <select
+                    value={device.deviceType}
+                    onChange={(e) => onDeviceInput(idx, "deviceType", e.target.value)}
+                    required
+                    className="rounded-md border border-[var(--line)] px-3 py-2"
+                  >
+                    <option value="">Device Type</option>
+                    <option value="PHONE_ANDROID">Phone Android</option>
+                    <option value="PHONE_IPHONE">Phone iPhone</option>
+                    <option value="TABLET">Tablet</option>
+                    <option value="WINDOWS_PC">Windows PC</option>
+                    <option value="MAC">Mac</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <input
+                    value={device.brand}
+                    onChange={(e) => onDeviceInput(idx, "brand", e.target.value)}
+                    required
+                    placeholder="Brand"
+                    className="rounded-md border border-[var(--line)] px-3 py-2"
+                  />
+                  <input
+                    value={device.model}
+                    onChange={(e) => onDeviceInput(idx, "model", e.target.value)}
+                    required
+                    placeholder="Model"
+                    className="rounded-md border border-[var(--line)] px-3 py-2"
+                  />
+                  <input
+                    value={device.serialOrImei}
+                    onChange={(e) => onDeviceInput(idx, "serialOrImei", e.target.value)}
+                    placeholder="Serial / IMEI"
+                    className="rounded-md border border-[var(--line)] px-3 py-2"
+                  />
+                  <textarea
+                    value={device.accessories}
+                    onChange={(e) => onDeviceInput(idx, "accessories", e.target.value)}
+                    placeholder="Accessories"
+                    className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
+                  />
+                  <textarea
+                    value={device.physicalNotes}
+                    onChange={(e) => onDeviceInput(idx, "physicalNotes", e.target.value)}
+                    placeholder="Physical notes"
+                    className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       ) : null}
 
       {step === 2 ? (
         <section className="space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <textarea
-            name="issueDescription"
-            value={form.issueDescription}
-            onChange={onInput}
-            required
-            placeholder="Issue description in client's words"
-            className="min-h-28 w-full rounded-md border border-[var(--line)] px-3 py-2"
-          />
+          <div className="grid gap-3">
+            {devices.map((device, idx) => (
+              <div key={idx} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issue for device {idx + 1}</p>
+                <textarea
+                  value={device.issueDescription}
+                  onChange={(e) => onDeviceInput(idx, "issueDescription", e.target.value)}
+                  required
+                  placeholder="Issue description in client's words"
+                  className="mt-2 min-h-24 w-full rounded-md border border-[var(--line)] px-3 py-2"
+                />
+                <div className="mt-2">
+                  <label className="mb-1 block text-sm font-medium">Before Repair Photos (device {idx + 1})</label>
+                  <input name={`photos_${idx}`} type="file" accept="image/png,image/jpeg,image/webp" multiple />
+                </div>
+              </div>
+            ))}
+          </div>
+
           <input
             value={receivedBy}
             readOnly
@@ -145,9 +240,17 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <div className="grid gap-2 text-sm text-[var(--ink)] md:grid-cols-2">
             <p><span className="font-medium">Client:</span> {form.fullName || "-"}</p>
             <p><span className="font-medium">Phone:</span> {form.phone || "-"}</p>
-            <p><span className="font-medium">Device:</span> {form.deviceType || "-"}</p>
-            <p><span className="font-medium">Model:</span> {form.brand} {form.model}</p>
-            <p className="md:col-span-2"><span className="font-medium">Issue:</span> {form.issueDescription || "-"}</p>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {devices.map((d, idx) => (
+              <div key={idx} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Device {idx + 1}</p>
+                <p className="mt-1 text-sm"><span className="font-medium">Type:</span> {d.deviceType || "-"}</p>
+                <p className="text-sm"><span className="font-medium">Model:</span> {d.brand} {d.model}</p>
+                <p className="text-sm"><span className="font-medium">Serial/IMEI:</span> {d.serialOrImei || "-"}</p>
+                <p className="mt-2 text-sm"><span className="font-medium">Issue:</span> {d.issueDescription || "-"}</p>
+              </div>
+            ))}
           </div>
         </section>
       ) : null}
@@ -156,14 +259,8 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       <input type="hidden" name="phone" value={form.phone} />
       <input type="hidden" name="email" value={form.email} />
       <input type="hidden" name="organization" value={form.organization} />
-      <input type="hidden" name="deviceType" value={form.deviceType} />
-      <input type="hidden" name="brand" value={form.brand} />
-      <input type="hidden" name="model" value={form.model} />
-      <input type="hidden" name="serialOrImei" value={form.serialOrImei} />
-      <input type="hidden" name="accessories" value={form.accessories} />
-      <input type="hidden" name="physicalNotes" value={form.physicalNotes} />
-      <input type="hidden" name="issueDescription" value={form.issueDescription} />
       <input type="hidden" name="receivedAt" value={form.receivedAt} />
+      <input type="hidden" name="devicesJson" value={JSON.stringify(devices)} />
 
       <div className="flex justify-between">
         <button
