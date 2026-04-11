@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 
 import { can } from "@/lib/permissions";
 
@@ -63,23 +62,6 @@ function isVisible(role: Role, rule: "all" | readonly string[]) {
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
-}
-
-function mobileLabel(label: string) {
-  if (label === "Dashboard") return "Home";
-  if (label === "Clients") return "Client";
-  if (label === "Reports") return "Report";
-  if (label === "Billing Jobs") return "Jobs";
-  if (label === "Approval Jobs") return "Approvals";
-  if (label === "My Queue") return "Queue";
-  if (label === "My Jobs") return "Jobs";
-  if (label === "Work Orders") return "Jobs";
-  if (label === "My Payouts") return "Payouts";
-  if (label === "Work Queue") return "Queue";
-  if (label === "Technician Board") return "Board";
-  if (label === "Overview") return "Home";
-  if (label === "Profile") return "Me";
-  return label;
 }
 
 function navIcon(href: string) {
@@ -209,155 +191,43 @@ function groupedNavForRole(role: Role, permissions: string[]) {
     .filter((section) => section.items.length > 0);
 }
 
-function mobilePrimaryForRole(role: Role, items: ReturnType<typeof orderedNavForRole>) {
-  const preferred: Partial<Record<Role, readonly string[]>> = {
-    ADMIN: ["/dashboard", "/jobs", "/reports"],
-    OPS: ["/dashboard", "/jobs", "/reports"],
-    TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/technicians"],
-    TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts"],
-    INTAKE: ["/dashboard", "/jobs", "/clients"],
-  };
-
-  const wanted = preferred[role] ?? items.map((item) => item.href).slice(0, 3);
-  return wanted
-    .map((href) => items.find((item) => item.href === href))
-    .filter((item): item is (typeof items)[number] => Boolean(item));
-}
-
 export function AppSidebar({ role, permissions = [] }: { role: Role; permissions?: string[] }) {
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const visibleNav = orderedNavForRole(role, permissions);
   const groupedNav = groupedNavForRole(role, permissions);
-  const mobilePrimary = mobilePrimaryForRole(role, visibleNav);
-  const mobileMore = visibleNav.filter((item) => !mobilePrimary.some((primary) => primary.href === item.href));
-  const moreActive = mobileMore.some((item) => isActive(pathname, item.href));
 
   return (
-    <>
-      <aside className="glass hidden border-r border-[var(--line)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:flex-col">
-        <div className="border-b border-[var(--line)] px-5 py-5">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">Eagle Info</p>
-          <p className="text-base font-semibold">Repair Command Center</p>
-        </div>
-        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-          {groupedNav.map((section) => (
-            <div key={section.group} className="space-y-1.5">
-              <p className="px-2 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>
-              {section.items.map((item) => {
-                const label = roleLabel(role, item.href, item.label);
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`block w-full rounded-lg px-2.5 py-1.5 text-[15px] font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
-                      active
-                        ? "panel-shadow border border-[var(--brand)]/85 bg-[linear-gradient(180deg,rgba(212,175,55,0.15),rgba(212,175,55,0.1))] text-[var(--ink)]"
-                        : "text-[var(--ink)] hover:bg-[var(--panel)]"
-                    }`}
-                  >
-                      <span className="flex items-center gap-2.5">
-                      <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
-                      <span>{label}</span>
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-      </aside>
-
-      <nav className="mobile-bottom-nav glass fixed bottom-0 left-0 right-0 z-40 flex items-center gap-1 border-t border-[var(--line)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_22px_rgba(15,23,33,0.12)] lg:hidden">
-        {mobilePrimary.map((item) => {
-          const label = roleLabel(role, item.href, item.label);
-          const active = isActive(pathname, item.href);
-          return (
-          <Link
-            key={item.href}
-            href={item.href}
-              className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-1 ${
-                active
-                  ? "bg-[var(--brand)] text-white"
-                  : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-              }`}
-            >
-            <span className="flex items-center gap-1.5 truncate">
-              <span className="nav-icon-premium sidebar-nav-icon h-5 w-5 rounded-md">{navIcon(item.href)}</span>
-              <span className="truncate">{mobileLabel(label)}</span>
-            </span>
-          </Link>
-          );
-        })}
-        {mobileMore.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-xs font-medium ${
-              moreActive
-                ? "bg-[var(--brand)] text-white"
-                : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-            }`}
-          >
-            <span className="truncate">More</span>
-          </button>
-        ) : null}
-      </nav>
-
-      {moreOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMoreOpen(false)}>
-          <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-[var(--line)] bg-white p-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold">More</p>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(false)}
-                className="rounded-md border border-[var(--line)] px-2 py-1 text-xs"
-              >
-                Close
-              </button>
-            </div>
-            <div className="grid gap-2">
-              {groupedNav
-                .map((section) => ({
-                  group: section.group,
-                  items: section.items.filter((item) => mobileMore.some((mobileItem) => mobileItem.href === item.href)),
-                }))
-                .filter((section) => section.items.length > 0)
-                .map((section) => (
-                  <div key={`mobile-more-${section.group}`} className="space-y-1.5">
-                    <p className="px-1 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>
-                    {section.items.map((item) => {
-                      const label = roleLabel(role, item.href, item.label);
-                      const active = isActive(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMoreOpen(false)}
-                          className={`block w-full rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
-                            active
-                              ? "border border-[var(--brand)] bg-[var(--panel-strong)] text-[var(--ink)]"
-                              : "text-[var(--ink)] hover:bg-[var(--panel-strong)]"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
-                            <span>{label}</span>
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))}
-            </div>
+    <aside className="glass hidden border-r border-[var(--line)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:flex-col">
+      <div className="border-b border-[var(--line)] px-5 py-5">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">Eagle Info</p>
+        <p className="text-base font-semibold">Repair Command Center</p>
+      </div>
+      <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+        {groupedNav.map((section) => (
+          <div key={section.group} className="space-y-1.5">
+            <p className="px-2 text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">{groupLabel[section.group]}</p>
+            {section.items.map((item) => {
+              const label = roleLabel(role, item.href, item.label);
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block w-full rounded-lg px-2.5 py-1.5 text-[15px] font-medium focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 ${
+                    active
+                      ? "panel-shadow border border-[var(--brand)]/85 bg-[linear-gradient(180deg,rgba(212,175,55,0.15),rgba(212,175,55,0.1))] text-[var(--ink)]"
+                      : "text-[var(--ink)] hover:bg-[var(--panel)]"
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="nav-icon-premium sidebar-nav-icon">{navIcon(item.href)}</span>
+                    <span>{label}</span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
-        </div>
-      ) : null}
-    </>
+        ))}
+      </nav>
+    </aside>
   );
 }

@@ -392,13 +392,13 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {visibleTabs.map((tab) => (
           <button
             type="button"
             key={tab}
             onClick={() => setActive(tab)}
-            className={`w-full rounded-lg border px-3 py-2.5 text-sm capitalize transition sm:w-auto ${
+            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition ${
               active === tab
                 ? "border-[#D4AF37] bg-[#D4AF37] text-white"
                 : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[#D4AF37]/50"

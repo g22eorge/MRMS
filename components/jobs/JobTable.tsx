@@ -77,7 +77,7 @@ export function JobTable({
 
   return (
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-      <div className="flex items-center justify-between border-b border-[var(--line)] bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] px-3 py-2.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Job Results</p>
         <div className="flex items-center gap-2">
           <p className="text-xs text-[var(--ink-muted)]">{jobs.length} in this page</p>

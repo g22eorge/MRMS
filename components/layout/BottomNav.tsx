@@ -142,8 +142,8 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--panel)]/95 backdrop-blur-md lg:hidden">
-        <div className="mx-auto flex max-w-lg items-center justify-around px-2 py-1.5">
+      <nav className="mobile-bottom-nav glass fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--panel)]/95 backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-around px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
           {primaryItems.map((item) => (
             <Link
               key={item.href}
