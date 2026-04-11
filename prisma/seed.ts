@@ -489,7 +489,11 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error(error);
+    const known = error as { code?: string; meta?: unknown; message?: string; stack?: string };
+    console.error("Seed failed:", known?.message ?? error);
+    if (known?.code) console.error("Prisma code:", known.code);
+    if (known?.meta) console.error("Prisma meta:", known.meta);
+    if (known?.stack) console.error(known.stack);
     process.exit(1);
   })
   .finally(async () => {
