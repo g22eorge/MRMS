@@ -140,6 +140,22 @@ export async function GET() {
   await run("notification:count", async () => prisma.notification.count());
   await run("notificationPreferences:count", async () => prisma.notificationPreferences.count());
 
+  // Branding (can crash if table columns drifted)
+  await run("branding:delegateRead", async () => {
+    const delegate = (prisma as unknown as {
+      documentBrandingSettings?: {
+        findUnique: (args: { where: { id: string } }) => Promise<unknown>;
+      };
+    }).documentBrandingSettings;
+    if (!delegate) return { delegate: false };
+    const row = await delegate.findUnique({ where: { id: "singleton" } });
+    return { delegate: true, hasRow: Boolean(row) };
+  });
+
+  await run("branding:pragmaColumns", async () =>
+    prisma.$queryRaw<Array<{ name: string }>>`PRAGMA table_info('DocumentBrandingSettings')`,
+  );
+
   // Session user lookup path
   await run("user:current", async () =>
     prisma.user.findUnique({ where: { id: user.id }, select: { id: true, role: true, isActive: true } }),

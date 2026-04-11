@@ -60,6 +60,13 @@ async function jobColumns() {
   return new Set(rows.map((r) => r.name));
 }
 
+async function brandingColumns() {
+  const rows = await prisma.$queryRaw<Array<{ name: string }>>`
+    PRAGMA table_info('DocumentBrandingSettings')
+  `;
+  return new Set(rows.map((r) => r.name));
+}
+
 export async function POST() {
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
@@ -129,6 +136,28 @@ export async function POST() {
       )
     `);
     changes.push({ kind: "create_table", detail: "Created NotificationPreferences" });
+  }
+
+  // Branding table schema drift (add missing color columns if needed)
+  if (await tableExists("DocumentBrandingSettings")) {
+    const bcols = await brandingColumns();
+    const addBrandingColumn = async (name: string, type: string, dflt?: string) => {
+      if (bcols.has(name)) return;
+      const defaultClause = dflt ? ` DEFAULT ${dflt}` : "";
+      await prisma.$executeRawUnsafe(`ALTER TABLE "DocumentBrandingSettings" ADD COLUMN "${name}" ${type}${defaultClause}`);
+      changes.push({ kind: "alter_table", detail: `Added DocumentBrandingSettings.${name}` });
+    };
+
+    await addBrandingColumn("primaryColor", "TEXT", "'#000000'");
+    await addBrandingColumn("secondaryColor", "TEXT", "'#D4AF37'");
+    await addBrandingColumn("accentColor", "TEXT", "'#D4AF37'");
+    await addBrandingColumn("backgroundColor", "TEXT", "'#FFFFFF'");
+    await addBrandingColumn("surfaceColor", "TEXT", "'#F5F5F5'");
+    await addBrandingColumn("borderColor", "TEXT", "'#E5E5E5'");
+    await addBrandingColumn("signatureCompanyLabel", "TEXT", "'Signed by: Eagle Info Solutions'");
+    await addBrandingColumn("signatureClientLabel", "TEXT", "'Signed by: Client'");
+    await addBrandingColumn("signatureCompanyLabel", "TEXT");
+    await addBrandingColumn("signatureClientLabel", "TEXT");
   }
 
   // Re-check and report
