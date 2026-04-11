@@ -30,7 +30,6 @@ export function NotificationBell() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("🔔 NotificationBell: Fetching notifications...");
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
@@ -48,20 +47,17 @@ export function NotificationBell() {
 
   async function fetchNotifications() {
     try {
-      console.log("🔔 Making API call to /api/notifications");
       const res = await fetch("/api/notifications");
-      console.log("🔔 Response:", res.status);
       if (!res.ok) {
         setError(`Status: ${res.status}`);
         return;
       }
       const data = await res.json();
-      console.log("🔔 Data received:", data);
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
       setError(null);
     } catch (err) {
-      console.error("🔔 Error:", err);
+      console.error("Notification fetch error:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
@@ -104,7 +100,6 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => {
-          console.log("🔔 Bell clicked, isOpen:", !isOpen);
           setIsOpen(!isOpen);
         }}
         className="relative flex items-center gap-2 rounded-md border border-black bg-black px-3 py-2 text-white"

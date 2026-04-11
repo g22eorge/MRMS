@@ -28,21 +28,17 @@ export default async function LoginPage() {
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-white/80">Eagle Info Solutions</p>
               <h1 className="mt-3 text-2xl font-semibold leading-tight sm:text-3xl lg:text-4xl">
-                Better Repair Management Starts with Better Communication
+                Repair jobs, without the chaos
               </h1>
-              <p className="mt-4 text-sm leading-6 text-white/90">
-                MRMS keeps client data protected while enabling precise coordination between intake,
-                technicians, operations, and accounts. Every update stays clear, traceable, and aligned
-                to Eagle Info service standards.
+              <p className="mt-4 max-w-prose text-sm leading-6 text-white/90">
+                Secure job tracking for intake, technicians, and operations. Clear status, clear accountability.
               </p>
             </div>
 
             <div className="grid gap-2.5 sm:grid-cols-2">
               {[
-                "Client information stays controlled and role-protected",
-                "Device records and diagnostics are tracked with clarity",
-                "Approvals, recommendations, and updates stay auditable",
-                "Faster turnaround through cleaner team communication",
+                "Role-based access keeps client data protected",
+                "Statuses, approvals, and timelines stay auditable",
               ].map((item) => (
                 <div key={item} className="rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
                   <p className="text-sm text-white/95">{item}</p>
@@ -51,11 +47,8 @@ export default async function LoginPage() {
             </div>
 
             <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-sm font-semibold">Trusted Workflow Promise</p>
-              <p className="mt-1 text-sm text-white/90">
-                Proper handling of clients, equipment, and technician communication strengthens quality,
-                protects trust, and preserves the reputation of Eagle Info Solutions.
-              </p>
+              <p className="text-sm font-semibold">Workflow promise</p>
+              <p className="mt-1 text-sm text-white/90">Every change is logged. Every handoff is traceable.</p>
             </div>
           </div>
         </section>

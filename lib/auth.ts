@@ -25,6 +25,11 @@ export const auth = betterAuth({
     },
   },
   session: {
-    cookieCache: { enabled: true, maxAge: 60 * 60 * 24 * 7 },
+    // Keep sessions reasonably short.
+    // expiresIn: session lifetime (seconds)
+    // disableSessionRefresh: prevents extending sessions indefinitely
+    expiresIn: 60 * 60 * 8, // 8 hours
+    disableSessionRefresh: true,
+    cookieCache: { enabled: true, maxAge: 60 * 5 }, // 5 minutes
   },
 });
