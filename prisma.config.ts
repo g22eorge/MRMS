@@ -3,27 +3,19 @@ import path from "node:path";
 import { defineConfig } from "prisma/config";
 
 function getDatabaseUrl() {
-  // For production on Vercel with Turso
-  if (process.env.TURSO_DATABASE_URL) {
-    const token = process.env.TURSO_AUTH_TOKEN;
-    if (token) {
-      const separator = process.env.TURSO_DATABASE_URL.includes("?") ? "&" : "?";
-      return `${process.env.TURSO_DATABASE_URL}${separator}authToken=${encodeURIComponent(token)}`;
-    }
-    return process.env.TURSO_DATABASE_URL;
+  // Prisma CLI (generate/db push/migrate) for sqlite requires a `file:` URL.
+  // In production we still connect to Turso at runtime via the Prisma libsql adapter,
+  // so keep the CLI datasource URL as a local file.
+  const url = process.env.DATABASE_URL || "file:./dev.db";
+
+  if (!url.startsWith("file:")) {
+    const raw = url.replace(/^file:/, "");
+    return `file:${path.resolve(process.cwd(), raw)}`;
   }
 
-  // For local/development
-  const url = process.env.DATABASE_URL || `file:${path.resolve(process.cwd(), "dev.db")}`;
-  
-  if (!url.startsWith("file:") && !url.startsWith("prisma://") && !url.startsWith("postgres")) {
-    if (url.includes("://")) {
-      return url;
-    }
-    return `file:${path.resolve(process.cwd(), url)}`;
-  }
-  
-  return url;
+  const rawPath = url.slice("file:".length);
+  if (!rawPath || rawPath.startsWith("/")) return url;
+  return `file:${path.resolve(process.cwd(), rawPath)}`;
 }
 
 // Set the env var so prisma schema can use it

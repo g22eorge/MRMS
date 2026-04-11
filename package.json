@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "(prisma generate || bunx prisma generate || npx prisma generate) && (prisma migrate deploy || bunx prisma migrate deploy || npx prisma migrate deploy) && next dev --webpack",
     "build": "export DATABASE_URL=\"${DATABASE_URL:-${TURSO_DATABASE_URL:-file:./dev.db}}\"; (prisma generate || bunx prisma generate || npx prisma generate) && next build",
-    "vercel-build": "export DATABASE_URL=\"${TURSO_DATABASE_URL:-file:./dev.db}\"; export TURSO_AUTH_TOKEN=\"${TURSO_AUTH_TOKEN:-}\"; echo \"DATABASE_URL set to: $DATABASE_URL\"; bunx prisma db push --accept-data-loss && bunx prisma generate && next build",
+    "vercel-build": "export DATABASE_URL=\"file:./dev.db\"; bunx prisma generate && next build",
     "start": "if [ -f .next/standalone/server.js ]; then PORT=${PORT:-3000} HOSTNAME=0.0.0.0 node .next/standalone/server.js; else next start; fi",
     "lint": "eslint",
     "check:links": "node scripts/check-links.mjs",
