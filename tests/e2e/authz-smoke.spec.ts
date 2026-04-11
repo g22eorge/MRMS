@@ -1,7 +1,7 @@
 import { expect, test, type Cookie, type Page } from "@playwright/test";
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";
-const intakeEmail = process.env.E2E_INTAKE_EMAIL ?? "ops@eagle.tech";
+const intakeEmail = process.env.E2E_INTAKE_EMAIL ?? "ops.extended@eagle.tech";
 const password = process.env.E2E_PASSWORD ?? process.env.SEED_PASSWORD ?? "Admin123!";
 const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 
