@@ -46,7 +46,7 @@ async function login(page: Page, email: string) {
   let response: Response | null = null;
   let failureNote = "";
 
-  for (let attempt = 1; attempt <= 8; attempt += 1) {
+  for (let attempt = 1; attempt <= 15; attempt += 1) {
     response = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
       method: "POST",
       headers: {
@@ -63,7 +63,13 @@ async function login(page: Page, email: string) {
 
     const body = await response.text();
     failureNote = `status=${response.status} body=${body.slice(0, 240)}`;
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    
+    if (response.status === 429) {
+      // Rate limited - wait longer before retry
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
   }
 
   expect(response?.ok, failureNote).toBeTruthy();
