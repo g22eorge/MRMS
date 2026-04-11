@@ -161,6 +161,7 @@ export async function updateJobAction(formData: FormData) {
           JobStatus.DIAGNOSING,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
+          JobStatus.DELIVERED,
           JobStatus.COMPLETED,
           JobStatus.CLOSED,
         ] as JobStatus[]
@@ -172,13 +173,14 @@ export async function updateJobAction(formData: FormData) {
           JobStatus.DIAGNOSING,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
+          JobStatus.DELIVERED,
           JobStatus.COMPLETED,
           JobStatus.CLOSED,
         ] as JobStatus[]
       ).includes(nextStatus);
     }
     if (role === "TECHNICIAN_EXTERNAL") {
-      return ([JobStatus.COMPLETED] as JobStatus[]).includes(nextStatus);
+      return ([JobStatus.COMPLETED, JobStatus.DELIVERED] as JobStatus[]).includes(nextStatus);
     }
     if (role === "OPS") {
       return (
@@ -187,6 +189,7 @@ export async function updateJobAction(formData: FormData) {
           JobStatus.CLOSED,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
+          JobStatus.DELIVERED,
           JobStatus.COMPLETED,
         ] as JobStatus[]
       ).includes(nextStatus);
