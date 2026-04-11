@@ -1,15 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { getCurrentUserRole } from "@/lib/session";
-
 export default async function NotificationSettingsPage() {
-  const { user } = await getCurrentUserRole();
-
-  async function updatePrefs(formData: FormData) {
-    "use server";
-    redirect("/settings/notifications?saved=true");
-  }
-
   return (
     <div className="space-y-6">
       <div>

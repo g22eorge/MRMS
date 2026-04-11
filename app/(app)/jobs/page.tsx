@@ -166,7 +166,6 @@ export default async function JobsPage({
   const returnTo = returnToQuery ? `/jobs?${returnToQuery}` : "/jobs";
   const openNow = rows.filter((row) => row.status !== "COMPLETED" && row.status !== "CLOSED").length;
   const readyForPickup = rows.filter((row) => row.status === "READY_FOR_PICKUP").length;
-  const awaitingApproval = rows.filter((row) => row.status === "AWAITING_APPROVAL").length;
   const pulseBaseFilters = Object.fromEntries(
     Object.entries(preserved).filter(([key]) => key !== "status" && key !== "page"),
   ) as Record<string, string>;

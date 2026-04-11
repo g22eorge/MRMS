@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ChangeEvent, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
@@ -30,7 +28,6 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     email: string | null;
     organization: string | null;
   }>(null);
-  const router = useRouter();
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
 
