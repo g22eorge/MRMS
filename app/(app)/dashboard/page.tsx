@@ -772,7 +772,7 @@ export default async function DashboardPage({
         </div>
 
         <div className="hidden lg:block">
-          <ReportsCharts statusData={statusData} deviceData={deviceData} />
+          <ReportsCharts statusData={statusData} deviceData={deviceData} from={selectedFrom} to={selectedTo} />
         </div>
 
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
