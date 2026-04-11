@@ -1,22 +1,27 @@
-import "dotenv/config";
 import path from "node:path";
 
 import { defineConfig } from "prisma/config";
 
 // This runs at build time - need to ensure DATABASE_URL is available
-// Vercel injects env vars at runtime, but prisma generate runs at build
+// Vercel injects env vars at build time via process.env
 
 function getDatabaseUrl() {
   // For production on Vercel, use TURSO_DATABASE_URL if set
   if (process.env.PROD === "true") {
+    console.log("PROD is true, checking for TURSO_DATABASE_URL...");
     if (process.env.TURSO_DATABASE_URL) {
+      console.log("Found TURSO_DATABASE_URL:", process.env.TURSO_DATABASE_URL.substring(0, 30) + "...");
       const token = process.env.TURSO_AUTH_TOKEN;
       if (token) {
         const separator = process.env.TURSO_DATABASE_URL.includes("?") ? "&" : "?";
         return `${process.env.TURSO_DATABASE_URL}${separator}authToken=${encodeURIComponent(token)}`;
       }
       return process.env.TURSO_DATABASE_URL;
+    } else {
+      console.log("TURSO_DATABASE_URL not found in env");
     }
+  } else {
+    console.log("PROD is not true, got:", process.env.PROD);
   }
 
   // For local/development
