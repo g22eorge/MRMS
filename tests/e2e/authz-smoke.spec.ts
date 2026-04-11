@@ -1,7 +1,7 @@
 import { expect, test, type Cookie, type Page } from "@playwright/test";
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";
-const externalTechEmail = process.env.E2E_EXTERNAL_EMAIL ?? "abdu@eagle.tech";
+const intakeEmail = process.env.E2E_INTAKE_EMAIL ?? "ops@eagle.tech";
 const password = process.env.E2E_PASSWORD ?? process.env.SEED_PASSWORD ?? "Admin123!";
 const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 
@@ -93,22 +93,16 @@ test("admin sees admin navigation and can open user settings", async ({ page }) 
   await expect(page.getByRole("button", { name: "Create User" })).toBeVisible();
 });
 
-test("external technician is restricted from client-identifying views", async ({ page }) => {
-  await login(page, externalTechEmail);
+test("intake role is restricted from admin-only views", async ({ page }) => {
+  await login(page, intakeEmail);
 
+  await expect(page.getByRole("link", { name: "Jobs" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Work Orders" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "My Payouts" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Clients" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Clients" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Reports" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Users" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Branding" })).toHaveCount(0);
 
   await page.goto("/jobs");
   await expect(page.getByPlaceholder("Search job #", { exact: true }).first()).toBeVisible();
-  await expect(page.getByPlaceholder("Search job # or client")).toHaveCount(0);
-
-  await page.getByRole("link", { name: "Open" }).first().click();
-  await expect(page.getByText("External Diagnosis")).toBeVisible();
-  await expect(page.getByRole("button", { name: "client" })).toHaveCount(0);
-  await expect(page.getByText("Revenue Demo Client")).toHaveCount(0);
-  await expect(page.getByText("Amina Yusuf")).toHaveCount(0);
 });
