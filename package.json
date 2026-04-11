@@ -10,7 +10,7 @@
     "lint": "eslint",
     "check:links": "node scripts/check-links.mjs",
     "report:revenue": "node scripts/revenue-report.mjs",
-    "qa:data-integrity": "node scripts/qa-data-integrity.mjs",
+    "qa:data-integrity": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:./dev.db\" bunx prisma generate && node scripts/qa-data-integrity.mjs",
     "qa:concurrency": "node scripts/qa-concurrency.mjs",
     "qa:perf": "node scripts/qa-perf.mjs",
     "qa:http-security": "node scripts/qa-http-security.mjs",
