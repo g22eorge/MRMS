@@ -6,6 +6,7 @@ const classMap: Record<JobStatus, string> = {
   AWAITING_APPROVAL: "bg-[#D4AF37] text-white",
   IN_REPAIR: "bg-black text-white",
   READY_FOR_PICKUP: "bg-[#D4AF37] text-white",
+  DELIVERED: "bg-black text-white",
   COMPLETED: "bg-[#D4AF37] text-white",
   CLOSED: "bg-[var(--panel)] text-[var(--ink-muted)]",
 };
@@ -16,6 +17,7 @@ const helpText: Record<JobStatus, string> = {
   AWAITING_APPROVAL: "Waiting for client approval before proceeding.",
   IN_REPAIR: "Repair work is actively in progress.",
   READY_FOR_PICKUP: "Repair is done and device is ready for pickup/handover.",
+  DELIVERED: "Device has been delivered to the client.",
   COMPLETED: "Repair work finished successfully.",
   CLOSED: "Job ended without successful completion (declined/unrepairable).",
 };

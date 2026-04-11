@@ -37,6 +37,7 @@ const statusOptionLabel: Record<JobStatus, string> = {
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+  DELIVERED: "Delivered",
 };
 
 export default async function JobsPage({

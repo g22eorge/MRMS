@@ -85,6 +85,7 @@ const statusLabel: Record<JobStatus, string> = {
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+  DELIVERED: "Delivered",
 };
 
 const deviceLabel: Record<string, string> = {

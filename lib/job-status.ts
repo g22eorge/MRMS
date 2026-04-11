@@ -4,6 +4,7 @@ export const JOB_STATUSES = [
   "AWAITING_APPROVAL",
   "IN_REPAIR",
   "READY_FOR_PICKUP",
+  "DELIVERED",
   "COMPLETED",
   "CLOSED",
 ] as const;

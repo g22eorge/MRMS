@@ -22,6 +22,7 @@ const statusOptionLabel = {
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+  DELIVERED: "Delivered",
 } as const;
 
 function parseMonth(monthParam?: string) {

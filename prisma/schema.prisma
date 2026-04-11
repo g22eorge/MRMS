@@ -99,6 +99,7 @@ enum JobStatus {
   AWAITING_APPROVAL
   IN_REPAIR
   READY_FOR_PICKUP
+  DELIVERED
   COMPLETED
   CLOSED
 }
@@ -119,6 +120,12 @@ enum CommunicationStatus {
 enum RepairPath {
   IN_HOUSE
   EXTERNAL
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+  COURIER
 }
 
 enum DeviceType {
@@ -224,6 +231,9 @@ model Job {
 
   receivedAt  DateTime  @default(now())
   completedAt DateTime?
+  deliveredAt DateTime?
+  deliveryMethod DeliveryMethod? // PICKUP, DELIVERY, COURIER
+  deliveredTo String? // name of person who received
   closedAt    DateTime?
   updatedAt   DateTime  @updatedAt
 

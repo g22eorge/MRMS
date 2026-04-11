@@ -191,7 +191,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
     DIAGNOSING: ["IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
     AWAITING_APPROVAL: ["IN_REPAIR", "CLOSED"],
     IN_REPAIR: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
-    READY_FOR_PICKUP: ["COMPLETED", "CLOSED"],
+    READY_FOR_PICKUP: ["DELIVERED", "COMPLETED", "CLOSED"],
+    DELIVERED: ["COMPLETED", "CLOSED"],
   };
 
   const statusActions = allowedStatusTransitions[job.status] ?? [];
@@ -241,7 +242,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
     DIAGNOSING: "Capture diagnosis and set repair path",
     AWAITING_APPROVAL: "Record client approval decision",
     IN_REPAIR: "Update repair log and progress",
-    READY_FOR_PICKUP: "Notify client and hand over device",
+    READY_FOR_PICKUP: "Confirm delivery to client",
+    DELIVERED: "Verify payment and finalize job",
     COMPLETED: "Archive and invoice follow-up only",
     CLOSED: "No further workflow action",
   };
@@ -971,26 +973,51 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               {job.statusNote ? ` | Note: ${job.statusNote}` : ""}
             </p>
           ) : null}
-          {statusActions.map((status) => (
-            <button
-              key={status}
-              type="submit"
-              name="nextStatus"
-              value={status}
-              disabled={isStatusPending}
-              onClick={(event) => {
-                if (
-                  status === "CLOSED" &&
-                  !window.confirm("Close this job? This will mark it as non-repairable/declined.")
-                ) {
-                  event.preventDefault();
-                }
-              }}
-              className="btn-premium-dark w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Set {prettyEnum(status)}
-            </button>
-          ))}
+          <div className="flex flex-wrap gap-2 w-full">
+            {statusActions.map((status) => (
+              <button
+                key={status}
+                type="submit"
+                name="nextStatus"
+                value={status}
+                disabled={isStatusPending}
+                onClick={(event) => {
+                  if (
+                    status === "CLOSED" &&
+                    !window.confirm("Close this job? This will mark it as non-repairable/declined.")
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+                className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px]"
+              >
+                Set {prettyEnum(status)}
+              </button>
+            ))}
+          </div>
+          {statusActions.includes("DELIVERED") && (
+            <div className="w-full border-t border-[var(--line)] pt-3 mt-2">
+              <p className="text-xs font-medium text-[var(--ink)] mb-2">Confirm Delivery</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <select
+                  name="deliveryMethod"
+                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)]"
+                  required
+                >
+                  <option value="">Method</option>
+                  <option value="PICKUP">Client Pickup</option>
+                  <option value="DELIVERY">We Delivered</option>
+                  <option value="COURIER">Courier</option>
+                </select>
+                <input
+                  type="text"
+                  name="deliveredTo"
+                  placeholder="Received by (name)"
+                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
+                />
+              </div>
+            </div>
+          )}
           {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}

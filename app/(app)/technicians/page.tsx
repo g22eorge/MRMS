@@ -28,6 +28,7 @@ const statusOptionLabel: Record<JobStatus, string> = {
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+  DELIVERED: "Delivered",
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -43,6 +44,7 @@ function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
 
 function statusTone(status: JobStatus) {
   if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37] text-white border-[#D4AF37]";
+  if (status === "DELIVERED") return "bg-black text-white border-black";
   if (status === "IN_REPAIR") return "bg-black text-white border-black";
   if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
   if (status === "DIAGNOSING") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";

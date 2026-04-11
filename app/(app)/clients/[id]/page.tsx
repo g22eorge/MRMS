@@ -29,6 +29,7 @@ const statusOptionLabel: Record<JobStatus, string> = {
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
+  DELIVERED: "Delivered",
   COMPLETED: "Completed",
   CLOSED: "Closed",
 };

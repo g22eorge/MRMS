@@ -62,6 +62,8 @@ const updateSchema = z.object({
   workDone: z.string().optional(),
   partsReplaced: z.string().optional(),
   nextStatus: z.nativeEnum(JobStatus).optional(),
+  deliveryMethod: z.enum(["PICKUP", "DELIVERY", "COURIER"]).optional(),
+  deliveredTo: z.string().optional(),
 });
 
 function buildTimeline(payload: z.infer<typeof updateSchema>) {
@@ -139,7 +141,8 @@ export async function updateJobAction(formData: FormData) {
     DIAGNOSING: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.CLOSED],
     AWAITING_APPROVAL: [JobStatus.IN_REPAIR, JobStatus.CLOSED],
     IN_REPAIR: [JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
-    READY_FOR_PICKUP: [JobStatus.COMPLETED, JobStatus.CLOSED],
+    READY_FOR_PICKUP: [JobStatus.DELIVERED, JobStatus.COMPLETED, JobStatus.CLOSED],
+    DELIVERED: [JobStatus.COMPLETED, JobStatus.CLOSED],
   };
 
   if (payload.nextStatus) {
@@ -374,6 +377,13 @@ export async function updateJobAction(formData: FormData) {
       data.approvalDate = new Date();
     }
     data.completedAt = payload.nextStatus === JobStatus.COMPLETED ? new Date() : undefined;
+    data.deliveredAt = payload.nextStatus === JobStatus.DELIVERED ? new Date() : undefined;
+    if (payload.deliveryMethod) {
+      data.deliveryMethod = payload.deliveryMethod;
+    }
+    if (payload.deliveredTo) {
+      data.deliveredTo = sanitizeOptionalText(payload.deliveredTo) || null;
+    }
     data.closedAt =
       payload.nextStatus === JobStatus.CLOSED
         ? new Date()
@@ -426,6 +436,9 @@ export async function updateJobAction(formData: FormData) {
       delete fallbackData.vatApplicable;
       delete fallbackData.statusNote;
       delete fallbackData.workflowReason;
+      delete fallbackData.deliveredAt;
+      delete fallbackData.deliveryMethod;
+      delete fallbackData.deliveredTo;
 
       updated = await (prisma.job as unknown as {
         update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{
