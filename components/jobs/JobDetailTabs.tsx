@@ -293,63 +293,63 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
       label: "Watch",
       value: watchLabel ? `${watchLabel} (${statusAgeHours}h)` : `Healthy (${statusAgeHours}h in state)`,
       tone: watchLabel ? "text-black" : "text-[#D4AF37]",
-      accent: watchLabel ? "bg-slate-200 border-slate-300" : "bg-[#D4AF37]/10 border-[#D4AF37]/30",
+      accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[#D4AF37]/10 border-[#D4AF37]/30",
       priority: watchLabel ? 88 : 40,
     },
     {
       key: "assigned",
       label: "Assigned Tech",
       value: job.assignedTo?.name ?? "Unassigned",
-      tone: job.assignedTo?.name ? "text-slate-800" : "text-black",
-      accent: job.assignedTo?.name ? "bg-slate-50 border-slate-200" : "bg-slate-200 border-slate-300",
+      tone: job.assignedTo?.name ? "text-[var(--ink)]" : "text-black",
+      accent: job.assignedTo?.name ? "bg-[var(--panel)] border-[var(--line)]" : "bg-[var(--panel-strong)] border-[var(--line)]",
       priority: job.assignedTo?.name ? 70 : 95,
     },
     {
       key: "clientDecision",
       label: "Client Decision",
       value: clientDecision,
-      tone: "text-slate-800",
-      accent: "bg-slate-50 border-slate-200",
+      tone: "text-[var(--ink)]",
+      accent: "bg-[var(--panel)] border-[var(--line)]",
       priority: job.communicationStatus === "AWAITING_RESPONSE" ? 86 : 58,
     },
     {
       key: "recommendation",
       label: "Recommendation",
       value: recommendation,
-      tone: "text-slate-800",
-      accent: "bg-slate-50 border-slate-200",
+      tone: "text-[var(--ink)]",
+      accent: "bg-[var(--panel)] border-[var(--line)]",
       priority: 50,
     },
     {
       key: "eta",
       label: "ETA",
       value: etaValue,
-      tone: "text-slate-800",
-      accent: "bg-slate-50 border-slate-200",
+      tone: "text-[var(--ink)]",
+      accent: "bg-[var(--panel)] border-[var(--line)]",
       priority: job.repairTimeline ? 64 : 74,
     },
     {
       key: "nextAction",
       label: "Next Action",
       value: nextActionByStatus[job.status],
-      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-slate-700" : "text-black",
-      accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-slate-50 border-slate-200" : "bg-slate-200 border-slate-300",
+      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-[var(--ink)]" : "text-black",
+      accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-[var(--panel)] border-[var(--line)]" : "bg-[var(--panel-strong)] border-[var(--line)]",
       priority: 84,
     },
     {
       key: "lastContact",
       label: "Last Client Contact",
       value: job.lastClientContactAt ? formatUtcDateTime(job.lastClientContactAt) : "Not recorded",
-      tone: "text-slate-700",
-      accent: "bg-slate-50 border-slate-200",
+      tone: "text-[var(--ink)]",
+      accent: "bg-[var(--panel)] border-[var(--line)]",
       priority: job.lastClientContactAt ? 52 : 80,
     },
     {
       key: "repairPath",
       label: "Repair Path",
       value: derivedRepairPath,
-      tone: "text-slate-800",
-      accent: "bg-slate-50 border-slate-200",
+      tone: "text-[var(--ink)]",
+      accent: "bg-[var(--panel)] border-[var(--line)]",
       priority: 54,
     },
     ...(canViewFinancials
@@ -358,8 +358,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             key: "clientBill",
             label: "Client Bill",
             value: typeof job.clientBill === "number" ? formatBillAmount(job.clientBill) : "Pending",
-            tone: "text-slate-800",
-            accent: "bg-slate-50 border-slate-200",
+            tone: "text-[var(--ink)]",
+            accent: "bg-[var(--panel)] border-[var(--line)]",
             priority: 56,
           },
         ]
@@ -374,7 +374,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">{job.jobNumber}</h1>
-            <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">
+            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
               {job.deviceType} / {job.brand} {job.model}
             </p>
           </div>
@@ -402,7 +402,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
       {active === "overview" ? (
         <div className={panelShellClass}>
           <div className="mb-4 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Repair Journey</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Repair Journey</p>
             <div className="flex flex-wrap gap-2">
               {stageLabels.map((label, index) => {
                 const isDone = index < currentStageIndex;
@@ -415,7 +415,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                         ? "border-[#D4AF37] bg-[#D4AF37] text-white"
                         : isDone
                           ? "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]"
-                          : "border-slate-200 bg-slate-50 text-slate-600"
+                          : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"
                     }`}
                   >
                     {index + 1}. {label}
@@ -423,7 +423,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 );
               })}
               {job.status === "CLOSED" ? (
-                <span className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-black">
+                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-xs font-medium text-black">
                   Closed
                 </span>
               ) : null}
@@ -432,15 +432,15 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
 
           <div className="mb-4 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#D4AF37]">Executive Brief</p>
-            <p className="mt-1 text-sm text-slate-800 [overflow-wrap:anywhere]">{narrativeBits.join(" ")}</p>
+            <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{narrativeBits.join(" ")}</p>
           </div>
 
           <div className="mb-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">At a Glance</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">At a Glance</p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {quickSignals.map((signal) => (
                 <div key={signal.label} className={`rounded-md border px-3 py-2 ${signal.accent}`}>
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">{signal.label}</p>
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">{signal.label}</p>
                   <p className={`mt-1 text-sm font-medium ${signal.tone} [overflow-wrap:anywhere]`}>{signal.value}</p>
                 </div>
               ))}
@@ -448,23 +448,23 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           </div>
 
           <div className={softSectionClass}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 1 - Intake</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 1 - Intake</p>
             <p className="font-medium">Issue</p>
-            <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">{job.issueDescription}</p>
+            <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{job.issueDescription}</p>
           </div>
 
           <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 2 - Technician Diagnosis</p>
-            <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
-            <p className="text-sm text-slate-600">Repair path: {derivedRepairPath}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 2 - Technician Diagnosis</p>
+            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
+            <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
             {job.diagnosisNotes ? (
-              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
+              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
             ) : null}
             {job.externalDiagnosis ? (
-              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">External diagnosis: {job.externalDiagnosis}</p>
+              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">External diagnosis: {job.externalDiagnosis}</p>
             ) : null}
             {job.partsNeeded ? (
-              <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">Parts needed: {job.partsNeeded}</p>
+              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Parts needed: {job.partsNeeded}</p>
             ) : null}
           </div>
 
@@ -487,7 +487,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               className={`mt-4 flex flex-wrap items-end gap-2 ${softSectionClass} [&_*]:min-w-0`}
             >
               <div className="min-w-0 flex-1 sm:min-w-[220px]">
-                <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
+                <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
                   Assigned Technician
                 </label>
                 <select
@@ -535,7 +535,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               }}
                className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
              >
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Step 3 - Client Approval & Recommendation
               </p>
               <select
@@ -548,7 +548,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 <option value="APPROVED">Approved</option>
                 <option value="DECLINED">Declined</option>
               </select>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-[var(--ink-muted)]">
                 Use Awaiting response after sharing estimate/details; set Approved or Declined when client confirms.
               </p>
               <select
@@ -568,7 +568,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
                 className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
               />
               {job.lastClientContactAt ? (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-[var(--ink-muted)]">
                   Last client contact: {formatUtcDateTime(job.lastClientContactAt)}
                 </p>
               ) : null}
@@ -586,22 +586,22 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           ) : null}
 
            <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 4 - Repair & Closure Context</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 4 - Repair & Closure Context</p>
             {job.repairTimeline ? (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-[var(--ink)]">
                 ETA: <span className="font-medium">{job.repairTimeline}</span>
                 {job.timelineConfidence ? ` (${job.timelineConfidence.replaceAll("_", " ")})` : ""}
               </p>
             ) : (
-              <p className="text-sm text-slate-600">ETA not set yet.</p>
+              <p className="text-sm text-[var(--ink-muted)]">ETA not set yet.</p>
             )}
-            {job.timelineNote ? <p className="text-sm text-slate-600">ETA note: {job.timelineNote}</p> : null}
+            {job.timelineNote ? <p className="text-sm text-[var(--ink-muted)]">ETA note: {job.timelineNote}</p> : null}
             {job.workflowReason && job.workflowReason !== "NONE" ? (
-              <p className="text-sm text-slate-600">Workflow reason: {job.workflowReason.replaceAll("_", " ")}</p>
+              <p className="text-sm text-[var(--ink-muted)]">Workflow reason: {job.workflowReason.replaceAll("_", " ")}</p>
             ) : null}
-            {job.statusNote ? <p className="text-sm text-slate-600">Workflow note: {job.statusNote}</p> : null}
+            {job.statusNote ? <p className="text-sm text-[var(--ink-muted)]">Workflow note: {job.statusNote}</p> : null}
             {isIntake ? (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-[var(--ink)]">
                 Client-facing cost: {typeof job.clientBill === "number" ? formatBillAmount(job.clientBill) : "Pending final approval"}
               </p>
             ) : null}
@@ -625,7 +625,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
               }}
                className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
              >
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Update Repair / Closure Context</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Update Repair / Closure Context</p>
               <select
                 name="workflowReason"
                 defaultValue={job.workflowReason ?? "NONE"}
@@ -715,7 +715,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             />
           ) : null}
           {diagnosisMode === "internal" ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--ink-muted)]">
               External diagnosis is hidden for internal technician flow.
             </p>
           ) : null}
@@ -727,7 +727,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             className={areaClass}
           />
           {role !== "TECHNICIAN_EXTERNAL" ? (
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
               Repair path: <span className="font-medium">{derivedRepairPath}</span>
             </div>
           ) : null}
@@ -781,7 +781,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           }}
           className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
         >
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Billing</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
           <input
             name="externalTechBill"
             type="number"
@@ -791,7 +791,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             className={fieldClass}
           />
           {!canManageFinancials ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--ink-muted)]">
               Client billing and payout controls are admin-only.
             </p>
           ) : null}
@@ -806,7 +806,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             />
           ) : null}
           {canManageFinancials ? (
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
               <input
                 type="checkbox"
                 name="vatApplicable"
@@ -818,7 +818,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             </label>
           ) : null}
           {canManageFinancials ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--ink-muted)]">
               Repair cost: {formatBillAmount(repairCostBeforeVat)} | VAT: {formatBillAmount(vatAmount)} | Total: {formatBillAmount(clientBillValue)}
             </p>
           ) : null}
@@ -829,20 +829,20 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           ) : null}
           {hasPayoutControls ? (
             <div className={softSectionClass}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">External Technician Payout</p>
               <div className="rounded-lg border border-[var(--line)] bg-white p-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-slate-600">Payout status</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[#D4AF37] text-white" : "bg-slate-300 text-slate-800"}`}>
+                  <p className="text-xs text-[var(--ink-muted)]">Payout status</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[#D4AF37] text-white" : "bg-[#D4AF37]/20 text-[#D4AF37]"}`}>
                     {job.externalPaid ? "Paid" : "Not paid"}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
                   External bill: {typeof job.externalTechBill === "number" ? formatBillAmount(job.externalTechBill) : "-"}
                   {" | "}
                   Payout amount: {typeof job.externalTechFee === "number" ? formatBillAmount(job.externalTechFee) : "-"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
                   {job.externalPaidAt ? `Paid on ${formatUtcDateTime(job.externalPaidAt)}` : "Awaiting payout confirmation"}
                 </p>
               </div>
@@ -896,16 +896,16 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           ) : null}
           {!hasPayoutControls && job.repairPath === "EXTERNAL" ? (
             <div className={softSectionClass}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">External Technician Payout</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">
                 You can view financial summaries, but payout controls require finance authorization.
               </p>
             </div>
           ) : null}
           {job.repairPath !== "EXTERNAL" ? (
             <div className={softSectionClass}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">External Technician Payout</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">External Technician Payout</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">
                 Payout controls appear only when this job is set to external repair.
               </p>
             </div>
@@ -966,7 +966,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
           className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0`}
         >
           {job.workflowReason && job.workflowReason !== "NONE" ? (
-            <p className="w-full text-xs text-slate-600">
+            <p className="w-full text-xs text-[var(--ink-muted)]">
               Current reason: {job.workflowReason.replaceAll("_", " ")}
               {job.statusNote ? ` | Note: ${job.statusNote}` : ""}
             </p>

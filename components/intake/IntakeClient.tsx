@@ -6,10 +6,10 @@ import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  PENDING_INTAKE:   { label: "Pending",       cls: "bg-slate-200 text-slate-700" },
+  PENDING_INTAKE:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
   APPROVED:         { label: "Approved",       cls: "bg-[#D4AF37] text-white" },
   REJECTED:         { label: "Rejected",       cls: "bg-black text-white" },
-  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-slate-400 text-white" },
+  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-[var(--ink)] text-white" },
 };
 
 const HANDOVER_LABEL: Record<string, string> = {
@@ -33,7 +33,7 @@ function fmt(d: Date | string) {
 
 /* ── status badge ── */
 function StatusBadge({ status }: { status: string }) {
-  const meta = STATUS_META[status] ?? { label: status, cls: "bg-slate-200 text-slate-600" };
+  const meta = STATUS_META[status] ?? { label: status, cls: "bg-[var(--panel-strong)] text-[var(--ink-muted)]" };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.cls}`}>
       {meta.label}
@@ -45,9 +45,9 @@ function StatusBadge({ status }: { status: string }) {
 function DRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex gap-3 text-sm py-1.5 border-b border-slate-100 last:border-0">
-      <span className="w-40 shrink-0 text-slate-500 font-medium">{label}</span>
-      <span className="text-slate-800 break-words min-w-0">{value}</span>
+    <div className="flex gap-3 text-sm py-1.5 border-b border-[var(--line)] last:border-0">
+      <span className="w-40 shrink-0 text-[var(--ink-muted)] font-medium">{label}</span>
+      <span className="text-[var(--ink)] break-words min-w-0">{value}</span>
     </div>
   );
 }
@@ -55,8 +55,8 @@ function DRow({ label, value }: { label: string; value?: string | null }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-2">{title}</p>
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-1">{children}</div>
+      <p className="text-[10px] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-2">{title}</p>
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-1">{children}</div>
     </div>
   );
 }
@@ -123,16 +123,16 @@ function RequestDrawer({
       {/* drawer */}
       <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         {/* header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)] bg-[var(--panel)]">
           <div>
-            <p className="text-[11px] font-bold tracking-widest uppercase text-slate-400">Repair Request</p>
-            <h2 className="text-lg font-bold text-slate-800">{req.requestNumber}</h2>
+            <p className="text-[11px] font-bold tracking-widest uppercase text-[var(--ink-muted)]">Repair Request</p>
+            <h2 className="text-lg font-bold text-[var(--ink)]">{req.requestNumber}</h2>
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={localStatus} />
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors"
+              className="rounded-lg p-1.5 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
@@ -141,8 +141,8 @@ function RequestDrawer({
 
         {/* converted — open job banner */}
         {isConverted && req.linkedJobId && (
-          <div className="px-6 py-3 border-b border-slate-300 bg-slate-100 flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-700 font-medium">This request was converted to a job.</p>
+          <div className="px-6 py-3 border-b border-[var(--line)] bg-[var(--panel-strong)] flex items-center justify-between gap-3">
+            <p className="text-xs text-[var(--ink)] font-medium">This request was converted to a job.</p>
             <a
               href={`/jobs/${req.linkedJobId}`}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90 transition-colors"
@@ -155,7 +155,7 @@ function RequestDrawer({
 
         {/* actions bar */}
         {!isConverted && !isRejected && (
-          <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-2 flex-wrap">
+          <div className="px-6 py-3 border-b border-[var(--line)] bg-white flex items-center gap-2 flex-wrap">
             {isPending && (
               <>
                 <ActionBtn
@@ -184,7 +184,7 @@ function RequestDrawer({
               />
             )}
             {pending && (
-              <span className="text-xs text-slate-400 ml-1">Saving…</span>
+              <span className="text-xs text-[var(--ink-muted)] ml-1">Saving…</span>
             )}
           </div>
         )}
@@ -206,7 +206,7 @@ function RequestDrawer({
           </Section>
 
           <Section title="Issue">
-            <div className="py-2 text-sm text-slate-800 whitespace-pre-wrap">{req.problemDescription}</div>
+            <div className="py-2 text-sm text-[var(--ink)] whitespace-pre-wrap">{req.problemDescription}</div>
           </Section>
 
           <Section title="Handover">
@@ -314,7 +314,7 @@ function RowActions({
           disabled={pending}
           onClick={(e) => act("CONVERTED_TO_JOB", e)}
           title="Convert to Job"
-          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-slate-200 text-slate-600 border border-slate-300 hover:bg-slate-300 disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-[var(--panel-strong)] text-[var(--ink-muted)] border border-[var(--line)] hover:bg-[var(--panel-strong)] disabled:opacity-40 transition-colors"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           Convert to Job
@@ -325,7 +325,7 @@ function RowActions({
           href={`/jobs/${req.linkedJobId}`}
           onClick={(e) => e.stopPropagation()}
           title="Open Job"
-          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-slate-200 text-slate-600 border border-slate-300 hover:bg-slate-300 transition-colors"
+          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-[var(--panel-strong)] text-[var(--ink-muted)] border border-[var(--line)] hover:bg-[var(--panel-strong)] transition-colors"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Open Job
@@ -335,7 +335,7 @@ function RowActions({
       <button
         onClick={(e) => { e.stopPropagation(); onView(); }}
         title="View details"
-        className="inline-flex items-center rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+        className="inline-flex items-center rounded-md p-1.5 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] transition-colors"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
@@ -356,32 +356,32 @@ function MobileCard({
   return (
     <div
       onClick={onSelect}
-      className="rounded-xl border border-slate-200 bg-white shadow-sm cursor-pointer transition-colors hover:border-slate-300 active:bg-slate-50 overflow-hidden"
+      className="rounded-xl border border-[var(--line)] bg-white shadow-sm cursor-pointer transition-colors hover:border-[var(--line)] active:bg-[var(--panel)] overflow-hidden"
     >
       {/* header: req # + status */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <span className="font-mono text-[11px] font-semibold text-slate-400 tracking-wide">{req.requestNumber}</span>
+        <span className="font-mono text-[11px] font-semibold text-[var(--ink-muted)] tracking-wide">{req.requestNumber}</span>
         <StatusBadge status={req.requestStatus} />
       </div>
 
       {/* body: customer + device info */}
       <div className="px-4 pb-3">
-        <p className="text-sm font-semibold text-slate-800 truncate">{req.customerName}</p>
-        <p className="text-xs text-slate-400 mb-1.5">{req.phone}</p>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+        <p className="text-sm font-semibold text-[var(--ink)] truncate">{req.customerName}</p>
+        <p className="text-xs text-[var(--ink-muted)] mb-1.5">{req.phone}</p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[var(--ink-muted)]">
           <span className="font-medium">{req.brand}{req.model ? ` ${req.model}` : ""}</span>
-          <span className="text-slate-300">·</span>
+          <span className="text-[var(--line)]">·</span>
           <span>{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</span>
-          <span className="text-slate-300">·</span>
+          <span className="text-[var(--line)]">·</span>
           <span>{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
-          <span className="text-slate-300">·</span>
+          <span className="text-[var(--line)]">·</span>
           <span>{fmt(req.createdAt)}</span>
         </div>
       </div>
 
       {/* footer: action buttons */}
       <div
-        className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
+        className="border-t border-[var(--line)] bg-[var(--panel)]/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
         onClick={(e) => e.stopPropagation()}
       >
         <RowActions req={req} onStatusChange={onStatusChange} onView={onSelect} />
@@ -456,13 +456,13 @@ export function IntakeClient({
               onClick={() => setFilter(tab.key)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors
                 ${active
-                  ? "bg-slate-800 text-white"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-black text-white"
+                  : "bg-white border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel)]"
                 }`}
             >
               {tab.label}
               {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {count}
                 </span>
               )}
@@ -472,7 +472,7 @@ export function IntakeClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center text-slate-400 text-sm">
+        <div className="rounded-xl border border-dashed border-[var(--line)] py-16 text-center text-[var(--ink-muted)] text-sm">
           No requests in this category.
         </div>
       ) : (
@@ -490,44 +490,44 @@ export function IntakeClient({
           </div>
 
           {/* ── DESKTOP TABLE VIEW ── */}
-          <div className="hidden lg:block rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <table className="min-w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50">
+          <div className="hidden lg:block rounded-xl border border-[var(--line)] bg-white overflow-hidden shadow-sm">
+            <table className="min-w-full divide-y divide-[var(--line)]">
+              <thead className="bg-[var(--panel)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Request #</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Device</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Handover</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Request #</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Customer</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Device</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Handover</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Date</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--line)]">
                 {filtered.map((req) => (
                   <tr
                     key={req.id}
                     onClick={() => setSelected(req)}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                    className="hover:bg-[var(--panel)] cursor-pointer transition-colors group"
                   >
-                    <td className="px-4 py-3 text-sm font-mono font-semibold text-slate-700 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm font-mono font-semibold text-[var(--ink)] whitespace-nowrap">
                       {req.requestNumber}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-slate-800">{req.customerName}</div>
-                      <div className="text-xs text-slate-400">{req.phone}</div>
+                      <div className="text-sm font-medium text-[var(--ink)]">{req.customerName}</div>
+                      <div className="text-xs text-[var(--ink-muted)]">{req.phone}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm text-slate-800">{req.brand}{req.model && <span className="text-slate-500"> {req.model}</span>}</div>
-                      <div className="text-xs text-slate-400">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
+                      <div className="text-sm text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
+                      <div className="text-xs text-[var(--ink-muted)]">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-600">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
+                      <span className="text-xs text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge status={req.requestStatus} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)]">
                       {fmt(req.createdAt)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">

@@ -37,17 +37,17 @@ function clamp(value: number, min: number, max: number) {
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
   if (overdue) return { label: "Attention", tone: "bg-black text-white border-black" };
   if (ready) return { label: "High", tone: "bg-[#D4AF37] text-white border-[#D4AF37]" };
-  if (ageDays >= 2) return { label: "Medium", tone: "bg-slate-300 text-slate-800 border-slate-400" };
-  return { label: "Normal", tone: "bg-slate-100 text-slate-700 border-slate-200" };
+  if (ageDays >= 2) return { label: "Medium", tone: "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30" };
+  return { label: "Normal", tone: "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]" };
 }
 
 function statusTone(status: JobStatus) {
   if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37] text-white border-[#D4AF37]";
   if (status === "IN_REPAIR") return "bg-black text-white border-black";
   if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
-  if (status === "DIAGNOSING") return "bg-slate-300 text-slate-800 border-slate-400";
-  if (status === "CLOSED") return "bg-slate-100 text-slate-500 border-slate-200";
-return "bg-slate-100 text-slate-700 border-slate-200";
+  if (status === "DIAGNOSING") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
+  if (status === "CLOSED") return "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]";
+  return "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]";
 }
 
 function shortText(value: string | null, max = 78) {
@@ -412,7 +412,7 @@ export default async function TechniciansPage({
 
                 {typeof job.etaProgress === "number" ? (
                   <div className="mt-2">
-                    <div className="h-1.5 rounded-full bg-slate-200">
+                    <div className="h-1.5 rounded-full bg-[var(--panel-strong)]">
                       <div
                         className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
                         style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
@@ -480,7 +480,7 @@ export default async function TechniciansPage({
 
                   {typeof job.etaProgress === "number" ? (
                     <div className="mt-2">
-                      <div className="h-1.5 rounded-full bg-slate-200">
+                      <div className="h-1.5 rounded-full bg-[var(--panel-strong)]">
                         <div
 className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
                           style={{ width: `${Math.min(job.etaProgress, 100)}%` }}

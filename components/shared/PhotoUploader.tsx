@@ -43,24 +43,24 @@ export function PhotoUploader({
         }}
         className="flex flex-wrap items-center gap-2"
       >
-        <select name="label" className="rounded-md border border-slate-300 px-2 py-1">
+        <select name="label" className="rounded-md border border-[var(--line)] px-2 py-1">
           <option value="before">Before</option>
           <option value="during">During</option>
           <option value="after">After</option>
           <option value="other">Other</option>
         </select>
         <input name="files" type="file" accept="image/png,image/jpeg,image/webp" multiple required />
-        <button disabled={isPending} className="rounded-md bg-slate-800 px-3 py-2 text-sm text-white">
+        <button disabled={isPending} className="rounded-md bg-black px-3 py-2 text-sm text-white">
           Upload
         </button>
       </form>
 
       <div className="grid gap-3 md:grid-cols-3">
         {photos.map((photo) => (
-          <div key={photo.id} className="rounded-lg border border-slate-200 bg-white p-2">
+          <div key={photo.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
             <Image src={photo.url} alt={photo.label ?? "job photo"} width={320} height={160} className="h-40 w-full rounded object-cover" />
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs text-slate-600">{photo.label ?? "-"}</span>
+              <span className="text-xs text-[var(--ink-muted)]">{photo.label ?? "-"}</span>
               {canDelete ? (
                 <form
                   action={async () => {

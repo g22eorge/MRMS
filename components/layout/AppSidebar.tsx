@@ -306,7 +306,7 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
       </nav>
 
       {moreOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 lg:hidden" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMoreOpen(false)}>
           <div
             className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-[var(--line)] bg-white p-4"
             onClick={(event) => event.stopPropagation()}

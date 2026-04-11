@@ -131,7 +131,7 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      {error && <span className="text-[10px] text-red-400">{error}</span>}
+      {error && <span className="text-[10px] text-[#D4AF37]">{error}</span>}
 
       {isOpen && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">

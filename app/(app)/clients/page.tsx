@@ -271,7 +271,7 @@ export default async function ClientsPage({
       </div>
 
       {clients.length === 0 ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No clients match this view.</div>
+        <div className="rounded-lg border border-[var(--line)] bg-white p-6 text-sm text-[var(--ink-muted)]">No clients match this view.</div>
       ) : (
         <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="space-y-3 p-3 2xl:hidden">
@@ -316,7 +316,7 @@ export default async function ClientsPage({
                       <input type="hidden" name="id" value={client.id} />
                       <button
                         disabled={client._count.jobs > 0}
-                        className="btn-premium-danger w-full rounded-md px-3 py-1.5 text-[13px] font-medium disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 sm:py-2 sm:text-sm"
+                        className="btn-premium-danger w-full rounded-md px-3 py-1.5 text-[13px] font-medium disabled:border-[var(--line)] disabled:bg-[var(--panel)] disabled:text-[var(--ink-muted)] sm:py-2 sm:text-sm"
                       >
                         Delete
                       </button>
@@ -363,7 +363,7 @@ export default async function ClientsPage({
                             <input type="hidden" name="id" value={client.id} />
                             <button
                               disabled={client._count.jobs > 0}
-                              className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
+                              className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] disabled:border-[var(--line)] disabled:bg-[var(--panel)] disabled:text-[var(--ink-muted)]"
                             >
                               Delete
                             </button>

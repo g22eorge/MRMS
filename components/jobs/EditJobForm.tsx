@@ -46,7 +46,7 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
             router.refresh();
           });
         }}
-        className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2"
+        className="grid gap-3 rounded-lg border border-[var(--line)] bg-white p-4 md:grid-cols-2"
       >
         <input type="hidden" name="id" value={job.id} />
         <input type="hidden" name="returnTo" value={returnTo} />
@@ -55,29 +55,29 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
           name="brand"
           defaultValue={job.brand}
           required
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className="rounded-md border border-[var(--line)] px-3 py-2"
         />
         <input
           name="model"
           defaultValue={job.model}
           required
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className="rounded-md border border-[var(--line)] px-3 py-2"
         />
         <input
           name="serialOrImei"
           defaultValue={job.serialOrImei ?? ""}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className="rounded-md border border-[var(--line)] px-3 py-2"
         />
         <textarea
           name="technicianNotes"
           defaultValue={job.technicianNotes ?? ""}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className="rounded-md border border-[var(--line)] px-3 py-2"
         />
         <textarea
           name="issueDescription"
           defaultValue={job.issueDescription}
           required
-          className="rounded-md border border-slate-300 px-3 py-2 md:col-span-2"
+          className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
         />
         <div className="md:col-span-2 flex gap-2">
           <button
@@ -86,7 +86,7 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
           >
             {isPending ? "Saving..." : "Save"}
           </button>
-          <Link href={returnTo} className="rounded-md border border-slate-300 px-3 py-2">
+          <Link href={returnTo} className="rounded-md border border-[var(--line)] px-3 py-2">
             Cancel
           </Link>
         </div>

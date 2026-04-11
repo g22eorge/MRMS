@@ -1,13 +1,13 @@
 import { JobStatus } from "@/lib/job-status";
 
 const classMap: Record<JobStatus, string> = {
-  RECEIVED: "bg-slate-100 text-slate-700",
-  DIAGNOSING: "bg-slate-300 text-slate-800",
+  RECEIVED: "bg-[var(--panel)] text-[var(--ink)]",
+  DIAGNOSING: "bg-[var(--panel-strong)] text-[var(--ink)]",
   AWAITING_APPROVAL: "bg-[#D4AF37] text-white",
   IN_REPAIR: "bg-black text-white",
   READY_FOR_PICKUP: "bg-[#D4AF37] text-white",
   COMPLETED: "bg-[#D4AF37] text-white",
-  CLOSED: "bg-slate-200 text-slate-500",
+  CLOSED: "bg-[var(--panel)] text-[var(--ink-muted)]",
 };
 
 const helpText: Record<JobStatus, string> = {

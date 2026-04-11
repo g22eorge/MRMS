@@ -324,7 +324,7 @@ export default async function ClientDetailPage({
         </form>
 
         {!notesFeatureAvailable ? (
-          <p className="mt-2 text-xs text-slate-600">Notes timeline needs latest DB migration. Run `bunx prisma migrate dev` and restart dev server.</p>
+          <p className="mt-2 text-xs text-[var(--ink-muted)]">Notes timeline needs latest DB migration. Run `bunx prisma migrate dev` and restart dev server.</p>
         ) : null}
 
         <div className="mt-4 space-y-2">

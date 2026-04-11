@@ -55,7 +55,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             type="button"
             onClick={() => setStep(idx)}
             className={`rounded-full px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${
-              idx === step ? "bg-[#D4AF37] text-white" : "bg-slate-200 text-slate-700"
+              idx === step ? "bg-[#D4AF37] text-white" : "bg-[var(--panel-strong)] text-[var(--ink)]"
             }`}
           >
             {idx + 1}. {label}
@@ -64,8 +64,8 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       </div>
 
       {step === 0 ? (
-        <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
-          <input name="fullName" value={form.fullName} onChange={onInput} required placeholder="Full Name" className="rounded-md border border-slate-300 px-3 py-2" />
+        <section className="grid gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 md:grid-cols-2">
+          <input name="fullName" value={form.fullName} onChange={onInput} required placeholder="Full Name" className="rounded-md border border-[var(--line)] px-3 py-2" />
           <input
             name="phone"
             value={form.phone}
@@ -82,10 +82,10 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             }}
             required
             placeholder="Phone"
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded-md border border-[var(--line)] px-3 py-2"
           />
-          <input name="email" value={form.email} onChange={onInput} placeholder="Email" className="rounded-md border border-slate-300 px-3 py-2" />
-          <input name="organization" value={form.organization} onChange={onInput} placeholder="Organization" className="rounded-md border border-slate-300 px-3 py-2" />
+          <input name="email" value={form.email} onChange={onInput} placeholder="Email" className="rounded-md border border-[var(--line)] px-3 py-2" />
+          <input name="organization" value={form.organization} onChange={onInput} placeholder="Organization" className="rounded-md border border-[var(--line)] px-3 py-2" />
           {existingClient ? (
             <p className="text-xs text-[#D4AF37] md:col-span-2">
               Existing client found by phone: {existingClient.fullName}. Submitting will update this client profile.
@@ -95,8 +95,8 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       ) : null}
 
       {step === 1 ? (
-        <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
-          <select name="deviceType" value={form.deviceType} onChange={onInput} required className="rounded-md border border-slate-300 px-3 py-2">
+        <section className="grid gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 md:grid-cols-2">
+          <select name="deviceType" value={form.deviceType} onChange={onInput} required className="rounded-md border border-[var(--line)] px-3 py-2">
             <option value="">Device Type</option>
             <option value="PHONE_ANDROID">Phone Android</option>
             <option value="PHONE_IPHONE">Phone iPhone</option>
@@ -105,11 +105,11 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             <option value="MAC">Mac</option>
             <option value="OTHER">Other</option>
           </select>
-          <input name="brand" value={form.brand} onChange={onInput} required placeholder="Brand" className="rounded-md border border-slate-300 px-3 py-2" />
-          <input name="model" value={form.model} onChange={onInput} required placeholder="Model" className="rounded-md border border-slate-300 px-3 py-2" />
-          <input name="serialOrImei" value={form.serialOrImei} onChange={onInput} placeholder="Serial / IMEI" className="rounded-md border border-slate-300 px-3 py-2" />
-          <textarea name="accessories" value={form.accessories} onChange={onInput} placeholder="Accessories" className="rounded-md border border-slate-300 px-3 py-2 md:col-span-2" />
-          <textarea name="physicalNotes" value={form.physicalNotes} onChange={onInput} placeholder="Physical notes" className="rounded-md border border-slate-300 px-3 py-2 md:col-span-2" />
+          <input name="brand" value={form.brand} onChange={onInput} required placeholder="Brand" className="rounded-md border border-[var(--line)] px-3 py-2" />
+          <input name="model" value={form.model} onChange={onInput} required placeholder="Model" className="rounded-md border border-[var(--line)] px-3 py-2" />
+          <input name="serialOrImei" value={form.serialOrImei} onChange={onInput} placeholder="Serial / IMEI" className="rounded-md border border-[var(--line)] px-3 py-2" />
+          <textarea name="accessories" value={form.accessories} onChange={onInput} placeholder="Accessories" className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2" />
+          <textarea name="physicalNotes" value={form.physicalNotes} onChange={onInput} placeholder="Physical notes" className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2" />
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium">Before Repair Photos</label>
             <input name="photos" type="file" accept="image/png,image/jpeg,image/webp" multiple />
@@ -118,34 +118,34 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       ) : null}
 
       {step === 2 ? (
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+        <section className="space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <textarea
             name="issueDescription"
             value={form.issueDescription}
             onChange={onInput}
             required
             placeholder="Issue description in client's words"
-            className="min-h-28 w-full rounded-md border border-slate-300 px-3 py-2"
+            className="min-h-28 w-full rounded-md border border-[var(--line)] px-3 py-2"
           />
           <input
             value={receivedBy}
             readOnly
             aria-label="Received by"
-            className="w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)]"
           />
           <input
             name="receivedAt"
             type="datetime-local"
             value={form.receivedAt}
             onChange={onInput}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded-md border border-[var(--line)] px-3 py-2"
           />
         </section>
       ) : null}
 
       {step === 3 ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+        <section className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="grid gap-2 text-sm text-[var(--ink)] md:grid-cols-2">
             <p><span className="font-medium">Client:</span> {form.fullName || "-"}</p>
             <p><span className="font-medium">Phone:</span> {form.phone || "-"}</p>
             <p><span className="font-medium">Device:</span> {form.deviceType || "-"}</p>

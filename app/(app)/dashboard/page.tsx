@@ -93,13 +93,13 @@ const deviceLabel: Record<string, string> = {
 };
 
 const repairFlowReference = [
-  { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-slate-300 bg-slate-100 text-slate-700" },
-  { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-slate-300 bg-slate-100 text-slate-700" },
+  { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
+  { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
-  { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-slate-300 bg-slate-100 text-slate-700" },
+  { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
   { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
-  { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-slate-200 bg-slate-100 text-slate-500" },
+  { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]" },
 ] as const;
 
 function RepairStatusReference({

@@ -491,11 +491,11 @@ export default async function UsersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleLabel(u.role)}</span>
-                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-slate-200 text-slate-700"}`}>
+                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>
                     {u.isActive ? "Account: Active" : "Account: Inactive"}
                   </span>
                   {hasLinkedRecords ? (
-                    <span className="rounded-full bg-slate-300 px-2 py-1 text-xs text-slate-800">Has history</span>
+                    <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs text-[var(--ink)]">Has history</span>
                   ) : null}
                   <span className="text-[11px] text-[var(--ink-muted)] sm:hidden">Tap to expand</span>
                 </div>
@@ -626,7 +626,7 @@ export default async function UsersPage() {
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-slate-500">Inactive</span>
+                  <span className="text-sm text-[var(--ink-muted)]">Inactive</span>
                   <form action={reactivate} className="sm:w-fit">
                     <input type="hidden" name="id" value={u.id} />
                     <SubmitActionButton

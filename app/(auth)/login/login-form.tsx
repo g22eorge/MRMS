@@ -49,7 +49,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+          className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
           placeholder="you@eagleinfo.com"
         />
       </div>
@@ -63,13 +63,13 @@ export function LoginForm() {
             name="password"
             type={showPassword ? "text" : "password"}
             required
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-24 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+            className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 pr-24 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
             placeholder="Enter your password"
           />
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel)]"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -77,8 +77,8 @@ export function LoginForm() {
       </div>
 
       <div className="flex items-center justify-between text-sm">
-        <label className="flex items-center gap-2 text-slate-600">
-          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border-slate-300 text-[#D4AF37]" />
+        <label className="flex items-center gap-2 text-[var(--ink-muted)]">
+          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border border-[var(--line)] text-[#D4AF37]" />
           Remember me
         </label>
         <a href="mailto:support@eagleinfo.com" className="text-[#D4AF37] hover:underline">
@@ -94,7 +94,7 @@ export function LoginForm() {
         {isPending ? "Signing in..." : "Sign in"}
       </button>
 
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-[var(--ink-muted)]">
         Need help accessing your account? Contact system support.
       </p>
     </form>

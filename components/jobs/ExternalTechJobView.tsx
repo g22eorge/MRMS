@@ -87,11 +87,11 @@ export function ExternalTechJobView({
             Awaiting client approval. Hold repair work until approval is confirmed.
           </div>
         ) : null}
-        <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">
+        <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
           {job.deviceType} / {job.brand} {job.model}
         </p>
-        <p className="mt-1 text-sm text-slate-600 [overflow-wrap:anywhere]">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
-        <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">Accessories: {job.accessories ?? "-"}</p>
+        <p className="mt-1 text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
+        <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Accessories: {job.accessories ?? "-"}</p>
       </div>
 
       <form
@@ -203,11 +203,11 @@ export function ExternalTechJobView({
             />
 
             <input type="hidden" name="repairTimeline" value={timelinePreview === "No timeline selected" ? "" : timelinePreview} />
-            <p className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm text-slate-700">
+            <p className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
               ETA Preview: <span className="font-medium">{timelinePreview}</span>
             </p>
           {job.repairTimeline ? (
-            <p className="text-xs text-slate-500">Current saved ETA: {job.repairTimeline}</p>
+            <p className="text-xs text-[var(--ink-muted)]">Current saved ETA: {job.repairTimeline}</p>
           ) : null}
         </div>
 

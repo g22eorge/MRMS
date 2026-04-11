@@ -35,12 +35,12 @@ type WorkflowReason =
 type HighlightReason = Exclude<WorkflowReason, "NONE">;
 
 const workflowReasonTone: Record<HighlightReason, string> = {
-  PARTS_PENDING: "bg-slate-300 text-slate-800",
+  PARTS_PENDING: "bg-[#D4AF37]/20 text-[#D4AF37]",
   SPECIALIST_ESCALATION: "bg-[#D4AF37] text-white",
   CLIENT_DECLINED: "bg-black text-white",
   UNREPAIRABLE: "bg-black text-white",
-  CUSTOMER_CANCELLED: "bg-slate-200 text-slate-600",
-  OTHER: "bg-slate-100 text-slate-700",
+  CUSTOMER_CANCELLED: "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  OTHER: "bg-[var(--panel-strong)] text-[var(--ink)]",
 };
 
 function workflowReasonLabel(reason: HighlightReason) {
@@ -157,7 +157,7 @@ export function JobTable({
                         ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                         : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
                           ? "bg-[#D4AF37]/20 text-[#D4AF37]"
-                          : "bg-slate-100 text-slate-700"
+                          : "bg-[var(--panel-strong)] text-[var(--ink)]"
                     }`}
                   >
                     {typeof job.clientBill === "number"
@@ -255,7 +255,7 @@ export function JobTable({
                             ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                             : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
                               ? "bg-[#D4AF37]/20 text-[#D4AF37]"
-                              : "bg-slate-100 text-slate-700"
+                              : "bg-[var(--panel-strong)] text-[var(--ink)]"
                         }`}
                       >
                         {typeof job.clientBill === "number"
