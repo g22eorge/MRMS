@@ -472,42 +472,25 @@ export async function updateJobAction(formData: FormData) {
     return { success: true };
   }
 
-  if (payload.nextStatus && payload.nextStatus !== job.status) {
-    await notifyStatusChange(
-      job.id,
-      job.status,
-      payload.nextStatus,
-      job.jobNumber,
-      job.client.fullName
-    );
+  // Notifications must compare against the pre-update snapshot.
+  // `job` is fetched after the update, so compare to `existing`.
+  if (existing.status !== job.status) {
+    await notifyStatusChange(job.id, existing.status, job.status, job.jobNumber, job.client.fullName);
   }
 
-
-  if (payload.assignedToId && payload.assignedToId !== job.assignedToId) {
-    await notifyJobAssigned(
-      job.id,
-      job.jobNumber,
-      `${job.brand} ${job.model}`,
-      payload.assignedToId
-    );
+  if (existing.assignedToId !== job.assignedToId && job.assignedToId) {
+    await notifyJobAssigned(job.id, job.jobNumber, `${job.brand} ${job.model}`, job.assignedToId);
   }
 
-  if (payload.repairTimeline) {
-    await notifyTimelineUpdate(
-      job.id,
-      job.jobNumber,
-      `${job.brand} ${job.model}`,
-      payload.repairTimeline
-    );
+  if (existing.repairTimeline !== job.repairTimeline && job.repairTimeline) {
+    await notifyTimelineUpdate(job.id, job.jobNumber, `${job.brand} ${job.model}`, job.repairTimeline);
   }
 
-  if (payload.timelineNote) {
-    await notifyDelayNote(
-      job.id,
-      job.jobNumber,
-      `${job.brand} ${job.model}`,
-      payload.timelineNote
-    );
+  if (existing.timelineNote !== (job as typeof job & { timelineNote?: string | null }).timelineNote) {
+    const nextNote = (job as typeof job & { timelineNote?: string | null }).timelineNote;
+    if (nextNote) {
+      await notifyDelayNote(job.id, job.jobNumber, `${job.brand} ${job.model}`, nextNote);
+    }
   }
 
   revalidatePath(`/jobs/${payload.jobId}`);

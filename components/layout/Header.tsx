@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 
 type HeaderProps = {
   userName: string;
@@ -14,14 +15,6 @@ type HeaderProps = {
 export function Header({ userName, role }: HeaderProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    fetch("/api/notifications")
-      .then(res => res.json())
-      .then(data => setUnreadCount(data.unreadCount || 0))
-      .catch(console.error);
-  }, []);
 
   return (
     <header className="glass sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3 md:py-3">
@@ -32,15 +25,7 @@ export function Header({ userName, role }: HeaderProps) {
         </p>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 rounded-md border border-black bg-black px-3 py-2 text-white">
-          <span>🔔</span>
-          <span className="text-xs font-bold">Alerts</span>
-          {unreadCount > 0 && (
-            <span className="rounded-full bg-[#D4AF37] px-2 py-0.5 text-[10px] font-bold text-black">
-              {unreadCount}
-            </span>
-          )}
-        </div>
+        <NotificationBell />
         <button
           disabled={isSigningOut}
           onClick={async () => {

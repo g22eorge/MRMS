@@ -70,7 +70,7 @@ export function NotificationBell() {
 
   async function markAsRead(id: string) {
     try {
-      await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+      await fetch(`/api/notifications/${id}`, { method: "POST" });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
@@ -101,14 +101,13 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="relative flex items-center gap-2" ref={dropdownRef}>
-      <span className="text-xs text-white/70">Alerts</span>
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => {
           console.log("🔔 Bell clicked, isOpen:", !isOpen);
           setIsOpen(!isOpen);
         }}
-        className="relative rounded-lg p-2 text-white hover:bg-white/20 border border-white/30"
+        className="relative flex items-center gap-2 rounded-md border border-black bg-black px-3 py-2 text-white"
         aria-label="Notifications"
       >
         <svg
@@ -125,13 +124,14 @@ export function NotificationBell() {
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
+        <span className="text-xs font-bold">Alerts</span>
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#D4AF37] text-[10px] font-bold text-black">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
-      {error && <span className="text-[10px] text-[#D4AF37]">{error}</span>}
+      {error && <span className="ml-2 text-[10px] text-[#D4AF37]">{error}</span>}
 
       {isOpen && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
