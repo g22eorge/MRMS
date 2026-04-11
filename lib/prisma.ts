@@ -31,7 +31,7 @@ function sqlitePathFromUrl(url: string) {
 }
 
 function ensureLocalSqliteSchema(url: string) {
-  if (process.env.PROD === "true") return;
+  if (process.env.TURSO_DATABASE_URL) return;
   if (process.env.NODE_ENV === "production") return;
 
   const sqlitePath = sqlitePathFromUrl(url);
@@ -54,9 +54,10 @@ function ensureLocalSqliteSchema(url: string) {
 }
 
 function createPrismaClient() {
-  const prod = process.env.PROD === "true";
+  // Use TURSO_DATABASE_URL to detect production mode
+  const isProduction = !!process.env.TURSO_DATABASE_URL;
 
-  if (!prod) {
+  if (!isProduction) {
     const databaseUrl = process.env.DATABASE_URL?.trim();
 
     if (!databaseUrl) {
@@ -74,7 +75,7 @@ function createPrismaClient() {
 
   const url = process.env.TURSO_DATABASE_URL;
   if (!url) {
-    throw new Error("Missing TURSO_DATABASE_URL while PROD=true");
+    throw new Error("Missing TURSO_DATABASE_URL");
   }
 
   const adapter = new PrismaLibSql({
