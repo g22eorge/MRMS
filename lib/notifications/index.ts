@@ -188,16 +188,23 @@ export async function notifyStatusChange(
   jobNumber: string,
   clientName: string
 ) {
+  const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
+  const targetRoles = prefs.filter((p) => p.notifyStatusChange).map((p) => p.userId);
   const title = "Status Changed";
   const message = `Job ${jobNumber} (${clientName}) status changed from ${oldStatus.replace("_", " ")} to ${newStatus.replace("_", " ")}`;
 
-  await createNotificationsForRole({
-    type: NotificationType.STATUS_CHANGE,
-    title,
-    message,
-    jobId,
-    roles: ["ADMIN", "OPS"],
-  });
+  if (targetRoles.length > 0) {
+    await prisma.notification.createMany({
+      data: targetRoles.map((userId) => ({
+        type: NotificationType.STATUS_CHANGE,
+        title,
+        message,
+        jobId,
+        userId,
+        channel: NotificationChannel.DASHBOARD,
+      })),
+    });
+  }
 
   if (newStatus === JobStatus.READY_FOR_PICKUP) {
     const client = await prisma.client.findFirst({
@@ -205,10 +212,10 @@ export async function notifyStatusChange(
       select: { phone: true, fullName: true },
     });
 
-    if (client?.phone) {
+    if (client?.phone && prefs.some((p) => p.whatsappEnabled)) {
       await sendCustomWhatsAppMessage(
         client.phone,
-        `Hi ${client.fullName}, your device for job ${jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`
+        `Hi ${client.fullName}, your device for job ${jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`,
       );
     }
   }
@@ -220,28 +227,79 @@ export async function notifyApprovalNeeded(
   clientName: string,
   costEstimate: number
 ) {
+  const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
+  const targetRoles = prefs.filter((p) => p.notifyApprovalNeeded).map((p) => p.userId);
   const title = "Approval Needed";
   const message = `Job ${jobNumber} (${clientName}) requires approval. Estimated cost: UGX ${costEstimate.toLocaleString()}`;
 
-  await createNotificationsForRole({
-    type: NotificationType.APPROVAL_NEEDED,
-    title,
-    message,
-    jobId,
-    roles: ["ADMIN", "OPS"],
-  });
+  if (targetRoles.length > 0) {
+    await prisma.notification.createMany({
+      data: targetRoles.map((userId) => ({
+        type: NotificationType.APPROVAL_NEEDED,
+        title,
+        message,
+        jobId,
+        userId,
+        channel: NotificationChannel.DASHBOARD,
+      })),
+    });
+  }
 
   const client = await prisma.client.findFirst({
     where: { jobs: { some: { id: jobId } } },
     select: { phone: true, fullName: true },
   });
 
-  if (client?.phone) {
+  if (client?.phone && prefs.some((p) => p.whatsappEnabled)) {
     await sendCustomWhatsAppMessage(
       client.phone,
       `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: UGX ${costEstimate.toLocaleString()}. Please confirm to proceed. - Eagle Info Solutions`
     );
   }
+}
+
+async function getUserPreferencesForRoles(roles: Array<"ADMIN" | "OPS" | "TECHNICIAN_INTERNAL" | "TECHNICIAN_EXTERNAL" | "INTAKE">) {
+  const users = await prisma.user.findMany({
+    where: { role: { in: roles }, isActive: true },
+    select: { id: true },
+  });
+  if (users.length === 0) {
+    return [] as Array<{
+      userId: string;
+      whatsappEnabled: boolean;
+      notifyStatusChange: boolean;
+      notifyApprovalNeeded: boolean;
+      notifyEstimateSubmitted: boolean;
+      notifyTimelineUpdated: boolean;
+      notifyDelayNote: boolean;
+    }>;
+  }
+
+  const prefs = await prisma.notificationPreferences.findMany({
+    where: { userId: { in: users.map((u) => u.id) } },
+    select: {
+      userId: true,
+      whatsappEnabled: true,
+      notifyStatusChange: true,
+      notifyApprovalNeeded: true,
+      notifyEstimateSubmitted: true,
+      notifyTimelineUpdated: true,
+      notifyDelayNote: true,
+    },
+  });
+
+  const prefMap = new Map(prefs.map((p) => [p.userId, p]));
+  return users.map((u) =>
+    prefMap.get(u.id) ?? {
+      userId: u.id,
+      whatsappEnabled: true,
+      notifyStatusChange: true,
+      notifyApprovalNeeded: true,
+      notifyEstimateSubmitted: true,
+      notifyTimelineUpdated: true,
+      notifyDelayNote: true,
+    },
+  );
 }
 
 export async function notifyJobAssigned(
@@ -268,16 +326,23 @@ export async function notifyEstimateSubmitted(
   deviceInfo: string,
   estimatedCost: number
 ) {
+  const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
+  const targets = prefs.filter((p) => p.notifyEstimateSubmitted).map((p) => p.userId);
   const title = "Estimate Submitted";
   const message = `External tech submitted estimate for job ${jobNumber} (${deviceInfo}) - UGX ${estimatedCost.toLocaleString()}`;
 
-  await createNotificationsForRole({
-    type: NotificationType.ESTIMATE_SUBMITTED,
-    title,
-    message,
-    jobId,
-    roles: ["ADMIN", "OPS"],
-  });
+  if (targets.length > 0) {
+    await prisma.notification.createMany({
+      data: targets.map((userId) => ({
+        type: NotificationType.ESTIMATE_SUBMITTED,
+        title,
+        message,
+        jobId,
+        userId,
+        channel: NotificationChannel.DASHBOARD,
+      })),
+    });
+  }
 }
 
 export async function notifyTimelineUpdate(
@@ -286,16 +351,23 @@ export async function notifyTimelineUpdate(
   deviceInfo: string,
   newTimeline: string
 ) {
+  const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
+  const targets = prefs.filter((p) => p.notifyTimelineUpdated).map((p) => p.userId);
   const title = "Timeline Updated";
   const message = `Job ${jobNumber} (${deviceInfo}) timeline updated: ${newTimeline}`;
 
-  await createNotificationsForRole({
-    type: NotificationType.TIMELINE_UPDATED,
-    title,
-    message,
-    jobId,
-    roles: ["ADMIN", "OPS"],
-  });
+  if (targets.length > 0) {
+    await prisma.notification.createMany({
+      data: targets.map((userId) => ({
+        type: NotificationType.TIMELINE_UPDATED,
+        title,
+        message,
+        jobId,
+        userId,
+        channel: NotificationChannel.DASHBOARD,
+      })),
+    });
+  }
 }
 
 export async function notifyDelayNote(
@@ -304,14 +376,21 @@ export async function notifyDelayNote(
   deviceInfo: string,
   note: string
 ) {
+  const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
+  const targets = prefs.filter((p) => p.notifyDelayNote).map((p) => p.userId);
   const title = "Delay Note Added";
   const message = `Job ${jobNumber} (${deviceInfo}) delay: ${note}`;
 
-  await createNotificationsForRole({
-    type: NotificationType.DELAY_NOTE_ADDED,
-    title,
-    message,
-    jobId,
-    roles: ["ADMIN", "OPS"],
-  });
+  if (targets.length > 0) {
+    await prisma.notification.createMany({
+      data: targets.map((userId) => ({
+        type: NotificationType.DELAY_NOTE_ADDED,
+        title,
+        message,
+        jobId,
+        userId,
+        channel: NotificationChannel.DASHBOARD,
+      })),
+    });
+  }
 }
