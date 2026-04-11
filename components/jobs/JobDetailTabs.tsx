@@ -81,6 +81,14 @@ type Props = {
     name: string;
     role: Role;
   }>;
+  deviceHistory?: Array<{
+    id: string;
+    jobNumber: string;
+    status: JobStatus;
+    receivedAt: Date;
+    completedAt: Date | null;
+    updatedAt: Date;
+  }>;
   job: {
     id: string;
     jobNumber: string;
@@ -144,7 +152,7 @@ type Props = {
   };
 };
 
-export function JobDetailTabs({ role, permissions = [], job, technicians }: Props) {
+export function JobDetailTabs({ role, permissions = [], job, technicians, deviceHistory = [] }: Props) {
   const router = useRouter();
   const [active, setActive] = useState<(typeof tabs)[number]>("overview");
   const [savedSection, setSavedSection] = useState<
@@ -454,6 +462,34 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
             <p className="font-medium">Issue</p>
             <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{job.issueDescription}</p>
           </div>
+
+          {deviceHistory.length > 0 ? (
+            <div className={`mt-4 ${softSectionClass}`}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Device History</p>
+              <p className="text-sm text-[var(--ink-muted)]">Past jobs linked to this device.</p>
+              <div className="mt-2 grid gap-2">
+                {deviceHistory.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => router.push(`/jobs/${h.id}`)}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[#D4AF37]/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--ink)]">{h.jobNumber}</p>
+                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+                        {prettyEnum(h.status)} · Received {formatUtcDateTime(h.receivedAt)}
+                        {h.completedAt ? ` · Completed ${formatUtcDateTime(h.completedAt)}` : ""}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                      Open
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className={`mt-4 ${softSectionClass}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 2 - Technician Diagnosis</p>

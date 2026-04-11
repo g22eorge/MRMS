@@ -110,5 +110,47 @@ export default async function JobDetailPage({
     clientBill: getClientBill(job),
   };
 
-  return <JobDetailTabs role={user.role} permissions={user.permissions} job={jobWithBilling} technicians={technicians} />;
+  // Device history: show other jobs for the same device when available.
+  // We avoid exposing any client info here; this is only rendered for non-external roles.
+  let deviceHistory: Array<{
+    id: string;
+    jobNumber: string;
+    status: typeof job.status;
+    receivedAt: Date;
+    completedAt: Date | null;
+    updatedAt: Date;
+  }> = [];
+
+  try {
+    const deviceId = (job as typeof job & { deviceId?: string | null }).deviceId ?? null;
+    const serialOrImei = (job as typeof job & { serialOrImei?: string | null }).serialOrImei ?? null;
+
+    if (deviceId) {
+      deviceHistory = await prisma.job.findMany({
+        where: { deviceId, id: { not: job.id } },
+        orderBy: { receivedAt: "desc" },
+        take: 10,
+        select: { id: true, jobNumber: true, status: true, receivedAt: true, completedAt: true, updatedAt: true },
+      });
+    } else if (serialOrImei) {
+      deviceHistory = await prisma.job.findMany({
+        where: { clientId: job.clientId, serialOrImei, id: { not: job.id } },
+        orderBy: { receivedAt: "desc" },
+        take: 10,
+        select: { id: true, jobNumber: true, status: true, receivedAt: true, completedAt: true, updatedAt: true },
+      });
+    }
+  } catch {
+    deviceHistory = [];
+  }
+
+  return (
+    <JobDetailTabs
+      role={user.role}
+      permissions={user.permissions}
+      job={jobWithBilling}
+      technicians={technicians}
+      deviceHistory={deviceHistory}
+    />
+  );
 }
