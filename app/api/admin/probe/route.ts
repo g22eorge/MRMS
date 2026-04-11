@@ -94,6 +94,48 @@ export async function GET() {
     }),
   );
 
+  // Concurrency probe: dashboard runs large Promise.all batches.
+  await run("dashboard:adminLargePromiseAll", async () => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - 31);
+    const end = now;
+
+    const [
+      statusGroup,
+      deviceGroup,
+      completedSelected,
+      receivedSelectedCount,
+      closedSelectedCount,
+      externalCount,
+      inHouseCount,
+      externalCompleted,
+    ] = await Promise.all([
+      prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
+      prisma.job.groupBy({ by: ["deviceType"], _count: { deviceType: true } }),
+      prisma.job.findMany({ where: { status: "COMPLETED", completedAt: { gte: start, lte: end } } }),
+      prisma.job.count({ where: { receivedAt: { gte: start, lte: end } } }),
+      prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: start, lte: end } } }),
+      prisma.job.count({ where: { repairPath: "EXTERNAL", receivedAt: { gte: start, lte: end } } }),
+      prisma.job.count({ where: { repairPath: "IN_HOUSE", receivedAt: { gte: start, lte: end } } }),
+      prisma.job.findMany({
+        where: { repairPath: "EXTERNAL", status: "COMPLETED" },
+        select: { id: true, externalTechBill: true },
+      }),
+    ]);
+
+    return {
+      statusBuckets: statusGroup.length,
+      deviceBuckets: deviceGroup.length,
+      completedSelected: completedSelected.length,
+      receivedSelectedCount,
+      closedSelectedCount,
+      externalCount,
+      inHouseCount,
+      externalCompleted: externalCompleted.length,
+    };
+  });
+
   // Notifications (these were missing in prod)
   await run("notification:count", async () => prisma.notification.count());
   await run("notificationPreferences:count", async () => prisma.notificationPreferences.count());
