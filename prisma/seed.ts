@@ -158,7 +158,12 @@ async function ensureJob({
   completedAt?: Date;
   closedAt?: Date;
 }) {
-  const existing = await prisma.job.findUnique({ where: { jobNumber } });
+  // Select explicitly so seeding doesn't break when optional columns
+  // (e.g. deviceId) are not present in some environments yet.
+  const existing = await prisma.job.findUnique({
+    where: { jobNumber },
+    select: { id: true },
+  });
   if (existing) {
     return prisma.job.update({
       where: { id: existing.id },
