@@ -46,3 +46,7 @@ next-env.d.ts
 
 # local sqlite files
 dev.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
