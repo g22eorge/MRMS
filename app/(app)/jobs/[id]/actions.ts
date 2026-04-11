@@ -118,7 +118,41 @@ export async function updateJobAction(formData: FormData) {
   }
 
   const payload = parsed.data;
-  const existing = await prisma.job.findUnique({ where: { id: payload.jobId } });
+  // Select explicitly to avoid runtime failures if some newer columns (e.g. deviceId)
+  // are not yet present in a given environment.
+  const existing = await prisma.job.findUnique({
+    where: { id: payload.jobId },
+    select: {
+      id: true,
+      updatedAt: true,
+      status: true,
+      assignedToId: true,
+      repairPath: true,
+      // billing + payouts
+      clientBill: true,
+      vatApplicable: true,
+      externalTechFee: true,
+      externalPaid: true,
+      externalPaymentRef: true,
+      // workflow + comms
+      communicationStatus: true,
+      clientConversationNote: true,
+      workflowReason: true,
+      statusNote: true,
+      // diagnosis + repair
+      diagnosisNotes: true,
+      externalDiagnosis: true,
+      partsNeeded: true,
+      workDone: true,
+      partsReplaced: true,
+      // timeline
+      repairTimeline: true,
+      timelineNote: true,
+      // approval fields (used by status transitions)
+      clientApproved: true,
+      approvalDate: true,
+    },
+  });
   if (!existing) {
     return { error: "Job not found" };
   }
@@ -465,7 +499,18 @@ export async function updateJobAction(formData: FormData) {
 
   const job = await prisma.job.findUnique({
     where: { id: payload.jobId },
-    include: { client: true, assignedTo: true },
+    select: {
+      id: true,
+      jobNumber: true,
+      status: true,
+      assignedToId: true,
+      brand: true,
+      model: true,
+      repairTimeline: true,
+      timelineNote: true,
+      client: { select: { fullName: true, phone: true } },
+      assignedTo: { select: { id: true, name: true, role: true } },
+    },
   });
 
   if (!job) {
