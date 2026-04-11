@@ -143,7 +143,7 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: {
-        status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+        status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] },
       },
       select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
@@ -341,7 +341,7 @@ export default async function ReportsPage({
     for (const job of jobsInSelectedMonth) {
       const bucket = ensure(deviceLabel[job.deviceType] ?? job.deviceType);
       bucket.total += 1;
-      if (["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
+      if (["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status)) {
         bucket.open += 1;
       }
       if (job.status === "COMPLETED") {

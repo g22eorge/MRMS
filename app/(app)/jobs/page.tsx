@@ -68,7 +68,7 @@ export default async function JobsPage({
     ...(pricingFilter === "needs"
       ? {
           clientBill: null,
-          status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[] },
+          status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] as JobStatus[] },
         }
       : pricingFilter === "priced"
         ? { clientBill: { not: null } }
@@ -181,7 +181,7 @@ export default async function JobsPage({
   const staleThresholdHours = 24;
   const staleCutoff = new Date();
   staleCutoff.setHours(staleCutoff.getHours() - staleThresholdHours);
-  const openStatuses: JobStatus[] = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"];
+  const openStatuses: JobStatus[] = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"];
   const staleOpenCount = jobs.filter((job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff).length;
   const unassignedOpenCount = jobs.filter(
     (job) => openStatuses.includes(job.status as JobStatus) && !job.assignedToId,

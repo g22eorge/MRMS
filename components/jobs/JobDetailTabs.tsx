@@ -197,7 +197,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians }: Prop
 
   const statusActions = allowedStatusTransitions[job.status] ?? [];
   const isTerminal =
-    job.status === "COMPLETED" || job.status === "CLOSED";
+    job.status === "COMPLETED" || job.status === "CLOSED" || job.status === "DELIVERED";
   const existingMargin =
     typeof job.clientBill === "number" && typeof job.externalTechBill === "number"
       ? job.clientBill - job.externalTechBill

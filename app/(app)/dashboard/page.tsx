@@ -257,7 +257,7 @@ export default async function DashboardPage({
     const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
 
     const currency = getAppCurrency();
-    const openCount = jobs.filter((job) => ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)).length;
+    const openCount = jobs.filter((job) => ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status)).length;
     const completedCount = jobs.filter((job) => job.status === "COMPLETED").length;
     const paidTotal = jobs
       .filter((job) => payouts.get(job.id)?.externalPaid && typeof payouts.get(job.id)?.externalTechFee === "number")
@@ -390,21 +390,21 @@ export default async function DashboardPage({
           prisma.job.count({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] },
               clientBill: null,
             },
           }),
           prisma.job.count({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"] },
               clientBill: { not: null },
             },
           }),
           prisma.job.findMany({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"] },
               clientBill: { not: null },
             },
             select: {
@@ -801,7 +801,7 @@ export default async function DashboardPage({
       }),
       prisma.job.count({
         where: {
-          status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
+          status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "AWAITING_APPROVAL"] },
         },
       }),
       prisma.job.findMany({
@@ -896,7 +896,7 @@ export default async function DashboardPage({
       prisma.job.count({
         where: {
           createdById: session.user.id,
-          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] },
         },
       }),
       prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
@@ -985,7 +985,7 @@ export default async function DashboardPage({
 
   const [totalJobs, openJobs, completedJobs] = await Promise.all([
     prisma.job.count(),
-    prisma.job.count({ where: { status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] } } }),
+    prisma.job.count({ where: { status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "AWAITING_APPROVAL"] } } }),
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 

@@ -117,7 +117,7 @@ export function JobTable({
                     {canSeeCost ? (
                       <p className="mt-1 text-[11px] font-semibold text-[var(--ink)]">
                         {showClientFacingCostOnly
-                          ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
+                          ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
                             ? formatMoney(job.clientBill)
                             : "Pending final"
                           : job.externalTechBill
@@ -173,7 +173,7 @@ export function JobTable({
                   <p className="text-[var(--ink-muted)]">{showClientFacingCostOnly ? "Client Cost" : "External Bill"}</p>
                   <p className="font-medium text-[var(--ink)]">
                     {showClientFacingCostOnly
-                      ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
+                      ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
                         ? formatMoney(job.clientBill)
                         : "Pending final"
                       : job.externalTechBill

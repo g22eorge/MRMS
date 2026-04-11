@@ -187,7 +187,7 @@ export default async function TechniciansPage({
   const spotlightCandidates = sortedJobs.filter(
     (job) =>
       !dismissedSpotlightIds.has(job.id) &&
-      ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
+      ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status),
   );
   const spotlightJobs = spotlightCandidates.slice(0, 3);
   const boardReturnTo = routeWith({});
