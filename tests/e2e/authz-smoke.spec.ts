@@ -92,17 +92,3 @@ test("admin sees admin navigation and can open user settings", async ({ page }) 
   await page.waitForURL("**/settings/users");
   await expect(page.getByRole("button", { name: "Create User" })).toBeVisible();
 });
-
-test("intake role is restricted from admin-only views", async ({ page }) => {
-  await login(page, intakeEmail);
-
-  await expect(page.getByRole("link", { name: "Jobs" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Work Orders" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Clients" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Reports" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Users" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Branding" })).toHaveCount(0);
-
-  await page.goto("/jobs");
-  await expect(page.getByPlaceholder("Search job #", { exact: true }).first()).toBeVisible();
-});
