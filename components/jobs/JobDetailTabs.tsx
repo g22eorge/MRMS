@@ -10,7 +10,7 @@ import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { JobStatus } from "@/lib/job-status";
+import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "timeline", "photos"] as const;
@@ -210,23 +210,20 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     return true;
   });
 
-  const allowedStatusTransitions: Partial<Record<JobStatus, JobStatus[]>> = {
+  const allowedStatusTransitions: Partial<Record<ReturnType<typeof normalizeJobStatus>, JobStatus[]>> = {
     RECEIVED: ["DIAGNOSING"],
-    DIAGNOSING: ["PENDING_EXTERNAL_ASSIGNMENT", "IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
-    PENDING_EXTERNAL_ASSIGNMENT: ["ASSIGNED_ONE_TIME_EXTERNAL", "IN_EXTERNAL_REPAIR", "CLOSED"],
-    ASSIGNED_ONE_TIME_EXTERNAL: ["IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "CLOSED"],
-    IN_EXTERNAL_REPAIR: ["WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL", "CLOSED"],
-    WAITING_FOR_PARTS: ["IN_EXTERNAL_REPAIR", "RETURNED_FROM_EXTERNAL", "CLOSED"],
-    RETURNED_FROM_EXTERNAL: ["IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
+    DIAGNOSING: ["IN_EXTERNAL_REPAIR", "IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
+    IN_EXTERNAL_REPAIR: ["IN_REPAIR", "AWAITING_APPROVAL", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
     AWAITING_APPROVAL: ["IN_REPAIR", "CLOSED"],
     IN_REPAIR: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
-    READY_FOR_PICKUP: ["DELIVERED", "COMPLETED", "CLOSED"],
-    DELIVERED: ["COMPLETED", "CLOSED"],
+    READY_FOR_PICKUP: ["COMPLETED", "CLOSED"],
+    COMPLETED: [],
+    CLOSED: [],
   };
 
-  const statusActions = allowedStatusTransitions[job.status] ?? [];
-  const isTerminal =
-    job.status === "COMPLETED" || job.status === "CLOSED" || job.status === "DELIVERED";
+  const statusKey = normalizeJobStatus(job.status);
+  const statusActions = allowedStatusTransitions[statusKey] ?? [];
+  const isTerminal = job.status === "COMPLETED" || job.status === "CLOSED";
   const existingMargin =
     typeof job.clientBill === "number" && typeof job.externalTechBill === "number"
       ? job.clientBill - job.externalTechBill
@@ -263,31 +260,16 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         ? 1
         : job.status === "AWAITING_APPROVAL"
           ? 2
-          : (
-                [
-                  "PENDING_EXTERNAL_ASSIGNMENT",
-                  "ASSIGNED_ONE_TIME_EXTERNAL",
-                  "IN_EXTERNAL_REPAIR",
-                  "WAITING_FOR_PARTS",
-                  "RETURNED_FROM_EXTERNAL",
-                  "IN_REPAIR",
-                  "READY_FOR_PICKUP",
-                ] as JobStatus[]
-              ).includes(job.status)
+          : (["IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[]).includes(job.status)
             ? 3
             : 4;
-  const nextActionByStatus: Record<JobStatus, string> = {
+  const nextActionByStatus: Record<ReturnType<typeof normalizeJobStatus>, string> = {
     RECEIVED: "Start diagnosis",
     DIAGNOSING: "Capture diagnosis and set repair path",
-    PENDING_EXTERNAL_ASSIGNMENT: "Assign one-time external technician",
-    ASSIGNED_ONE_TIME_EXTERNAL: "Send device and confirm external start",
     IN_EXTERNAL_REPAIR: "Capture progress updates and ETA",
-    WAITING_FOR_PARTS: "Record parts status and follow up",
-    RETURNED_FROM_EXTERNAL: "Verify outcome and continue internal flow",
     AWAITING_APPROVAL: "Record client approval decision",
     IN_REPAIR: "Update repair log and progress",
     READY_FOR_PICKUP: "Confirm delivery to client",
-    DELIVERED: "Verify payment and finalize job",
     COMPLETED: "Archive and invoice follow-up only",
     CLOSED: "No further workflow action",
   };
@@ -318,20 +300,10 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     (
       job.repairPath === "EXTERNAL" ||
       Boolean(oneTimeExternal) ||
-      ([
-        "PENDING_EXTERNAL_ASSIGNMENT",
-        "ASSIGNED_ONE_TIME_EXTERNAL",
-        "IN_EXTERNAL_REPAIR",
-        "WAITING_FOR_PARTS",
-        "RETURNED_FROM_EXTERNAL",
-      ] as JobStatus[]).includes(job.status)
+      (["IN_EXTERNAL_REPAIR"] as JobStatus[]).includes(job.status)
     );
   const oneTimeStatusOptions: Array<{ value: JobStatus; label: string }> = [
-    { value: "PENDING_EXTERNAL_ASSIGNMENT", label: "Pending External Assignment" },
-    { value: "ASSIGNED_ONE_TIME_EXTERNAL", label: "Assigned to One-Time External Tech" },
-    { value: "IN_EXTERNAL_REPAIR", label: "In External Repair" },
-    { value: "WAITING_FOR_PARTS", label: "Waiting for Parts" },
-    { value: "RETURNED_FROM_EXTERNAL", label: "Returned from External Tech" },
+    { value: "IN_EXTERNAL_REPAIR", label: "External Repair" },
     { value: "COMPLETED", label: "Completed" },
   ];
 
@@ -415,7 +387,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     {
       key: "nextAction",
       label: "Next Action",
-      value: nextActionByStatus[job.status],
+      value: nextActionByStatus[statusKey],
       tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-[var(--ink)]" : "text-black",
       accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-[var(--panel)] border-[var(--line)]" : "bg-[var(--panel-strong)] border-[var(--line)]",
       priority: 84,
@@ -1270,29 +1242,26 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               </button>
             ))}
           </div>
-          {statusActions.includes("DELIVERED") && (
-            <div className="w-full border-t border-[var(--line)] pt-3 mt-2">
-              <p className="text-xs font-medium text-[var(--ink)] mb-2">Confirm Delivery</p>
-              <div className="flex flex-wrap gap-2 items-center">
-                <select
-                  name="deliveryMethod"
-                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)]"
-                  required
-                >
-                  <option value="">Method</option>
-                  <option value="PICKUP">Client Pickup</option>
-                  <option value="DELIVERY">We Delivered</option>
-                  <option value="COURIER">Courier</option>
-                </select>
-                <input
-                  type="text"
-                  name="deliveredTo"
-                  placeholder="Received by (name)"
-                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
-                />
-              </div>
+          <div className="w-full border-t border-[var(--line)] pt-3 mt-2">
+            <p className="text-xs font-medium text-[var(--ink)] mb-2">Delivery (Optional)</p>
+            <div className="flex flex-wrap gap-2 items-center">
+              <select
+                name="deliveryMethod"
+                className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)]"
+              >
+                <option value="">Method</option>
+                <option value="PICKUP">Client Pickup</option>
+                <option value="DELIVERY">We Delivered</option>
+                <option value="COURIER">Courier</option>
+              </select>
+              <input
+                type="text"
+                name="deliveredTo"
+                placeholder="Received by (name)"
+                className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
+              />
             </div>
-          )}
+          </div>
           {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}

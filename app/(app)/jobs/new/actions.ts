@@ -108,10 +108,10 @@ export async function createJobAction(formData: FormData) {
   const openStatuses = [
     "RECEIVED",
     "DIAGNOSING",
+    "IN_EXTERNAL_REPAIR",
     "AWAITING_APPROVAL",
     "IN_REPAIR",
     "READY_FOR_PICKUP",
-    "DELIVERED",
   ] as const;
 
   const createdJobs: Array<{ id: string }> = [];

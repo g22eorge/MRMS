@@ -7,7 +7,7 @@ import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
-import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -73,20 +73,15 @@ function yearOptions(count: number) {
   });
 }
 
-const statusLabel: Record<JobStatus, string> = {
+const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-  DELIVERED: "Delivered",
 };
 
 const deviceLabel: Record<string, string> = {
@@ -101,9 +96,7 @@ const deviceLabel: Record<string, string> = {
 const repairFlowReference = [
   { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "PENDING_EXTERNAL_ASSIGNMENT", label: "External Assign", href: "/jobs?status=PENDING_EXTERNAL_ASSIGNMENT", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "IN_EXTERNAL_REPAIR", label: "External Repair", href: "/jobs?status=IN_EXTERNAL_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "RETURNED_FROM_EXTERNAL", label: "Returned", href: "/jobs?status=RETURNED_FROM_EXTERNAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
   { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
@@ -268,15 +261,10 @@ export default async function DashboardPage({
     const openCount = jobs.filter((job) => [
       "RECEIVED",
       "DIAGNOSING",
-      "PENDING_EXTERNAL_ASSIGNMENT",
-      "ASSIGNED_ONE_TIME_EXTERNAL",
       "IN_EXTERNAL_REPAIR",
-      "WAITING_FOR_PARTS",
-      "RETURNED_FROM_EXTERNAL",
       "AWAITING_APPROVAL",
       "IN_REPAIR",
       "READY_FOR_PICKUP",
-      "DELIVERED",
     ].includes(job.status)).length;
     const completedCount = jobs.filter((job) => job.status === "COMPLETED").length;
     const paidTotal = jobs
@@ -360,7 +348,9 @@ export default async function DashboardPage({
                 <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{job.jobNumber}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">
+                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
@@ -410,21 +400,21 @@ export default async function DashboardPage({
           prisma.job.count({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
               clientBill: null,
             },
           }),
           prisma.job.count({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
               clientBill: { not: null },
             },
           }),
           prisma.job.findMany({
             where: {
               ...pricingScopeWhere,
-              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"] },
+              status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
               clientBill: { not: null },
             },
             select: {
@@ -504,7 +494,9 @@ export default async function DashboardPage({
                 <li key={job.id} className="border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex items-center justify-between gap-2 group">
                     <p className="truncate text-xs font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber}</p>
-                    <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                    <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">
+                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -545,7 +537,9 @@ export default async function DashboardPage({
                 <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center group">
                     <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber} - {job.brand} {job.model}</p>
-                    <span className="text-xs text-[var(--ink-muted)]">{statusLabel[job.status]}</span>
+                    <span className="text-xs text-[var(--ink-muted)]">
+                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -630,8 +624,13 @@ export default async function DashboardPage({
     );
     const marginRate = revenueSelected > 0 ? (marginSelected / revenueSelected) * 100 : 0;
 
-    const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
-    const statusData = JOB_STATUSES.map((status) => ({
+    const statusCount = new Map<string, number>();
+    for (const item of statusGroup) {
+      const key = normalizeJobStatus(item.status as JobStatus);
+      statusCount.set(key, (statusCount.get(key) ?? 0) + item._count.status);
+    }
+
+    const statusData = UI_JOB_STATUSES.map((status) => ({
       key: status,
       name: statusLabel[status],
       value: statusCount.get(status) ?? 0,
@@ -821,7 +820,7 @@ export default async function DashboardPage({
       }),
       prisma.job.count({
         where: {
-          status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "AWAITING_APPROVAL"] },
+          status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
         },
       }),
       prisma.job.findMany({
@@ -916,21 +915,7 @@ export default async function DashboardPage({
       prisma.job.count({
         where: {
           createdById: session.user.id,
-          status: {
-            in: [
-              "RECEIVED",
-              "DIAGNOSING",
-              "PENDING_EXTERNAL_ASSIGNMENT",
-              "ASSIGNED_ONE_TIME_EXTERNAL",
-              "IN_EXTERNAL_REPAIR",
-              "WAITING_FOR_PARTS",
-              "RETURNED_FROM_EXTERNAL",
-              "AWAITING_APPROVAL",
-              "IN_REPAIR",
-              "READY_FOR_PICKUP",
-              "DELIVERED",
-            ],
-          },
+          status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
         },
       }),
       prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
@@ -1021,21 +1006,7 @@ export default async function DashboardPage({
     prisma.job.count(),
     prisma.job.count({
       where: {
-        status: {
-          in: [
-            "RECEIVED",
-            "DIAGNOSING",
-            "PENDING_EXTERNAL_ASSIGNMENT",
-            "ASSIGNED_ONE_TIME_EXTERNAL",
-            "IN_EXTERNAL_REPAIR",
-            "WAITING_FOR_PARTS",
-            "RETURNED_FROM_EXTERNAL",
-            "IN_REPAIR",
-            "READY_FOR_PICKUP",
-            "DELIVERED",
-            "AWAITING_APPROVAL",
-          ],
-        },
+        status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
       },
     }),
     prisma.job.count({ where: { status: "COMPLETED" } }),

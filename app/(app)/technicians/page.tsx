@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
-import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -15,30 +15,21 @@ type SearchParams = {
 const ACTIVE_BOARD_STATUSES = [
   "RECEIVED",
   "DIAGNOSING",
-  "PENDING_EXTERNAL_ASSIGNMENT",
-  "ASSIGNED_ONE_TIME_EXTERNAL",
   "IN_EXTERNAL_REPAIR",
-  "WAITING_FOR_PARTS",
-  "RETURNED_FROM_EXTERNAL",
   "AWAITING_APPROVAL",
   "IN_REPAIR",
   "READY_FOR_PICKUP",
 ];
 
-const statusOptionLabel: Record<JobStatus, string> = {
+const statusOptionLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-  DELIVERED: "Delivered",
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -54,6 +45,7 @@ function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
 
 function statusTone(status: JobStatus) {
   if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37] text-white border-[#D4AF37]";
+  // DELIVERED status is deprecated in UI; keep style fallback if historical data has it.
   if (status === "DELIVERED") return "bg-black text-white border-black";
   if (status === "IN_REPAIR") return "bg-black text-white border-black";
   if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
@@ -69,7 +61,7 @@ function shortText(value: string | null, max = 78) {
 }
 
 function statusLabel(status: JobStatus) {
-  return statusOptionLabel[status];
+  return statusOptionLabel[normalizeJobStatus(status)];
 }
 
 function nextCourse(job: {
@@ -197,7 +189,7 @@ export default async function TechniciansPage({
   const spotlightCandidates = sortedJobs.filter(
     (job) =>
       !dismissedSpotlightIds.has(job.id) &&
-      ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status),
+      ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
   );
   const spotlightJobs = spotlightCandidates.slice(0, 3);
   const boardReturnTo = routeWith({});
@@ -292,7 +284,7 @@ export default async function TechniciansPage({
           <div className="mt-2 grid gap-2">
             <select name="status" defaultValue={filters.status} className={mobileControlClass}>
               <option value="">All statuses</option>
-              {JOB_STATUSES.map((status) => (
+              {UI_JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{statusOptionLabel[status]}</option>
               ))}
             </select>
@@ -313,9 +305,9 @@ export default async function TechniciansPage({
         />
         <select name="status" defaultValue={filters.status} className={controlClass}>
           <option value="">All statuses</option>
-          {JOB_STATUSES.map((status) => (
-            <option key={status} value={status}>{statusOptionLabel[status]}</option>
-          ))}
+            {UI_JOB_STATUSES.map((status) => (
+              <option key={status} value={status}>{statusOptionLabel[status]}</option>
+            ))}
         </select>
         <select name="ready" defaultValue={filters.ready} className={controlClass}>
           <option value="">All queue</option>
@@ -337,7 +329,7 @@ export default async function TechniciansPage({
           ) : null}
           {filters.status ? (
             <Link href={routeWith({ status: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-              Status: {statusOptionLabel[filters.status as JobStatus] ?? filters.status} x
+              Status: {statusOptionLabel[normalizeJobStatus(filters.status as JobStatus)] ?? filters.status} x
             </Link>
           ) : null}
           {filters.ready === "1" ? (
@@ -377,7 +369,7 @@ export default async function TechniciansPage({
         <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
           {statusCounts.map((status) => (
             <div key={`mobile-${status.key}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{statusOptionLabel[status.key as JobStatus]}</p>
+              <p className="text-[11px] text-[var(--ink-muted)]">{(statusOptionLabel as Record<string, string>)[status.key] ?? status.key}</p>
               <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
             </div>
           ))}
@@ -385,7 +377,7 @@ export default async function TechniciansPage({
         <div className="mt-2 hidden gap-2 lg:grid lg:grid-cols-5">
           {statusCounts.map((status) => (
             <div key={status.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{statusOptionLabel[status.key as JobStatus]}</p>
+              <p className="text-[11px] text-[var(--ink-muted)]">{(statusOptionLabel as Record<string, string>)[status.key] ?? status.key}</p>
               <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
             </div>
           ))}

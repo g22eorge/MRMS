@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
-import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -23,18 +23,13 @@ const addNoteSchema = z.object({
   body: z.string().min(2),
 });
 
-const statusOptionLabel: Record<JobStatus, string> = {
+const statusOptionLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
-  DELIVERED: "Delivered",
   COMPLETED: "Completed",
   CLOSED: "Closed",
 };
@@ -287,7 +282,7 @@ export default async function ClientDetailPage({
             <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
             <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20">
               <option value="">All statuses</option>
-              {JOB_STATUSES.map((status) => (
+              {UI_JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{statusOptionLabel[status]}</option>
               ))}
             </select>
@@ -306,7 +301,9 @@ export default async function ClientDetailPage({
                   <summary className="list-none">
                     <div className="flex items-center justify-between gap-2">
                       <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">{statusOptionLabel[job.status]}</span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">
+                        {statusOptionLabel[job.status as keyof typeof statusOptionLabel] ?? job.status}
+                      </span>
                     </div>
                     <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
                     <p className="text-xs text-[var(--ink-muted)]">Received {formatEATDate(job.receivedAt)}</p>

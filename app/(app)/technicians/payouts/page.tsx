@@ -17,17 +17,12 @@ type SearchParams = {
 const statusOptionLabel = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-  DELIVERED: "Delivered",
 } as const;
 
 function parseMonth(monthParam?: string) {
@@ -202,7 +197,10 @@ export default async function TechnicianPayoutsPage({
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium sm:text-sm">{job.jobNumber} - {job.brand} {job.model}</p>
-                        <p className="text-[10px] text-[var(--ink-muted)] sm:text-xs">{statusOptionLabel[job.status]} {job.completedAt ? `• completed ${formatEATDate(job.completedAt)}` : ""}</p>
+                        <p className="text-[10px] text-[var(--ink-muted)] sm:text-xs">
+                          {(statusOptionLabel as Record<string, string>)[job.status] ?? job.status}{" "}
+                          {job.completedAt ? `• completed ${formatEATDate(job.completedAt)}` : ""}
+                        </p>
                         {payouts.get(job.id)?.externalPaymentRef ? (
                           <p className="text-[10px] text-[var(--ink-muted)]">Ref: {payouts.get(job.id)?.externalPaymentRef}</p>
                         ) : null}

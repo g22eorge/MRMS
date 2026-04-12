@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { JobTable, JobRow } from "@/components/jobs/JobTable";
 import { StatusFlowNotice } from "@/components/jobs/StatusFlowNotice";
-import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -39,20 +39,32 @@ const supportsOneTimeExternal = Boolean(
     ?.fields.some((field) => field.name === "oneTimeExternalAssignment"),
 );
 
-const statusOptionLabel: Record<JobStatus, string> = {
+const statusOptionLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned to One-Time External Tech",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External Tech",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-  DELIVERED: "Delivered",
+};
+
+const UI_TO_DB_STATUSES: Record<ReturnType<typeof normalizeJobStatus>, JobStatus[]> = {
+  RECEIVED: ["RECEIVED"],
+  DIAGNOSING: ["DIAGNOSING"],
+  IN_EXTERNAL_REPAIR: [
+    "PENDING_EXTERNAL_ASSIGNMENT",
+    "ASSIGNED_ONE_TIME_EXTERNAL",
+    "IN_EXTERNAL_REPAIR",
+    "WAITING_FOR_PARTS",
+    "RETURNED_FROM_EXTERNAL",
+  ],
+  AWAITING_APPROVAL: ["AWAITING_APPROVAL"],
+  IN_REPAIR: ["IN_REPAIR"],
+  READY_FOR_PICKUP: ["READY_FOR_PICKUP"],
+  COMPLETED: ["COMPLETED", "DELIVERED"],
+  CLOSED: ["CLOSED"],
 };
 
 export default async function JobsPage({
@@ -65,7 +77,16 @@ export default async function JobsPage({
   const statuses = (filters.status ?? "")
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean) as JobStatus[];
+    .filter(Boolean);
+
+  const uiStatuses = statuses.filter((status) => (UI_JOB_STATUSES as readonly string[]).includes(status));
+  const dbStatuses = uiStatuses.length
+    ? Array.from(
+        new Set(
+          uiStatuses.flatMap((status) => UI_TO_DB_STATUSES[status as ReturnType<typeof normalizeJobStatus>] ?? []),
+        ),
+      )
+    : [];
   const pricingFilter = filters.pricing === "needs" || filters.pricing === "priced" ? filters.pricing : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   const pageSize = 20;
@@ -79,11 +100,11 @@ export default async function JobsPage({
     ...(user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !internalCanSearchAll)
       ? { assignedToId: session.user.id }
       : {}),
-    ...(statuses.length > 0 ? { status: { in: statuses } } : {}),
+    ...(dbStatuses.length > 0 ? { status: { in: dbStatuses } } : {}),
     ...(pricingFilter === "needs"
       ? {
           clientBill: null,
-          status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] as JobStatus[] },
+        status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[] },
         }
       : pricingFilter === "priced"
         ? { clientBill: { not: null } }
@@ -216,15 +237,10 @@ export default async function JobsPage({
   const openStatuses: JobStatus[] = [
     "RECEIVED",
     "DIAGNOSING",
-    "PENDING_EXTERNAL_ASSIGNMENT",
-    "ASSIGNED_ONE_TIME_EXTERNAL",
     "IN_EXTERNAL_REPAIR",
-    "WAITING_FOR_PARTS",
-    "RETURNED_FROM_EXTERNAL",
     "AWAITING_APPROVAL",
     "IN_REPAIR",
     "READY_FOR_PICKUP",
-    "DELIVERED",
   ];
   const staleOpenCount = (jobs as Array<{ status: string; updatedAt: Date }>).filter(
     (job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff,
@@ -360,7 +376,7 @@ export default async function JobsPage({
             <div className="mt-2 grid grid-cols-2 gap-2">
               <select name="status" defaultValue={filters.status} className={selectControlClass}>
                 <option value="">All statuses</option>
-                {JOB_STATUSES.map((status) => (
+                {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
                 ))}
               </select>
@@ -398,7 +414,7 @@ export default async function JobsPage({
               />
               <select name="status" defaultValue={filters.status} className={`col-span-3 ${desktopControlClass}`}>
                 <option value="">All statuses</option>
-                {JOB_STATUSES.map((status) => (
+                {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
                 ))}
               </select>
@@ -435,7 +451,7 @@ export default async function JobsPage({
             <div className="mt-2 grid grid-cols-2 gap-2">
               <select name="status" defaultValue={filters.status} className={selectControlClass}>
                 <option value="">All statuses</option>
-                {JOB_STATUSES.map((status) => (
+                {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
                 ))}
               </select>
@@ -496,7 +512,7 @@ export default async function JobsPage({
               />
               <select name="status" defaultValue={filters.status} className={`col-span-3 ${desktopControlClass}`}>
                 <option value="">All statuses</option>
-                {JOB_STATUSES.map((status) => (
+                {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
                 ))}
               </select>
@@ -541,7 +557,7 @@ export default async function JobsPage({
               </div>
             </details>
           </form>
-          <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> (PENDING_EXTERNAL_ASSIGNMENT -> ASSIGNED_ONE_TIME_EXTERNAL -> IN_EXTERNAL_REPAIR -> WAITING_FOR_PARTS -> RETURNED_FROM_EXTERNAL) OR (AWAITING_APPROVAL) -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED/CLOSED." />
+          <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> (External Repair) OR (AWAITING_APPROVAL) -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED/CLOSED." />
         </div>
       )}
 

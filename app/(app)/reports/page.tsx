@@ -7,7 +7,7 @@ import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
-import { JOB_STATUSES, JobStatus } from "@/lib/job-status";
+import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -77,20 +77,15 @@ function yearOptions(count: number) {
   });
 }
 
-const statusLabel: Record<JobStatus, string> = {
+const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
-  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
-  IN_EXTERNAL_REPAIR: "In External Repair",
-  WAITING_FOR_PARTS: "Waiting for Parts",
-  RETURNED_FROM_EXTERNAL: "Returned from External",
+  IN_EXTERNAL_REPAIR: "External Repair",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-  DELIVERED: "Delivered",
 };
 
 const deviceLabel: Record<string, string> = {
@@ -148,21 +143,7 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: {
-        status: {
-          in: [
-            "RECEIVED",
-            "DIAGNOSING",
-            "PENDING_EXTERNAL_ASSIGNMENT",
-            "ASSIGNED_ONE_TIME_EXTERNAL",
-            "IN_EXTERNAL_REPAIR",
-            "WAITING_FOR_PARTS",
-            "RETURNED_FROM_EXTERNAL",
-            "AWAITING_APPROVAL",
-            "IN_REPAIR",
-            "READY_FOR_PICKUP",
-            "DELIVERED",
-          ],
-        },
+        status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
       },
       select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
@@ -188,8 +169,8 @@ export default async function ReportsPage({
   const externalPayoutOutstandingCount = unpaidPayouts.length;
   const externalPayoutOutstandingTotal = unpaidPayouts.reduce((sum, payout) => sum + payout.amount, 0);
 
-  const statusCount = new Map(statusGroup.map((s) => [s.status, s._count.status]));
-  const statusData = JOB_STATUSES.map((status) => ({
+  const statusCount = new Map(statusGroup.map((s) => [normalizeJobStatus(s.status as JobStatus), s._count.status]));
+  const statusData = UI_JOB_STATUSES.map((status) => ({
     key: status,
     name: statusLabel[status],
     value: statusCount.get(status) ?? 0,
@@ -360,7 +341,7 @@ export default async function ReportsPage({
     for (const job of jobsInSelectedMonth) {
       const bucket = ensure(deviceLabel[job.deviceType] ?? job.deviceType);
       bucket.total += 1;
-      if (["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status)) {
+      if (["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
         bucket.open += 1;
       }
       if (job.status === "COMPLETED") {
