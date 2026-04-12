@@ -14,8 +14,9 @@ export function LoginForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const email = String(data.get("email") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim().toLowerCase();
     const password = String(data.get("password") ?? "");
+    const rememberMe = Boolean(data.get("rememberMe"));
 
     setIsPending(true);
     try {
@@ -23,6 +24,7 @@ export function LoginForm() {
         email,
         password,
         callbackURL: "/dashboard",
+        rememberMe,
       });
 
       if (response.error) {
