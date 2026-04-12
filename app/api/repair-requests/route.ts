@@ -230,6 +230,9 @@ export async function POST(request: NextRequest) {
     // Queue WhatsApp confirmation (durable + retryable)
     const phoneValue = String(body.phone || body.customer_phone || "");
     const customerName = String(body.customer_name ?? "Customer") as string;
+    let confirmation: "queued" | "sent" | "skipped" = "skipped";
+    let outboxId: string | undefined;
+
     if (result.requestId && phoneValue && customerName) {
       const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${result.requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
       const enqueueResult = await enqueueWhatsAppMessage({
@@ -242,6 +245,13 @@ export async function POST(request: NextRequest) {
         console.error("[RepairRequest] WhatsApp enqueue failed:", err);
         return null;
       });
+
+      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+        confirmation = "queued";
+        outboxId = enqueueResult.outboxId;
+      } else if (enqueueResult && "sent" in enqueueResult && enqueueResult.sent) {
+        confirmation = "sent";
+      }
 
       // In serverless runtimes, fire-and-forget work may be cut short.
       // Best-effort attempt to deliver immediately (timeout capped).
@@ -260,7 +270,8 @@ export async function POST(request: NextRequest) {
       success: true,
       request_number: result.requestNumber,
       message: "Your repair request has been submitted successfully. We'll contact you shortly.",
-      confirmation: "queued",
+      confirmation,
+      ...(outboxId ? { outbox_id: outboxId } : {}),
     }, { headers: corsHeaders });
   } catch (error) {
     console.error("[RepairRequestAPI] Error:", error);

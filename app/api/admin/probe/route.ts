@@ -155,6 +155,24 @@ export async function GET() {
     }),
   );
 
+  // Repair requests (website intake)
+  await run("repairRequest:count", async () => prisma.repairRequest.count());
+  await run("repairRequest:recent", async () =>
+    prisma.repairRequest.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        requestNumber: true,
+        requestStatus: true,
+        phone: true,
+        deviceType: true,
+        brand: true,
+        createdAt: true,
+      },
+    }),
+  );
+
   // Branding (can crash if table columns drifted)
   await run("branding:delegateRead", async () => {
     const delegate = (prisma as unknown as {
