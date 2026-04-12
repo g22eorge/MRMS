@@ -151,7 +151,17 @@ export async function GET() {
       take: 5,
       where: { channel: "WHATSAPP", status: { in: ["PENDING", "FAILED"] } },
       orderBy: { nextAttemptAt: "asc" },
-      select: { id: true, type: true, status: true, attemptCount: true, nextAttemptAt: true },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        to: true,
+        attemptCount: true,
+        lastErrorCode: true,
+        lastError: true,
+        lastAttemptAt: true,
+        nextAttemptAt: true,
+      },
     }),
   );
 
