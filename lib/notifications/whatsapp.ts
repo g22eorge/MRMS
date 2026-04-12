@@ -157,7 +157,8 @@ async function sendWhatsAppMessageInternal({
   }
 
   try {
-    const normalizedPhone = normalizeUgandaPhone(to);
+    // WhatsApp Cloud API expects international digits only (no leading "+", no spaces).
+    const normalizedPhone = normalizeWhatsAppRecipient(to);
     
     const response = await fetch(
       `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`,
@@ -213,10 +214,12 @@ async function sendWhatsAppMessageInternal({
   }
 }
 
-function normalizeUgandaPhone(input: string): string {
-  const trimmed = input.replace(/\s+/g, "").replace(/-/g, "");
-  if (trimmed.startsWith("+")) return trimmed;
-  if (trimmed.startsWith("256")) return `+${trimmed}`;
-  if (trimmed.startsWith("0")) return `+256${trimmed.slice(1)}`;
-  return `+${trimmed}`;
+function normalizeWhatsAppRecipient(input: string): string {
+  const digits = input.replace(/\D+/g, "");
+
+  // Uganda convenience: allow 0xxxxxxxxx or +256xxxxxxxxx inputs.
+  if (digits.startsWith("256")) return digits;
+  if (digits.length === 10 && digits.startsWith("0")) return `256${digits.slice(1)}`;
+
+  return digits;
 }
