@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
 import { prisma } from "@/lib/prisma";
-import { enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { deliverOutboundMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 
 const ALLOWED_ORIGINS = [
   process.env.ALLOWED_ORIGIN_1 || "https://www.eagleinfosolutions.com",
@@ -232,13 +232,28 @@ export async function POST(request: NextRequest) {
     const customerName = String(body.customer_name ?? "Customer") as string;
     if (result.requestId && phoneValue && customerName) {
       const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${result.requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
-      enqueueWhatsAppMessage({
+      const enqueueResult = await enqueueWhatsAppMessage({
         to: phoneValue,
         body: message,
         type: "REPAIR_REQUEST_CONFIRMATION",
         repairRequestId: result.requestId,
         provider: "meta",
-      }).catch((err) => console.error("[RepairRequest] WhatsApp enqueue failed:", err));
+      }).catch((err) => {
+        console.error("[RepairRequest] WhatsApp enqueue failed:", err);
+        return null;
+      });
+
+      // In serverless runtimes, fire-and-forget work may be cut short.
+      // Best-effort attempt to deliver immediately (timeout capped).
+      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+        const attempt = await Promise.race([
+          deliverOutboundMessage(enqueueResult.outboxId),
+          new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: "timeout" }), 2500)),
+        ]);
+        if (attempt && typeof attempt === "object" && "ok" in attempt && (attempt as { ok: boolean }).ok) {
+          console.log("[RepairRequest] WhatsApp delivered inline", enqueueResult.outboxId);
+        }
+      }
     }
 
     return NextResponse.json({

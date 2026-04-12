@@ -66,9 +66,6 @@ export async function enqueueWhatsAppMessage(input: {
     return { queued: false, sent: Boolean(direct?.success), messageId: direct?.messageId, error: direct?.error };
   }
 
-  // Try to send immediately (still durable if this fails).
-  void deliverOutboundMessage(row.id);
-
   return { queued: true, outboxId: row.id };
 }
 
