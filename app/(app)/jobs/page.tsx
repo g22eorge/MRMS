@@ -23,11 +23,21 @@ type SearchParams = {
 };
 
 type JobWithClient = Prisma.JobGetPayload<{
-  include: { client: true; assignedTo: true; oneTimeExternalAssignment: true };
-}>;
+  include: { client: true; assignedTo: true };
+}> & {
+  oneTimeExternalAssignment?: { technicianName: string } | null;
+};
 type JobWithoutClient = Prisma.JobGetPayload<{
-  include: { assignedTo: true; oneTimeExternalAssignment: true };
-}>;
+  include: { assignedTo: true };
+}> & {
+  oneTimeExternalAssignment?: { technicianName: string } | null;
+};
+
+const supportsOneTimeExternal = Boolean(
+  Prisma.dmmf.datamodel.models
+    .find((model) => model.name === "Job")
+    ?.fields.some((field) => field.name === "oneTimeExternalAssignment"),
+);
 
 const statusOptionLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
@@ -109,19 +119,37 @@ export default async function JobsPage({
             : {}),
         };
 
-  const [jobs, total] = await Promise.all([
-    prisma.job.findMany({
+  const includeBase =
+    user.role === "TECHNICIAN_EXTERNAL"
+      ? ({ assignedTo: true } as const)
+      : ({ client: true, assignedTo: true } as const);
+
+  const includeWithOneTime = supportsOneTimeExternal
+    ? ({
+        ...includeBase,
+        oneTimeExternalAssignment: { select: { technicianName: true } },
+      } as const)
+    : includeBase;
+
+  const jobsPromise = prisma.job
+    .findMany({
       where,
-      include:
-        user.role === "TECHNICIAN_EXTERNAL"
-          ? { assignedTo: true, oneTimeExternalAssignment: true }
-          : { client: true, assignedTo: true, oneTimeExternalAssignment: true },
+      include: includeWithOneTime,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }),
-    prisma.job.count({ where }),
-  ]);
+    })
+    .catch(() =>
+      prisma.job.findMany({
+        where,
+        include: includeBase,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    );
+
+  const [jobs, total] = await Promise.all([jobsPromise, prisma.job.count({ where })]);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -156,7 +184,7 @@ export default async function JobsPage({
       brand: job.brand,
       model: job.model,
       clientName: "client" in job ? job.client?.fullName : undefined,
-       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
+      assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
       clientBill: getClientBill(job),
@@ -198,8 +226,10 @@ export default async function JobsPage({
     "READY_FOR_PICKUP",
     "DELIVERED",
   ];
-  const staleOpenCount = jobs.filter((job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff).length;
-  const unassignedOpenCount = jobs.filter(
+  const staleOpenCount = (jobs as Array<{ status: string; updatedAt: Date }>).filter(
+    (job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff,
+  ).length;
+  const unassignedOpenCount = (jobs as Array<{ status: string; assignedToId: string | null }>).filter(
     (job) => openStatuses.includes(job.status as JobStatus) && !job.assignedToId,
   ).length;
   const completedCount = rows.filter((row) => row.status === "COMPLETED").length;

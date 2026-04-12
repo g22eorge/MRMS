@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
@@ -75,19 +76,29 @@ export default async function JobDetailPage({
     );
   }
 
-  const job = await prisma.job.findFirst({
-    where,
-    include: {
-      client: true,
-      assignedTo: true,
-      oneTimeExternalAssignment: true,
-      photos: true,
-      auditLogs: {
-        include: { user: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
-      },
+  const supportsOneTimeExternal = Boolean(
+    Prisma.dmmf.datamodel.models
+      .find((model) => model.name === "Job")
+      ?.fields.some((field) => field.name === "oneTimeExternalAssignment"),
+  );
+
+  const includeBase = {
+    client: true,
+    assignedTo: true,
+    photos: true,
+    auditLogs: {
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
     },
-  });
+  } as const;
+
+  const includeWithOneTime = supportsOneTimeExternal
+    ? ({ ...includeBase, oneTimeExternalAssignment: true } as const)
+    : includeBase;
+
+  const job = await prisma.job
+    .findFirst({ where, include: includeWithOneTime })
+    .catch(() => prisma.job.findFirst({ where, include: includeBase }));
 
   if (!job) {
     notFound();
@@ -110,6 +121,10 @@ export default async function JobDetailPage({
     externalTechBill: getExternalTechBill(job),
     clientBill: getClientBill(job),
   };
+
+  if (!("oneTimeExternalAssignment" in jobWithBilling)) {
+    (jobWithBilling as typeof jobWithBilling & { oneTimeExternalAssignment?: null }).oneTimeExternalAssignment = null;
+  }
 
   // Device history: show other jobs for the same device when available.
   // We avoid exposing any client info here; this is only rendered for non-external roles.

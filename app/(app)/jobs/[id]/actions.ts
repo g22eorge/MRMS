@@ -3,6 +3,7 @@
 import {
   CommunicationStatus,
   JobStatus,
+  Prisma,
   RecommendationOption,
   RepairPath,
   Role,
@@ -610,6 +611,16 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
     return { error: "Forbidden" };
   }
 
+  const supportsOneTimeExternal = Boolean(
+    Prisma.dmmf.datamodel.models
+      .find((model) => model.name === "Job")
+      ?.fields.some((field) => field.name === "oneTimeExternalAssignment"),
+  );
+
+  if (!supportsOneTimeExternal) {
+    return { error: "One-time external assignments are not available (Prisma client is out of date). Restart and run prisma generate." };
+  }
+
   const parsed = oneTimeExternalSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
@@ -698,22 +709,30 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
     jobUpdate.status = JobStatus.ASSIGNED_ONE_TIME_EXTERNAL;
   }
 
-  await prisma.$transaction([
-    prisma.oneTimeExternalTechAssignment.upsert({
-      where: { jobId: payload.jobId },
-      create: { jobId: payload.jobId, ...createAssignmentData },
-      update: updateAssignmentData,
-    }),
-    prisma.job.update({ where: { id: payload.jobId }, data: jobUpdate }),
-    prisma.auditLog.create({
-      data: {
-        jobId: payload.jobId,
-        userId: session.user.id,
-        action: "ONE_TIME_EXTERNAL_UPDATED",
-        detail: JSON.stringify({ ...payload, assignedAt: payload.assignedDate }),
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.oneTimeExternalTechAssignment.upsert({
+        where: { jobId: payload.jobId },
+        create: { jobId: payload.jobId, ...createAssignmentData },
+        update: updateAssignmentData,
+      }),
+      prisma.job.update({ where: { id: payload.jobId }, data: jobUpdate }),
+      prisma.auditLog.create({
+        data: {
+          jobId: payload.jobId,
+          userId: session.user.id,
+          action: "ONE_TIME_EXTERNAL_UPDATED",
+          detail: JSON.stringify({ ...payload, assignedAt: payload.assignedDate }),
+        },
+      }),
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("onetimeexternaltechassignment")) {
+      return { error: "One-time external assignments are not yet deployed to this database. Apply the latest schema changes and try again." };
+    }
+    return { error: "Failed to save one-time external assignment" };
+  }
 
   revalidatePath(`/jobs/${payload.jobId}`);
   revalidatePath("/jobs");
