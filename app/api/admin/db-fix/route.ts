@@ -168,6 +168,42 @@ export async function POST() {
     changes.push({ kind: "create_table", detail: "Created NotificationPreferences" });
   }
 
+  // Outbound WhatsApp outbox
+  const hasOutbound = await tableExists("OutboundMessage");
+  if (!hasOutbound) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "OutboundMessage" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "channel" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "type" TEXT NOT NULL,
+        "to" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "provider" TEXT,
+        "providerMessageId" TEXT,
+        "attemptCount" INTEGER NOT NULL DEFAULT 0,
+        "lastAttemptAt" DATETIME,
+        "nextAttemptAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "sentAt" DATETIME,
+        "lastErrorCode" TEXT,
+        "lastError" TEXT,
+        "lockedAt" DATETIME,
+        "repairRequestId" TEXT,
+        "jobId" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("repairRequestId") REFERENCES "RepairRequest"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+        FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "OutboundMessage_channel_status_nextAttemptAt_idx" ON "OutboundMessage"("channel", "status", "nextAttemptAt")',
+    );
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "OutboundMessage_repairRequestId_idx" ON "OutboundMessage"("repairRequestId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "OutboundMessage_jobId_idx" ON "OutboundMessage"("jobId")');
+    changes.push({ kind: "create_table", detail: "Created OutboundMessage + indexes" });
+  }
+
   // Branding table schema drift (add missing color columns if needed)
   if (await tableExists("DocumentBrandingSettings")) {
     const bcols = await brandingColumns();
@@ -199,6 +235,7 @@ export async function POST() {
     tablesNow: {
       Notification: await tableExists("Notification"),
       NotificationPreferences: await tableExists("NotificationPreferences"),
+      OutboundMessage: await tableExists("OutboundMessage"),
       Device: await tableExists("Device"),
     },
   });
