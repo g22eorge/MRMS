@@ -33,16 +33,29 @@ export async function whatsappHealthCheck(): Promise<{ ok: boolean; error?: stri
   if (!config) return { ok: false, error: "WhatsApp not configured" };
 
   try {
-    const response = await fetch(`https://graph.facebook.com/v21.0/${config.phoneNumberId}?fields=id`, {
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${config.phoneNumberId}?fields=id,display_phone_number,verified_name,code_verification_status,quality_rating`,
+      {
       headers: {
         Authorization: `Bearer ${config.accessToken}`,
       },
-    });
+      },
+    );
     if (!response.ok) {
       const body = await response.text();
       return { ok: false, error: `WhatsApp health failed: ${response.status} ${body.slice(0, 200)}` };
     }
-    return { ok: true };
+
+    // Success means token + phoneNumberId are valid. Return some metadata for debugging.
+    const data = await response.json().catch(() => null);
+    const meta = {
+      display_phone_number: data?.display_phone_number,
+      verified_name: data?.verified_name,
+      code_verification_status: data?.code_verification_status,
+      quality_rating: data?.quality_rating,
+    };
+
+    return { ok: true, ...meta } as unknown as { ok: boolean; error?: string };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, error: message };

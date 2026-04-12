@@ -141,10 +141,9 @@ export async function deliverOutboundMessage(id: string) {
 
   const metaCode = result.errorCode;
 
-  // Non-retryable: target number is not a WhatsApp account.
-  const isNotRegistered = metaCode === "133010";
-
-  const nextStatus = isNotRegistered || attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
+  // Meta sometimes returns 133010 for issues that can be fixed (wrong sender phone number id,
+  // account state) as well as truly non-WhatsApp recipients. Keep retryable until MAX_ATTEMPTS.
+  const nextStatus = attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
   await prisma.outboundMessage.update({
     where: { id },
     data: {
@@ -152,11 +151,9 @@ export async function deliverOutboundMessage(id: string) {
       attemptCount: attempt,
       lastAttemptAt: new Date(),
       nextAttemptAt: computeNextAttempt(attempt),
-      lastErrorCode: isNotRegistered
-        ? "ACCOUNT_NOT_REGISTERED"
-        : result.error?.startsWith("WhatsApp API error")
-          ? `API_ERROR_${metaCode ?? "UNKNOWN"}`
-          : "SEND_ERROR",
+      lastErrorCode: result.error?.startsWith("WhatsApp API error")
+        ? `API_ERROR_${metaCode ?? "UNKNOWN"}`
+        : "SEND_ERROR",
       lastError: result.error?.slice(0, 500) ?? "Unknown error",
       lockedAt: null,
     },
