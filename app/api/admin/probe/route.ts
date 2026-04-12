@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { whatsappIsConfigured } from "@/lib/notifications/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,20 @@ export async function GET() {
   // Notifications (these were missing in prod)
   await run("notification:count", async () => prisma.notification.count());
   await run("notificationPreferences:count", async () => prisma.notificationPreferences.count());
+
+  // WhatsApp config (avoid network calls in probe)
+  await run("whatsapp:configured", async () => ({ configured: whatsappIsConfigured() }));
+
+  // Outbox
+  await run("outbox:count", async () => prisma.outboundMessage.count());
+  await run("outbox:pending", async () =>
+    prisma.outboundMessage.findMany({
+      take: 5,
+      where: { channel: "WHATSAPP", status: { in: ["PENDING", "FAILED"] } },
+      orderBy: { nextAttemptAt: "asc" },
+      select: { id: true, type: true, status: true, attemptCount: true, nextAttemptAt: true },
+    }),
+  );
 
   // Branding (can crash if table columns drifted)
   await run("branding:delegateRead", async () => {

@@ -270,6 +270,7 @@ model Job {
   auditLogs AuditLog[]
   notifications Notification[]
   oneTimeExternalAssignment OneTimeExternalTechAssignment?
+  outboundMessages OutboundMessage[]
 
   @@index([deviceId])
 }
@@ -338,6 +339,25 @@ enum NotificationChannel {
   EMAIL
 }
 
+enum OutboundMessageChannel {
+  WHATSAPP
+}
+
+enum OutboundMessageStatus {
+  PENDING
+  SENT
+  FAILED
+  DEAD
+}
+
+enum OutboundMessageType {
+  REPAIR_REQUEST_CONFIRMATION
+  INTAKE_APPROVED
+  INTAKE_REJECTED
+  JOB_CREATED
+  JOB_COMPLETED
+}
+
 model Notification {
   id          String            @id @default(cuid())
   type        NotificationType
@@ -353,6 +373,41 @@ model Notification {
   createdAt   DateTime         @default(now())
   
   @@index([userId, isRead])
+  @@index([jobId])
+}
+
+model OutboundMessage {
+  id               String               @id @default(cuid())
+  channel          OutboundMessageChannel
+  status           OutboundMessageStatus @default(PENDING)
+  type             OutboundMessageType
+
+  to               String
+  body             String
+
+  provider         String?
+  providerMessageId String?
+
+  attemptCount     Int                  @default(0)
+  lastAttemptAt    DateTime?
+  nextAttemptAt    DateTime             @default(now())
+  sentAt           DateTime?
+
+  lastErrorCode    String?
+  lastError        String?
+
+  lockedAt         DateTime?
+
+  repairRequestId  String?
+  repairRequest    RepairRequest?       @relation(fields: [repairRequestId], references: [id], onDelete: SetNull)
+  jobId            String?
+  job              Job?                 @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([channel, status, nextAttemptAt])
+  @@index([repairRequestId])
   @@index([jobId])
 }
 
@@ -461,6 +516,8 @@ model RepairRequest {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  outboundMessages OutboundMessage[]
 }
 
 enum RepairRequestStatus {

@@ -40,7 +40,7 @@ async function generateRequestNumber(): Promise<string> {
 
 export async function createRepairRequest(
   input: CreateRepairRequestInput
-): Promise<{ success: boolean; requestNumber?: string; error?: string }> {
+): Promise<{ success: boolean; requestId?: string; requestNumber?: string; error?: string }> {
   try {
     const requestNumber = await generateRequestNumber();
 
@@ -81,7 +81,7 @@ export async function createRepairRequest(
       },
     });
 
-    return { success: true, requestNumber: request.requestNumber };
+    return { success: true, requestId: request.id, requestNumber: request.requestNumber };
   } catch (error) {
     console.error("[RepairRequestService] Create error:", error);
     return { success: false, error: String(error) };

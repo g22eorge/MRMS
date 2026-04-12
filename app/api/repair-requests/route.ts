@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
 import { prisma } from "@/lib/prisma";
-import { sendRepairRequestConfirmation } from "@/lib/notifications/whatsapp";
+import { enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 
 const ALLOWED_ORIGINS = [
   process.env.ALLOWED_ORIGIN_1 || "https://www.eagleinfosolutions.com",
@@ -227,19 +227,25 @@ export async function POST(request: NextRequest) {
 
     console.log("[RepairRequest] Created:", result.requestNumber);
 
-    // Send WhatsApp confirmation (non-blocking)
+    // Queue WhatsApp confirmation (durable + retryable)
     const phoneValue = String(body.phone || body.customer_phone || "");
     const customerName = String(body.customer_name ?? "Customer") as string;
-    if (phoneValue && phoneValue !== "" && customerName) {
-      sendRepairRequestConfirmation(phoneValue, customerName as string, result.requestNumber).catch((err) => {
-        console.error("[RepairRequest] WhatsApp notification failed:", err);
-      });
+    if (result.requestId && phoneValue && customerName) {
+      const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${result.requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
+      enqueueWhatsAppMessage({
+        to: phoneValue,
+        body: message,
+        type: "REPAIR_REQUEST_CONFIRMATION",
+        repairRequestId: result.requestId,
+        provider: "meta",
+      }).catch((err) => console.error("[RepairRequest] WhatsApp enqueue failed:", err));
     }
 
     return NextResponse.json({
       success: true,
       request_number: result.requestNumber,
       message: "Your repair request has been submitted successfully. We'll contact you shortly.",
+      confirmation: "queued",
     }, { headers: corsHeaders });
   } catch (error) {
     console.error("[RepairRequestAPI] Error:", error);

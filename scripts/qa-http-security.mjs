@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-const base = process.env.QA_BASE_URL ?? "http://localhost:3000";
+import { spawn } from "node:child_process";
+
+const base = process.env.QA_BASE_URL ?? "http://127.0.0.1:4030";
 
 const checks = [
   { path: "/api/jobs", name: "jobs API unauth" },
@@ -11,12 +13,47 @@ const checks = [
 
 let failed = false;
 
-for (const check of checks) {
-  try {
-    const response = await fetch(`${base}${check.path}`, {
-      redirect: "manual",
-      headers: { accept: "text/html,application/json" },
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForServer(baseUrl, timeoutMs = 30000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const response = await fetch(`${baseUrl}/login`, { redirect: "manual" });
+      if (response.status === 200 || response.status === 307) {
+        return;
+      }
+    } catch {
+      // retry
+    }
+    await sleep(700);
+  }
+  throw new Error(`Server did not become ready at ${baseUrl} within ${timeoutMs}ms`);
+}
+
+let serverProcess = null;
+let spawnedServer = false;
+
+try {
+  if (!process.env.QA_BASE_URL) {
+    const url = new URL(base);
+    const port = url.port || "4030";
+    serverProcess = spawn("bun", ["run", "start"], {
+      env: { ...process.env, PORT: port },
+      stdio: "ignore",
     });
+    spawnedServer = true;
+    await waitForServer(base);
+  }
+
+  for (const check of checks) {
+    try {
+      const response = await fetch(`${base}${check.path}`, {
+        redirect: "manual",
+        headers: { accept: "text/html,application/json" },
+      });
 
     if (response.status === 200) {
       console.error(`FAIL: ${check.name} returned 200`);
@@ -25,14 +62,19 @@ for (const check of checks) {
     }
 
     console.log(`OK: ${check.name} returned ${response.status}`);
-  } catch (error) {
-    console.error(`FAIL: ${check.name} request error`, error.message);
-    failed = true;
+    } catch (error) {
+      console.error(`FAIL: ${check.name} request error`, error.message);
+      failed = true;
+    }
+  }
+
+  if (failed) {
+    process.exit(1);
+  }
+
+  console.log("OK: unauthenticated access checks passed.");
+} finally {
+  if (spawnedServer && serverProcess?.pid) {
+    serverProcess.kill("SIGTERM");
   }
 }
-
-if (failed) {
-  process.exit(1);
-}
-
-console.log("OK: unauthenticated access checks passed.");

@@ -24,6 +24,31 @@ function getConfig(): WhatsAppConfig | null {
   };
 }
 
+export function whatsappIsConfigured() {
+  return Boolean(getConfig());
+}
+
+export async function whatsappHealthCheck(): Promise<{ ok: boolean; error?: string }> {
+  const config = getConfig();
+  if (!config) return { ok: false, error: "WhatsApp not configured" };
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v21.0/${config.phoneNumberId}?fields=id`, {
+      headers: {
+        Authorization: `Bearer ${config.accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      return { ok: false, error: `WhatsApp health failed: ${response.status} ${body.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message };
+  }
+}
+
 export async function sendRepairRequestConfirmation(
   phone?: string,
   customerName?: string,
@@ -154,7 +179,7 @@ async function sendWhatsAppMessageInternal({
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[WhatsApp] API error:", response.status, errorText);
-      return { success: false, error: `WhatsApp API error: ${response.status}` };
+      return { success: false, error: `WhatsApp API error: ${response.status} ${errorText.slice(0, 200)}` };
     }
 
     const data = await response.json();

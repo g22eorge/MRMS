@@ -17,6 +17,7 @@ const TABLES_TO_CHECK = [
   "Photo",
   "AuditLog",
   "RepairRequest",
+  "OutboundMessage",
   "Notification",
   "NotificationPreferences",
   "DocumentBrandingSettings",
