@@ -33,7 +33,13 @@ export async function enqueueWhatsAppMessage(input: {
   if (!supportsOutbox()) {
     // Old Prisma client in this runtime: fall back to best-effort direct send.
     const direct = await sendCustomWhatsAppMessage(input.to, input.body);
-    return { queued: false, sent: direct.success, messageId: direct.messageId, error: direct.error };
+    return {
+      queued: false,
+      sent: direct.success,
+      messageId: direct.messageId,
+      error: direct.error,
+      errorCode: direct.errorCode,
+    };
   }
 
   const row = await prisma.outboundMessage
@@ -62,8 +68,14 @@ export async function enqueueWhatsAppMessage(input: {
     });
 
   if (!row.id) {
-    const direct = (row as { direct?: { success: boolean; messageId?: string; error?: string } }).direct;
-    return { queued: false, sent: Boolean(direct?.success), messageId: direct?.messageId, error: direct?.error };
+    const direct = (row as { direct?: { success: boolean; messageId?: string; error?: string; errorCode?: string } }).direct;
+    return {
+      queued: false,
+      sent: Boolean(direct?.success),
+      messageId: direct?.messageId,
+      error: direct?.error,
+      errorCode: direct?.errorCode,
+    };
   }
 
   return { queued: true, outboxId: row.id };
@@ -127,7 +139,12 @@ export async function deliverOutboundMessage(id: string) {
     return { ok: true, sent: true } satisfies DeliveryResult;
   }
 
-  const nextStatus = attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
+  const metaCode = result.errorCode;
+
+  // Non-retryable: target number is not a WhatsApp account.
+  const isNotRegistered = metaCode === "133010";
+
+  const nextStatus = isNotRegistered || attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
   await prisma.outboundMessage.update({
     where: { id },
     data: {
@@ -135,7 +152,11 @@ export async function deliverOutboundMessage(id: string) {
       attemptCount: attempt,
       lastAttemptAt: new Date(),
       nextAttemptAt: computeNextAttempt(attempt),
-      lastErrorCode: result.error?.startsWith("WhatsApp API error") ? "API_ERROR" : "SEND_ERROR",
+      lastErrorCode: isNotRegistered
+        ? "ACCOUNT_NOT_REGISTERED"
+        : result.error?.startsWith("WhatsApp API error")
+          ? `API_ERROR_${metaCode ?? "UNKNOWN"}`
+          : "SEND_ERROR",
       lastError: result.error?.slice(0, 500) ?? "Unknown error",
       lockedAt: null,
     },

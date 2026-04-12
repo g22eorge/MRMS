@@ -236,7 +236,8 @@ export async function POST(request: NextRequest) {
     if (result.requestId && phoneValue && customerName) {
       const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${result.requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
       const enqueueResult = await enqueueWhatsAppMessage({
-        to: phoneValue,
+        // Use the normalized phone we saved to the DB.
+        to: normalizedPhone,
         body: message,
         type: "REPAIR_REQUEST_CONFIRMATION",
         repairRequestId: result.requestId,

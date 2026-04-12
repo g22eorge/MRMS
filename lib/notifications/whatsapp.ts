@@ -137,7 +137,7 @@ export async function sendJobCompletionNotification(
 export async function sendCustomWhatsAppMessage(
   to: string,
   message: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
   return sendWhatsAppMessageInternal({ to, message });
 }
 
@@ -147,7 +147,7 @@ async function sendWhatsAppMessageInternal({
 }: {
   to?: string;
   message?: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+}): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
   if (!to || !message) {
     return { success: false, error: "Missing to or message" };
   }
@@ -179,7 +179,22 @@ async function sendWhatsAppMessageInternal({
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[WhatsApp] API error:", response.status, errorText);
-      return { success: false, error: `WhatsApp API error: ${response.status} ${errorText.slice(0, 200)}` };
+
+      // Best-effort parse Meta error payload
+      let metaCode: string | undefined;
+      try {
+        const parsed = JSON.parse(errorText);
+        const code = parsed?.error?.code;
+        if (typeof code === "number" || typeof code === "string") metaCode = String(code);
+      } catch {
+        // ignore
+      }
+
+      return {
+        success: false,
+        errorCode: metaCode,
+        error: `WhatsApp API error: ${response.status} ${errorText.slice(0, 200)}`,
+      };
     }
 
     const data = await response.json();
