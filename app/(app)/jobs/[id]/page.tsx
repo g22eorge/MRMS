@@ -80,6 +80,7 @@ export default async function JobDetailPage({
     include: {
       client: true,
       assignedTo: true,
+      oneTimeExternalAssignment: true,
       photos: true,
       auditLogs: {
         include: { user: { select: { name: true } } },

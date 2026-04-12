@@ -15,6 +15,11 @@ type SearchParams = {
 const ACTIVE_BOARD_STATUSES = [
   "RECEIVED",
   "DIAGNOSING",
+  "PENDING_EXTERNAL_ASSIGNMENT",
+  "ASSIGNED_ONE_TIME_EXTERNAL",
+  "IN_EXTERNAL_REPAIR",
+  "WAITING_FOR_PARTS",
+  "RETURNED_FROM_EXTERNAL",
   "AWAITING_APPROVAL",
   "IN_REPAIR",
   "READY_FOR_PICKUP",
@@ -23,6 +28,11 @@ const ACTIVE_BOARD_STATUSES = [
 const statusOptionLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
+  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
+  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
+  IN_EXTERNAL_REPAIR: "In External Repair",
+  WAITING_FOR_PARTS: "Waiting for Parts",
+  RETURNED_FROM_EXTERNAL: "Returned from External",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",

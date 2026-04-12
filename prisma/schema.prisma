@@ -96,6 +96,11 @@ enum Role {
 enum JobStatus {
   RECEIVED
   DIAGNOSING
+  PENDING_EXTERNAL_ASSIGNMENT
+  ASSIGNED_ONE_TIME_EXTERNAL
+  IN_EXTERNAL_REPAIR
+  WAITING_FOR_PARTS
+  RETURNED_FROM_EXTERNAL
   AWAITING_APPROVAL
   IN_REPAIR
   READY_FOR_PICKUP
@@ -264,8 +269,36 @@ model Job {
   photos    Photo[]
   auditLogs AuditLog[]
   notifications Notification[]
+  oneTimeExternalAssignment OneTimeExternalTechAssignment?
 
   @@index([deviceId])
+}
+
+model OneTimeExternalTechAssignment {
+  id                String   @id @default(cuid())
+  jobId             String   @unique
+  job               Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  technicianName    String
+  phone             String
+  specialization    String?
+
+  agreedRepairCost  Float?
+  partsNotes        String?
+  expectedPartsCost Float?
+
+  assignedAt        DateTime
+  expectedReturnAt  DateTime?
+  returnedAt        DateTime?
+
+  instructions      String?
+  progressNotes     String?
+  finalOutcome      String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([assignedAt])
 }
 
 model Photo {

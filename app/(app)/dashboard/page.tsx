@@ -76,6 +76,11 @@ function yearOptions(count: number) {
 const statusLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
+  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
+  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned (One-Time External)",
+  IN_EXTERNAL_REPAIR: "In External Repair",
+  WAITING_FOR_PARTS: "Waiting for Parts",
+  RETURNED_FROM_EXTERNAL: "Returned from External",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
@@ -96,6 +101,9 @@ const deviceLabel: Record<string, string> = {
 const repairFlowReference = [
   { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
+  { key: "PENDING_EXTERNAL_ASSIGNMENT", label: "External Assign", href: "/jobs?status=PENDING_EXTERNAL_ASSIGNMENT", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
+  { key: "IN_EXTERNAL_REPAIR", label: "External Repair", href: "/jobs?status=IN_EXTERNAL_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
+  { key: "RETURNED_FROM_EXTERNAL", label: "Returned", href: "/jobs?status=RETURNED_FROM_EXTERNAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
   { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
@@ -257,7 +265,19 @@ export default async function DashboardPage({
     const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
 
     const currency = getAppCurrency();
-    const openCount = jobs.filter((job) => ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"].includes(job.status)).length;
+    const openCount = jobs.filter((job) => [
+      "RECEIVED",
+      "DIAGNOSING",
+      "PENDING_EXTERNAL_ASSIGNMENT",
+      "ASSIGNED_ONE_TIME_EXTERNAL",
+      "IN_EXTERNAL_REPAIR",
+      "WAITING_FOR_PARTS",
+      "RETURNED_FROM_EXTERNAL",
+      "AWAITING_APPROVAL",
+      "IN_REPAIR",
+      "READY_FOR_PICKUP",
+      "DELIVERED",
+    ].includes(job.status)).length;
     const completedCount = jobs.filter((job) => job.status === "COMPLETED").length;
     const paidTotal = jobs
       .filter((job) => payouts.get(job.id)?.externalPaid && typeof payouts.get(job.id)?.externalTechFee === "number")
@@ -896,7 +916,21 @@ export default async function DashboardPage({
       prisma.job.count({
         where: {
           createdById: session.user.id,
-          status: { in: ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"] },
+          status: {
+            in: [
+              "RECEIVED",
+              "DIAGNOSING",
+              "PENDING_EXTERNAL_ASSIGNMENT",
+              "ASSIGNED_ONE_TIME_EXTERNAL",
+              "IN_EXTERNAL_REPAIR",
+              "WAITING_FOR_PARTS",
+              "RETURNED_FROM_EXTERNAL",
+              "AWAITING_APPROVAL",
+              "IN_REPAIR",
+              "READY_FOR_PICKUP",
+              "DELIVERED",
+            ],
+          },
         },
       }),
       prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
@@ -985,7 +1019,25 @@ export default async function DashboardPage({
 
   const [totalJobs, openJobs, completedJobs] = await Promise.all([
     prisma.job.count(),
-    prisma.job.count({ where: { status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED", "AWAITING_APPROVAL"] } } }),
+    prisma.job.count({
+      where: {
+        status: {
+          in: [
+            "RECEIVED",
+            "DIAGNOSING",
+            "PENDING_EXTERNAL_ASSIGNMENT",
+            "ASSIGNED_ONE_TIME_EXTERNAL",
+            "IN_EXTERNAL_REPAIR",
+            "WAITING_FOR_PARTS",
+            "RETURNED_FROM_EXTERNAL",
+            "IN_REPAIR",
+            "READY_FOR_PICKUP",
+            "DELIVERED",
+            "AWAITING_APPROVAL",
+          ],
+        },
+      },
+    }),
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 

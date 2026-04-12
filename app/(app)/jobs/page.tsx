@@ -23,15 +23,20 @@ type SearchParams = {
 };
 
 type JobWithClient = Prisma.JobGetPayload<{
-  include: { client: true; assignedTo: true };
+  include: { client: true; assignedTo: true; oneTimeExternalAssignment: true };
 }>;
 type JobWithoutClient = Prisma.JobGetPayload<{
-  include: { assignedTo: true };
+  include: { assignedTo: true; oneTimeExternalAssignment: true };
 }>;
 
 const statusOptionLabel: Record<JobStatus, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
+  PENDING_EXTERNAL_ASSIGNMENT: "Pending External Assignment",
+  ASSIGNED_ONE_TIME_EXTERNAL: "Assigned to One-Time External Tech",
+  IN_EXTERNAL_REPAIR: "In External Repair",
+  WAITING_FOR_PARTS: "Waiting for Parts",
+  RETURNED_FROM_EXTERNAL: "Returned from External Tech",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
@@ -109,8 +114,8 @@ export default async function JobsPage({
       where,
       include:
         user.role === "TECHNICIAN_EXTERNAL"
-          ? { assignedTo: true }
-          : { client: true, assignedTo: true },
+          ? { assignedTo: true, oneTimeExternalAssignment: true }
+          : { client: true, assignedTo: true, oneTimeExternalAssignment: true },
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -151,7 +156,7 @@ export default async function JobsPage({
       brand: job.brand,
       model: job.model,
       clientName: "client" in job ? job.client?.fullName : undefined,
-      assignedTo: job.assignedTo?.name,
+       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
       clientBill: getClientBill(job),
@@ -180,7 +185,19 @@ export default async function JobsPage({
   const staleThresholdHours = 24;
   const staleCutoff = new Date();
   staleCutoff.setHours(staleCutoff.getHours() - staleThresholdHours);
-  const openStatuses: JobStatus[] = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "DELIVERED"];
+  const openStatuses: JobStatus[] = [
+    "RECEIVED",
+    "DIAGNOSING",
+    "PENDING_EXTERNAL_ASSIGNMENT",
+    "ASSIGNED_ONE_TIME_EXTERNAL",
+    "IN_EXTERNAL_REPAIR",
+    "WAITING_FOR_PARTS",
+    "RETURNED_FROM_EXTERNAL",
+    "AWAITING_APPROVAL",
+    "IN_REPAIR",
+    "READY_FOR_PICKUP",
+    "DELIVERED",
+  ];
   const staleOpenCount = jobs.filter((job) => openStatuses.includes(job.status as JobStatus) && job.updatedAt < staleCutoff).length;
   const unassignedOpenCount = jobs.filter(
     (job) => openStatuses.includes(job.status as JobStatus) && !job.assignedToId,
@@ -494,7 +511,7 @@ export default async function JobsPage({
               </div>
             </details>
           </form>
-          <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> AWAITING_APPROVAL -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED or CLOSED. Use job workflow notes for parts pending, specialist escalation, or closure reason." />
+          <StatusFlowNotice message="Status flow: RECEIVED -> DIAGNOSING -> (PENDING_EXTERNAL_ASSIGNMENT -> ASSIGNED_ONE_TIME_EXTERNAL -> IN_EXTERNAL_REPAIR -> WAITING_FOR_PARTS -> RETURNED_FROM_EXTERNAL) OR (AWAITING_APPROVAL) -> IN_REPAIR -> READY_FOR_PICKUP -> COMPLETED/CLOSED." />
         </div>
       )}
 

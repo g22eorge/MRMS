@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { updateJobAction } from "@/app/(app)/jobs/[id]/actions";
+import { updateJobAction, updateOneTimeExternalAssignmentAction } from "@/app/(app)/jobs/[id]/actions";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
@@ -149,6 +149,20 @@ type Props = {
       user: { name: string };
     }>;
     photos: Array<{ id: string; url: string; label: string | null }>;
+    oneTimeExternalAssignment?: {
+      technicianName: string;
+      phone: string;
+      specialization: string | null;
+      agreedRepairCost: number | null;
+      expectedPartsCost: number | null;
+      partsNotes: string | null;
+      assignedAt: Date;
+      expectedReturnAt: Date | null;
+      returnedAt: Date | null;
+      instructions: string | null;
+      progressNotes: string | null;
+      finalOutcome: string | null;
+    } | null;
   };
 };
 
@@ -157,6 +171,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const [active, setActive] = useState<(typeof tabs)[number]>("overview");
   const [savedSection, setSavedSection] = useState<
     | "assignment"
+    | "oneTimeExternal"
     | "context"
     | "communication"
     | "diagnosis"
@@ -166,6 +181,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     | null
   >(null);
   const [isAssignPending, startAssignTransition] = useTransition();
+  const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
   const [isContextPending, startContextTransition] = useTransition();
   const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
@@ -196,7 +212,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
 
   const allowedStatusTransitions: Partial<Record<JobStatus, JobStatus[]>> = {
     RECEIVED: ["DIAGNOSING"],
-    DIAGNOSING: ["IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
+    DIAGNOSING: ["PENDING_EXTERNAL_ASSIGNMENT", "IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
+    PENDING_EXTERNAL_ASSIGNMENT: ["ASSIGNED_ONE_TIME_EXTERNAL", "IN_EXTERNAL_REPAIR", "CLOSED"],
+    ASSIGNED_ONE_TIME_EXTERNAL: ["IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "CLOSED"],
+    IN_EXTERNAL_REPAIR: ["WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL", "CLOSED"],
+    WAITING_FOR_PARTS: ["IN_EXTERNAL_REPAIR", "RETURNED_FROM_EXTERNAL", "CLOSED"],
+    RETURNED_FROM_EXTERNAL: ["IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
     AWAITING_APPROVAL: ["IN_REPAIR", "CLOSED"],
     IN_REPAIR: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
     READY_FOR_PICKUP: ["DELIVERED", "COMPLETED", "CLOSED"],
@@ -242,12 +263,27 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         ? 1
         : job.status === "AWAITING_APPROVAL"
           ? 2
-          : job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP"
+          : (
+                [
+                  "PENDING_EXTERNAL_ASSIGNMENT",
+                  "ASSIGNED_ONE_TIME_EXTERNAL",
+                  "IN_EXTERNAL_REPAIR",
+                  "WAITING_FOR_PARTS",
+                  "RETURNED_FROM_EXTERNAL",
+                  "IN_REPAIR",
+                  "READY_FOR_PICKUP",
+                ] as JobStatus[]
+              ).includes(job.status)
             ? 3
             : 4;
   const nextActionByStatus: Record<JobStatus, string> = {
     RECEIVED: "Start diagnosis",
     DIAGNOSING: "Capture diagnosis and set repair path",
+    PENDING_EXTERNAL_ASSIGNMENT: "Assign one-time external technician",
+    ASSIGNED_ONE_TIME_EXTERNAL: "Send device and confirm external start",
+    IN_EXTERNAL_REPAIR: "Capture progress updates and ETA",
+    WAITING_FOR_PARTS: "Record parts status and follow up",
+    RETURNED_FROM_EXTERNAL: "Verify outcome and continue internal flow",
     AWAITING_APPROVAL: "Record client approval decision",
     IN_REPAIR: "Update repair log and progress",
     READY_FOR_PICKUP: "Confirm delivery to client",
@@ -262,13 +298,49 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     : "Not set";
   const clientDecision = communicationLabel(job.communicationStatus);
   const recommendation = recommendationLabel(job.recommendationOption);
+  const assignedLabel = job.assignedTo?.name
+    ? job.assignedTo.name
+    : job.oneTimeExternalAssignment?.technicianName
+      ? `One-time external: ${job.oneTimeExternalAssignment.technicianName}`
+      : "No technician assigned yet.";
   const narrativeBits = [
     `Status is ${prettyEnum(job.status)}.`,
-    job.assignedTo?.name ? `Assigned to ${job.assignedTo.name}.` : "No technician assigned yet.",
+    assignedLabel === "No technician assigned yet." ? assignedLabel : `Assigned to ${assignedLabel}.`,
     `Client decision: ${clientDecision.toLowerCase()}.`,
     job.repairTimeline ? `ETA ${etaValue}.` : "ETA not set.",
     watchLabel ? `${watchLabel} (${statusAgeHours}h in this state).` : null,
   ].filter(Boolean) as string[];
+
+  const canManageOneTimeExternal = role === "ADMIN" || role === "OPS" || role === "TECHNICIAN_INTERNAL";
+  const oneTimeExternal = job.oneTimeExternalAssignment ?? null;
+  const showOneTimeExternalPanel =
+    canManageOneTimeExternal &&
+    (
+      job.repairPath === "EXTERNAL" ||
+      Boolean(oneTimeExternal) ||
+      ([
+        "PENDING_EXTERNAL_ASSIGNMENT",
+        "ASSIGNED_ONE_TIME_EXTERNAL",
+        "IN_EXTERNAL_REPAIR",
+        "WAITING_FOR_PARTS",
+        "RETURNED_FROM_EXTERNAL",
+      ] as JobStatus[]).includes(job.status)
+    );
+  const oneTimeStatusOptions: Array<{ value: JobStatus; label: string }> = [
+    { value: "PENDING_EXTERNAL_ASSIGNMENT", label: "Pending External Assignment" },
+    { value: "ASSIGNED_ONE_TIME_EXTERNAL", label: "Assigned to One-Time External Tech" },
+    { value: "IN_EXTERNAL_REPAIR", label: "In External Repair" },
+    { value: "WAITING_FOR_PARTS", label: "Waiting for Parts" },
+    { value: "RETURNED_FROM_EXTERNAL", label: "Returned from External Tech" },
+    { value: "COMPLETED", label: "Completed" },
+  ];
+
+  function dateInputValue(value: Date | null | undefined) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  }
 
   const rolePriorityBoost = (key: string) => {
     if (role === "INTAKE") {
@@ -309,10 +381,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
     {
       key: "assigned",
       label: "Assigned Tech",
-      value: job.assignedTo?.name ?? "Unassigned",
-      tone: job.assignedTo?.name ? "text-[var(--ink)]" : "text-black",
-      accent: job.assignedTo?.name ? "bg-[var(--panel)] border-[var(--line)]" : "bg-[var(--panel-strong)] border-[var(--line)]",
-      priority: job.assignedTo?.name ? 70 : 95,
+      value: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned",
+      tone: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName ? "text-[var(--ink)]" : "text-black",
+      accent: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName
+        ? "bg-[var(--panel)] border-[var(--line)]"
+        : "bg-[var(--panel-strong)] border-[var(--line)]",
+      priority: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName ? 70 : 95,
     },
     {
       key: "clientDecision",
@@ -493,7 +567,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
 
           <div className={`mt-4 ${softSectionClass}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 2 - Technician Diagnosis</p>
-            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Assigned: {job.assignedTo?.name ?? "Unassigned"}</p>
+            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
+              Assigned: {job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned"}
+            </p>
             <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
             {job.diagnosisNotes ? (
               <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
@@ -506,7 +582,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             ) : null}
           </div>
 
-          {canAssignJobs && technicians.length > 0 ? (
+          {canAssignJobs && technicians.length > 0 && !oneTimeExternal ? (
             <form
               action={(formData) => {
                 formData.set("jobId", job.id);
@@ -552,6 +628,169 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 {savedSection === "assignment" ? (
                   <p className="text-xs text-[#D4AF37]">Saved</p>
                 ) : null}
+            </form>
+          ) : null}
+
+          {showOneTimeExternalPanel ? (
+            <form
+              action={(formData) => {
+                formData.set("jobId", job.id);
+                formData.set("expectedUpdatedAt", expectedUpdatedAt);
+                startOneTimeExternalTransition(async () => {
+                  const res = await updateOneTimeExternalAssignmentAction(formData);
+                  if (res.error) {
+                    toast.error(res.error);
+                    return;
+                  }
+                  toast.success("One-time external technician saved");
+                  setSavedSection("oneTimeExternal");
+                  router.refresh();
+                });
+              }}
+              className={`mt-4 space-y-3 ${softSectionClass} [&_*]:min-w-0`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">One-Time External Technician</p>
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                    Use this when outsourcing a specific job without creating a technician login. Updates are captured internally.
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  <select
+                    name="outsourcingStatus"
+                    defaultValue={oneTimeStatusOptions.some((o) => o.value === job.status) ? job.status : "PENDING_EXTERNAL_ASSIGNMENT"}
+                    className={fieldClass}
+                  >
+                    {oneTimeStatusOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Technician name</label>
+                  <input
+                    name="technicianName"
+                    required
+                    defaultValue={oneTimeExternal?.technicianName ?? ""}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Phone</label>
+                  <input
+                    name="phone"
+                    required
+                    defaultValue={oneTimeExternal?.phone ?? ""}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Specialization</label>
+                  <input
+                    name="specialization"
+                    defaultValue={oneTimeExternal?.specialization ?? ""}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Agreed repair cost</label>
+                  <input
+                    name="agreedRepairCost"
+                    inputMode="decimal"
+                    defaultValue={oneTimeExternal?.agreedRepairCost ?? ""}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Parts involved / expected parts cost</label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input
+                      name="partsNotes"
+                      placeholder="Parts notes"
+                      defaultValue={oneTimeExternal?.partsNotes ?? ""}
+                      className={fieldClass}
+                    />
+                    <input
+                      name="expectedPartsCost"
+                      inputMode="decimal"
+                      placeholder="Expected parts cost"
+                      defaultValue={oneTimeExternal?.expectedPartsCost ?? ""}
+                      className={fieldClass}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Date assigned</label>
+                  <input
+                    type="date"
+                    name="assignedDate"
+                    required
+                    defaultValue={dateInputValue(oneTimeExternal?.assignedAt ?? new Date())}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Expected return date</label>
+                  <input
+                    type="date"
+                    name="expectedReturnDate"
+                    defaultValue={dateInputValue(oneTimeExternal?.expectedReturnAt)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Returned / handover date</label>
+                  <input
+                    type="date"
+                    name="returnedDate"
+                    defaultValue={dateInputValue(oneTimeExternal?.returnedAt)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Progress notes</label>
+                  <input
+                    name="progressNotes"
+                    defaultValue={oneTimeExternal?.progressNotes ?? ""}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Notes / diagnosis / work instructions</label>
+                  <textarea
+                    name="instructions"
+                    defaultValue={oneTimeExternal?.instructions ?? ""}
+                    className={areaClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Final outcome</label>
+                  <textarea
+                    name="finalOutcome"
+                    defaultValue={oneTimeExternal?.finalOutcome ?? ""}
+                    className={areaClass}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isOneTimeExternalPending}
+                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  {oneTimeExternal ? "Update External Assignment" : "Assign One-Time External Tech"}
+                </button>
+                {savedSection === "oneTimeExternal" ? (
+                  <p className="text-xs text-[#D4AF37]">Saved</p>
+                ) : null}
+              </div>
             </form>
           ) : null}
 

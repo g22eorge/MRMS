@@ -64,6 +64,32 @@ const updateSchema = z.object({
   deliveredTo: z.string().optional(),
 });
 
+const oneTimeExternalSchema = z.object({
+  jobId: z.string().min(1),
+  expectedUpdatedAt: z.string().optional(),
+  technicianName: z.string().min(1),
+  phone: z.string().min(3),
+  specialization: z.string().optional(),
+  agreedRepairCost: z.coerce.number().optional(),
+  expectedPartsCost: z.coerce.number().optional(),
+  partsNotes: z.string().optional(),
+  assignedDate: z.string().min(1),
+  expectedReturnDate: z.string().optional(),
+  returnedDate: z.string().optional(),
+  instructions: z.string().optional(),
+  progressNotes: z.string().optional(),
+  finalOutcome: z.string().optional(),
+  outsourcingStatus: z.nativeEnum(JobStatus).optional(),
+});
+
+function toMiddayUtcDate(value: string | undefined) {
+  if (!value) return null;
+  // Expect YYYY-MM-DD (from <input type="date">). Use midday UTC to avoid timezone rollbacks.
+  const date = new Date(`${value}T12:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
 function buildTimeline(payload: z.infer<typeof updateSchema>) {
   const unitMinutes =
     payload.timelineUnit === "HOUR"
@@ -170,7 +196,21 @@ export async function updateJobAction(formData: FormData) {
 
   const transitions: Partial<Record<JobStatus, JobStatus[]>> = {
     RECEIVED: [JobStatus.DIAGNOSING],
-    DIAGNOSING: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.CLOSED],
+    DIAGNOSING: [
+      JobStatus.PENDING_EXTERNAL_ASSIGNMENT,
+      JobStatus.IN_REPAIR,
+      JobStatus.AWAITING_APPROVAL,
+      JobStatus.CLOSED,
+    ],
+    PENDING_EXTERNAL_ASSIGNMENT: [
+      JobStatus.ASSIGNED_ONE_TIME_EXTERNAL,
+      JobStatus.IN_EXTERNAL_REPAIR,
+      JobStatus.CLOSED,
+    ],
+    ASSIGNED_ONE_TIME_EXTERNAL: [JobStatus.IN_EXTERNAL_REPAIR, JobStatus.WAITING_FOR_PARTS, JobStatus.CLOSED],
+    IN_EXTERNAL_REPAIR: [JobStatus.WAITING_FOR_PARTS, JobStatus.RETURNED_FROM_EXTERNAL, JobStatus.CLOSED],
+    WAITING_FOR_PARTS: [JobStatus.IN_EXTERNAL_REPAIR, JobStatus.RETURNED_FROM_EXTERNAL, JobStatus.CLOSED],
+    RETURNED_FROM_EXTERNAL: [JobStatus.IN_REPAIR, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
     AWAITING_APPROVAL: [JobStatus.IN_REPAIR, JobStatus.CLOSED],
     IN_REPAIR: [JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
     READY_FOR_PICKUP: [JobStatus.DELIVERED, JobStatus.COMPLETED, JobStatus.CLOSED],
@@ -190,6 +230,11 @@ export async function updateJobAction(formData: FormData) {
       return (
         [
           JobStatus.DIAGNOSING,
+          JobStatus.PENDING_EXTERNAL_ASSIGNMENT,
+          JobStatus.ASSIGNED_ONE_TIME_EXTERNAL,
+          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.WAITING_FOR_PARTS,
+          JobStatus.RETURNED_FROM_EXTERNAL,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
           JobStatus.DELIVERED,
@@ -202,6 +247,11 @@ export async function updateJobAction(formData: FormData) {
       return (
         [
           JobStatus.DIAGNOSING,
+          JobStatus.PENDING_EXTERNAL_ASSIGNMENT,
+          JobStatus.ASSIGNED_ONE_TIME_EXTERNAL,
+          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.WAITING_FOR_PARTS,
+          JobStatus.RETURNED_FROM_EXTERNAL,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
           JobStatus.DELIVERED,
@@ -216,6 +266,11 @@ export async function updateJobAction(formData: FormData) {
     if (role === "OPS") {
       return (
         [
+          JobStatus.PENDING_EXTERNAL_ASSIGNMENT,
+          JobStatus.ASSIGNED_ONE_TIME_EXTERNAL,
+          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.WAITING_FOR_PARTS,
+          JobStatus.RETURNED_FROM_EXTERNAL,
           JobStatus.AWAITING_APPROVAL,
           JobStatus.CLOSED,
           JobStatus.IN_REPAIR,
@@ -541,6 +596,127 @@ export async function updateJobAction(formData: FormData) {
   revalidatePath(`/jobs/${payload.jobId}`);
   revalidatePath("/jobs");
   revalidatePath("/technicians");
+  revalidatePath("/dashboard");
+
+  return { success: true };
+}
+
+export async function updateOneTimeExternalAssignmentAction(formData: FormData) {
+  const { session, user } = await getCurrentUserRole();
+  const permissionUser = { role: user.role, permissions: user.permissions };
+  const isRest = user.email?.toLowerCase() === "rest@eagle.tech";
+
+  if (!(user.role === "ADMIN" || user.role === "OPS" || isRest || can.assignJobs(permissionUser))) {
+    return { error: "Forbidden" };
+  }
+
+  const parsed = oneTimeExternalSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  }
+
+  const payload = parsed.data;
+  const allowedOutsourceStatuses = new Set<JobStatus>([
+    JobStatus.PENDING_EXTERNAL_ASSIGNMENT,
+    JobStatus.ASSIGNED_ONE_TIME_EXTERNAL,
+    JobStatus.IN_EXTERNAL_REPAIR,
+    JobStatus.WAITING_FOR_PARTS,
+    JobStatus.RETURNED_FROM_EXTERNAL,
+    JobStatus.COMPLETED,
+  ]);
+
+  const existing = await prisma.job.findUnique({
+    where: { id: payload.jobId },
+    select: { id: true, updatedAt: true, status: true },
+  });
+
+  if (!existing) {
+    return { error: "Job not found" };
+  }
+
+  if (payload.expectedUpdatedAt) {
+    const expected = new Date(payload.expectedUpdatedAt).toISOString();
+    const actual = existing.updatedAt.toISOString();
+    if (expected !== actual) {
+      return { error: "This job changed since you opened it. Refresh and try again." };
+    }
+  }
+
+  const nextStatus = payload.outsourcingStatus;
+  if (nextStatus && !allowedOutsourceStatuses.has(nextStatus)) {
+    return { error: "Invalid outsourcing status" };
+  }
+
+  const assignedAt = toMiddayUtcDate(payload.assignedDate);
+  if (!assignedAt) {
+    return { error: "Invalid assigned date" };
+  }
+
+  const expectedReturnAt = toMiddayUtcDate(payload.expectedReturnDate);
+  const returnedAt = toMiddayUtcDate(payload.returnedDate);
+
+  const baseAssignmentData = {
+    technicianName: payload.technicianName.trim(),
+    phone: payload.phone.trim(),
+    specialization: sanitizeOptionalText(payload.specialization) || null,
+    agreedRepairCost: typeof payload.agreedRepairCost === "number" ? payload.agreedRepairCost : null,
+    expectedPartsCost: typeof payload.expectedPartsCost === "number" ? payload.expectedPartsCost : null,
+    partsNotes: sanitizeOptionalText(payload.partsNotes) || null,
+    assignedAt,
+    expectedReturnAt,
+    instructions: sanitizeOptionalText(payload.instructions) || null,
+    progressNotes: sanitizeOptionalText(payload.progressNotes) || null,
+    finalOutcome: sanitizeOptionalText(payload.finalOutcome) || null,
+  };
+
+  const shouldAutoMarkReturned = nextStatus === JobStatus.RETURNED_FROM_EXTERNAL && !returnedAt;
+  const createAssignmentData = {
+    ...baseAssignmentData,
+    returnedAt: returnedAt ?? (shouldAutoMarkReturned ? new Date() : null),
+  };
+
+  const updateAssignmentData: Record<string, unknown> = {
+    ...baseAssignmentData,
+  };
+
+  // Only touch returnedAt when explicitly set, or when we are auto-marking the handover.
+  if (returnedAt || shouldAutoMarkReturned) {
+    updateAssignmentData.returnedAt = returnedAt ?? new Date();
+  }
+
+  const jobUpdate: Record<string, unknown> = {
+    repairPath: RepairPath.EXTERNAL,
+    assignedToId: null,
+  };
+
+  if (nextStatus) {
+    jobUpdate.status = nextStatus;
+    if (nextStatus === JobStatus.COMPLETED) {
+      jobUpdate.completedAt = new Date();
+    }
+  } else if (existing.status === JobStatus.PENDING_EXTERNAL_ASSIGNMENT) {
+    jobUpdate.status = JobStatus.ASSIGNED_ONE_TIME_EXTERNAL;
+  }
+
+  await prisma.$transaction([
+    prisma.oneTimeExternalTechAssignment.upsert({
+      where: { jobId: payload.jobId },
+      create: { jobId: payload.jobId, ...createAssignmentData },
+      update: updateAssignmentData,
+    }),
+    prisma.job.update({ where: { id: payload.jobId }, data: jobUpdate }),
+    prisma.auditLog.create({
+      data: {
+        jobId: payload.jobId,
+        userId: session.user.id,
+        action: "ONE_TIME_EXTERNAL_UPDATED",
+        detail: JSON.stringify({ ...payload, assignedAt: payload.assignedDate }),
+      },
+    }),
+  ]);
+
+  revalidatePath(`/jobs/${payload.jobId}`);
+  revalidatePath("/jobs");
   revalidatePath("/dashboard");
 
   return { success: true };

@@ -36,6 +36,7 @@ export async function GET() {
             timelineNote: true,
             assignedToId: true,
             assignedTo: { select: { id: true, name: true } },
+            oneTimeExternalAssignment: { select: { technicianName: true } },
             updatedAt: true,
             receivedAt: true,
           },
@@ -82,6 +83,7 @@ export async function GET() {
             client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
             createdBy: { select: { id: true, name: true } },
             assignedTo: { select: { id: true, name: true } },
+            oneTimeExternalAssignment: { select: { technicianName: true } },
           },
           orderBy: { updatedAt: "desc" },
         });
