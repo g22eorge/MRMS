@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { emailIsConfigured } from "@/lib/notifications/email";
 
 export const dynamic = "force-dynamic";
 
@@ -144,15 +145,22 @@ export async function GET() {
   // WhatsApp config (avoid network calls in probe)
   await run("whatsapp:configured", async () => ({ configured: whatsappIsConfigured() }));
 
+  // Email config
+  await run("email:configured", async () => ({ configured: emailIsConfigured() }));
+
   // Outbox
   await run("outbox:count", async () => prisma.outboundMessage.count());
+  await run("outbox:byChannel", async () =>
+    prisma.outboundMessage.groupBy({ by: ["channel"], _count: { channel: true } }),
+  );
   await run("outbox:pending", async () =>
     prisma.outboundMessage.findMany({
       take: 5,
-      where: { channel: "WHATSAPP", status: { in: ["PENDING", "FAILED"] } },
+      where: { status: { in: ["PENDING", "FAILED"] } },
       orderBy: { nextAttemptAt: "asc" },
       select: {
         id: true,
+        channel: true,
         type: true,
         status: true,
         to: true,
