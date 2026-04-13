@@ -341,6 +341,7 @@ enum NotificationChannel {
 
 enum OutboundMessageChannel {
   WHATSAPP
+  EMAIL
 }
 
 enum OutboundMessageStatus {
@@ -356,6 +357,7 @@ enum OutboundMessageType {
   INTAKE_REJECTED
   JOB_CREATED
   JOB_COMPLETED
+  REPAIR_REQUEST_EMAIL_ALERT
 }
 
 model Notification {

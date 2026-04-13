@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
 import { prisma } from "@/lib/prisma";
-import { deliverOutboundMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 
 const ALLOWED_ORIGINS = [
   process.env.ALLOWED_ORIGIN_1 || "https://www.eagleinfosolutions.com",
@@ -186,16 +186,21 @@ export async function POST(request: NextRequest) {
     const phone = body.phone || body.customer_phone;
     const email = body.email || body.customer_email;
     const normalizedPhone = normalizeUgandaPhone(phone as string);
+    const normalizedName = sanitizeText((body.customer_name as string) || "");
+    const normalizedEmail = email ? (sanitizeOptionalText(email as string) ?? "") : "";
+    const normalizedBrand = sanitizeText((body.brand as string) || (body.device_brand as string) || "");
+    const normalizedModel = sanitizeOptionalText((body.model as string) || (body.device_model as string)) ?? "";
+    const normalizedDescription = sanitizeText((body.problem_description as string) || (body.issue_description as string) || "");
 
     // Save to database
     const result = await createRepairRequest({
-      customerName: sanitizeText((body.customer_name as string) || ""),
+      customerName: normalizedName,
       phone: normalizedPhone,
-      email: email ? (sanitizeOptionalText(email as string) ?? undefined) : undefined,
+      email: normalizedEmail ? normalizedEmail : undefined,
       deviceType: deviceType,
-      brand: sanitizeText((body.brand as string) || (body.device_brand as string) || ""),
-      model: (body.model || body.device_model) ? sanitizeOptionalText((body.model as string) || (body.device_model as string)) ?? undefined : undefined,
-      problemDescription: sanitizeText((body.problem_description as string) || (body.issue_description as string) || ""),
+      brand: normalizedBrand,
+      model: normalizedModel ? normalizedModel : undefined,
+      problemDescription: normalizedDescription,
       handoverMethod: handoverMethod as "SELF_DROPOFF" | "SEND_WITH_DELIVERY_PERSON" | "REQUEST_PICKUP",
       preferredDropoffDate: (body.preferred_dropoff_date || body.preferred_date) ? sanitizeOptionalText((body.preferred_dropoff_date as string) || (body.preferred_date as string)) ?? undefined : undefined,
       preferredDropoffTime: body.preferred_dropoff_time ? sanitizeOptionalText(body.preferred_dropoff_time as string) ?? undefined : undefined,
@@ -264,6 +269,43 @@ export async function POST(request: NextRequest) {
         if (attempt && typeof attempt === "object" && "ok" in attempt && (attempt as { ok: boolean }).ok) {
           console.log("[RepairRequest] WhatsApp delivered inline", enqueueResult.outboxId);
         }
+      }
+    }
+
+    // Email alert for staff (durable + retryable)
+    const alertTo = process.env.REPAIR_REQUEST_ALERT_EMAIL;
+    if (result.requestId && alertTo) {
+      const subject = `New Repair Request ${result.requestNumber}`;
+      const details = [
+        `Request: ${result.requestNumber}`,
+        `Name: ${normalizedName}`,
+        `Phone: ${normalizedPhone}`,
+        `Email: ${normalizedEmail || ""}`,
+        `Device: ${deviceType}`, 
+        `Brand/Model: ${normalizedBrand} ${normalizedModel}`,
+        `Handover: ${handoverMethod}`,
+        "",
+        "Problem:",
+        normalizedDescription,
+      ].join("\n");
+
+      const enqueueResult = await enqueueEmailMessage({
+        to: alertTo,
+        subject,
+        body: details,
+        type: "REPAIR_REQUEST_EMAIL_ALERT",
+        repairRequestId: result.requestId,
+      }).catch((err) => {
+        console.error("[RepairRequest] Email enqueue failed:", err);
+        return null;
+      });
+
+      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+        // Best-effort inline delivery (cap)
+        await Promise.race([
+          deliverOutboundMessage(enqueueResult.outboxId),
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]);
       }
     }
 

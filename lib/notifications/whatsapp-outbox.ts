@@ -1,6 +1,7 @@
 import { Prisma, type OutboundMessageType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { sendEmail, emailIsConfigured } from "@/lib/notifications/email";
 import { sendCustomWhatsAppMessage, whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
 
 const MAX_ATTEMPTS = 8;
@@ -81,11 +82,53 @@ export async function enqueueWhatsAppMessage(input: {
   return { queued: true, outboxId: row.id };
 }
 
+export async function enqueueEmailMessage(input: {
+  to: string | string[];
+  subject: string;
+  body: string;
+  type: OutboundMessageType;
+  repairRequestId?: string;
+  jobId?: string;
+}) {
+  if (!supportsOutbox()) {
+    const direct = await sendEmail({ to: input.to, subject: input.subject, text: input.body });
+    return {
+      queued: false,
+      sent: direct.success,
+      messageId: direct.success ? direct.messageId : undefined,
+      error: direct.success ? undefined : direct.error,
+    };
+  }
+
+  const toValue = Array.isArray(input.to) ? input.to.join(",") : input.to;
+  const row = await prisma.outboundMessage.create({
+    data: {
+      channel: "EMAIL",
+      status: "PENDING",
+      type: input.type,
+      to: toValue,
+      body: `${input.subject}\n\n${input.body}`,
+      nextAttemptAt: new Date(),
+      repairRequestId: input.repairRequestId,
+      jobId: input.jobId,
+      provider: "resend",
+    },
+    select: { id: true },
+  });
+
+  return { queued: true, outboxId: row.id };
+}
+
 export async function deliverOutboundMessage(id: string) {
   if (!supportsOutbox()) return { ok: false, error: "Outbox not supported in this runtime" };
 
+  const row = await prisma.outboundMessage.findUnique({ where: { id } });
+  if (!row) return { ok: false, error: "Not found" } satisfies DeliveryResult;
+  if (row.status === "SENT" || row.status === "DEAD") return { ok: true, skipped: true } satisfies DeliveryResult;
+  if (row.nextAttemptAt && row.nextAttemptAt > new Date()) return { ok: true, deferred: true } satisfies DeliveryResult;
+
   // Config check first (avoid spinning retries when not configured)
-  if (!whatsappIsConfigured()) {
+  if (row.channel === "WHATSAPP" && !whatsappIsConfigured()) {
     await prisma.outboundMessage.update({
       where: { id },
       data: {
@@ -101,10 +144,21 @@ export async function deliverOutboundMessage(id: string) {
     return { ok: false, error: "WhatsApp not configured" } satisfies DeliveryResult;
   }
 
-  const row = await prisma.outboundMessage.findUnique({ where: { id } });
-  if (!row) return { ok: false, error: "Not found" } satisfies DeliveryResult;
-  if (row.status === "SENT" || row.status === "DEAD") return { ok: true, skipped: true } satisfies DeliveryResult;
-  if (row.nextAttemptAt && row.nextAttemptAt > new Date()) return { ok: true, deferred: true } satisfies DeliveryResult;
+  if (row.channel === "EMAIL" && !emailIsConfigured()) {
+    await prisma.outboundMessage.update({
+      where: { id },
+      data: {
+        status: "FAILED",
+        lastErrorCode: "NOT_CONFIGURED",
+        lastError: "Email not configured",
+        attemptCount: { increment: 1 },
+        lastAttemptAt: new Date(),
+        nextAttemptAt: computeNextAttempt(1),
+        lockedAt: null,
+      },
+    });
+    return { ok: false, error: "Email not configured" } satisfies DeliveryResult;
+  }
 
   // Acquire lock (best-effort)
   const lockCutoff = new Date(Date.now() - LOCK_TTL_MS);
@@ -120,7 +174,14 @@ export async function deliverOutboundMessage(id: string) {
   if (locked.count !== 1) return { ok: true, skipped: true } satisfies DeliveryResult;
 
   const attempt = row.attemptCount + 1;
-  const result = await sendCustomWhatsAppMessage(row.to, row.body);
+  const result =
+    row.channel === "WHATSAPP"
+      ? await sendCustomWhatsAppMessage(row.to, row.body)
+      : await sendEmail({
+          to: row.to.split(",").map((t) => t.trim()).filter(Boolean),
+          subject: row.body.split("\n")[0] ?? "MRMS Notification",
+          text: row.body,
+        });
 
   if (result.success) {
     await prisma.outboundMessage.update({
@@ -139,7 +200,7 @@ export async function deliverOutboundMessage(id: string) {
     return { ok: true, sent: true } satisfies DeliveryResult;
   }
 
-  const metaCode = result.errorCode;
+  const metaCode = (result as { errorCode?: string }).errorCode;
 
   // Meta sometimes returns 133010 for issues that can be fixed (wrong sender phone number id,
   // account state) as well as truly non-WhatsApp recipients. Keep retryable until MAX_ATTEMPTS.
@@ -151,9 +212,12 @@ export async function deliverOutboundMessage(id: string) {
       attemptCount: attempt,
       lastAttemptAt: new Date(),
       nextAttemptAt: computeNextAttempt(attempt),
-      lastErrorCode: result.error?.startsWith("WhatsApp API error")
-        ? `API_ERROR_${metaCode ?? "UNKNOWN"}`
-        : "SEND_ERROR",
+      lastErrorCode:
+        row.channel === "WHATSAPP"
+          ? result.error?.startsWith("WhatsApp API error")
+            ? `API_ERROR_${metaCode ?? "UNKNOWN"}`
+            : "SEND_ERROR"
+          : "EMAIL_ERROR",
       lastError: result.error?.slice(0, 500) ?? "Unknown error",
       lockedAt: null,
     },
@@ -189,4 +253,32 @@ export async function retryDueWhatsApp(limit = 25) {
 
   const health = await whatsappHealthCheck().catch((e) => ({ ok: false, error: String(e) }));
   return { ok: true, processed: due.length, sent, failed, health };
+}
+
+export async function retryDueOutboundMessages(limit = 25) {
+  if (!supportsOutbox()) {
+    return { ok: false, error: "Outbox not supported in this runtime" };
+  }
+
+  const lockCutoff = new Date(Date.now() - LOCK_TTL_MS);
+  const due = await prisma.outboundMessage.findMany({
+    where: {
+      status: { in: ["PENDING", "FAILED"] },
+      nextAttemptAt: { lte: new Date() },
+      OR: [{ lockedAt: null }, { lockedAt: { lt: lockCutoff } }],
+    },
+    orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
+    take: limit,
+    select: { id: true },
+  });
+
+  let sent = 0;
+  let failed = 0;
+  for (const item of due) {
+    const res = (await deliverOutboundMessage(item.id)) as DeliveryResult;
+    if (res.ok && "sent" in res && res.sent) sent += 1;
+    if (!res.ok) failed += 1;
+  }
+
+  return { ok: true, processed: due.length, sent, failed };
 }
