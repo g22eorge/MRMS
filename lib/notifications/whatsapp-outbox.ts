@@ -1,8 +1,10 @@
 import { Prisma, type OutboundMessageType } from "@prisma/client";
+import React from "react";
 
 import { prisma } from "@/lib/prisma";
 import { sendEmail, emailIsConfigured } from "@/lib/notifications/email";
 import { sendCustomWhatsAppMessage, whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { RepairRequestAlertEmail } from "@/emails/RepairRequestAlertEmail";
 
 const MAX_ATTEMPTS = 8;
 const LOCK_TTL_MS = 2 * 60 * 1000;
@@ -173,15 +175,23 @@ export async function deliverOutboundMessage(id: string) {
 
   if (locked.count !== 1) return { ok: true, skipped: true } satisfies DeliveryResult;
 
+  // If we've already seen "Account not registered" for this recipient, don't keep calling Meta.
+  if (row.channel === "WHATSAPP" && row.lastErrorCode === "API_ERROR_133010") {
+    await prisma.outboundMessage.update({
+      where: { id },
+      data: {
+        status: "DEAD",
+        lastAttemptAt: new Date(),
+        lockedAt: null,
+      },
+    });
+    return { ok: true, skipped: true } satisfies DeliveryResult;
+  }
+
   const attempt = row.attemptCount + 1;
+
   const result =
-    row.channel === "WHATSAPP"
-      ? await sendCustomWhatsAppMessage(row.to, row.body)
-      : await sendEmail({
-          to: row.to.split(",").map((t) => t.trim()).filter(Boolean),
-          subject: row.body.split("\n")[0] ?? "MRMS Notification",
-          text: row.body,
-        });
+    row.channel === "WHATSAPP" ? await sendCustomWhatsAppMessage(row.to, row.body) : await deliverEmail(row);
 
   if (result.success) {
     await prisma.outboundMessage.update({
@@ -202,9 +212,11 @@ export async function deliverOutboundMessage(id: string) {
 
   const metaCode = (result as { errorCode?: string }).errorCode;
 
-  // Meta sometimes returns 133010 for issues that can be fixed (wrong sender phone number id,
-  // account state) as well as truly non-WhatsApp recipients. Keep retryable until MAX_ATTEMPTS.
-  const nextStatus = attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
+  // WhatsApp Cloud API error 133010 is the recipient number not being a WhatsApp account.
+  // Retrying won't help; treat as terminal so the outbox doesn't spin forever.
+  const isTerminalRecipientError = row.channel === "WHATSAPP" && metaCode === "133010";
+
+  const nextStatus = isTerminalRecipientError ? "DEAD" : attempt >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
   await prisma.outboundMessage.update({
     where: { id },
     data: {
@@ -223,6 +235,76 @@ export async function deliverOutboundMessage(id: string) {
     },
   });
   return { ok: false, error: result.error ?? "Send failed" } satisfies DeliveryResult;
+}
+
+async function deliverEmail(row: { id: string; to: string; body: string; type: OutboundMessageType; repairRequestId: string | null }) {
+  const to = row.to.split(",").map((t) => t.trim()).filter(Boolean);
+
+  // Use a dedicated alerts sender domain (Resend verifies sender domains).
+  // Prefer explicit env override; otherwise default to alerts.eagleinfosolutions.com.
+  const from =
+    process.env.RESEND_ALERTS_FROM ||
+    "Eagle Info Alerts <alerts@alerts.eagleinfosolutions.com>";
+
+  // Prefer a structured template when we have the DB id.
+  if (row.type === "REPAIR_REQUEST_EMAIL_ALERT" && row.repairRequestId) {
+    const request = await prisma.repairRequest.findUnique({
+      where: { id: row.repairRequestId },
+      select: {
+        requestNumber: true,
+        createdAt: true,
+        customerName: true,
+        phone: true,
+        email: true,
+        deviceType: true,
+        brand: true,
+        model: true,
+        problemDescription: true,
+        handoverMethod: true,
+      },
+    });
+
+    if (request) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
+      const intakeUrl = appUrl ? `${appUrl}/intake/${row.repairRequestId}` : null;
+
+      const subject = `New Repair Request ${request.requestNumber}`;
+      const text = [
+        `New repair request: ${request.requestNumber}`,
+        `Created: ${request.createdAt.toISOString()}`,
+        `Name: ${request.customerName}`,
+        `Phone: ${request.phone}`,
+        `Email: ${request.email ?? ""}`,
+        `Device: ${request.deviceType}`,
+        `Brand/Model: ${request.brand} ${request.model ?? ""}`,
+        `Handover: ${request.handoverMethod}`,
+        "",
+        "Problem:",
+        request.problemDescription,
+        ...(intakeUrl ? ["", `Intake: ${intakeUrl}`] : []),
+      ].join("\n");
+
+      const react = React.createElement(RepairRequestAlertEmail, {
+        requestNumber: request.requestNumber,
+        createdAtISO: request.createdAt.toISOString(),
+        customerName: request.customerName,
+        phone: request.phone,
+        email: request.email,
+        deviceType: request.deviceType,
+        brand: request.brand,
+        model: request.model,
+        problemDescription: request.problemDescription,
+        handoverMethod: request.handoverMethod,
+        intakeUrl,
+      });
+
+      return sendEmail({ to, subject, text, react, from });
+    }
+  }
+
+  // Fallback: old format stored as "Subject\n\nBody".
+  const subject = row.body.split("\n")[0] ?? "MRMS Notification";
+  return sendEmail({ to, subject, text: row.body, from });
 }
 
 export async function retryDueWhatsApp(limit = 25) {

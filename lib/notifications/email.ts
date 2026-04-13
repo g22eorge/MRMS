@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import type { ReactElement } from "react";
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -7,20 +8,26 @@ function getResend() {
 }
 
 export function emailIsConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.REPAIR_REQUEST_ALERT_EMAIL && process.env.RESEND_FROM);
+  return Boolean(
+    process.env.RESEND_API_KEY &&
+      process.env.REPAIR_REQUEST_ALERT_EMAIL &&
+      (process.env.RESEND_ALERTS_FROM || process.env.RESEND_FROM),
+  );
 }
 
 export async function sendEmail(input: {
   to: string | string[];
   subject: string;
   text: string;
+  react?: ReactElement;
+  from?: string;
 }) {
   const resend = getResend();
   if (!resend) {
     return { success: false as const, error: "Email not configured" };
   }
 
-  const from = process.env.RESEND_FROM;
+  const from = input.from ?? process.env.RESEND_FROM;
   if (!from) {
     return { success: false as const, error: "Missing RESEND_FROM" };
   }
@@ -31,6 +38,7 @@ export async function sendEmail(input: {
       to: input.to,
       subject: input.subject,
       text: input.text,
+      ...(input.react ? { react: input.react } : {}),
     });
 
     // resend returns { data, error }
