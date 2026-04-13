@@ -449,12 +449,14 @@ export async function updateJobAction(formData: FormData) {
       data.approvalDate = new Date();
     }
     data.completedAt = payload.nextStatus === JobStatus.COMPLETED ? new Date() : undefined;
+    // Delivery fields should only be captured at the end of the workflow.
     // DELIVERED status is deprecated in UI; keep deliveredAt only when staff set it explicitly.
     data.deliveredAt = undefined;
-    if (payload.deliveryMethod) {
+    const isTerminalTransition = payload.nextStatus === JobStatus.COMPLETED || payload.nextStatus === JobStatus.CLOSED;
+    if (isTerminalTransition && payload.deliveryMethod) {
       data.deliveryMethod = payload.deliveryMethod;
     }
-    if (payload.deliveredTo) {
+    if (isTerminalTransition && payload.deliveredTo) {
       data.deliveredTo = sanitizeOptionalText(payload.deliveredTo) || null;
     }
     data.closedAt =

@@ -1242,26 +1242,28 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               </button>
             ))}
           </div>
-          <div className="w-full border-t border-[var(--line)] pt-3 mt-2">
-            <p className="text-xs font-medium text-[var(--ink)] mb-2">Delivery (Optional)</p>
-            <div className="flex flex-wrap gap-2 items-center">
-              <select
-                name="deliveryMethod"
-                className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)]"
-              >
-                <option value="">Method</option>
-                <option value="PICKUP">Client Pickup</option>
-                <option value="DELIVERY">We Delivered</option>
-                <option value="COURIER">Courier</option>
-              </select>
-              <input
-                type="text"
-                name="deliveredTo"
-                placeholder="Received by (name)"
-                className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
-              />
+          {job.status === "READY_FOR_PICKUP" ? (
+            <div className="w-full border-t border-[var(--line)] pt-3 mt-2">
+              <p className="text-xs font-medium text-[var(--ink)] mb-2">Delivery (Optional)</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <select
+                  name="deliveryMethod"
+                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)]"
+                >
+                  <option value="">Method</option>
+                  <option value="PICKUP">Client Pickup</option>
+                  <option value="DELIVERY">We Delivered</option>
+                  <option value="COURIER">Courier</option>
+                </select>
+                <input
+                  type="text"
+                  name="deliveredTo"
+                  placeholder="Received by (name)"
+                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
           {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
         </form>
       ) : null}
