@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { whatsappConfigSummary } from "@/lib/notifications/whatsapp";
 import { emailIsConfigured } from "@/lib/notifications/email";
 
 export const dynamic = "force-dynamic";
@@ -143,7 +143,7 @@ export async function GET() {
   await run("notificationPreferences:count", async () => prisma.notificationPreferences.count());
 
   // WhatsApp config (avoid network calls in probe)
-  await run("whatsapp:configured", async () => ({ configured: whatsappIsConfigured() }));
+  await run("whatsapp:configured", async () => whatsappConfigSummary());
 
   // Email config
   await run("email:configured", async () => ({ configured: emailIsConfigured() }));

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUserRole } from "@/lib/session";
-import { whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { whatsappConfigSummary, whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +16,5 @@ export async function GET() {
   }
 
   const res = await whatsappHealthCheck();
-  return NextResponse.json({ ...res, configured: true });
+  return NextResponse.json({ ...res, configured: true, config: whatsappConfigSummary() });
 }

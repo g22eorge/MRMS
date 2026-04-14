@@ -3,6 +3,7 @@ interface WhatsAppConfig {
   provider: string;
   accessToken: string;
   phoneNumberId: string;
+  businessAccountId?: string;
 }
 
 function getConfig(): WhatsAppConfig | null {
@@ -10,6 +11,7 @@ function getConfig(): WhatsAppConfig | null {
   const provider = process.env.WHATSAPP_PROVIDER;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 
   if (!businessNumber || !accessToken || !phoneNumberId) {
     console.warn("[WhatsApp] Missing configuration - notifications disabled");
@@ -21,6 +23,18 @@ function getConfig(): WhatsAppConfig | null {
     provider: provider || "meta",
     accessToken,
     phoneNumberId,
+    businessAccountId: businessAccountId || undefined,
+  };
+}
+
+export function whatsappConfigSummary() {
+  const cfg = getConfig();
+  return {
+    configured: Boolean(cfg),
+    provider: cfg?.provider ?? null,
+    businessNumber: cfg?.businessNumber ?? null,
+    phoneNumberId: cfg?.phoneNumberId ?? null,
+    businessAccountId: cfg?.businessAccountId ?? null,
   };
 }
 
