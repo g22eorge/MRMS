@@ -23,7 +23,7 @@ const TABLES_TO_CHECK = [
   "DocumentBrandingSettings",
 ] as const;
 
-const JOB_COLUMNS_TO_CHECK = [
+  const JOB_COLUMNS_TO_CHECK = [
   "status",
   "deviceId",
   "serviceType",
@@ -43,7 +43,14 @@ const JOB_COLUMNS_TO_CHECK = [
   "externalTechFee",
   "externalPaid",
   "externalPaidAt",
-  "vatApplicable",
+    "vatApplicable",
+  ] as const;
+
+const OUTBOX_COLUMNS_TO_CHECK = [
+  "providerDeliveryStatus",
+  "providerDeliveryAt",
+  "providerDeliveryErrorCode",
+  "providerDeliveryError",
 ] as const;
 
 type SqliteTableInfoRow = {
@@ -92,11 +99,22 @@ export async function GET() {
     jobStatusCounts = null;
   }
 
+  // 4) Outbox columns
+  let outboxColumnsPresent: Record<string, boolean> | null = null;
+  try {
+    const info = await prisma.$queryRaw<SqliteTableInfoRow[]>`PRAGMA table_info('OutboundMessage')`;
+    const colSet = new Set(info.map((row) => row.name));
+    outboxColumnsPresent = Object.fromEntries(OUTBOX_COLUMNS_TO_CHECK.map((c) => [c, colSet.has(c)]));
+  } catch {
+    outboxColumnsPresent = null;
+  }
+
   return NextResponse.json({
     ok: true,
     tablesPresent,
     jobColumnsPresent,
     jobColumnNames,
     jobStatusCounts,
+    outboxColumnsPresent,
   });
 }

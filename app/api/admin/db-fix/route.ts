@@ -224,6 +224,24 @@ export async function POST() {
     changes.push({ kind: "create_table", detail: "Created OutboundMessage + indexes" });
   }
 
+  // OutboundMessage delivery status columns
+  if (await tableExists("OutboundMessage")) {
+    const outboxCols = await prisma.$queryRaw<Array<{ name: string }>>`PRAGMA table_info('OutboundMessage')`;
+    const outboxColSet = new Set(outboxCols.map((r) => r.name));
+    const addOutboxColumn = async (name: string, type: string) => {
+      if (outboxColSet.has(name)) return;
+      await prisma.$executeRawUnsafe(`ALTER TABLE "OutboundMessage" ADD COLUMN "${name}" ${type}`);
+      changes.push({ kind: "alter_table", detail: `Added OutboundMessage.${name}` });
+    };
+
+    await addOutboxColumn("providerDeliveryStatus", "TEXT");
+    await addOutboxColumn("providerDeliveryAt", "DATETIME");
+    await addOutboxColumn("providerDeliveryErrorCode", "TEXT");
+    await addOutboxColumn("providerDeliveryError", "TEXT");
+    // providerMessageId lookup
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "OutboundMessage_providerMessageId_idx" ON "OutboundMessage"("providerMessageId")');
+  }
+
   // Branding table schema drift (add missing color columns if needed)
   if (await tableExists("DocumentBrandingSettings")) {
     const bcols = await brandingColumns();

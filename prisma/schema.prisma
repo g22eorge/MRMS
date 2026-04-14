@@ -387,6 +387,7 @@ enum OutboundMessageType {
   JOB_CREATED
   JOB_COMPLETED
   REPAIR_REQUEST_EMAIL_ALERT
+  ADMIN_TEST
 }
 
 model Notification {
@@ -419,6 +420,12 @@ model OutboundMessage {
   provider         String?
   providerMessageId String?
 
+  // Provider delivery statuses (webhook callbacks). This does not affect outbox retry.
+  providerDeliveryStatus String?
+  providerDeliveryAt     DateTime?
+  providerDeliveryErrorCode String?
+  providerDeliveryError     String?
+
   attemptCount     Int                  @default(0)
   lastAttemptAt    DateTime?
   nextAttemptAt    DateTime             @default(now())
@@ -438,6 +445,7 @@ model OutboundMessage {
   updatedAt        DateTime             @updatedAt
 
   @@index([channel, status, nextAttemptAt])
+  @@index([providerMessageId])
   @@index([repairRequestId])
   @@index([jobId])
 }

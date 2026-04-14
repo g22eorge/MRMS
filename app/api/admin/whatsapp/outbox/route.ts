@@ -12,6 +12,7 @@ const TYPES = [
   "JOB_CREATED",
   "JOB_COMPLETED",
   "REPAIR_REQUEST_EMAIL_ALERT",
+  "ADMIN_TEST",
 ] as const;
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,10 @@ export async function GET(request: NextRequest) {
       sentAt: true,
       provider: true,
       providerMessageId: true,
+      providerDeliveryStatus: true,
+      providerDeliveryAt: true,
+      providerDeliveryErrorCode: true,
+      providerDeliveryError: true,
       lastErrorCode: true,
       lastError: true,
       repairRequestId: true,

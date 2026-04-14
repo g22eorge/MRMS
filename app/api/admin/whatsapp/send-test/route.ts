@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getCurrentUserRole } from "@/lib/session";
 import { sendCustomWhatsAppMessage, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -95,5 +96,25 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await sendCustomWhatsAppMessage(to, message);
-  return NextResponse.json({ ok: result.success, ...result });
+
+  const row = await prisma.outboundMessage.create({
+    data: {
+      channel: "WHATSAPP",
+      status: result.success ? "SENT" : "FAILED",
+      type: "ADMIN_TEST",
+      to,
+      body: message,
+      provider: "meta",
+      providerMessageId: result.messageId ?? null,
+      sentAt: result.success ? new Date() : null,
+      attemptCount: 1,
+      lastAttemptAt: new Date(),
+      nextAttemptAt: new Date(0),
+      lastErrorCode: result.success ? null : result.errorCode ? `API_ERROR_${result.errorCode}` : "WHATSAPP_ERROR",
+      lastError: result.success ? null : result.error ?? "Unknown WhatsApp error",
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json({ ok: result.success, outboxId: row.id, ...result });
 }
