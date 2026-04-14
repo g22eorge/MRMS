@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
+import { toast } from "sonner";
 
 import {
   deleteRepairRequestAction,
@@ -112,6 +113,10 @@ function RequestDrawer({
   function act(status: string) {
     startTransition(async () => {
       const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "jobId" in res && res.jobId) {
         router.push(`/jobs/${res.jobId}`);
         return;
@@ -127,9 +132,14 @@ function RequestDrawer({
     formData.set("id", req.id);
     startTransition(async () => {
       const res = await updateRepairRequestDetailsAction(formData);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "success" in res && res.success) {
         onRequestUpdate(res.request);
         setEditMode(false);
+        toast.success("Request updated");
       }
     });
   }
@@ -140,9 +150,14 @@ function RequestDrawer({
       const fd = new FormData();
       fd.set("id", req.id);
       const res = await deleteRepairRequestAction(fd);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "success" in res && res.success) {
         onStatusChange(req.id, "__deleted__");
         onClose();
+        toast.success("Request deleted");
       }
     });
   }
@@ -394,6 +409,10 @@ function RowActions({
     e.stopPropagation();
     startTransition(async () => {
       const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "jobId" in res && res.jobId) {
         router.push(`/jobs/${res.jobId}`);
         return;
@@ -594,8 +613,13 @@ export function IntakeClient({
       const fd = new FormData();
       fd.set("id", req.id);
       const res = await deleteRepairRequestAction(fd);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "success" in res && res.success) {
         handleStatusChange(req.id, "__deleted__");
+        toast.success("Request deleted");
       }
     });
   }
@@ -603,8 +627,13 @@ export function IntakeClient({
   function refresh() {
     startLoading(async () => {
       const res = await listRepairRequestsAction({ take: 200 });
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
       if (res && "success" in res && res.success) {
         setRequests(res.requests);
+        toast.success("Intake refreshed");
       }
     });
   }
