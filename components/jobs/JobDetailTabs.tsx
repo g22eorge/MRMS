@@ -97,6 +97,23 @@ type Props = {
     brand: string;
     model: string;
     issueDescription: string;
+    serviceType?: "HARDWARE" | "SOFTWARE" | "BOTH" | null;
+    softwareOsInstall?: boolean;
+    softwareDriversUpdates?: boolean;
+    softwareDataBackupRestore?: boolean;
+    softwareAccountSetup?: boolean;
+    softwarePerformanceTune?: boolean;
+    softwareThirdPartyApps?: boolean;
+    softwareRequestedNotes?: string | null;
+    softwareLicenseAttested?: boolean;
+    softwareInstallerSource?:
+      | "CLIENT_PROVIDED_INSTALLER"
+      | "CLIENT_ACCOUNT_LOGIN"
+      | "COMPANY_LICENSE"
+      | "OPEN_SOURCE"
+      | "OTHER"
+      | null;
+    softwareInstallerSourceNote?: string | null;
     workflowReason?:
       | "NONE"
       | "PARTS_PENDING"
@@ -197,6 +214,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+
+  const isSoftwareJob = (job.serviceType ?? "HARDWARE") !== "HARDWARE";
   const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
   const canAssignJobs = can.assignJobs(permissionUser);
   const canUpdateClientCommunication = can.approveWork(permissionUser);
@@ -509,6 +528,59 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{job.issueDescription}</p>
           </div>
 
+          {isSoftwareJob && role !== "TECHNICIAN_EXTERNAL" ? (
+            <div className={`mt-4 ${softSectionClass}`}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Software Service</p>
+              <p className="text-sm text-[var(--ink-muted)]">
+                Type: <span className="font-medium text-[var(--ink)]">{prettyEnum(job.serviceType ?? "SOFTWARE")}</span>
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(
+                  [
+                    job.softwareOsInstall ? "OS install" : null,
+                    job.softwareDriversUpdates ? "Drivers + updates" : null,
+                    job.softwareDataBackupRestore ? "Backup/restore" : null,
+                    job.softwareAccountSetup ? "Account setup" : null,
+                    job.softwarePerformanceTune ? "Performance tune" : null,
+                    job.softwareThirdPartyApps ? "Third-party apps (client-licensed)" : null,
+                  ] as const
+                )
+                  .filter(Boolean)
+                  .map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-xs font-medium text-[var(--ink)]"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                {!job.softwareOsInstall &&
+                !job.softwareDriversUpdates &&
+                !job.softwareDataBackupRestore &&
+                !job.softwareAccountSetup &&
+                !job.softwarePerformanceTune &&
+                !job.softwareThirdPartyApps ? (
+                  <span className="text-xs text-[var(--ink-muted)]">No software scope selected.</span>
+                ) : null}
+              </div>
+
+              <p className="mt-2 text-sm text-[var(--ink-muted)]">
+                License attestation: {job.softwareLicenseAttested ? "Confirmed" : "Not recorded"}
+              </p>
+              {job.softwareInstallerSource ? (
+                <p className="text-sm text-[var(--ink-muted)]">
+                  Installer source: {prettyEnum(job.softwareInstallerSource)}
+                  {job.softwareInstallerSourceNote ? ` (${job.softwareInstallerSourceNote})` : ""}
+                </p>
+              ) : null}
+              {job.softwareRequestedNotes ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
+                  {job.softwareRequestedNotes}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {deviceHistory.length > 0 ? (
             <div className={`mt-4 ${softSectionClass}`}>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Device History</p>
@@ -583,7 +655,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   className={fieldClass}
                 >
                   <option value="">Unassigned</option>
-                  {technicians.map((technician) => (
+                  {technicians
+                    .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
+                    .map((technician) => (
                     <option key={technician.id} value={technician.id}>
                       {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
                     </option>

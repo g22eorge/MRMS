@@ -13,7 +13,8 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { getUploadsRoot } from "@/lib/storage";
 
-const deviceSchema = z.object({
+const deviceSchema = z
+  .object({
   deviceType: z.enum([
     "PHONE_ANDROID",
     "PHONE_IPHONE",
@@ -27,8 +28,35 @@ const deviceSchema = z.object({
   serialOrImei: z.string().optional(),
   accessories: z.string().optional(),
   physicalNotes: z.string().optional(),
+  serviceType: z.enum(["HARDWARE", "SOFTWARE", "BOTH"]).optional(),
+  softwareOsInstall: z.boolean().optional(),
+  softwareDriversUpdates: z.boolean().optional(),
+  softwareDataBackupRestore: z.boolean().optional(),
+  softwareAccountSetup: z.boolean().optional(),
+  softwarePerformanceTune: z.boolean().optional(),
+  softwareThirdPartyApps: z.boolean().optional(),
+  softwareRequestedNotes: z.string().optional(),
+  softwareLicenseAttested: z.boolean().optional(),
+  softwareInstallerSource: z.enum([
+    "CLIENT_PROVIDED_INSTALLER",
+    "CLIENT_ACCOUNT_LOGIN",
+    "COMPANY_LICENSE",
+    "OPEN_SOURCE",
+    "OTHER",
+  ]).optional(),
+  softwareInstallerSourceNote: z.string().optional(),
   issueDescription: z.string().min(5),
-});
+  })
+  .superRefine((value, ctx) => {
+    const serviceType = value.serviceType ?? "HARDWARE";
+    if (serviceType !== "HARDWARE" && !value.softwareLicenseAttested) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Software jobs require license attestation.",
+        path: ["softwareLicenseAttested"],
+      });
+    }
+  });
 
 const newJobSchema = z.object({
   fullName: z.string().min(2),
@@ -161,9 +189,28 @@ export async function createJobAction(formData: FormData) {
     }
 
     let job: { id: string } | null = null;
+    let includeSoftwareFields = true;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const jobNumber = await generateJobNumber();
       try {
+        const serviceType = device.serviceType ?? "HARDWARE";
+        const softwareRequestedNotes = sanitizeOptionalText(device.softwareRequestedNotes);
+        const softwareInstallerSourceNote = sanitizeOptionalText(device.softwareInstallerSourceNote);
+
+        const softwareFields = {
+          serviceType,
+          softwareOsInstall: Boolean(device.softwareOsInstall),
+          softwareDriversUpdates: Boolean(device.softwareDriversUpdates),
+          softwareDataBackupRestore: Boolean(device.softwareDataBackupRestore),
+          softwareAccountSetup: Boolean(device.softwareAccountSetup),
+          softwarePerformanceTune: Boolean(device.softwarePerformanceTune),
+          softwareThirdPartyApps: Boolean(device.softwareThirdPartyApps),
+          softwareRequestedNotes,
+          softwareLicenseAttested: Boolean(device.softwareLicenseAttested),
+          softwareInstallerSource: device.softwareInstallerSource ?? undefined,
+          softwareInstallerSourceNote,
+        } as const;
+
         job = await prisma.job.create({
           data: {
             jobNumber,
@@ -177,6 +224,8 @@ export async function createJobAction(formData: FormData) {
             accessories: sanitizeOptionalText(device.accessories),
             physicalNotes: sanitizeOptionalText(device.physicalNotes),
             issueDescription: sanitizeText(device.issueDescription),
+            ...(includeSoftwareFields && serviceType !== "HARDWARE" ? { repairPath: "IN_HOUSE" } : {}),
+            ...(includeSoftwareFields ? softwareFields : {}),
             receivedAt,
           },
           select: { id: true },
@@ -189,6 +238,25 @@ export async function createJobAction(formData: FormData) {
           }
           // deviceId column missing in some environments
           if (error.code === "P2022") {
+            // serviceType/software columns may not be migrated yet.
+            // Drop them and retry.
+            const message = error.message || "";
+            if (
+              message.includes("serviceType") ||
+              message.includes("softwareOsInstall") ||
+              message.includes("softwareDriversUpdates") ||
+              message.includes("softwareDataBackupRestore") ||
+              message.includes("softwareAccountSetup") ||
+              message.includes("softwarePerformanceTune") ||
+              message.includes("softwareThirdPartyApps") ||
+              message.includes("softwareRequestedNotes") ||
+              message.includes("softwareLicenseAttested") ||
+              message.includes("softwareInstallerSource") ||
+              message.includes("softwareInstallerSourceNote")
+            ) {
+              includeSoftwareFields = false;
+              continue;
+            }
             deviceId = null;
             continue;
           }

@@ -13,6 +13,23 @@ type DeviceDraft = {
   serialOrImei: string;
   accessories: string;
   physicalNotes: string;
+  serviceType: "HARDWARE" | "SOFTWARE" | "BOTH";
+  softwareOsInstall: boolean;
+  softwareDriversUpdates: boolean;
+  softwareDataBackupRestore: boolean;
+  softwareAccountSetup: boolean;
+  softwarePerformanceTune: boolean;
+  softwareThirdPartyApps: boolean;
+  softwareRequestedNotes: string;
+  softwareLicenseAttested: boolean;
+  softwareInstallerSource:
+    | ""
+    | "CLIENT_PROVIDED_INSTALLER"
+    | "CLIENT_ACCOUNT_LOGIN"
+    | "COMPANY_LICENSE"
+    | "OPEN_SOURCE"
+    | "OTHER";
+  softwareInstallerSourceNote: string;
   issueDescription: string;
 };
 
@@ -24,6 +41,17 @@ function blankDevice(): DeviceDraft {
     serialOrImei: "",
     accessories: "",
     physicalNotes: "",
+    serviceType: "HARDWARE",
+    softwareOsInstall: false,
+    softwareDriversUpdates: false,
+    softwareDataBackupRestore: false,
+    softwareAccountSetup: false,
+    softwarePerformanceTune: false,
+    softwareThirdPartyApps: false,
+    softwareRequestedNotes: "",
+    softwareLicenseAttested: false,
+    softwareInstallerSource: "",
+    softwareInstallerSourceNote: "",
     issueDescription: "",
   };
 }
@@ -60,9 +88,42 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     });
   };
 
+  const onDeviceToggle = (index: number, field: keyof DeviceDraft, checked: boolean) => {
+    setDevices((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: checked };
+      return next;
+    });
+  };
+
+  const softwareOptions = [
+    ["softwareOsInstall", "OS install / reinstall"],
+    ["softwareDriversUpdates", "Drivers + updates"],
+    ["softwareDataBackupRestore", "Backup / restore"],
+    ["softwareAccountSetup", "Account setup"],
+    ["softwarePerformanceTune", "Performance tune"],
+    ["softwareThirdPartyApps", "Third-party apps (client-licensed)"],
+  ] as const satisfies ReadonlyArray<readonly [
+    | "softwareOsInstall"
+    | "softwareDriversUpdates"
+    | "softwareDataBackupRestore"
+    | "softwareAccountSetup"
+    | "softwarePerformanceTune"
+    | "softwareThirdPartyApps",
+    string,
+  ]>;
+
   return (
       <form
         action={(formData) => {
+          const missingAttestation = devices.some(
+            (d) => d.serviceType !== "HARDWARE" && !d.softwareLicenseAttested,
+          );
+          if (missingAttestation) {
+            window.alert("Software jobs require license attestation. Please confirm the client owns valid licenses/subscriptions.");
+            setStep(1);
+            return;
+          }
           startTransition(async () => {
             formData.set("devicesJson", JSON.stringify(devices));
             await createJobAction(formData);
@@ -191,6 +252,88 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                     placeholder="Physical notes"
                     className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
                   />
+
+                  <div className="md:col-span-2 grid gap-2 rounded-lg border border-[var(--line)] bg-white p-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-[var(--ink)]">Service Type</p>
+                        <select
+                          value={device.serviceType}
+                          onChange={(e) => onDeviceInput(idx, "serviceType", e.target.value)}
+                          className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+                        >
+                          <option value="HARDWARE">Hardware repair</option>
+                          <option value="SOFTWARE">Software service only</option>
+                          <option value="BOTH">Hardware + software</option>
+                        </select>
+                      </div>
+                      <div className="text-xs text-[var(--ink-muted)] leading-5">
+                        Software work is internal. For paid software, the client must provide valid licenses/accounts.
+                      </div>
+                    </div>
+
+                    {device.serviceType !== "HARDWARE" ? (
+                        <div className="mt-2 grid gap-3">
+                          <div className="grid gap-2 md:grid-cols-2">
+                          {softwareOptions.map(([key, label]) => (
+                            <label key={key} className="flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={device[key]}
+                                onChange={(e) => onDeviceToggle(idx, key, e.target.checked)}
+                              />
+                              <span>{label}</span>
+                            </label>
+                          ))}
+                        </div>
+
+                        <textarea
+                          value={device.softwareRequestedNotes}
+                          onChange={(e) => onDeviceInput(idx, "softwareRequestedNotes", e.target.value)}
+                          placeholder="Software notes (optional). Example: 'Install OS + office using client's account'."
+                          className="min-h-20 w-full rounded-md border border-[var(--line)] px-3 py-2"
+                        />
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Installer source</p>
+                            <select
+                              value={device.softwareInstallerSource}
+                              onChange={(e) => onDeviceInput(idx, "softwareInstallerSource", e.target.value)}
+                              className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+                            >
+                              <option value="">Select source</option>
+                              <option value="CLIENT_PROVIDED_INSTALLER">Client provided installer</option>
+                              <option value="CLIENT_ACCOUNT_LOGIN">Client account login</option>
+                              <option value="COMPANY_LICENSE">Company license</option>
+                              <option value="OPEN_SOURCE">Open-source</option>
+                              <option value="OTHER">Other</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Source note</p>
+                            <input
+                              value={device.softwareInstallerSourceNote}
+                              onChange={(e) => onDeviceInput(idx, "softwareInstallerSourceNote", e.target.value)}
+                              placeholder="Optional"
+                              className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+                            />
+                          </div>
+                        </div>
+
+                        <label className="flex items-start gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={device.softwareLicenseAttested}
+                            onChange={(e) => onDeviceToggle(idx, "softwareLicenseAttested", e.target.checked)}
+                          />
+                          <span>
+                            Client confirms they own valid licenses/subscriptions for any paid software requested.
+                          </span>
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}

@@ -127,6 +127,20 @@ enum RepairPath {
   EXTERNAL
 }
 
+enum ServiceType {
+  HARDWARE
+  SOFTWARE
+  BOTH
+}
+
+enum SoftwareInstallerSource {
+  CLIENT_PROVIDED_INSTALLER
+  CLIENT_ACCOUNT_LOGIN
+  COMPANY_LICENSE
+  OPEN_SOURCE
+  OTHER
+}
+
 enum DeliveryMethod {
   PICKUP
   DELIVERY
@@ -223,6 +237,21 @@ model Job {
   serialOrImei  String?
   accessories   String?
   physicalNotes String?
+
+  // Business line: hardware repair vs software-only services.
+  serviceType   ServiceType @default(HARDWARE)
+
+  // Software service scope (no app catalog; client must provide valid licenses).
+  softwareOsInstall          Boolean @default(false)
+  softwareDriversUpdates     Boolean @default(false)
+  softwareDataBackupRestore  Boolean @default(false)
+  softwareAccountSetup       Boolean @default(false)
+  softwarePerformanceTune    Boolean @default(false)
+  softwareThirdPartyApps     Boolean @default(false)
+  softwareRequestedNotes     String?
+  softwareLicenseAttested    Boolean @default(false)
+  softwareInstallerSource    SoftwareInstallerSource?
+  softwareInstallerSourceNote String?
 
   issueDescription  String
   workflowReason    WorkflowReason @default(NONE)

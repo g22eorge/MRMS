@@ -120,6 +120,26 @@ export async function POST() {
     changes.push({ kind: "alter_table", detail: "Added Job.deliveredTo" });
   }
 
+  // Software services (hardware vs software job types)
+  const addJobColumn = async (name: string, type: string, dflt?: string) => {
+    if (cols.has(name)) return;
+    const defaultClause = dflt ? ` DEFAULT ${dflt}` : "";
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Job" ADD COLUMN "${name}" ${type}${defaultClause}`);
+    changes.push({ kind: "alter_table", detail: `Added Job.${name}` });
+  };
+
+  await addJobColumn("serviceType", "TEXT", "'HARDWARE'");
+  await addJobColumn("softwareOsInstall", "INTEGER", "0");
+  await addJobColumn("softwareDriversUpdates", "INTEGER", "0");
+  await addJobColumn("softwareDataBackupRestore", "INTEGER", "0");
+  await addJobColumn("softwareAccountSetup", "INTEGER", "0");
+  await addJobColumn("softwarePerformanceTune", "INTEGER", "0");
+  await addJobColumn("softwareThirdPartyApps", "INTEGER", "0");
+  await addJobColumn("softwareRequestedNotes", "TEXT");
+  await addJobColumn("softwareLicenseAttested", "INTEGER", "0");
+  await addJobColumn("softwareInstallerSource", "TEXT");
+  await addJobColumn("softwareInstallerSourceNote", "TEXT");
+
   // Notifications
   const hasNotification = await tableExists("Notification");
   if (!hasNotification) {
@@ -231,7 +251,23 @@ export async function POST() {
   return NextResponse.json({
     ok: true,
     applied: changes,
-    jobColumnsNow: ["deviceId", "deliveredAt", "deliveryMethod", "deliveredTo"].map((c) => ({ c, present: finalCols.has(c) })),
+    jobColumnsNow: [
+      "deviceId",
+      "deliveredAt",
+      "deliveryMethod",
+      "deliveredTo",
+      "serviceType",
+      "softwareOsInstall",
+      "softwareDriversUpdates",
+      "softwareDataBackupRestore",
+      "softwareAccountSetup",
+      "softwarePerformanceTune",
+      "softwareThirdPartyApps",
+      "softwareRequestedNotes",
+      "softwareLicenseAttested",
+      "softwareInstallerSource",
+      "softwareInstallerSourceNote",
+    ].map((c) => ({ c, present: finalCols.has(c) })),
     tablesNow: {
       Notification: await tableExists("Notification"),
       NotificationPreferences: await tableExists("NotificationPreferences"),

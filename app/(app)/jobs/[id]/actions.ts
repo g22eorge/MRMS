@@ -147,42 +147,63 @@ export async function updateJobAction(formData: FormData) {
   const payload = parsed.data;
   // Select explicitly to avoid runtime failures if some newer columns (e.g. deviceId)
   // are not yet present in a given environment.
-  const existing = await prisma.job.findUnique({
-    where: { id: payload.jobId },
-    select: {
-      id: true,
-      updatedAt: true,
-      status: true,
-      assignedToId: true,
-      repairPath: true,
-      // billing + payouts
-      clientBill: true,
-      vatApplicable: true,
-      externalTechFee: true,
-      externalPaid: true,
-      externalPaymentRef: true,
-      // workflow + comms
-      communicationStatus: true,
-      clientConversationNote: true,
-      workflowReason: true,
-      statusNote: true,
-      // diagnosis + repair
-      diagnosisNotes: true,
-      externalDiagnosis: true,
-      partsNeeded: true,
-      workDone: true,
-      partsReplaced: true,
-      // timeline
-      repairTimeline: true,
-      timelineNote: true,
-      // approval fields (used by status transitions)
-      clientApproved: true,
-      approvalDate: true,
-    },
-  });
+  const selectExistingBase = {
+    id: true,
+    updatedAt: true,
+    status: true,
+    assignedToId: true,
+    repairPath: true,
+    // billing + payouts
+    clientBill: true,
+    vatApplicable: true,
+    externalTechFee: true,
+    externalPaid: true,
+    externalPaymentRef: true,
+    // workflow + comms
+    communicationStatus: true,
+    clientConversationNote: true,
+    workflowReason: true,
+    statusNote: true,
+    // diagnosis + repair
+    diagnosisNotes: true,
+    externalDiagnosis: true,
+    partsNeeded: true,
+    workDone: true,
+    partsReplaced: true,
+    // timeline
+    repairTimeline: true,
+    timelineNote: true,
+    // approval fields (used by status transitions)
+    clientApproved: true,
+    approvalDate: true,
+  } as const;
+
+  const existing = await prisma.job
+    .findUnique({
+      where: { id: payload.jobId },
+      select: {
+        ...selectExistingBase,
+        serviceType: true,
+      },
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("serviceType")) {
+        return prisma.job.findUnique({
+          where: { id: payload.jobId },
+          select: selectExistingBase,
+        }) as unknown as Promise<(typeof selectExistingBase & { id: string }) | null>;
+      }
+      throw error;
+    });
   if (!existing) {
     return { error: "Job not found" };
   }
+
+  const existingServiceType =
+    "serviceType" in existing && typeof (existing as { serviceType?: string }).serviceType === "string"
+      ? ((existing as { serviceType?: string }).serviceType as string)
+      : "HARDWARE";
 
   if (payload.expectedUpdatedAt) {
     const expected = new Date(payload.expectedUpdatedAt).toISOString();
@@ -384,6 +405,11 @@ export async function updateJobAction(formData: FormData) {
 
         if (!assignee) {
           return { error: "Invalid assignee. Select an active technician." };
+        }
+
+        // Software services are internal-only.
+        if (existingServiceType !== "HARDWARE" && assignee.role === Role.TECHNICIAN_EXTERNAL) {
+          return { error: "Software jobs cannot be assigned to external technicians." };
         }
 
         data.assignedToId = assignee.id;
@@ -613,13 +639,33 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
   const payload = parsed.data;
   const allowedOutsourceStatuses = new Set<JobStatus>([JobStatus.IN_EXTERNAL_REPAIR, JobStatus.COMPLETED]);
 
-  const existing = await prisma.job.findUnique({
-    where: { id: payload.jobId },
-    select: { id: true, updatedAt: true, status: true },
-  });
+  const existing = await prisma.job
+    .findUnique({
+      where: { id: payload.jobId },
+      select: { id: true, updatedAt: true, status: true, serviceType: true },
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("serviceType")) {
+        return prisma.job.findUnique({
+          where: { id: payload.jobId },
+          select: { id: true, updatedAt: true, status: true },
+        }) as unknown as Promise<({ id: string; updatedAt: Date; status: JobStatus } & { serviceType?: string }) | null>;
+      }
+      throw error;
+    });
 
   if (!existing) {
     return { error: "Job not found" };
+  }
+
+  const existingServiceType =
+    "serviceType" in existing && typeof (existing as { serviceType?: string }).serviceType === "string"
+      ? ((existing as { serviceType?: string }).serviceType as string)
+      : "HARDWARE";
+
+  if (existingServiceType !== "HARDWARE") {
+    return { error: "Software jobs cannot be outsourced to one-time external technicians." };
   }
 
   if (payload.expectedUpdatedAt) {
