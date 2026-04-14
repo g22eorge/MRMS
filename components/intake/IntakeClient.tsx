@@ -94,6 +94,7 @@ function RequestDrawer({
   onRequestUpdate,
   canManageIntake,
   isAdmin,
+  defaultEditMode,
 }: {
   req: RepairRequest;
   onClose: () => void;
@@ -101,10 +102,11 @@ function RequestDrawer({
   onRequestUpdate: (updated: RepairRequest) => void;
   canManageIntake: boolean;
   isAdmin: boolean;
+  defaultEditMode: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [localStatus, setLocalStatus] = useState(req.requestStatus);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(defaultEditMode);
   const router = useRouter();
 
   function act(status: string) {
@@ -372,12 +374,18 @@ function RowActions({
   req,
   onStatusChange,
   onView,
+  onEdit,
+  onDelete,
   canManageIntake,
+  isAdmin,
 }: {
   req: RepairRequest;
   onStatusChange: (id: string, status: string) => void;
   onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   canManageIntake: boolean;
+  isAdmin: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -442,6 +450,30 @@ function RowActions({
           Open Job
         </a>
       )}
+      {canManageIntake ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          title="Edit"
+          className="inline-flex items-center rounded-md p-1.5 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        </button>
+      ) : null}
+      {isAdmin ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          title="Delete"
+          className="inline-flex items-center rounded-md p-1.5 text-white bg-black hover:bg-black/80 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        </button>
+      ) : null}
       {/* view icon — table only, omit from mobile cards */}
       <button
         onClick={(e) => { e.stopPropagation(); onView(); }}
@@ -459,12 +491,18 @@ function MobileCard({
   req,
   onStatusChange,
   onSelect,
+  onEdit,
+  onDelete,
   canManageIntake,
+  isAdmin,
 }: {
   req: RepairRequest;
   onStatusChange: (id: string, status: string) => void;
   onSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   canManageIntake: boolean;
+  isAdmin: boolean;
 }) {
   return (
     <div
@@ -497,7 +535,15 @@ function MobileCard({
         className="border-t border-[var(--line)] bg-[var(--panel)]/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
         onClick={(e) => e.stopPropagation()}
       >
-        <RowActions req={req} onStatusChange={onStatusChange} onView={onSelect} canManageIntake={canManageIntake} />
+        <RowActions
+          req={req}
+          onStatusChange={onStatusChange}
+          onView={onSelect}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          canManageIntake={canManageIntake}
+          isAdmin={isAdmin}
+        />
       </div>
     </div>
   );
@@ -520,6 +566,7 @@ export function IntakeClient({
   const [selected, setSelected]   = useState<RepairRequest | null>(null);
   const [filter, setFilter]       = useState<string>("ALL");
   const [loading, startLoading] = useTransition();
+  const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
 
   function handleStatusChange(id: string, status: string) {
     if (status === "__deleted__") {
@@ -539,6 +586,18 @@ export function IntakeClient({
   function handleRequestUpdate(updated: RepairRequest) {
     setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     if (selected?.id === updated.id) setSelected(updated);
+  }
+
+  function deleteRequest(req: RepairRequest) {
+    if (!window.confirm(`Delete ${req.requestNumber}? This cannot be undone.`)) return;
+    startLoading(async () => {
+      const fd = new FormData();
+      fd.set("id", req.id);
+      const res = await deleteRepairRequestAction(fd);
+      if (res && "success" in res && res.success) {
+        handleStatusChange(req.id, "__deleted__");
+      }
+    });
   }
 
   function refresh() {
@@ -631,8 +690,17 @@ export function IntakeClient({
                 key={req.id}
                 req={req}
                 onStatusChange={handleStatusChange}
-                onSelect={() => setSelected(req)}
+                onSelect={() => {
+                  setDrawerMode("view");
+                  setSelected(req);
+                }}
+                onEdit={() => {
+                  setDrawerMode("edit");
+                  setSelected(req);
+                }}
+                onDelete={() => deleteRequest(req)}
                 canManageIntake={canManageIntake}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
@@ -682,8 +750,17 @@ export function IntakeClient({
                       <RowActions
                         req={req}
                         onStatusChange={handleStatusChange}
-                        onView={() => setSelected(req)}
+                        onView={() => {
+                          setDrawerMode("view");
+                          setSelected(req);
+                        }}
+                        onEdit={() => {
+                          setDrawerMode("edit");
+                          setSelected(req);
+                        }}
+                        onDelete={() => deleteRequest(req)}
                         canManageIntake={canManageIntake}
+                        isAdmin={isAdmin}
                       />
                     </td>
                   </tr>
@@ -702,6 +779,7 @@ export function IntakeClient({
           onRequestUpdate={handleRequestUpdate}
           canManageIntake={canManageIntake}
           isAdmin={isAdmin}
+          defaultEditMode={drawerMode === "edit"}
         />
       )}
     </>
