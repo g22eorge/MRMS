@@ -4,6 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 
+import {
+  deleteRepairRequestAction,
+  listRepairRequestsAction,
+  setRepairRequestStatusAction,
+  updateRepairRequestDetailsAction,
+} from "@/app/(app)/intake/actions";
+
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   PENDING_INTAKE:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
@@ -81,31 +88,59 @@ function ActionBtn({
 
 /* ── drawer ── */
 function RequestDrawer({
-  req, onClose, onStatusChange,
+  req,
+  onClose,
+  onStatusChange,
+  onRequestUpdate,
+  canManageIntake,
+  isAdmin,
 }: {
   req: RepairRequest;
   onClose: () => void;
   onStatusChange: (id: string, status: string) => void;
+  onRequestUpdate: (updated: RepairRequest) => void;
+  canManageIntake: boolean;
+  isAdmin: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [localStatus, setLocalStatus] = useState(req.requestStatus);
+  const [editMode, setEditMode] = useState(false);
   const router = useRouter();
 
   function act(status: string) {
     startTransition(async () => {
-      const res = await fetch(`/api/repair-requests/${req.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.jobId) {
-          router.push(`/jobs/${data.jobId}`);
-          return;
-        }
-        setLocalStatus(status as RepairRequestStatus);
-        onStatusChange(req.id, status);
+      const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+      if (res && "jobId" in res && res.jobId) {
+        router.push(`/jobs/${res.jobId}`);
+        return;
+      }
+      if (res && "requestStatus" in res && res.requestStatus) {
+        setLocalStatus(res.requestStatus as RepairRequestStatus);
+        onStatusChange(req.id, res.requestStatus);
+      }
+    });
+  }
+
+  function saveEdits(formData: FormData) {
+    formData.set("id", req.id);
+    startTransition(async () => {
+      const res = await updateRepairRequestDetailsAction(formData);
+      if (res && "success" in res && res.success) {
+        onRequestUpdate(res.request);
+        setEditMode(false);
+      }
+    });
+  }
+
+  function remove() {
+    if (!window.confirm(`Delete ${req.requestNumber}? This cannot be undone.`)) return;
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("id", req.id);
+      const res = await deleteRepairRequestAction(fd);
+      if (res && "success" in res && res.success) {
+        onStatusChange(req.id, "__deleted__");
+        onClose();
       }
     });
   }
@@ -130,6 +165,24 @@ function RequestDrawer({
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={localStatus} />
+            {canManageIntake ? (
+              <button
+                type="button"
+                onClick={() => setEditMode((v) => !v)}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-[var(--line)] bg-white text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] transition-colors"
+              >
+                {editMode ? "Done" : "Edit"}
+              </button>
+            ) : null}
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={remove}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-black bg-black text-white hover:bg-black/80 transition-colors"
+              >
+                Delete
+              </button>
+            ) : null}
             <button
               onClick={onClose}
               className="rounded-lg p-1.5 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] transition-colors"
@@ -154,7 +207,7 @@ function RequestDrawer({
         )}
 
         {/* actions bar */}
-        {!isConverted && !isRejected && (
+        {canManageIntake && !isConverted && !isRejected && (
           <div className="px-6 py-3 border-b border-[var(--line)] bg-white flex items-center gap-2 flex-wrap">
             {isPending && (
               <>
@@ -191,6 +244,67 @@ function RequestDrawer({
 
         {/* body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {editMode && canManageIntake ? (
+            <form action={saveEdits} className="mb-6 rounded-xl border border-[var(--line)] bg-white p-4">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-3">Edit Request</p>
+              <div className="grid grid-cols-1 gap-3">
+                <input
+                  name="customerName"
+                  defaultValue={req.customerName}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Customer name"
+                />
+                <input
+                  name="phone"
+                  defaultValue={req.phone}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Phone"
+                />
+                <input
+                  name="email"
+                  defaultValue={req.email ?? ""}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Email"
+                />
+                <input
+                  name="brand"
+                  defaultValue={req.brand}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Brand"
+                />
+                <input
+                  name="model"
+                  defaultValue={req.model ?? ""}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Model"
+                />
+                <input
+                  name="serialNumber"
+                  defaultValue={req.serialNumber ?? ""}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Serial / IMEI"
+                />
+                <textarea
+                  name="problemDescription"
+                  defaultValue={req.problemDescription}
+                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  placeholder="Problem description"
+                  rows={4}
+                />
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90 disabled:opacity-40"
+                >
+                  Save
+                </button>
+                {pending ? <span className="text-xs text-[var(--ink-muted)]">Saving…</span> : null}
+              </div>
+            </form>
+          ) : null}
+
           <Section title="Customer">
             <DRow label="Name"              value={req.customerName} />
             <DRow label="Phone"             value={req.phone} />
@@ -258,10 +372,12 @@ function RowActions({
   req,
   onStatusChange,
   onView,
+  canManageIntake,
 }: {
   req: RepairRequest;
   onStatusChange: (id: string, status: string) => void;
   onView: () => void;
+  canManageIntake: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -269,25 +385,20 @@ function RowActions({
   function act(status: string, e: React.MouseEvent) {
     e.stopPropagation();
     startTransition(async () => {
-      const res = await fetch(`/api/repair-requests/${req.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.jobId) {
-          router.push(`/jobs/${data.jobId}`);
-          return;
-        }
-        onStatusChange(req.id, status);
+      const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+      if (res && "jobId" in res && res.jobId) {
+        router.push(`/jobs/${res.jobId}`);
+        return;
+      }
+      if (res && "requestStatus" in res && res.requestStatus) {
+        onStatusChange(req.id, res.requestStatus);
       }
     });
   }
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-      {req.requestStatus === "PENDING_INTAKE" && (
+      {canManageIntake && req.requestStatus === "PENDING_INTAKE" && (
         <>
           <button
             disabled={pending}
@@ -309,7 +420,7 @@ function RowActions({
           </button>
         </>
       )}
-      {req.requestStatus === "APPROVED" && (
+      {canManageIntake && req.requestStatus === "APPROVED" && (
         <button
           disabled={pending}
           onClick={(e) => act("CONVERTED_TO_JOB", e)}
@@ -348,10 +459,12 @@ function MobileCard({
   req,
   onStatusChange,
   onSelect,
+  canManageIntake,
 }: {
   req: RepairRequest;
   onStatusChange: (id: string, status: string) => void;
   onSelect: () => void;
+  canManageIntake: boolean;
 }) {
   return (
     <div
@@ -384,7 +497,7 @@ function MobileCard({
         className="border-t border-[var(--line)] bg-[var(--panel)]/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
         onClick={(e) => e.stopPropagation()}
       >
-        <RowActions req={req} onStatusChange={onStatusChange} onView={onSelect} />
+        <RowActions req={req} onStatusChange={onStatusChange} onView={onSelect} canManageIntake={canManageIntake} />
       </div>
     </div>
   );
@@ -395,15 +508,25 @@ function MobileCard({
 export function IntakeClient({
   initialRequests,
   pending,
+  canManageIntake,
+  isAdmin,
 }: {
   initialRequests: RepairRequest[];
   pending: number;
+  canManageIntake: boolean;
+  isAdmin: boolean;
 }) {
   const [requests, setRequests] = useState(initialRequests);
   const [selected, setSelected]   = useState<RepairRequest | null>(null);
   const [filter, setFilter]       = useState<string>("ALL");
+  const [loading, startLoading] = useTransition();
 
   function handleStatusChange(id: string, status: string) {
+    if (status === "__deleted__") {
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      if (selected?.id === id) setSelected(null);
+      return;
+    }
     const s = status as RepairRequestStatus;
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, requestStatus: s } : r))
@@ -411,6 +534,20 @@ export function IntakeClient({
     if (selected?.id === id) {
       setSelected((prev) => prev ? { ...prev, requestStatus: s } : null);
     }
+  }
+
+  function handleRequestUpdate(updated: RepairRequest) {
+    setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    if (selected?.id === updated.id) setSelected(updated);
+  }
+
+  function refresh() {
+    startLoading(async () => {
+      const res = await listRepairRequestsAction({ take: 200 });
+      if (res && "success" in res && res.success) {
+        setRequests(res.requests);
+      }
+    });
   }
 
   const counts = requests.reduce<Record<string, number>>((acc, r) => {
@@ -446,7 +583,8 @@ export function IntakeClient({
       </div>
 
       {/* filter tabs */}
-      <div className="flex gap-1.5 mb-4 flex-wrap">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
         {tabs.map((tab) => {
           const count = tab.key === "ALL" ? requests.length : (counts[tab.key] ?? 0);
           const active = filter === tab.key;
@@ -469,6 +607,15 @@ export function IntakeClient({
             </button>
           );
         })}
+        </div>
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel)] disabled:opacity-40"
+        >
+          Refresh
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -485,6 +632,7 @@ export function IntakeClient({
                 req={req}
                 onStatusChange={handleStatusChange}
                 onSelect={() => setSelected(req)}
+                canManageIntake={canManageIntake}
               />
             ))}
           </div>
@@ -535,6 +683,7 @@ export function IntakeClient({
                         req={req}
                         onStatusChange={handleStatusChange}
                         onView={() => setSelected(req)}
+                        canManageIntake={canManageIntake}
                       />
                     </td>
                   </tr>
@@ -550,6 +699,9 @@ export function IntakeClient({
           req={selected}
           onClose={() => setSelected(null)}
           onStatusChange={handleStatusChange}
+          onRequestUpdate={handleRequestUpdate}
+          canManageIntake={canManageIntake}
+          isAdmin={isAdmin}
         />
       )}
     </>

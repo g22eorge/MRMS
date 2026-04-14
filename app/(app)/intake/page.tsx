@@ -19,7 +19,12 @@ export default async function IntakePage() {
 
   return (
     <div className="space-y-0">
-      <IntakeClient initialRequests={requests} pending={pending} />
+      <IntakeClient
+        initialRequests={requests}
+        pending={pending}
+        canManageIntake={can.manageIntake(user)}
+        isAdmin={user.role === "ADMIN"}
+      />
     </div>
   );
 }
