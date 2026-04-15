@@ -1,7 +1,7 @@
 "use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
@@ -60,7 +60,6 @@ function blankDevice(): DeviceDraft {
 
 export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   const [step, setStep] = useState(0);
-  const formRef = useRef<HTMLFormElement | null>(null);
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -119,6 +118,13 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     (d) => d.serviceType !== "HARDWARE" && !d.softwareLicenseAttested,
   );
 
+  const [state, formAction] = useFormState(createJobAction, { error: null });
+
+  useEffect(() => {
+    if (!state?.error) return;
+    toast.error(state.error);
+  }, [state?.error]);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (missingAttestation) {
       e.preventDefault();
@@ -143,7 +149,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   }
 
   return (
-      <form ref={formRef} action={createJobAction} onSubmit={onSubmit} className="space-y-4">
+      <form action={formAction} onSubmit={onSubmit} className="space-y-4">
       <div className="flex gap-2 overflow-x-auto">
         {steps.map((label, idx) => (
           <button

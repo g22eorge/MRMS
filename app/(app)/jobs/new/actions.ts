@@ -72,14 +72,14 @@ function parseDevices(devicesJson: string) {
   try {
     raw = JSON.parse(devicesJson);
   } catch {
-    throw new Error("Invalid devices payload");
+    return { ok: false as const, error: "Invalid devices payload" };
   }
 
   const parsed = z.array(deviceSchema).min(1).max(10).safeParse(raw);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid device details");
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid device details" };
   }
-  return parsed.data;
+  return { ok: true as const, devices: parsed.data };
 }
 
 export async function generateJobNumber() {
@@ -99,39 +99,47 @@ export async function generateJobNumber() {
   return `${prefix}${String(next).padStart(4, "0")}`;
 }
 
-export async function createJobAction(formData: FormData) {
-  const { session, user } = await getCurrentUserRole();
+export async function createJobAction(
+  _prevState: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  try {
+    const { session, user } = await getCurrentUserRole();
 
-  if (!can.createJob(user)) {
-    throw new Error("You cannot create jobs.");
-  }
+    if (!can.createJob(user)) {
+      return { error: "You cannot create jobs." };
+    }
 
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = newJobSchema.safeParse(raw);
+    const raw = Object.fromEntries(formData.entries());
+    const parsed = newJobSchema.safeParse(raw);
 
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid form values");
-  }
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid form values" };
+    }
 
-  const client = await prisma.client.upsert({
-    where: { phone: parsed.data.phone },
-    create: {
-      fullName: sanitizeText(parsed.data.fullName),
-      phone: sanitizeText(parsed.data.phone),
-      email: sanitizeOptionalText(parsed.data.email),
-      organization: sanitizeOptionalText(parsed.data.organization),
-    },
-    update: {
-      fullName: sanitizeText(parsed.data.fullName),
-      email: sanitizeOptionalText(parsed.data.email),
-      organization: sanitizeOptionalText(parsed.data.organization),
-    },
-  });
+    const client = await prisma.client.upsert({
+      where: { phone: parsed.data.phone },
+      create: {
+        fullName: sanitizeText(parsed.data.fullName),
+        phone: sanitizeText(parsed.data.phone),
+        email: sanitizeOptionalText(parsed.data.email),
+        organization: sanitizeOptionalText(parsed.data.organization),
+      },
+      update: {
+        fullName: sanitizeText(parsed.data.fullName),
+        email: sanitizeOptionalText(parsed.data.email),
+        organization: sanitizeOptionalText(parsed.data.organization),
+      },
+    });
 
-  const devices = parseDevices(parsed.data.devicesJson);
-  const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
-  const maxSize = 5 * 1024 * 1024;
-  const receivedAt = parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date();
+    const parsedDevices = parseDevices(parsed.data.devicesJson);
+    if (!parsedDevices.ok) {
+      return { error: parsedDevices.error };
+    }
+    const devices = parsedDevices.devices;
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const maxSize = 5 * 1024 * 1024;
+    const receivedAt = parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date();
 
   const openStatuses = [
     "RECEIVED",
@@ -142,12 +150,12 @@ export async function createJobAction(formData: FormData) {
     "READY_FOR_PICKUP",
   ] as const;
 
-  const createdJobs: Array<{ id: string }> = [];
+    const createdJobs: Array<{ id: string }> = [];
 
-  for (let i = 0; i < devices.length; i += 1) {
-    const device = devices[i];
-    const serial = sanitizeOptionalText(device.serialOrImei);
-    if (serial) {
+    for (let i = 0; i < devices.length; i += 1) {
+      const device = devices[i];
+      const serial = sanitizeOptionalText(device.serialOrImei);
+      if (serial) {
       const dup = await prisma.job.findFirst({
         where: {
           clientId: client.id,
@@ -156,10 +164,10 @@ export async function createJobAction(formData: FormData) {
         },
         select: { id: true, jobNumber: true },
       });
-      if (dup) {
-        throw new Error(`An open job already exists for this device serial/IMEI: ${dup.jobNumber}`);
+        if (dup) {
+          return { error: `An open job already exists for this device serial/IMEI: ${dup.jobNumber}` };
+        }
       }
-    }
 
     let deviceId: string | null = null;
     try {
@@ -265,9 +273,9 @@ export async function createJobAction(formData: FormData) {
       }
     }
 
-    if (!job) {
-      throw new Error("Could not allocate unique job number. Please retry.");
-    }
+      if (!job) {
+        return { error: "Could not allocate unique job number. Please retry." };
+      }
 
     createdJobs.push(job);
 
@@ -280,8 +288,8 @@ export async function createJobAction(formData: FormData) {
       },
     });
 
-    const files = formData.getAll(`photos_${i}`) as File[];
-    if (files.length > 0) {
+      const files = formData.getAll(`photos_${i}`) as File[];
+      if (files.length > 0) {
       const uploadDir = path.join(getUploadsRoot(), "jobs", job.id);
       await mkdir(uploadDir, { recursive: true });
 
@@ -302,8 +310,20 @@ export async function createJobAction(formData: FormData) {
           },
         });
       }
+      }
     }
-  }
 
-  redirect(createdJobs.length === 1 ? `/jobs/${createdJobs[0]!.id}` : "/jobs");
+    redirect(createdJobs.length === 1 ? `/jobs/${createdJobs[0]!.id}` : "/jobs");
+  } catch (err) {
+    // Preserve Next redirect behavior
+    const digest =
+      err && typeof err === "object" && "digest" in err
+        ? String((err as { digest?: unknown }).digest)
+        : "";
+    if (digest.includes("NEXT_REDIRECT")) throw err;
+
+    const msg = err instanceof Error ? err.message : "Failed to create job";
+    console.error("[createJobAction]", msg);
+    return { error: msg };
+  }
 }
