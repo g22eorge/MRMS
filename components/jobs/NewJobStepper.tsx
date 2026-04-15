@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
@@ -120,13 +121,20 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             (d) => d.serviceType !== "HARDWARE" && !d.softwareLicenseAttested,
           );
           if (missingAttestation) {
-            window.alert("Software jobs require license attestation. Please confirm the client owns valid licenses/subscriptions.");
+            toast.error(
+              "Software jobs require license attestation. Confirm the client owns valid licenses/subscriptions.",
+            );
             setStep(1);
             return;
           }
           startTransition(async () => {
             formData.set("devicesJson", JSON.stringify(devices));
-            await createJobAction(formData);
+            try {
+              await createJobAction(formData);
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : "Failed to create job";
+              toast.error(msg);
+            }
           });
         }}
         className="space-y-4"
