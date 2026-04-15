@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState, useTransition } from "react";
+import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
@@ -59,7 +60,7 @@ function blankDevice(): DeviceDraft {
 
 export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   const [step, setStep] = useState(0);
-  const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -114,40 +115,35 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     string,
   ]>;
 
-  return (
-      <form
-        action={(formData) => {
-          const missingAttestation = devices.some(
-            (d) => d.serviceType !== "HARDWARE" && !d.softwareLicenseAttested,
-          );
-          if (missingAttestation) {
-            toast.error(
-              "Software jobs require license attestation. Confirm the client owns valid licenses/subscriptions.",
-            );
-            setStep(1);
-            return;
-          }
-          startTransition(async () => {
-            formData.set("devicesJson", JSON.stringify(devices));
-            try {
-              await createJobAction(formData);
-            } catch (err) {
-              // Next.js uses thrown errors for redirects in Server Actions.
-              const digest =
-                err && typeof err === "object" && "digest" in err
-                  ? String((err as { digest?: unknown }).digest)
-                  : "";
-              if (digest.includes("NEXT_REDIRECT")) {
-                throw err;
-              }
+  const missingAttestation = devices.some(
+    (d) => d.serviceType !== "HARDWARE" && !d.softwareLicenseAttested,
+  );
 
-              const msg = err instanceof Error ? err.message : "Failed to create job";
-              toast.error(msg);
-            }
-          });
-        }}
-        className="space-y-4"
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (missingAttestation) {
+      e.preventDefault();
+      toast.error(
+        "Software jobs require license attestation. Confirm the client owns valid licenses/subscriptions.",
+      );
+      setStep(1);
+    }
+  }
+
+  function SubmitButton() {
+    const { pending } = useFormStatus();
+    return (
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
       >
+        {pending ? "Creating..." : "Create Job"}
+      </button>
+    );
+  }
+
+  return (
+      <form ref={formRef} action={createJobAction} onSubmit={onSubmit} className="space-y-4">
       <div className="flex gap-2 overflow-x-auto">
         {steps.map((label, idx) => (
           <button
@@ -441,13 +437,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             Next
           </button>
         ) : (
-          <button
-            type="submit"
-            disabled={isPending}
-            className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
-          >
-            {isPending ? "Creating..." : "Create Job"}
-          </button>
+          <SubmitButton />
         )}
       </div>
     </form>
