@@ -60,21 +60,24 @@ export async function updateRepairRequestDetailsAction(formData: FormData) {
   const { user } = await getCurrentUserRole();
   if (!can.manageIntake(user)) return { error: "Forbidden" } as const;
 
+  // FormData.get returns null when missing; Zod optional() expects undefined.
+  const get = (key: string) => formData.get(key) ?? undefined;
+
   const payload = updateDetailsSchema.safeParse({
-    id: formData.get("id"),
-    customerName: formData.get("customerName"),
-    phone: formData.get("phone"),
-    email: formData.get("email"),
-    deviceType: formData.get("deviceType"),
-    brand: formData.get("brand"),
-    model: formData.get("model"),
-    serialNumber: formData.get("serialNumber"),
-    handoverMethod: formData.get("handoverMethod"),
-    problemDescription: formData.get("problemDescription"),
+    id: get("id"),
+    customerName: get("customerName"),
+    phone: get("phone"),
+    email: get("email"),
+    deviceType: get("deviceType"),
+    brand: get("brand"),
+    model: get("model"),
+    serialNumber: get("serialNumber"),
+    handoverMethod: get("handoverMethod"),
+    problemDescription: get("problemDescription"),
   });
 
   if (!payload.success) {
-    return { error: "Invalid input" } as const;
+    return { error: payload.error.issues[0]?.message ?? "Invalid input" } as const;
   }
 
   const data: Prisma.RepairRequestUpdateInput = {};
