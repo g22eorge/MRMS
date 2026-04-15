@@ -132,6 +132,15 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             try {
               await createJobAction(formData);
             } catch (err) {
+              // Next.js uses thrown errors for redirects in Server Actions.
+              const digest =
+                err && typeof err === "object" && "digest" in err
+                  ? String((err as { digest?: unknown }).digest)
+                  : "";
+              if (digest.includes("NEXT_REDIRECT")) {
+                throw err;
+              }
+
               const msg = err instanceof Error ? err.message : "Failed to create job";
               toast.error(msg);
             }
