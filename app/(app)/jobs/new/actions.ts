@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, type SoftwareInstallerSource } from "@prisma/client";
 import { z } from "zod";
 
 import { can } from "@/lib/permissions";
@@ -37,13 +37,16 @@ const deviceSchema = z
   softwareThirdPartyApps: z.boolean().optional(),
   softwareRequestedNotes: z.string().optional(),
   softwareLicenseAttested: z.boolean().optional(),
-  softwareInstallerSource: z.enum([
-    "CLIENT_PROVIDED_INSTALLER",
-    "CLIENT_ACCOUNT_LOGIN",
-    "COMPANY_LICENSE",
-    "OPEN_SOURCE",
-    "OTHER",
-  ]).optional(),
+  softwareInstallerSource: z
+    .enum([
+      "CLIENT_PROVIDED_INSTALLER",
+      "CLIENT_ACCOUNT_LOGIN",
+      "COMPANY_LICENSE",
+      "OPEN_SOURCE",
+      "OTHER",
+    ])
+    .optional()
+    .or(z.literal("")),
   softwareInstallerSourceNote: z.string().optional(),
   issueDescription: z.string().min(5),
   })
@@ -205,6 +208,19 @@ export async function createJobAction(
         const softwareRequestedNotes = sanitizeOptionalText(device.softwareRequestedNotes);
         const softwareInstallerSourceNote = sanitizeOptionalText(device.softwareInstallerSourceNote);
 
+        const rawInstallerSource = (device as { softwareInstallerSource?: unknown }).softwareInstallerSource;
+        const allowedInstallerSources = new Set<SoftwareInstallerSource>([
+          "CLIENT_PROVIDED_INSTALLER",
+          "CLIENT_ACCOUNT_LOGIN",
+          "COMPANY_LICENSE",
+          "OPEN_SOURCE",
+          "OTHER",
+        ]);
+        const normalizedInstallerSource =
+          typeof rawInstallerSource === "string" && allowedInstallerSources.has(rawInstallerSource as SoftwareInstallerSource)
+            ? (rawInstallerSource as SoftwareInstallerSource)
+            : undefined;
+
         const softwareFields = {
           serviceType,
           softwareOsInstall: Boolean(device.softwareOsInstall),
@@ -215,7 +231,7 @@ export async function createJobAction(
           softwareThirdPartyApps: Boolean(device.softwareThirdPartyApps),
           softwareRequestedNotes,
           softwareLicenseAttested: Boolean(device.softwareLicenseAttested),
-          softwareInstallerSource: device.softwareInstallerSource ?? undefined,
+          softwareInstallerSource: normalizedInstallerSource,
           softwareInstallerSourceNote,
         } as const;
 
