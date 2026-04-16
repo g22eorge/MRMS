@@ -91,10 +91,44 @@ export async function updateRepairRequestDetailsAction(formData: FormData) {
   if (payload.data.handoverMethod !== undefined) data.handoverMethod = payload.data.handoverMethod;
   if (payload.data.problemDescription !== undefined) data.problemDescription = sanitizeText(payload.data.problemDescription);
 
-  const updated = await prisma.repairRequest.update({
+  const existing = await prisma.repairRequest.findUnique({
     where: { id: payload.data.id },
-    data,
+    select: { id: true, requestStatus: true, linkedJobId: true },
   });
+
+  if (!existing) return { error: "Not found" } as const;
+
+  const updated = await prisma.repairRequest.update({ where: { id: payload.data.id }, data });
+
+  // If the request was converted, keep the linked Job in sync for key intake fields.
+  if (existing.requestStatus === "CONVERTED_TO_JOB" && existing.linkedJobId) {
+    const jobData: Record<string, unknown> = {};
+    if (payload.data.deviceType !== undefined) jobData.deviceType = payload.data.deviceType;
+    if (payload.data.brand !== undefined) jobData.brand = sanitizeText(payload.data.brand);
+    if (payload.data.model !== undefined) jobData.model = sanitizeText(payload.data.model);
+    if (payload.data.serialNumber !== undefined) {
+      jobData.serialOrImei = sanitizeOptionalText(payload.data.serialNumber) ?? null;
+    }
+    if (payload.data.problemDescription !== undefined) {
+      jobData.issueDescription = sanitizeText(payload.data.problemDescription);
+    }
+
+    if (Object.keys(jobData).length > 0) {
+      await prisma.$transaction([
+        prisma.job.update({ where: { id: existing.linkedJobId }, data: jobData }),
+        prisma.auditLog.create({
+          data: {
+            jobId: existing.linkedJobId,
+            userId: user.id,
+            action: "JOB_SYNCED_FROM_REQUEST",
+            detail: JSON.stringify({ requestId: existing.id, fields: Object.keys(jobData) }),
+          },
+        }),
+      ]);
+      revalidatePath(`/jobs/${existing.linkedJobId}`);
+      revalidatePath("/jobs");
+    }
+  }
 
   revalidatePath("/intake");
   return { success: true as const, request: updated };
