@@ -22,15 +22,26 @@ const helpText: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   CLOSED: "Job ended without successful completion (declined/unrepairable).",
 };
 
+const labelMap: Record<ReturnType<typeof normalizeJobStatus>, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosing",
+  IN_EXTERNAL_REPAIR: "External",
+  AWAITING_APPROVAL: "Awaiting",
+  IN_REPAIR: "In Repair",
+  READY_FOR_PICKUP: "Ready",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
 export function JobStatusBadge({ status }: { status: JobStatus }) {
   const normalized = normalizeJobStatus(status);
   return (
     <span
       title={helpText[normalized]}
       aria-label={`${normalized.replaceAll("_", " ")}. ${helpText[normalized]}`}
-      className={`rounded-full px-2 py-1 text-xs font-semibold ${classMap[normalized]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${classMap[normalized]}`}
     >
-      {normalized.replaceAll("_", " ")}
+      {labelMap[normalized]}
     </span>
   );
 }
