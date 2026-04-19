@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      "https://eagleinfosolutions.com",
+      "https://mrms.eagleinfosolutions.com",
   ),
   openGraph: {
     title: "Eagle Info Repair Manager",
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     url: "/",
     siteName: "Eagle Info Solutions",
     type: "website",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Eagle Info Solutions" }],
+    images: [{ url: "/eagle-info-logo.png", width: 512, height: 512, alt: "Eagle Info Solutions" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Eagle Info Repair Manager",
     description: "Role-based repair job management system",
-    images: ["/twitter-image"],
+    images: ["/eagle-info-logo.png"],
   },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
