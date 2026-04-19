@@ -19,6 +19,35 @@
   --mobile-stack-offset: var(--mobile-header-height);
 }
 
+/* Dark black + gold theme (used on landing/login only). */
+.theme-blackgold {
+  --page-bg: #050505;
+  --ink: rgba(255, 255, 255, 0.92);
+  --ink-muted: rgba(255, 255, 255, 0.64);
+  --panel: #0b0b0b;
+  --panel-strong: #111111;
+  --line: rgba(255, 255, 255, 0.12);
+  --brand: #D4AF37;
+  --brand-deep: #B8960C;
+  --accent: #D4AF37;
+}
+
+.theme-blackgold .glass {
+  background: rgba(10, 10, 10, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.theme-blackgold .panel-shadow {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 22px 70px rgba(0, 0, 0, 0.55);
+}
+
+.theme-blackgold .btn-premium-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 100%);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
 @theme inline {
   --color-background: var(--page-bg);
   --color-foreground: var(--ink);

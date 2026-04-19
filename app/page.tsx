@@ -8,12 +8,12 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <main className="relative overflow-hidden">
+    <main className="theme-blackgold relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_450px_at_18%_18%,rgba(212,175,55,0.18),transparent_55%),radial-gradient(820px_520px_at_85%_72%,rgba(212,175,55,0.12),transparent_60%)]" />
 
       <div className="mx-auto w-full max-w-5xl px-4 py-12 md:py-16">
         <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
-          <div className="glass panel-shadow rounded-3xl border border-[var(--line)] bg-white/70 p-7 md:p-10">
+          <div className="glass panel-shadow rounded-3xl border border-[var(--line)] p-7 md:p-10">
             <p className="text-[11px] font-bold tracking-widest uppercase text-[var(--ink-muted)]">Eagle Info Solutions</p>
             <h1 className="mt-3 text-3xl font-extrabold leading-tight text-[var(--ink)] md:text-4xl">
               Repair Manager
@@ -63,7 +63,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="grid gap-4 rounded-3xl border border-[var(--line)] bg-white p-7 md:p-10">
+            <div className="grid gap-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-7 md:p-10">
               <p className="text-[11px] font-bold tracking-widest uppercase text-[var(--ink-muted)]">What’s inside</p>
               <div className="grid gap-3 text-sm text-[var(--ink)]">
                 <div className="flex items-start gap-3">

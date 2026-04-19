@@ -51,7 +51,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
           placeholder="you@eagleinfo.com"
         />
       </div>
@@ -65,7 +65,7 @@ export function LoginForm() {
             name="password"
             type={showPassword ? "text" : "password"}
             required
-            className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 pr-24 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 pr-24 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
             placeholder="Enter your password"
           />
           <button
