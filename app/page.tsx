@@ -19,6 +19,33 @@ const features = [
   },
 ];
 
+const commitments = [
+  {
+    title: "Transparent pricing",
+    body: "You receive a written quote before any work begins. The price you approve is the price you pay — no hidden charges, no last-minute additions.",
+  },
+  {
+    title: "No fix, no fee",
+    body: "If we diagnose your device and cannot repair it, you are not charged for the attempt. We only bill for completed, successful work.",
+  },
+  {
+    title: "Your data stays yours",
+    body: "We do not access, copy, or store your personal files during any repair. Your privacy is treated as a non-negotiable condition of every job.",
+  },
+  {
+    title: "Quality parts, guaranteed",
+    body: "We use genuine manufacturer parts or certified-equivalent components. Every part used is documented on your repair record.",
+  },
+  {
+    title: "30-day repair warranty",
+    body: "All completed repairs carry a 30-day workmanship guarantee. If the same fault returns within that period, we fix it at no additional cost.",
+  },
+  {
+    title: "We keep you informed",
+    body: "You are updated at diagnosis, before work begins, and at completion. No waiting in silence — you always know where your device stands.",
+  },
+];
+
 const shortLinks = ["/app", "/repair", "/address", "/company"];
 
 export default async function HomePage() {
@@ -125,6 +152,37 @@ export default async function HomePage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+          {/* Commitment section */}
+          <div className="mt-10 md:mt-14">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">
+                  Our commitment
+                </p>
+                <h2 className="mt-2 text-xl font-extrabold text-[var(--ink)] md:text-2xl">
+                  What you can expect from us
+                </h2>
+              </div>
+              <div className="hidden h-px flex-1 bg-[var(--line)] md:block" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {commitments.map((c, i) => (
+                <div
+                  key={c.title}
+                  className="rounded-2xl border border-[var(--line)] bg-[#141414] p-5"
+                >
+                  <div className="mb-3 flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[11px] font-bold text-[#D4AF37]">
+                      {i + 1}
+                    </span>
+                    <p className="text-sm font-semibold text-[var(--ink)]">{c.title}</p>
+                  </div>
+                  <p className="text-[13px] leading-5 text-[var(--ink-muted)]">{c.body}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
