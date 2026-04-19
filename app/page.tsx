@@ -39,9 +39,9 @@ export default async function HomePage() {
 
         {/* Wordmark */}
         <div className="fade-in mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-white p-1.5 shadow-[0_0_12px_rgba(212,175,55,0.2)]">
+          <div className="flex h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border border-[#D4AF37]/30 bg-white shadow-[0_0_12px_rgba(212,175,55,0.2)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={eagleLogo} alt="Eagle Info Solutions" width={34} height={34} />
+            <img src={eagleLogo} alt="Eagle Info Solutions" className="h-full w-full object-cover" />
           </div>
           <div>
             <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
