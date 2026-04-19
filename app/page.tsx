@@ -49,6 +49,27 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* CTA row — instant access for customers and visitors */}
+        <div className="fade-in mb-5 flex flex-wrap gap-2.5" style={{ animationDelay: "30ms" }}>
+          <Link
+            href="/repair"
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-black shadow-[0_4px_18px_rgba(212,175,55,0.3)]"
+            style={{ background: "linear-gradient(180deg, #E8C84A 0%, #C9A020 100%)" }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            Request a Repair
+          </Link>
+          <a
+            href="https://eagleinfosolutions.com"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.05] px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/[0.09] hover:text-white"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Visit our Website
+          </a>
+        </div>
+
         {/* Hero grid */}
         <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
 
@@ -190,11 +211,17 @@ export default async function HomePage() {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-[var(--line)] px-4 py-3 text-center">
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-[var(--ink-muted)]">
-          <span>© 2026 Eagle Info Solutions SMC Limited</span>
-          <a href="https://eagleinfosolutions.com" target="_blank" rel="noreferrer" className="transition-colors hover:text-[#D4AF37]">
-            eagleinfosolutions.com ↗
+      <div className="border-t border-[var(--line)] px-4 py-4 text-center">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <span className="text-[11px] text-[var(--ink-muted)]">© 2026 Eagle Info Solutions SMC Limited</span>
+          <a
+            href="https://eagleinfosolutions.com"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1 text-[11px] font-semibold text-white/70 transition-all hover:border-[#D4AF37]/35 hover:text-[#D4AF37]"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            eagleinfosolutions.com
           </a>
         </div>
       </div>
