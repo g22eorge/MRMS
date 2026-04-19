@@ -9,6 +9,12 @@ const PUBLIC_PATHS = [
   "/api/auth",
   "/api/repair-requests",
 
+  // Simple memorable shortlinks.
+  "/app",
+  "/company",
+  "/repair",
+  "/address",
+
   // Public metadata assets for link previews and icons.
   "/opengraph-image",
   "/twitter-image",
