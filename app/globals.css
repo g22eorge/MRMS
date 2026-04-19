@@ -23,22 +23,23 @@
 .theme-blackgold {
   --page-bg: #050505;
   --ink: rgba(255, 255, 255, 0.92);
-  --ink-muted: rgba(255, 255, 255, 0.64);
-  --panel: #0b0b0b;
-  --panel-strong: #111111;
-  --line: rgba(255, 255, 255, 0.12);
+  --ink-muted: rgba(255, 255, 255, 0.55);
+  --panel: #141414;
+  --panel-strong: #1c1c1c;
+  --line: rgba(255, 255, 255, 0.18);
   --brand: #D4AF37;
   --brand-deep: #B8960C;
   --accent: #D4AF37;
 }
 
 .theme-blackgold .glass {
-  background: rgba(10, 10, 10, 0.72);
-  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .theme-blackgold .panel-shadow {
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 22px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
 .theme-blackgold .btn-premium-secondary {

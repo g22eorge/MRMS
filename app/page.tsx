@@ -86,7 +86,7 @@ export default async function HomePage() {
             {/* Right column */}
             <div className="grid gap-4">
               {/* Customer card */}
-              <div className="rounded-3xl border border-[var(--line)] bg-black p-7 text-white md:p-10">
+              <div className="rounded-3xl border border-[var(--line)] bg-[#111111] p-7 text-white md:p-10">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">For customers</p>
                 <h2 className="mt-3 text-2xl font-extrabold">Need a repair?</h2>
                 <p className="mt-2 text-sm leading-6 text-white/70">
@@ -109,7 +109,7 @@ export default async function HomePage() {
               </div>
 
               {/* Features card */}
-              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-7 md:p-10">
+              <div className="rounded-3xl border border-[var(--line)] bg-[#1a1a1a] p-7 md:p-10">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">
                   What&apos;s inside
                 </p>
