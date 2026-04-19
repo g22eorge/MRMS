@@ -35,114 +35,118 @@ export default async function HomePage() {
     <main className="theme-blackgold relative flex min-h-screen flex-col overflow-hidden bg-[#050505]">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_450px_at_18%_18%,rgba(212,175,55,0.18),transparent_55%),radial-gradient(820px_520px_at_85%_72%,rgba(212,175,55,0.12),transparent_60%)]" />
 
-      <div className="flex flex-1 flex-col justify-center">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6">
+      {/* Content — top-anchored with consistent padding, no centering that creates dead space */}
+      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 md:py-12">
 
-          {/* Wordmark */}
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white p-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={eagleLogo} alt="Eagle Info Solutions" width={32} height={32} />
+        {/* Wordmark */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-white p-1.5 shadow-[0_0_12px_rgba(212,175,55,0.2)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={eagleLogo} alt="Eagle Info Solutions" width={34} height={34} />
+          </div>
+          <div>
+            <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
+            <p className="text-[11px] text-[var(--ink-muted)]">SMC Limited</p>
+          </div>
+        </div>
+
+        {/* Hero grid */}
+        <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
+
+          {/* Staff card — frosted glass with visible depth */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+            <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[#D4AF37]/10 blur-2xl" />
+            <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Internal Operations</p>
+            <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Repair Manager</h1>
+            <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">
+              Intake, hardware repairs, outsourced work tracking, and software services — built for speed, auditability, and client privacy.
+            </p>
+            <div className="relative mt-4">
+              <Link href="/login" className="btn-premium rounded-md px-4 py-2 text-sm font-semibold">
+                Sign In
+              </Link>
             </div>
-            <div>
-              <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
-              <p className="text-[11px] text-[var(--ink-muted)]">SMC Limited</p>
+            <div className="relative mt-4">
+              <p className="mb-2 text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Quick links</p>
+              <div className="flex flex-col gap-0.5">
+                {shortLinks.map(({ slug, label }) => (
+                  <Link
+                    key={slug}
+                    href={slug}
+                    className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 transition-all hover:bg-[#D4AF37]/10"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#D4AF37]/40 transition-colors group-hover:bg-[#D4AF37]" />
+                      <span className="text-xs text-[var(--ink-muted)] transition-colors group-hover:text-[var(--ink)]">{label}</span>
+                    </div>
+                    <span className="font-mono text-[10px] text-[#D4AF37]/50 transition-colors group-hover:text-[#D4AF37]">{slug}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Hero grid */}
-          <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
-            {/* Staff card */}
-            <div className="glass panel-shadow rounded-2xl border border-[var(--line)] p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Internal Operations</p>
-              <h1 className="mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Repair Manager</h1>
-              <p className="mt-2 text-sm leading-5 text-[var(--ink-muted)]">
-                Intake, hardware repairs, outsourced work tracking, and software services — built for speed, auditability, and client privacy.
+          {/* Right column */}
+          <div className="grid gap-3">
+
+            {/* Customer card — gold-tinted gradient to stand apart */}
+            <div className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#1a1710] to-[#0f0f0f] p-5 text-white">
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[#D4AF37]/10 blur-2xl" />
+              <p className="relative text-[10px] font-bold uppercase tracking-widest text-white/50">For customers</p>
+              <h2 className="relative mt-1.5 text-xl font-extrabold">Need a repair?</h2>
+              <p className="relative mt-1 text-sm leading-5 text-white/55">
+                Submit a repair request online. Our team will review it and get back to you.
               </p>
-              <div className="mt-4">
-                <Link href="/login" className="btn-premium rounded-md px-4 py-2 text-sm font-semibold">
-                  Sign In
+              <div className="relative mt-4 flex flex-wrap gap-2">
+                <Link href="/repair" className="rounded-md bg-[#D4AF37] px-3.5 py-1.5 text-sm font-semibold text-black">
+                  Request Repair
+                </Link>
+                <Link href="/address" className="rounded-md border border-white/25 bg-white/8 px-3.5 py-1.5 text-sm font-semibold text-white">
+                  Find Us
                 </Link>
               </div>
-              <div className="mt-4">
-                <p className="mb-2 text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Quick links</p>
-                <div className="flex flex-col gap-0.5">
-                  {shortLinks.map(({ slug, label }) => (
-                    <Link
-                      key={slug}
-                      href={slug}
-                      className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 transition-all hover:bg-[#D4AF37]/8"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="h-1 w-1 rounded-full bg-[#D4AF37]/40 transition-colors group-hover:bg-[#D4AF37]" />
-                        <span className="text-xs text-[var(--ink-muted)] transition-colors group-hover:text-[var(--ink)]">{label}</span>
-                      </div>
-                      <span className="font-mono text-[10px] text-[#D4AF37]/50 transition-colors group-hover:text-[#D4AF37]">{slug}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
             </div>
 
-            {/* Right column */}
-            <div className="grid gap-3">
-              {/* Customer card */}
-              <div className="rounded-2xl border border-[var(--line)] bg-[#111111] p-5 text-white">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">For customers</p>
-                <h2 className="mt-1.5 text-xl font-extrabold">Need a repair?</h2>
-                <p className="mt-1 text-sm leading-5 text-white/60">
-                  Submit a repair request online. Our team will review it and get back to you.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link href="/repair" className="rounded-md bg-[#D4AF37] px-3.5 py-1.5 text-sm font-semibold text-black">
-                    Request Repair
-                  </Link>
-                  <Link href="/address" className="rounded-md border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm font-semibold text-white">
-                    Find Us
-                  </Link>
-                </div>
-              </div>
-
-              {/* Features card */}
-              <div className="rounded-2xl border border-[var(--line)] bg-[#1a1a1a] p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">What&apos;s inside</p>
-                <div className="mt-2.5 grid gap-2 text-sm">
-                  {features.map((f) => (
-                    <div key={f.title} className="flex items-start gap-2.5">
-                      <span className="mt-1.5 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4AF37]" />
-                      <div>
-                        <span className="font-semibold text-[var(--ink)]">{f.title}</span>
-                        <span className="text-[var(--ink-muted)]"> — {f.body}</span>
-                      </div>
+            {/* Features card — slightly lighter than customer card for layering */}
+            <div className="rounded-2xl border border-white/8 bg-[#1e1e1e] p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">What&apos;s inside</p>
+              <div className="mt-2.5 grid gap-2 text-sm">
+                {features.map((f) => (
+                  <div key={f.title} className="flex items-start gap-2.5">
+                    <span className="mt-1.5 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4AF37]" />
+                    <div>
+                      <span className="font-semibold text-[var(--ink)]">{f.title}</span>
+                      <span className="text-[var(--ink-muted)]"> — {f.body}</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Commitment strip */}
-          <div className="mt-5">
-            <div className="mb-3 flex items-center gap-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Our commitment to you</p>
-              <div className="h-px flex-1 bg-[var(--line)]" />
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {commitments.map((c, i) => (
-                <div key={c.title} className="flex items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[#141414] px-4 py-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[10px] font-bold text-[#D4AF37]">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--ink)]">{c.title}</p>
-                    <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{c.body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
-
         </div>
+
+        {/* Commitment strip */}
+        <div className="mt-5">
+          <div className="mb-3 flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Our commitment to you</p>
+            <div className="h-px flex-1 bg-[var(--line)]" />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {commitments.map((c, i) => (
+              <div key={c.title} className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#141414] px-4 py-3">
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[10px] font-bold text-[#D4AF37]">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-xs font-semibold text-[var(--ink)]">{c.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{c.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
 
       {/* Footer */}
