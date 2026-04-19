@@ -9,6 +9,14 @@ import { RepairRequestAlertEmail } from "@/emails/RepairRequestAlertEmail";
 const MAX_ATTEMPTS = 8;
 const LOCK_TTL_MS = 2 * 60 * 1000;
 
+export function getOutboxRetryLimit(defaultLimit = 25) {
+  const raw = process.env.OUTBOX_RETRY_LIMIT;
+  const n = raw ? Number(raw) : defaultLimit;
+  // Keep this bounded to avoid long-running cron executions.
+  if (!Number.isFinite(n)) return defaultLimit;
+  return Math.max(1, Math.min(200, Math.floor(n)));
+}
+
 type DeliveryResult =
   | { ok: true; sent: true }
   | { ok: true; skipped: true }

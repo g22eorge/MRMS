@@ -5,7 +5,7 @@ import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageT
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { retryDueOutboundMessages, deliverOutboundMessage } from "@/lib/notifications/whatsapp-outbox";
+import { deliverOutboundMessage, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +96,7 @@ export default async function OutboxPage({
     "use server";
     const { user } = await getCurrentUserRole();
     if (!(user.role === "ADMIN" || user.role === "OPS")) return;
-    await retryDueOutboundMessages(25);
+    await retryDueOutboundMessages(getOutboxRetryLimit(25));
     revalidatePath("/settings/notifications/outbox");
   }
 

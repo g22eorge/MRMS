@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUserRole } from "@/lib/session";
-import { retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
+import { getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,6 @@ export async function POST() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const result = await retryDueOutboundMessages(25);
+  const result = await retryDueOutboundMessages(getOutboxRetryLimit(25));
   return NextResponse.json(result);
 }

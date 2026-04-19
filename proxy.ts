@@ -1,6 +1,9 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
+// NOTE: Next.js 16 supports "proxy.ts" as the middleware entrypoint.
+// Do not add a separate middleware.ts, or builds will fail.
+
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth",
