@@ -15,6 +15,13 @@ function getDatabaseUrl() {
 
   const rawPath = url.slice("file:".length);
   if (!rawPath || rawPath.startsWith("/")) return url;
+
+  // Prisma's `file:./dev.db` is resolved relative to `schema.prisma` (./prisma),
+  // but the CLI config runs from repo root. Normalize so CLI and runtime match.
+  if (rawPath === "dev.db" || rawPath === "./dev.db") {
+    return `file:${path.resolve(process.cwd(), "prisma", "dev.db")}`;
+  }
+
   return `file:${path.resolve(process.cwd(), rawPath)}`;
 }
 

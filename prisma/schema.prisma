@@ -559,6 +559,13 @@ model RepairRequest {
   outboundMessages OutboundMessage[]
 }
 
+// Allocates human-friendly repair request numbers safely under concurrency.
+model RepairRequestSequence {
+  year      Int      @id
+  value     Int      @default(0) // last allocated sequence value
+  updatedAt DateTime @updatedAt
+}
+
 enum RepairRequestStatus {
   PENDING_INTAKE
   APPROVED
