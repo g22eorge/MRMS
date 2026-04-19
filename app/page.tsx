@@ -152,7 +152,7 @@ export default async function HomePage() {
             <div className="h-px flex-1 bg-[var(--line)]" />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {["Apple", "Samsung", "Huawei", "Google Pixel", "Sony", "Dell", "HP", "Lenovo", "Microsoft Surface", "ASUS", "Acer", "OnePlus"].map((brand) => (
+            {["Apple", "Microsoft", "Dell", "HP", "Lenovo", "Adobe", "Kaspersky", "APC", "AutoCAD", "ArchiCAD"].map((brand) => (
               <span
                 key={brand}
                 className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] font-medium tracking-wide text-[var(--ink-muted)] transition-colors hover:border-[#D4AF37]/30 hover:text-[#D4AF37]/80"
