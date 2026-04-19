@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/whatsapp-retry",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
