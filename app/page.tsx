@@ -19,7 +19,13 @@ const commitments = [
   { title: "You're kept informed", body: "Updates at diagnosis, approval, and completion." },
 ];
 
-const shortLinks = ["/app", "/repair", "/address", "/company"];
+const shortLinks = [
+  { slug: "/app",     label: "MRMS App" },
+  { slug: "/repair",  label: "Repair Request" },
+  { slug: "/address", label: "Our Location" },
+  { slug: "/company", label: "Company Site" },
+  { slug: "/profile", label: "Company Profile" },
+];
 
 export default async function HomePage() {
   const session = await getSession();
@@ -59,15 +65,19 @@ export default async function HomePage() {
                 </Link>
               </div>
               <div className="mt-4">
-                <p className="mb-1.5 text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Short links</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {shortLinks.map((slug) => (
+                <p className="mb-2 text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Quick links</p>
+                <div className="flex flex-col gap-0.5">
+                  {shortLinks.map(({ slug, label }) => (
                     <Link
                       key={slug}
                       href={slug}
-                      className="rounded-full border border-[var(--line)] bg-white/5 px-2.5 py-0.5 font-mono text-[10px] text-[var(--ink-muted)] transition-colors hover:border-[#D4AF37]/50 hover:text-[#D4AF37]"
+                      className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 transition-all hover:bg-[#D4AF37]/8"
                     >
-                      {slug}
+                      <div className="flex items-center gap-2">
+                        <span className="h-1 w-1 rounded-full bg-[#D4AF37]/40 transition-colors group-hover:bg-[#D4AF37]" />
+                        <span className="text-xs text-[var(--ink-muted)] transition-colors group-hover:text-[var(--ink)]">{label}</span>
+                      </div>
+                      <span className="font-mono text-[10px] text-[#D4AF37]/50 transition-colors group-hover:text-[#D4AF37]">{slug}</span>
                     </Link>
                   ))}
                 </div>
