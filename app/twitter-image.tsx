@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { eagleLogo } from "@/lib/eagle-logo";
 
 export const runtime = "edge";
 
@@ -67,16 +68,18 @@ export default function TwitterImage() {
                 style={{
                   width: 72,
                   height: 72,
-                  borderRadius: 18,
-                  background: "#000",
-                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: 999,
+                  background: "#fff",
+                  border: "1px solid rgba(212,175,55,0.35)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 18px 55px rgba(0,0,0,0.55)",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.25)",
+                  overflow: "hidden",
                 }}
               >
-                <span style={{ color: "#D4AF37", fontWeight: 800, fontSize: 26, letterSpacing: 2 }}>EIS</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={eagleLogo} width={72} height={72} style={{ objectFit: "cover" }} alt="" />
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ color: "rgba(255,255,255,0.86)", fontSize: 14, letterSpacing: 4, fontWeight: 700 }}>
