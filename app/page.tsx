@@ -33,15 +33,10 @@ export default async function HomePage() {
 
           {/* Wordmark */}
           <div className="mb-5 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/eagle-info-logo.png"
-              alt="Eagle Info Solutions"
-              width={36}
-              height={36}
-              className="flex-shrink-0"
-              style={{ filter: "invert(1) sepia(1) saturate(3) hue-rotate(5deg)", mixBlendMode: "screen" }}
-            />
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white p-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/eagle-info-logo.png" alt="Eagle Info Solutions" width={32} height={32} />
+            </div>
             <div>
               <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
               <p className="text-[11px] text-[var(--ink-muted)]">SMC Limited</p>
