@@ -144,8 +144,24 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Spacer — grows on tall viewports so footer stays grounded */}
-        <div className="min-h-4 flex-1" />
+        {/* Brands strip */}
+        <div className="fade-in my-5 flex-1" style={{ animationDelay: "220ms" }}>
+          <div className="mb-3 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[var(--line)]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Devices we service</p>
+            <div className="h-px flex-1 bg-[var(--line)]" />
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {["Apple", "Samsung", "Huawei", "Google Pixel", "Sony", "Dell", "HP", "Lenovo", "Microsoft Surface", "ASUS", "Acer", "OnePlus"].map((brand) => (
+              <span
+                key={brand}
+                className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] font-medium tracking-wide text-[var(--ink-muted)] transition-colors hover:border-[#D4AF37]/30 hover:text-[#D4AF37]/80"
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
+        </div>
 
         {/* Commitment strip */}
         <div className="fade-in mt-5" style={{ animationDelay: "240ms" }}>
