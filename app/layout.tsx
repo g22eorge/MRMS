@@ -6,6 +6,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Eagle Info Repair Manager",
   description: "Role-based repair job management system",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://eagleinfosolutions.com",
+  ),
 };
 
 export const viewport: Viewport = {
