@@ -37,7 +37,7 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <main className="theme-blackgold relative flex min-h-screen flex-col overflow-hidden">
+    <main className="theme-blackgold relative flex min-h-screen flex-col overflow-hidden bg-[#050505]">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_450px_at_18%_18%,rgba(212,175,55,0.18),transparent_55%),radial-gradient(820px_520px_at_85%_72%,rgba(212,175,55,0.12),transparent_60%)]" />
 
       <div className="flex flex-1 flex-col justify-center">
