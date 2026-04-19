@@ -1,19 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/session";
-
-function EagleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <circle cx="22" cy="22" r="21" fill="#0F172A" stroke="#D4AF37" strokeWidth="2" />
-      <path
-        d="M22 10L24.6 17.9H33L26.7 22.6L29.3 30.5L22 25.8L14.7 30.5L17.3 22.6L11 17.9H19.4L22 10Z"
-        fill="#D4AF37"
-      />
-    </svg>
-  );
-}
 
 const features = [
   {
@@ -44,7 +33,14 @@ export default async function HomePage() {
         <div className="mx-auto w-full max-w-5xl px-4 py-12 md:py-16">
           {/* Wordmark */}
           <div className="mb-8 flex items-center gap-3">
-            <EagleIcon className="h-9 w-9 flex-shrink-0" />
+            <Image
+              src="/eagle-info-logo.png"
+              alt="Eagle Info Solutions"
+              width={40}
+              height={40}
+              className="flex-shrink-0"
+              style={{ filter: "invert(1) sepia(0.4) saturate(2) hue-rotate(5deg) brightness(0.95)" }}
+            />
             <div>
               <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
               <p className="text-[11px] text-[var(--ink-muted)]">SMC Limited</p>
