@@ -15,11 +15,15 @@ const PUBLIC_PATHS = [
   "/repair",
   "/address",
 
-  // Public metadata assets for link previews and icons.
+  // Public shortlinks (continued).
+  "/profile",
+
+  // Public metadata assets for link previews, icons, and static images.
   "/opengraph-image",
   "/twitter-image",
   "/apple-icon",
   "/icon.svg",
+  "/eagle-info-logo.png",
 ];
 
 export function proxy(req: NextRequest) {
