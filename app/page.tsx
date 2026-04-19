@@ -33,10 +33,10 @@ export default async function HomePage() {
 
           {/* Wordmark */}
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white p-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/eagle-info-logo.png" alt="Eagle Info Solutions" width={32} height={32} />
-            </div>
+            <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 flex-shrink-0">
+              <circle cx="22" cy="22" r="21" fill="#0F172A" stroke="#D4AF37" strokeWidth="1.5" />
+              <path d="M22 10.5L24.9 18.8H33.6L26.9 23.7L29.7 32L22 27.1L14.3 32L17.1 23.7L10.4 18.8H19.1L22 10.5Z" fill="#D4AF37" />
+            </svg>
             <div>
               <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
               <p className="text-[11px] text-[var(--ink-muted)]">SMC Limited</p>
