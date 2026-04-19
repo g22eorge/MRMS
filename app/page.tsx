@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -34,13 +33,14 @@ export default async function HomePage() {
 
           {/* Wordmark */}
           <div className="mb-5 flex items-center gap-3">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/eagle-info-logo.png"
               alt="Eagle Info Solutions"
               width={36}
               height={36}
               className="flex-shrink-0"
-              style={{ filter: "invert(1) sepia(0.4) saturate(2) hue-rotate(5deg) brightness(0.95)" }}
+              style={{ filter: "invert(1) sepia(1) saturate(3) hue-rotate(5deg)", mixBlendMode: "screen" }}
             />
             <div>
               <p className="text-sm font-bold leading-tight text-[var(--ink)]">Eagle Info Solutions</p>
