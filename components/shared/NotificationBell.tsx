@@ -119,7 +119,7 @@ export function NotificationBell() {
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
-        <span className="text-xs font-bold">Alerts</span>
+        <span className="hidden text-xs font-bold sm:inline">Alerts</span>
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#D4AF37] text-[10px] font-bold text-black">
             {unreadCount > 9 ? "9+" : unreadCount}

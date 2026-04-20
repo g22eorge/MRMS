@@ -18,8 +18,8 @@ export function Header({ userName, role }: HeaderProps) {
 
   return (
     <header className="glass sticky top-0 z-30 border-b border-[var(--line)] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:py-3">
-      <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 md:max-w-none">
-        <div className="min-w-0">
+      <div className="mx-auto flex w-full max-w-lg flex-wrap items-center gap-3 md:max-w-none">
+        <div className="min-w-0 flex-1">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-muted)]">Signed in as</p>
           <p className="min-w-0 text-sm font-semibold leading-snug">
             <span className="block truncate sm:inline">{userName}</span>{" "}
@@ -28,7 +28,7 @@ export function Header({ userName, role }: HeaderProps) {
             </span>
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
           <NotificationBell />
           <button
             disabled={isSigningOut}
