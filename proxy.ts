@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth",
+  "/api/login",
   "/api/repair-requests",
 
   // Simple memorable shortlinks.

@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { authClient } from "@/lib/auth-client";
-
 export function LoginForm() {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
@@ -20,15 +18,23 @@ export function LoginForm() {
 
     setIsPending(true);
     try {
-      const response = await authClient.signIn.email({
-        email,
-        password,
-        callbackURL: "/dashboard",
-        rememberMe,
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          callbackURL: "/dashboard",
+          rememberMe,
+        }),
       });
 
-      if (response.error) {
-        toast.error(response.error.message || "Invalid credentials");
+      if (!response.ok) {
+        const errorBody = (await response.json().catch(() => ({}))) as { message?: string; code?: string };
+        toast.error(errorBody.message || "Invalid credentials");
         return;
       }
 
