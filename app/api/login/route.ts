@@ -14,6 +14,13 @@ type ResolvedUser = {
   isActive: number;
 };
 
+function toHostOnlyCookie(cookie: string) {
+  // Prevent cross-domain cookie mismatches between custom and vercel domains.
+  // If BetterAuth emits a Domain attribute tied to one host, remove it so the
+  // browser stores the cookie for the current host only.
+  return cookie.replace(/;\s*Domain=[^;]*/gi, "");
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as LoginPayload;
@@ -75,12 +82,12 @@ export async function POST(request: Request) {
     const setCookies = upstream.headers.getSetCookie?.() ?? [];
     if (setCookies.length > 0) {
       for (const cookie of setCookies) {
-        response.headers.append("set-cookie", cookie);
+        response.headers.append("set-cookie", toHostOnlyCookie(cookie));
       }
     } else {
       const singleSetCookie = upstream.headers.get("set-cookie");
       if (singleSetCookie) {
-        response.headers.set("set-cookie", singleSetCookie);
+        response.headers.set("set-cookie", toHostOnlyCookie(singleSetCookie));
       }
     }
 
