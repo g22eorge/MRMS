@@ -91,10 +91,9 @@ export default function TwitterImage() {
               </div>
             </div>
 
-            <div style={{ color: "#fff", fontSize: 56, fontWeight: 800, lineHeight: 1.05 }}>
-              Repair Intake,
-              <br />
-              Hardware, and Software
+            <div style={{ display: "flex", flexDirection: "column", color: "#fff", fontSize: 56, fontWeight: 800, lineHeight: 1.05 }}>
+              <div style={{ display: "flex" }}>Repair Intake,</div>
+              <div style={{ display: "flex" }}>Hardware, and Software</div>
             </div>
 
             <div style={{ color: "rgba(255,255,255,0.70)", fontSize: 18, lineHeight: 1.4 }}>
