@@ -274,7 +274,7 @@ export default async function ClientsPage({
         <div className="rounded-lg border border-[var(--line)] bg-white p-6 text-sm text-[var(--ink-muted)]">No clients match this view.</div>
       ) : (
         <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="space-y-3 p-3 2xl:hidden">
+          <div className="space-y-3 p-3 lg:hidden">
             <ProgressiveList initialCount={5} step={5}>
               {(clients as ClientRow[]).map((client) => (
                 <details key={client.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
@@ -328,7 +328,7 @@ export default async function ClientsPage({
             </ProgressiveList>
           </div>
 
-          <div className="hidden overflow-x-auto 2xl:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="min-w-[920px] w-full border-collapse text-sm">
               <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                 <tr>

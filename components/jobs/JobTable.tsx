@@ -88,7 +88,7 @@ export function JobTable({
           ) : null}
         </div>
       </div>
-      <div className="space-y-3 p-3 2xl:hidden">
+      <div className="space-y-3 p-3 lg:hidden">
         <ProgressiveList initialCount={4} step={6}>
           {jobs.map((job) => (
             <details key={job.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:border-[#D4AF37]/50 hover:bg-white max-[360px]:p-2.5">
@@ -213,7 +213,7 @@ export function JobTable({
         </ProgressiveList>
       </div>
 
-      <div className="hidden overflow-x-auto 2xl:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="min-w-[1080px] w-full border-collapse text-sm">
         <thead className="bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(240,240,240,0.95))] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>
