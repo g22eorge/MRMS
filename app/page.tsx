@@ -49,7 +49,7 @@ const jsonLd = {
   sameAs: [
     "https://eagleinfosolutions.com",
     "https://www.linkedin.com/company/104326797/",
-    "https://www.facebook.com/EagleInfo_UG",
+    "https://www.facebook.com/EagleInfoSolutions",
     "https://www.instagram.com/EagleInfo_UG",
     "https://www.tiktok.com/@EagleInfo_UG",
   ],
@@ -281,7 +281,7 @@ export default async function HomePage() {
           </a>
         </div>
         <div className="mt-3 flex items-center justify-center gap-3">
-          <a href="https://www.facebook.com/EagleInfo_UG" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition-all hover:border-[#D4AF37]/40 hover:text-[#D4AF37]">
+          <a href="https://www.facebook.com/EagleInfoSolutions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition-all hover:border-[#D4AF37]/40 hover:text-[#D4AF37]">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
           </a>
           <a href="https://www.instagram.com/EagleInfo_UG" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition-all hover:border-[#D4AF37]/40 hover:text-[#D4AF37]">
