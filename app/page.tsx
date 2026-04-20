@@ -153,7 +153,7 @@ export default async function HomePage() {
                       <span className="h-1 w-1 rounded-full bg-[#D4AF37]/40 transition-colors group-hover:bg-[#D4AF37]" />
                       <span className="text-xs text-[var(--ink-muted)] transition-colors group-hover:text-[var(--ink)]">{label}</span>
                     </div>
-                    <span className="font-mono text-[10px] text-[#D4AF37]/50 transition-colors group-hover:text-[#D4AF37]">{slug}</span>
+                    <span className="font-mono text-[10px] text-[#D4AF37]/80 transition-colors group-hover:text-[#D4AF37]">{slug}</span>
                   </Link>
                 ))}
               </div>
