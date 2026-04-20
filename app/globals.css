@@ -39,6 +39,12 @@
   color: var(--ink);
   border-color: var(--line);
 }
+.theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
+  background: var(--panel-strong);
+  color: var(--ink);
+  border-color: rgba(212, 175, 55, 0.62);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.22);
+}
 .theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea)::placeholder {
   color: var(--ink-muted);
 }
