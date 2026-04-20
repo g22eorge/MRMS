@@ -53,48 +53,51 @@ const ALLOWED_HANDOVER_METHODS = [
   "REQUEST_PICKUP",
 ];
 
-function validatePayload(body: Record<string, unknown>): string[] {
+interface DeviceEntry {
+  device_type: string;
+  brand: string;
+  model?: string;
+  problem_description: string;
+}
+
+function validateCustomerAndHandover(body: Record<string, unknown>): string[] {
   const errors: string[] = [];
-
-  // Support both website format and MRMS format
   const phone = body.phone || body.customer_phone;
-  const deviceType = body.device_type;
-  const brand = body.brand || body.device_brand;
-  const problemDescription = body.problem_description || body.issue_description;
-  const handoverMethod = body.handover_method || "SELF_DROPOFF"; // website doesn't send this
+  const handoverMethod = body.handover_method || "SELF_DROPOFF";
 
-  if (!body.customer_name?.toString().trim() && !body.customer_name?.toString().trim()) errors.push("Customer name is required");
+  if (!body.customer_name?.toString().trim()) errors.push("Customer name is required");
   if (!phone?.toString().trim()) errors.push("Phone is required");
-  if (!deviceType?.toString().trim()) errors.push("Device type is required");
-  if (!brand?.toString().trim()) errors.push("Device brand is required");
-  if (!problemDescription?.toString().trim()) errors.push("Issue description is required");
 
   const hm = handoverMethod?.toString().toLowerCase();
-
   if (hm === "self_dropoff") {
-    if (!body.preferred_dropoff_date?.toString().trim() && !body.preferred_date?.toString().trim()) {
+    if (!body.preferred_dropoff_date?.toString().trim() && !body.preferred_date?.toString().trim())
       errors.push("Preferred date is required for self drop-off");
-    }
   }
-
   if (hm === "send_with_delivery_person") {
-    if (!body.delivery_person_name?.toString().trim()) {
-      errors.push("Delivery person name is required");
-    }
-    if (!body.delivery_person_phone?.toString().trim()) {
-      errors.push("Delivery person phone is required");
-    }
+    if (!body.delivery_person_name?.toString().trim()) errors.push("Delivery person name is required");
+    if (!body.delivery_person_phone?.toString().trim()) errors.push("Delivery person phone is required");
   }
-
   if (hm === "request_pickup") {
-    if (!body.pickup_address?.toString().trim()) {
-      errors.push("Pickup address is required");
-    }
-    if (!body.preferred_pickup_date?.toString().trim()) {
-      errors.push("Preferred pickup date is required");
-    }
+    if (!body.pickup_address?.toString().trim()) errors.push("Pickup address is required");
+    if (!body.preferred_pickup_date?.toString().trim()) errors.push("Preferred pickup date is required");
   }
+  return errors;
+}
 
+function validateSingleDevice(body: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+  if (!body.device_type?.toString().trim()) errors.push("Device type is required");
+  if (!(body.brand || body.device_brand)?.toString().trim()) errors.push("Device brand is required");
+  if (!(body.problem_description || body.issue_description)?.toString().trim()) errors.push("Issue description is required");
+  return errors;
+}
+
+function validateDeviceEntry(device: DeviceEntry, index: number): string[] {
+  const errors: string[] = [];
+  if (!device.device_type?.trim()) errors.push(`Device ${index + 1}: device_type is required`);
+  else if (!ALLOWED_DEVICE_TYPES.includes(device.device_type.toUpperCase())) errors.push(`Device ${index + 1}: invalid device_type`);
+  if (!device.brand?.trim()) errors.push(`Device ${index + 1}: brand is required`);
+  if (!device.problem_description?.trim()) errors.push(`Device ${index + 1}: problem_description is required`);
   return errors;
 }
 
@@ -106,6 +109,48 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
+function buildSharedFields(body: Record<string, unknown>, ip: string) {
+  const phone = body.phone || body.customer_phone;
+  const email = body.email || body.customer_email;
+  const handoverMethod = ((body.handover_method as string) || "SELF_DROPOFF").toUpperCase() as
+    "SELF_DROPOFF" | "SEND_WITH_DELIVERY_PERSON" | "REQUEST_PICKUP";
+
+  return {
+    customerName: sanitizeText((body.customer_name as string) || ""),
+    phone: normalizeUgandaPhone((phone as string) || ""),
+    email: email ? (sanitizeOptionalText(email as string) ?? undefined) : undefined,
+    handoverMethod,
+    preferredDropoffDate: (body.preferred_dropoff_date || body.preferred_date)
+      ? sanitizeOptionalText((body.preferred_dropoff_date as string) || (body.preferred_date as string)) ?? undefined
+      : undefined,
+    preferredDropoffTime: body.preferred_dropoff_time ? sanitizeOptionalText(body.preferred_dropoff_time as string) ?? undefined : undefined,
+    dropoffNotes: body.dropoff_notes ? sanitizeOptionalText(body.dropoff_notes as string) ?? undefined : undefined,
+    deliveryPersonName: body.delivery_person_name ? sanitizeOptionalText(body.delivery_person_name as string) ?? undefined : undefined,
+    deliveryPersonPhone: body.delivery_person_phone ? normalizeUgandaPhone(body.delivery_person_phone as string) : undefined,
+    deliveryCompany: body.delivery_company ? sanitizeOptionalText(body.delivery_company as string) ?? undefined : undefined,
+    dispatchDate: body.dispatch_date ? sanitizeOptionalText(body.dispatch_date as string) ?? undefined : undefined,
+    expectedArrivalTime: body.expected_arrival_time ? sanitizeOptionalText(body.expected_arrival_time as string) ?? undefined : undefined,
+    deliveryTrackingReference: body.delivery_tracking_reference ? sanitizeOptionalText(body.delivery_tracking_reference as string) ?? undefined : undefined,
+    deliveryFeeResponsibility: body.delivery_fee_responsibility ? sanitizeOptionalText(body.delivery_fee_responsibility as string) ?? undefined : undefined,
+    deliveryNotes: body.delivery_notes ? sanitizeOptionalText(body.delivery_notes as string) ?? undefined : undefined,
+    pickupAddress: body.pickup_address ? sanitizeOptionalText(body.pickup_address as string) ?? undefined : undefined,
+    pickupLandmark: body.pickup_landmark ? sanitizeOptionalText(body.pickup_landmark as string) ?? undefined : undefined,
+    preferredPickupDate: body.preferred_pickup_date ? sanitizeOptionalText(body.preferred_pickup_date as string) ?? undefined : undefined,
+    preferredPickupTime: body.preferred_pickup_time ? sanitizeOptionalText(body.preferred_pickup_time as string) ?? undefined : undefined,
+    alternateContactPerson: body.alternate_contact_person ? sanitizeOptionalText(body.alternate_contact_person as string) ?? undefined : undefined,
+    alternateContactPhone: body.alternate_contact_phone ? normalizeUgandaPhone(body.alternate_contact_phone as string) : undefined,
+    pickupNotes: body.pickup_notes ? sanitizeOptionalText(body.pickup_notes as string) ?? undefined : undefined,
+    submissionIp: ip,
+  };
+}
+
+async function deliverInline(outboxId: string) {
+  await Promise.race([
+    deliverOutboundMessage(outboxId),
+    new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
+  ]);
+}
+
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -114,50 +159,51 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // ── Honeypot check ──────────────────────────────────────────────────────
-    // Bots fill hidden fields; real users never see or touch this field.
     if (typeof body._hp === "string" && body._hp.trim().length > 0) {
-      // Silently accept so bots don't know they've been blocked.
       return NextResponse.json(
         { success: true, request_number: `REQ-${Date.now()}`, message: "Your repair request has been submitted successfully. We'll contact you shortly." },
         { headers: corsHeaders }
       );
     }
 
-    const errors = validatePayload(body);
+    const isBatch = Array.isArray(body.devices) && body.devices.length > 0;
 
+    // ── Validation ──────────────────────────────────────────────────────────
+    const customerErrors = validateCustomerAndHandover(body);
+    const deviceErrors = isBatch
+      ? body.devices.flatMap((d: DeviceEntry, i: number) => validateDeviceEntry(d, i))
+      : validateSingleDevice(body);
+
+    const errors = [...customerErrors, ...deviceErrors];
     if (errors.length > 0) {
-      return NextResponse.json(
-        { success: false, errors },
-        { status: 400, headers: corsHeaders }
-      );
+      return NextResponse.json({ success: false, errors }, { status: 400, headers: corsHeaders });
     }
 
     // ── Rate limiting ────────────────────────────────────────────────────────
     const ip = getClientIp(request);
     const rawPhone = (body.phone || body.customer_phone || "") as string;
     const normalizedPhoneForCheck = normalizeUgandaPhone(rawPhone);
+    const deviceCount = isBatch ? body.devices.length : 1;
 
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
-    // Max 3 submissions per phone per 24 h
     const phoneCount = await prisma.repairRequest.count({
       where: { phone: normalizedPhoneForCheck, createdAt: { gte: oneDayAgo } },
     });
-    if (phoneCount >= 3) {
+    if (phoneCount + deviceCount > 5) {
       return NextResponse.json(
         { success: false, error: "Too many requests from this number. Please wait 24 hours before submitting again, or call us directly on +256 772 006 344." },
         { status: 429, headers: corsHeaders }
       );
     }
 
-    // Max 10 submissions per IP per hour
     if (ip !== "unknown") {
       const ipCount = await prisma.repairRequest.count({
         where: { submissionIp: ip, createdAt: { gte: oneHourAgo } },
       });
-      if (ipCount >= 10) {
+      if (ipCount + deviceCount > 10) {
         return NextResponse.json(
           { success: false, error: "Too many requests from your network. Please try again later." },
           { status: 429, headers: corsHeaders }
@@ -165,153 +211,144 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const deviceType = (body.device_type as string).toUpperCase();
-    if (!ALLOWED_DEVICE_TYPES.includes(deviceType)) {
-      return NextResponse.json(
-        { success: false, errors: ["Invalid device_type"] },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-    // Support both website format and MRMS format
-    const handoverMethod = (body.handover_method as string || "SELF_DROPOFF").toUpperCase();
+    // ── Validate device types ────────────────────────────────────────────────
+    const handoverMethod = ((body.handover_method as string) || "SELF_DROPOFF").toUpperCase();
     if (!ALLOWED_HANDOVER_METHODS.includes(handoverMethod)) {
-      return NextResponse.json(
-        { success: false, errors: ["Invalid handover_method"] },
-        { status: 400, headers: corsHeaders }
-      );
+      return NextResponse.json({ success: false, errors: ["Invalid handover_method"] }, { status: 400, headers: corsHeaders });
     }
 
-    // Map fields from both formats
-    const phone = body.phone || body.customer_phone;
-    const email = body.email || body.customer_email;
-    const normalizedPhone = normalizeUgandaPhone(phone as string);
-    const normalizedName = sanitizeText((body.customer_name as string) || "");
-    const normalizedEmail = email ? (sanitizeOptionalText(email as string) ?? "") : "";
-    const normalizedBrand = sanitizeText((body.brand as string) || (body.device_brand as string) || "");
-    const normalizedModel = sanitizeOptionalText((body.model as string) || (body.device_model as string)) ?? "";
-    const normalizedDescription = sanitizeText((body.problem_description as string) || (body.issue_description as string) || "");
+    // ── Create repair request(s) ─────────────────────────────────────────────
+    const shared = buildSharedFields(body, ip);
+    const results: Array<{ requestNumber: string; requestId: string; brand: string; deviceType: string }> = [];
 
-    // Save to database
-    const result = await createRepairRequest({
-      customerName: normalizedName,
-      phone: normalizedPhone,
-      email: normalizedEmail ? normalizedEmail : undefined,
-      deviceType: deviceType,
-      brand: normalizedBrand,
-      model: normalizedModel ? normalizedModel : undefined,
-      problemDescription: normalizedDescription,
-      handoverMethod: handoverMethod as "SELF_DROPOFF" | "SEND_WITH_DELIVERY_PERSON" | "REQUEST_PICKUP",
-      preferredDropoffDate: (body.preferred_dropoff_date || body.preferred_date) ? sanitizeOptionalText((body.preferred_dropoff_date as string) || (body.preferred_date as string)) ?? undefined : undefined,
-      preferredDropoffTime: body.preferred_dropoff_time ? sanitizeOptionalText(body.preferred_dropoff_time as string) ?? undefined : undefined,
-      dropoffNotes: body.dropoff_notes ? sanitizeOptionalText(body.dropoff_notes as string) ?? undefined : undefined,
-      deliveryPersonName: body.delivery_person_name ? sanitizeOptionalText(body.delivery_person_name as string) ?? undefined : undefined,
-      deliveryPersonPhone: body.delivery_person_phone ? normalizeUgandaPhone(body.delivery_person_phone as string) : undefined,
-      deliveryCompany: body.delivery_company ? sanitizeOptionalText(body.delivery_company as string) ?? undefined : undefined,
-      dispatchDate: body.dispatch_date ? sanitizeOptionalText(body.dispatch_date as string) ?? undefined : undefined,
-      expectedArrivalTime: body.expected_arrival_time ? sanitizeOptionalText(body.expected_arrival_time as string) ?? undefined : undefined,
-      deliveryTrackingReference: body.delivery_tracking_reference ? sanitizeOptionalText(body.delivery_tracking_reference as string) ?? undefined : undefined,
-      deliveryFeeResponsibility: body.delivery_fee_responsibility ? sanitizeOptionalText(body.delivery_fee_responsibility as string) ?? undefined : undefined,
-      deliveryNotes: body.delivery_notes ? sanitizeOptionalText(body.delivery_notes as string) ?? undefined : undefined,
-      pickupAddress: body.pickup_address ? sanitizeOptionalText(body.pickup_address as string) ?? undefined : undefined,
-      pickupLandmark: body.pickup_landmark ? sanitizeOptionalText(body.pickup_landmark as string) ?? undefined : undefined,
-      preferredPickupDate: body.preferred_pickup_date ? sanitizeOptionalText(body.preferred_pickup_date as string) ?? undefined : undefined,
-      preferredPickupTime: body.preferred_pickup_time ? sanitizeOptionalText(body.preferred_pickup_time as string) ?? undefined : undefined,
-      alternateContactPerson: body.alternate_contact_person ? sanitizeOptionalText(body.alternate_contact_person as string) ?? undefined : undefined,
-      alternateContactPhone: body.alternate_contact_phone ? normalizeUgandaPhone(body.alternate_contact_phone as string) : undefined,
-      pickupNotes: body.pickup_notes ? sanitizeOptionalText(body.pickup_notes as string) ?? undefined : undefined,
-      submissionIp: ip,
-    });
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error || "Failed to create request" },
-        { status: 500, headers: corsHeaders }
-      );
+    if (isBatch) {
+      for (const device of body.devices as DeviceEntry[]) {
+        const dt = device.device_type.toUpperCase();
+        const result = await createRepairRequest({
+          ...shared,
+          deviceType: dt,
+          brand: sanitizeText(device.brand),
+          model: device.model ? sanitizeOptionalText(device.model) ?? undefined : undefined,
+          problemDescription: sanitizeText(device.problem_description),
+        });
+        if (!result.success || !result.requestId || !result.requestNumber) {
+          return NextResponse.json(
+            { success: false, error: result.error || "Failed to create one or more requests" },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: device.brand, deviceType: dt });
+      }
+    } else {
+      const dt = (body.device_type as string).toUpperCase();
+      if (!ALLOWED_DEVICE_TYPES.includes(dt)) {
+        return NextResponse.json({ success: false, errors: ["Invalid device_type"] }, { status: 400, headers: corsHeaders });
+      }
+      const result = await createRepairRequest({
+        ...shared,
+        deviceType: dt,
+        brand: sanitizeText((body.brand as string) || (body.device_brand as string) || ""),
+        model: sanitizeOptionalText((body.model as string) || (body.device_model as string)) ?? undefined,
+        problemDescription: sanitizeText((body.problem_description as string) || (body.issue_description as string) || ""),
+      });
+      if (!result.success || !result.requestId || !result.requestNumber) {
+        return NextResponse.json(
+          { success: false, error: result.error || "Failed to create request" },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+      results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: (body.brand || body.device_brand) as string, deviceType: dt });
     }
 
-    // Queue WhatsApp confirmation (durable + retryable)
-    const phoneValue = String(body.phone || body.customer_phone || "");
-    const customerName = String(body.customer_name ?? "Customer") as string;
+    // ── WhatsApp confirmation (one message for all devices) ──────────────────
+    const customerName = String(body.customer_name ?? "Customer");
+    const deviceLines = results.map((r) => `• ${r.requestNumber} — ${r.brand} (${r.deviceType.replace(/_/g, " ")})`).join("\n");
+    const whatsappMessage = isBatch
+      ? `Hello ${customerName},\n\nThank you! We've received your repair requests:\n\n${deviceLines}\n\nWe'll contact you shortly to confirm details for each device.\n\nBest regards,\nEagle Info Solutions`
+      : `Hello ${customerName},\n\nThank you for submitting your repair request (${results[0].requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
+
     let confirmation: "queued" | "sent" | "skipped" = "skipped";
     let outboxId: string | undefined;
 
-    if (result.requestId && phoneValue && customerName) {
-      const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${result.requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
-      const enqueueResult = await enqueueWhatsAppMessage({
-        // Use the normalized phone we saved to the DB.
-        to: normalizedPhone,
-        body: message,
-        type: "REPAIR_REQUEST_CONFIRMATION",
-        repairRequestId: result.requestId,
-        provider: "meta",
-      }).catch((err) => {
-        console.error("[RepairRequest] WhatsApp enqueue failed:", err);
-        return null;
-      });
+    const enqueueResult = await enqueueWhatsAppMessage({
+      to: shared.phone,
+      body: whatsappMessage,
+      type: "REPAIR_REQUEST_CONFIRMATION",
+      repairRequestId: results[0].requestId,
+      provider: "meta",
+    }).catch((err) => {
+      console.error("[RepairRequest] WhatsApp enqueue failed:", err);
+      return null;
+    });
 
-      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
-        confirmation = "queued";
-        outboxId = enqueueResult.outboxId;
-      } else if (enqueueResult && "sent" in enqueueResult && enqueueResult.sent) {
-        confirmation = "sent";
-      }
-
-      // In serverless runtimes, fire-and-forget work may be cut short.
-      // Best-effort attempt to deliver immediately (timeout capped).
-      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
-        const attempt = await Promise.race([
-          deliverOutboundMessage(enqueueResult.outboxId),
-          new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: "timeout" }), 2500)),
-        ]);
-        // best-effort inline delivery, result handled by cron retry if it fails
-      }
+    if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+      confirmation = "queued";
+      outboxId = enqueueResult.outboxId;
+      await deliverInline(enqueueResult.outboxId);
+    } else if (enqueueResult && "sent" in enqueueResult && enqueueResult.sent) {
+      confirmation = "sent";
     }
 
-    // Email alert for staff (durable + retryable)
+    // ── Email alert for staff ────────────────────────────────────────────────
     const alertTo = process.env.REPAIR_REQUEST_ALERT_EMAIL;
-    if (result.requestId && alertTo) {
-      const subject = `New Repair Request ${result.requestNumber}`;
+    if (alertTo) {
+      const subject = isBatch
+        ? `New Batch Repair Request — ${results.length} devices (${results.map((r) => r.requestNumber).join(", ")})`
+        : `New Repair Request ${results[0].requestNumber}`;
+
+      const deviceDetails = results
+        .map((r) => `  ${r.requestNumber}: ${r.brand} ${r.deviceType.replace(/_/g, " ")}`)
+        .join("\n");
+
       const details = [
-        `Request: ${result.requestNumber}`,
-        `Name: ${normalizedName}`,
-        `Phone: ${normalizedPhone}`,
-        `Email: ${normalizedEmail || ""}`,
-        `Device: ${deviceType}`, 
-        `Brand/Model: ${normalizedBrand} ${normalizedModel}`,
-        `Handover: ${handoverMethod}`,
+        `Name: ${shared.customerName}`,
+        `Phone: ${shared.phone}`,
+        `Email: ${shared.email || ""}`,
+        `Handover: ${shared.handoverMethod}`,
         "",
-        "Problem:",
-        normalizedDescription,
+        isBatch ? `Devices (${results.length}):` : "Device:",
+        deviceDetails,
       ].join("\n");
 
-      const enqueueResult = await enqueueEmailMessage({
+      const emailResult = await enqueueEmailMessage({
         to: alertTo,
         subject,
         body: details,
         type: "REPAIR_REQUEST_EMAIL_ALERT",
-        repairRequestId: result.requestId,
+        repairRequestId: results[0].requestId,
       }).catch((err) => {
         console.error("[RepairRequest] Email enqueue failed:", err);
         return null;
       });
 
-      if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
-        // Best-effort inline delivery (cap)
-        await Promise.race([
-          deliverOutboundMessage(enqueueResult.outboxId),
-          new Promise((resolve) => setTimeout(resolve, 2500)),
-        ]);
+      if (emailResult && "outboxId" in emailResult && emailResult.outboxId) {
+        await deliverInline(emailResult.outboxId);
       }
     }
 
-    return NextResponse.json({
+    // ── Response ─────────────────────────────────────────────────────────────
+    const responseBase = {
       success: true,
-      request_number: result.requestNumber,
-      message: "Your repair request has been submitted successfully. We'll contact you shortly.",
+      message: isBatch
+        ? `Your ${results.length} repair requests have been submitted. We'll contact you shortly.`
+        : "Your repair request has been submitted successfully. We'll contact you shortly.",
       confirmation,
       ...(outboxId ? { outbox_id: outboxId } : {}),
+    };
+
+    if (isBatch) {
+      return NextResponse.json({
+        ...responseBase,
+        request_numbers: results.map((r) => r.requestNumber),
+        devices: results.map((r) => ({ request_number: r.requestNumber, brand: r.brand, device_type: r.deviceType })),
+      }, { headers: corsHeaders });
+    }
+
+    return NextResponse.json({
+      ...responseBase,
+      request_number: results[0].requestNumber,
     }, { headers: corsHeaders });
+
   } catch (error) {
     console.error("[RepairRequestAPI] Error:", error);
     return NextResponse.json(
