@@ -54,6 +54,20 @@
   -webkit-box-shadow: 0 0 0 1000px var(--panel-strong) inset;
   caret-color: var(--ink);
 }
+/* Chromium/WebKit can apply internal autofill/focus background colors.
+   Keep dark-theme inputs dark even when clicked/tab-focused/autofilled. */
+.theme-blackgold input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.theme-blackgold select:focus,
+.theme-blackgold textarea:focus {
+  background-color: var(--panel-strong) !important;
+}
+.theme-blackgold input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):-webkit-autofill,
+.theme-blackgold input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):-webkit-autofill:hover,
+.theme-blackgold input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--panel-strong) inset !important;
+  transition: background-color 9999s ease-out 0s;
+}
 
 .theme-blackgold .glass {
   background: rgba(255, 255, 255, 0.05);
