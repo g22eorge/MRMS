@@ -19,11 +19,11 @@ export function Header({ userName, role }: HeaderProps) {
   return (
     <header className="glass sticky top-0 z-30 border-b border-[var(--line)] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:py-3">
       <div className="mx-auto flex w-full max-w-lg flex-wrap items-center gap-3 md:max-w-none">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-muted)]">Signed in as</p>
-          <p className="min-w-0 text-sm font-semibold leading-snug">
-            <span className="block truncate sm:inline">{userName}</span>{" "}
-            <span className="mt-1 inline-flex max-w-full rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-xs text-[var(--ink-muted)] sm:mt-0 sm:ml-1">
+          <p className="min-w-0 flex max-w-full flex-wrap items-center gap-1 text-sm font-semibold leading-snug">
+            <span className="min-w-0 max-w-full truncate">{userName}</span>
+            <span className="inline-flex max-w-full shrink-0 rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
               {role}
             </span>
           </p>
