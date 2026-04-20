@@ -1,8 +1,53 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import WhatsAppFloat from "@/components/shared/WhatsAppFloat";
 import { redirect } from "next/navigation";
 
 import { eagleLogo } from "@/lib/eagle-logo";
 import { getSession } from "@/lib/session";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "@id": "https://mrms.eagleinfosolutions.com/#business",
+  name: "Eagle Info Solutions SMC Limited",
+  description:
+    "Professional repair for phones, laptops, tablets and software in Kampala, Uganda. Transparent pricing, no-fix-no-fee guarantee, 30-day warranty.",
+  url: "https://eagleinfosolutions.com",
+  telephone: ["+256772006344", "+256754006344"],
+  image: "https://mrms.eagleinfosolutions.com/eagle-info-logo.png",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Shop L28, Nalubega Complex",
+    addressLocality: "Kampala",
+    addressCountry: "UG",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 0.3476,
+    longitude: 32.5825,
+  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "08:00",
+      closes: "18:00",
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Saturday"],
+      opens: "09:00",
+      closes: "15:00",
+    },
+  ],
+  priceRange: "$$",
+  sameAs: ["https://eagleinfosolutions.com"],
+};
 
 const features = [
   { title: "Jobs, timelines & audit logs", body: "Every repair tracked end-to-end." },
@@ -32,7 +77,12 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
+    <>
     <main className="theme-blackgold relative flex min-h-screen flex-col overflow-hidden bg-[#050505]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_450px_at_18%_18%,rgba(212,175,55,0.18),transparent_55%),radial-gradient(820px_520px_at_85%_72%,rgba(212,175,55,0.12),transparent_60%)]" />
 
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-10 pb-6 md:pt-12 md:pb-8">
@@ -211,7 +261,7 @@ export default async function HomePage() {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-[var(--line)] px-4 py-4 text-center">
+      <div className="border-t border-[var(--line)] px-4 py-5 text-center">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <span className="text-[11px] text-[var(--ink-muted)]">© 2026 Eagle Info Solutions SMC Limited</span>
           <a
@@ -224,7 +274,28 @@ export default async function HomePage() {
             eagleinfosolutions.com
           </a>
         </div>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+          <a href="tel:+256772006344" className="flex items-center gap-1.5 text-[11px] text-[var(--ink-muted)] transition-colors hover:text-[#D4AF37]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 012 1.18 2 2 0 014 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+            +256 772 006 344
+          </a>
+          <span className="text-[11px] text-white/30">·</span>
+          <a href="tel:+256754006344" className="text-[11px] text-[var(--ink-muted)] transition-colors hover:text-[#D4AF37]">+256 754 006 344</a>
+          <span className="text-[11px] text-white/30">·</span>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Eagle+Info+Solutions%2C+Shop+L28%2C+1st+Floor%2C+Nalubega+Complex%2C+Bombo+Road%2C+Kampala%2C+Uganda"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-[11px] text-[var(--ink-muted)] transition-colors hover:text-[#D4AF37]"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Shop L28, Nalubega Complex, Kampala
+          </a>
+        </div>
       </div>
+
     </main>
+    <WhatsAppFloat />
+    </>
   );
 }
