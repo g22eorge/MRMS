@@ -32,6 +32,23 @@
   --accent: #D4AF37;
 }
 
+/* Inputs inside the dark theme must have dark backgrounds and light text.
+   These rules are intentionally unlayered so they beat Tailwind's @layer utilities. */
+.theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  background: var(--panel-strong);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea)::placeholder {
+  color: var(--ink-muted);
+}
+.theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):-webkit-autofill,
+.theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--panel-strong) inset;
+  caret-color: var(--ink);
+}
+
 .theme-blackgold .glass {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
