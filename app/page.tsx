@@ -83,7 +83,7 @@ export default async function HomePage() {
             <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Repair Manager</h1>
             <p className="relative mt-1 text-[11px] font-medium tracking-wide text-[#D4AF37]/70">Every job tracked. Every handoff accountable.</p>
             <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">
-              Intake, hardware repairs, outsourced work tracking, and software services — built for speed, auditability, and client privacy.
+              End-to-end repair management — from first contact to device return, built for speed, auditability, and client privacy.
             </p>
             <div className="relative mt-4">
               <Link href="/login" className="btn-premium rounded-md px-4 py-2 text-sm font-semibold">
