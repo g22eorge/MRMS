@@ -230,8 +230,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[RepairRequest] Created:", result.requestNumber);
-
     // Queue WhatsApp confirmation (durable + retryable)
     const phoneValue = String(body.phone || body.customer_phone || "");
     const customerName = String(body.customer_name ?? "Customer") as string;
@@ -266,9 +264,7 @@ export async function POST(request: NextRequest) {
           deliverOutboundMessage(enqueueResult.outboxId),
           new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: "timeout" }), 2500)),
         ]);
-        if (attempt && typeof attempt === "object" && "ok" in attempt && (attempt as { ok: boolean }).ok) {
-          console.log("[RepairRequest] WhatsApp delivered inline", enqueueResult.outboxId);
-        }
+        // best-effort inline delivery, result handled by cron retry if it fails
       }
     }
 
