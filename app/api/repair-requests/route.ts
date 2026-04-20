@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     // ── Create repair request(s) ─────────────────────────────────────────────
     const shared = buildSharedFields(body, ip);
-    const results: Array<{ requestNumber: string; requestId: string; brand: string; deviceType: string }> = [];
+    const results: Array<{ requestNumber: string; requestId: string; brand: string; deviceType: string; problemDescription: string }> = [];
 
     if (isBatch) {
       for (const device of body.devices as DeviceEntry[]) {
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
             { status: 500, headers: corsHeaders }
           );
         }
-        results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: device.brand, deviceType: dt });
+        results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: device.brand, deviceType: dt, problemDescription: sanitizeText(device.problem_description) });
       }
     } else {
       const dt = (body.device_type as string).toUpperCase();
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
           { status: 500, headers: corsHeaders }
         );
       }
-      results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: (body.brand || body.device_brand) as string, deviceType: dt });
+      results.push({ requestNumber: result.requestNumber, requestId: result.requestId, brand: (body.brand || body.device_brand) as string, deviceType: dt, problemDescription: sanitizeText((body.problem_description as string) || (body.issue_description as string) || "") });
     }
 
     // ── WhatsApp confirmation (one message for all devices) ──────────────────
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
         : `New Repair Request ${results[0].requestNumber}`;
 
       const deviceDetails = results
-        .map((r) => `  ${r.requestNumber}: ${r.brand} ${r.deviceType.replace(/_/g, " ")}`)
+        .map((r) => `  ${r.requestNumber}: ${r.brand} ${r.deviceType.replace(/_/g, " ")}\n    Problem: ${r.problemDescription}`)
         .join("\n");
 
       const details = [
@@ -315,7 +315,9 @@ export async function POST(request: NextRequest) {
         subject,
         body: details,
         type: "REPAIR_REQUEST_EMAIL_ALERT",
-        repairRequestId: results[0].requestId,
+        // For batch, omit repairRequestId so deliverEmail uses the plain-text body
+        // which already lists all devices. Single device gets the rich HTML template.
+        repairRequestId: isBatch ? undefined : results[0].requestId,
       }).catch((err) => {
         console.error("[RepairRequest] Email enqueue failed:", err);
         return null;
