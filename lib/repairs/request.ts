@@ -61,28 +61,13 @@ async function allocateRequestNumber(): Promise<string> {
     return Number.isFinite(lastSeq) ? lastSeq : 0;
   };
 
-  // Ensure the sequence row exists and is not behind existing requestNumbers.
-  let existingSeq: { value: number } | null = null;
-  try {
-    existingSeq = await prisma.repairRequestSequence.findUnique({
-      where: { year },
-      select: { value: true },
-    });
-  } catch (error) {
-    const isTableMissing =
-      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") ||
-      (error instanceof Prisma.PrismaClientUnknownRequestError &&
-        error.message.includes("no such table"));
-    if (isTableMissing) {
-      await ensureSequenceTable();
-      existingSeq = await prisma.repairRequestSequence.findUnique({
-        where: { year },
-        select: { value: true },
-      });
-    } else {
-      throw error;
-    }
-  }
+  // Always ensure the table exists before touching it (CREATE TABLE IF NOT EXISTS is a no-op when present).
+  await ensureSequenceTable();
+
+  const existingSeq = await prisma.repairRequestSequence.findUnique({
+    where: { year },
+    select: { value: true },
+  });
 
   if (!existingSeq) {
     const maxExisting = await getMaxExisting();
