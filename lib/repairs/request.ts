@@ -69,7 +69,11 @@ async function allocateRequestNumber(): Promise<string> {
       select: { value: true },
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+    const isTableMissing =
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") ||
+      (error instanceof Prisma.PrismaClientUnknownRequestError &&
+        error.message.includes("no such table"));
+    if (isTableMissing) {
       await ensureSequenceTable();
       existingSeq = await prisma.repairRequestSequence.findUnique({
         where: { year },
