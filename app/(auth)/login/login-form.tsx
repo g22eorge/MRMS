@@ -14,7 +14,7 @@ export function LoginForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const email = String(data.get("email") ?? "").trim().toLowerCase();
+    const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     const rememberMe = Boolean(data.get("rememberMe"));
 
@@ -44,7 +44,7 @@ export function LoginForm() {
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1">
         <label className="text-sm font-medium" htmlFor="email">
-          Email or Username
+          Email
         </label>
         <input
           id="email"
