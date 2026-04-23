@@ -5,7 +5,7 @@ import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
-import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
@@ -304,7 +304,7 @@ export default async function DashboardPage({
             { label: "Assigned", value: String(jobs.length), href: "/technicians" },
             { label: "Open", value: String(openCount), href: "/technicians?ready=1", tone: "brand" },
             { label: "Completed", value: String(completedCount), href: "/jobs?status=COMPLETED", tone: "success" },
-            { label: "Outstanding", value: formatMoney(outstandingTotal, currency), href: "/technicians/payouts", tone: "warning" },
+            { label: "Outstanding", value: formatMoneyCompact(outstandingTotal, currency), href: "/technicians/payouts", tone: "warning" },
           ]}
         />
 
@@ -326,8 +326,8 @@ export default async function DashboardPage({
           </Link>
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payout Outstanding</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{formatMoney(outstandingTotal, currency)}</p>
-            <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoney(paidTotal, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{formatMoneyCompact(outstandingTotal, currency)}</p>
+            <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoneyCompact(paidTotal, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">
               <Link href="/technicians/payouts">View payout breakdown →</Link>
             </p>
@@ -473,7 +473,7 @@ export default async function DashboardPage({
               <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-center col-span-2 sm:col-span-1">
                 <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
                 <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-                  {marginTotal >= 0 ? "+" : ""}{formatMoney(marginTotal, getAppCurrency())}
+                  {marginTotal >= 0 ? "+" : ""}{formatMoneyCompact(marginTotal, getAppCurrency())}
                 </p>
               </Link>
             </div>
@@ -674,7 +674,7 @@ export default async function DashboardPage({
             { label: "Received", value: String(receivedSelectedCount), href: `/jobs?from=${selectedFrom}&to=${selectedTo}` },
             { label: "Completed", value: String(completedSelectedCount), href: `/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`, tone: "success" },
             { label: "Closed", value: String(closedSelectedCount), href: `/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`, tone: "warning" },
-            { label: "Revenue", value: formatMoney(revenueSelected, currency), href: reportHref, tone: "brand" },
+            { label: "Revenue", value: formatMoneyCompact(revenueSelected, currency), href: reportHref, tone: "brand" },
           ]}
         />
 
@@ -708,10 +708,10 @@ export default async function DashboardPage({
           </Link>
           <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoney(revenueSelected, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoneyCompact(revenueSelected, currency)}</p>
             <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
               {revenueDelta >= 0 ? "+" : "-"}
-              {formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
+              {formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}
             </p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open report workspace →</p>
           </Link>
@@ -738,12 +738,12 @@ export default async function DashboardPage({
           <div className="grid gap-2">
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
-              <p className="text-sm font-semibold">{formatMoney(revenueSelected, currency)}</p>
+              <p className="text-sm font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
               <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-                {formatMoney(marginSelected, currency)}
+                {formatMoneyCompact(marginSelected, currency)}
               </p>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -752,7 +752,7 @@ export default async function DashboardPage({
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-              <p className="text-sm font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
+              <p className="text-sm font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
             </div>
           </div>
         </PersistedDisclosure>
@@ -760,12 +760,12 @@ export default async function DashboardPage({
         <div className="hidden gap-4 lg:grid lg:grid-cols-4">
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-            <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
-            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
+            <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
+            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair Margin</p>
-            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{formatMoney(marginSelected, currency)}</p>
+            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{formatMoneyCompact(marginSelected, currency)}</p>
             <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -775,7 +775,7 @@ export default async function DashboardPage({
           </div>
           <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Payouts Due</p>
-            <p className="mt-1 text-2xl font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
+            <p className="mt-1 text-2xl font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
             <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs (all months)</p>
           </div>
         </div>
@@ -865,17 +865,17 @@ export default async function DashboardPage({
 
         <StickyKpiRow
           items={[
-            { label: "Revenue", value: formatMoney(monthRevenue, currency), href: "/reports" },
+            { label: "Revenue", value: formatMoneyCompact(monthRevenue, currency), href: "/reports" },
             { label: "Completed", value: String(completedThisMonth.length), href: "/jobs?status=COMPLETED", tone: "success" },
             { label: "Pending", value: String(pendingBilling), href: "/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL", tone: "warning" },
-            { label: "Payouts", value: formatMoney(payoutOutstanding, currency), href: "/reports", tone: "brand" },
+            { label: "Payouts", value: formatMoneyCompact(payoutOutstanding, currency), href: "/reports", tone: "brand" },
           ]}
         />
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
           <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold">{formatMoney(monthRevenue, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold">{formatMoneyCompact(monthRevenue, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open reports →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
@@ -890,7 +890,7 @@ export default async function DashboardPage({
           </Link>
           <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
-            <p className="mt-2 text-3xl font-semibold text-black">{formatMoney(payoutOutstanding, currency)}</p>
+            <p className="mt-2 text-3xl font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>
           </Link>
         </div>

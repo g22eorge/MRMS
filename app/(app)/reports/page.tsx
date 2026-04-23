@@ -5,7 +5,7 @@ import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
 import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
-import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
@@ -479,10 +479,10 @@ export default async function ReportsPage({
 
       <StickyKpiRow
         items={[
-          { label: "Revenue", value: formatMoney(revenueSelected, currency), tone: "brand" },
-          { label: "Margin", value: formatMoney(marginSelected, currency), tone: marginSelected >= 0 ? "success" : "warning" },
+          { label: "Revenue", value: formatMoneyCompact(revenueSelected, currency), tone: "brand" },
+          { label: "Margin", value: formatMoneyCompact(marginSelected, currency), tone: marginSelected >= 0 ? "success" : "warning" },
           { label: "Completed", value: String(completedSelected.length), tone: "success" },
-          { label: "Payouts", value: formatMoney(externalPayoutOutstandingTotal, currency), tone: "warning" },
+          { label: "Payouts", value: formatMoneyCompact(externalPayoutOutstandingTotal, currency), tone: "warning" },
         ]}
       />
 
@@ -565,12 +565,12 @@ export default async function ReportsPage({
         <div className="grid gap-2">
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
-            <p className="text-sm font-semibold">{formatMoney(revenueSelected, currency)}</p>
+            <p className="text-sm font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
             <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {formatMoney(marginSelected, currency)}
+              {formatMoneyCompact(marginSelected, currency)}
             </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
@@ -587,7 +587,7 @@ export default async function ReportsPage({
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-            <p className="text-sm font-semibold text-[#D4AF37]">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
+            <p className="text-sm font-semibold text-[#D4AF37]">{formatMoneyCompact(externalPayoutOutstandingTotal, currency)}</p>
           </div>
         </div>
       </PersistedDisclosure>
@@ -595,15 +595,15 @@ export default async function ReportsPage({
       <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-          <p className="mt-1 text-2xl font-semibold">{formatMoney(revenueSelected, currency)}</p>
+          <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
           <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-            {revenueDelta >= 0 ? "+" : "-"}{formatMoney(Math.abs(revenueDelta), currency)} vs {prevMonthString}
+            {revenueDelta >= 0 ? "+" : "-"}{formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}
           </p>
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair margin ({selectedMonthString})</p>
           <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-            {formatMoney(marginSelected, currency)}
+            {formatMoneyCompact(marginSelected, currency)}
           </p>
           <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
         </div>
@@ -624,7 +624,7 @@ export default async function ReportsPage({
         </div>
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External payouts due</p>
-          <p className="mt-1 text-2xl font-semibold">{formatMoney(externalPayoutOutstandingTotal, currency)}</p>
+          <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(externalPayoutOutstandingTotal, currency)}</p>
           <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid (all months)</p>
         </div>
       </div>
