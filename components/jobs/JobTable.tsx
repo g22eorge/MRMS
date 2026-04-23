@@ -214,7 +214,7 @@ export function JobTable({
       </div>
 
       <div className="hidden overflow-x-auto lg:block">
-        <table className="min-w-[1080px] w-full border-collapse text-sm">
+        <table className="min-w-[920px] w-full border-collapse text-sm">
         <thead className="bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(240,240,240,0.95))] text-left text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           <tr>
             <th className="border-b border-[var(--line)] px-4 py-3">Job #</th>
@@ -222,7 +222,7 @@ export function JobTable({
             <th className="border-b border-[var(--line)] px-4 py-3">Status</th>
             {canSeeClient ? <th className="border-b border-[var(--line)] px-4 py-3">Client</th> : null}
             {canSeeAssignment ? <th className="border-b border-[var(--line)] px-4 py-3">Assigned</th> : null}
-            <th className="border-b border-[var(--line)] px-4 py-3">Flag</th>
+            <th className="hidden border-b border-[var(--line)] px-4 py-3 xl:table-cell">Flag</th>
             <th className="border-b border-[var(--line)] px-4 py-3">Received</th>
             {canSeeCost ? <th className="border-b border-[var(--line)] px-4 py-3">{showClientFacingCostOnly ? "Client Cost" : "External Bill"}</th> : null}
             <th className="border-b border-[var(--line)] px-4 py-3">Actions</th>
@@ -242,7 +242,7 @@ export function JobTable({
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><JobStatusBadge status={job.status} /></td>
               {canSeeClient ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><p className="max-w-[14rem] truncate">{job.clientName ?? "-"}</p></td> : null}
               {canSeeAssignment ? <td className="border-b border-[var(--line)] px-4 py-3 align-middle"><p className="max-w-[14rem] truncate">{job.assignedTo ?? "-"}</p></td> : null}
-              <td className="border-b border-[var(--line)] px-4 py-3 align-middle">
+              <td className="hidden border-b border-[var(--line)] px-4 py-3 align-middle xl:table-cell">
                 {job.workflowReason && job.workflowReason !== "NONE" ? (
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${workflowReasonTone[job.workflowReason]}`}>
@@ -291,17 +291,17 @@ export function JobTable({
                 </td>
               ) : null}
               <td className="border-b border-[var(--line)] px-4 py-3 align-middle whitespace-nowrap">
-                <div className="inline-flex items-center gap-2">
+                <div className="inline-flex items-center gap-1.5">
                   <Link
                     href={`/jobs/${job.id}`}
-                    className="btn-premium inline-block rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+                    className="btn-premium inline-block rounded-md px-2 py-1 text-xs"
                   >
-                    Open
+                    View
                   </Link>
                   {canEditPage ? (
                     <Link
                       href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                      className="btn-premium-secondary inline-block rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+                      className="btn-premium-secondary inline-block rounded-md px-2 py-1 text-xs"
                     >
                       Edit
                     </Link>
@@ -309,7 +309,7 @@ export function JobTable({
                   {canDelete && deleteAction ? (
                     <form action={deleteAction} className="inline">
                       <input type="hidden" name="id" value={job.id} />
-                      <button className="btn-premium-danger rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Delete</button>
+                      <button className="btn-premium-danger rounded-md px-2 py-1 text-xs">Delete</button>
                     </form>
                   ) : null}
                 </div>
