@@ -185,99 +185,119 @@ export function JobTable({
             const strip = statusStripClass(job.status);
             const hasFlag = job.workflowReason && job.workflowReason !== "NONE";
             const flagCfg = hasFlag ? workflowReasonConfig[job.workflowReason as HighlightReason] : null;
+
+            // Compute cost value once
+            const costValue = canSeeCost
+              ? showClientFacingCostOnly
+                ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
+                  ? formatMoney(job.clientBill)
+                  : null
+                : job.externalTechBill
+                  ? formatMoney(job.externalTechBill)
+                  : null
+              : null;
+
+            // Pricing badge (admin/ops only)
+            const pricingBadge = canManagePricing
+              ? typeof job.clientBill === "number"
+                ? <span key="priced" className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-[var(--accent)]/10 text-[#9A7A00]">Priced</span>
+                : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+                  ? <span key="needs" className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-600">Needs pricing</span>
+                  : null
+              : null;
+
+            const hasBadgeRow = flagCfg || pricingBadge;
+
             return (
               <div
                 key={job.id}
-                className="relative border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[var(--panel-strong)]/30"
+                className="relative border-b border-[var(--line)] bg-[var(--panel)] last:border-b-0 transition-colors hover:bg-[var(--panel-strong)]/30"
               >
                 {/* Status strip */}
-                <span className={`absolute inset-y-0 left-0 w-[3px] rounded-r ${strip}`} aria-hidden="true" />
+                <span className={`absolute inset-y-0 left-0 w-1 rounded-r ${strip}`} aria-hidden="true" />
 
-                <div className="flex items-start justify-between gap-3 pl-2">
-                  {/* Left content */}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    {/* Row 1: Job # + status */}
-                    <div className="flex flex-wrap items-center gap-2">
+                {/* Full-bleed tap target — the whole card opens the job */}
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="absolute inset-0 z-0"
+                  aria-label={`Open job ${job.jobNumber}`}
+                />
+
+                {/* Card content — pointer-events-none so taps fall through to link above */}
+                <div className="pointer-events-none relative z-10 px-4 py-3 pl-5">
+
+                  {/* Row 1: Job # + status badge + corner actions */}
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="mono text-[13px] font-bold text-[var(--ink)]">{job.jobNumber}</span>
                       <JobStatusBadge status={job.status} />
-                      {flagCfg && (
+                    </div>
+                    {/* Secondary actions restore pointer-events */}
+                    {(canEditPage || (canDelete && deleteAction)) ? (
+                      <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
+                        {canEditPage ? (
+                          <Link
+                            href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
+                            className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-muted)] transition hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
+                          >
+                            Edit
+                          </Link>
+                        ) : null}
+                        {canDelete && deleteAction ? (
+                          <form action={deleteAction}>
+                            <input type="hidden" name="id" value={job.id} />
+                            <button className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600 transition hover:bg-red-100">
+                              Del
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Row 2: Device name + type chip */}
+                  <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 truncate font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                      <DeviceIcon type={job.deviceType} />
+                      {deviceLabel[job.deviceType] ?? job.deviceType}
+                    </span>
+                  </div>
+
+                  {/* Row 3: Meta (client · date · tech) + cost right-aligned */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1 text-[11px] text-[var(--ink-muted)]">
+                      {canSeeClient && job.clientName ? (
+                        <span className="truncate">{job.clientName}</span>
+                      ) : null}
+                      {canSeeClient && job.clientName ? (
+                        <span className="shrink-0 opacity-40">·</span>
+                      ) : null}
+                      <span className="shrink-0">{formatEATDate(job.receivedAt)}</span>
+                      {canSeeAssignment && job.assignedTo ? (
+                        <>
+                          <span className="shrink-0 opacity-40">·</span>
+                          <span className="max-w-[7rem] truncate">{job.assignedTo}</span>
+                        </>
+                      ) : null}
+                    </div>
+                    {costValue ? (
+                      <span className="shrink-0 text-[12px] font-semibold text-[var(--ink)]">{costValue}</span>
+                    ) : null}
+                  </div>
+
+                  {/* Row 4: Workflow / pricing badges (only when present) */}
+                  {hasBadgeRow ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {flagCfg ? (
                         <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${flagCfg.badge}`}>
                           {flagCfg.label}
                         </span>
-                      )}
-                    </div>
-                    {/* Row 2: Device */}
-                    <p className="font-medium text-[var(--ink)]">
-                      {job.brand} {job.model}
-                      <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
-                        <DeviceIcon type={job.deviceType} />
-                        {deviceLabel[job.deviceType] ?? job.deviceType}
-                      </span>
-                    </p>
-                    {/* Row 3: Meta */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--ink-muted)]">
-                      {canSeeClient && job.clientName ? <span>{job.clientName}</span> : null}
-                      {canSeeAssignment && job.assignedTo ? (
-                        <span className="flex items-center gap-1">
-                          <svg viewBox="0 0 12 12" fill="currentColor" className="h-2.5 w-2.5 opacity-40" aria-hidden="true">
-                            <circle cx="6" cy="4" r="2.5"/><path d="M1 10c0-2.21 2.24-4 5-4s5 1.79 5 4H1Z"/>
-                          </svg>
-                          {job.assignedTo}
-                        </span>
                       ) : null}
-                      <span>{formatEATDate(job.receivedAt)}</span>
-                      {canSeeCost ? (
-                        <span className="font-semibold text-[var(--ink)]">
-                          {showClientFacingCostOnly
-                            ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
-                              ? formatMoney(job.clientBill)
-                              : null
-                            : job.externalTechBill ? formatMoney(job.externalTechBill) : null}
-                        </span>
-                      ) : null}
-                      {canManagePricing && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                          typeof job.clientBill === "number"
-                            ? "bg-[var(--accent)]/10 text-[#9A7A00]"
-                            : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
-                              ? "bg-amber-50 text-amber-600"
-                              : "hidden"
-                        }`}>
-                          {typeof job.clientBill === "number"
-                            ? "Priced"
-                            : ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
-                              ? "Needs pricing"
-                              : null}
-                        </span>
-                      )}
+                      {pricingBadge}
                     </div>
-                  </div>
+                  ) : null}
 
-                  {/* Right: actions */}
-                  <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6 hover:text-[var(--accent)]"
-                    >
-                      Open
-                    </Link>
-                    {canEditPage ? (
-                      <Link
-                        href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                        className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-medium text-[var(--ink-muted)] transition hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
-                      >
-                        Edit
-                      </Link>
-                    ) : null}
-                    {canDelete && deleteAction ? (
-                      <form action={deleteAction}>
-                        <input type="hidden" name="id" value={job.id} />
-                        <button className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-600 transition hover:bg-red-100">
-                          Del
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
                 </div>
               </div>
             );
