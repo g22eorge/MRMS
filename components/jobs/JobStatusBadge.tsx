@@ -1,47 +1,88 @@
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 
-const classMap: Record<ReturnType<typeof normalizeJobStatus>, string> = {
-  RECEIVED: "bg-[var(--panel)] text-[var(--ink)]",
-  DIAGNOSING: "bg-[var(--panel-strong)] text-[var(--ink)]",
-  IN_EXTERNAL_REPAIR: "bg-black text-white",
-  AWAITING_APPROVAL: "bg-[#D4AF37] text-white",
-  IN_REPAIR: "bg-black text-white",
-  READY_FOR_PICKUP: "bg-[#D4AF37] text-white",
-  COMPLETED: "bg-[#D4AF37] text-white",
-  CLOSED: "bg-[var(--panel)] text-[var(--ink-muted)]",
+type StatusConfig = {
+  dot: string;
+  badge: string;
+  strip: string;   // left-border color class for table rows
+  label: string;
+  help: string;
 };
 
-const helpText: Record<ReturnType<typeof normalizeJobStatus>, string> = {
-  RECEIVED: "Job has been received and is waiting to be worked on.",
-  DIAGNOSING: "Technician is diagnosing the issue.",
-  IN_EXTERNAL_REPAIR: "Device is currently with a one-time external technician.",
-  AWAITING_APPROVAL: "Waiting for client approval before proceeding.",
-  IN_REPAIR: "Repair work is actively in progress.",
-  READY_FOR_PICKUP: "Repair is done and device is ready for pickup/handover.",
-  COMPLETED: "Repair work finished successfully.",
-  CLOSED: "Job ended without successful completion (declined/unrepairable).",
-};
-
-const labelMap: Record<ReturnType<typeof normalizeJobStatus>, string> = {
-  RECEIVED: "Received",
-  DIAGNOSING: "Diagnosing",
-  IN_EXTERNAL_REPAIR: "External",
-  AWAITING_APPROVAL: "Awaiting",
-  IN_REPAIR: "In Repair",
-  READY_FOR_PICKUP: "Ready",
-  COMPLETED: "Completed",
-  CLOSED: "Closed",
+const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> = {
+  RECEIVED: {
+    dot: "bg-slate-400",
+    badge: "border-slate-200 bg-slate-50 text-slate-600",
+    strip: "bg-slate-300",
+    label: "Received",
+    help: "Job received, waiting to be worked on.",
+  },
+  DIAGNOSING: {
+    dot: "bg-blue-500",
+    badge: "border-blue-200 bg-blue-50 text-blue-700",
+    strip: "bg-blue-400",
+    label: "Diagnosing",
+    help: "Technician is currently diagnosing the issue.",
+  },
+  IN_EXTERNAL_REPAIR: {
+    dot: "bg-violet-500",
+    badge: "border-violet-200 bg-violet-50 text-violet-700",
+    strip: "bg-violet-500",
+    label: "External",
+    help: "Device is with an external technician.",
+  },
+  AWAITING_APPROVAL: {
+    dot: "bg-amber-400",
+    badge: "border-amber-200 bg-amber-50 text-amber-700",
+    strip: "bg-amber-400",
+    label: "Awaiting",
+    help: "Waiting for client approval to proceed.",
+  },
+  IN_REPAIR: {
+    dot: "bg-emerald-500",
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    strip: "bg-emerald-500",
+    label: "In Repair",
+    help: "Repair is actively in progress.",
+  },
+  READY_FOR_PICKUP: {
+    dot: "bg-white",
+    badge: "border-[#D4AF37] bg-[#D4AF37] text-white",
+    strip: "bg-[#D4AF37]",
+    label: "Ready ✓",
+    help: "Repair complete — ready for client pickup.",
+  },
+  COMPLETED: {
+    dot: "bg-green-500",
+    badge: "border-green-200 bg-green-50 text-green-700",
+    strip: "bg-green-400",
+    label: "Completed",
+    help: "Repair finished and device returned.",
+  },
+  CLOSED: {
+    dot: "bg-gray-300",
+    badge: "border-gray-200 bg-gray-50 text-gray-500",
+    strip: "bg-gray-300",
+    label: "Closed",
+    help: "Job closed without successful repair.",
+  },
 };
 
 export function JobStatusBadge({ status }: { status: JobStatus }) {
-  const normalized = normalizeJobStatus(status);
+  const key = normalizeJobStatus(status);
+  const cfg = statusConfig[key];
   return (
     <span
-      title={helpText[normalized]}
-      aria-label={`${normalized.replaceAll("_", " ")}. ${helpText[normalized]}`}
-      className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${classMap[normalized]}`}
+      title={cfg.help}
+      aria-label={`${key.replaceAll("_", " ")}. ${cfg.help}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${cfg.badge}`}
     >
-      {labelMap[normalized]}
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.dot}`} aria-hidden="true" />
+      {cfg.label}
     </span>
   );
+}
+
+/** Returns the strip color bg class for a table row's left accent */
+export function statusStripClass(status: JobStatus): string {
+  return statusConfig[normalizeJobStatus(status)].strip;
 }

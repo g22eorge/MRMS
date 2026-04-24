@@ -9,15 +9,15 @@ type StickyKpiItem = {
 
 export function StickyKpiRow({ items, className = "" }: { items: StickyKpiItem[]; className?: string }) {
   return (
-    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden ${className}`}>
+    <div className={`panel-shadow sticky top-[var(--mobile-stack-offset)] z-10 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:static lg:top-auto lg:grid-cols-4 lg:px-3 ${className}`}>
       {items.map((item) => {
         const toneClass =
           item.tone === "brand"
-            ? "text-[var(--brand)]"
+            ? "text-[var(--accent)]"
             : item.tone === "success"
-              ? "text-[#D4AF37]"
+              ? "text-emerald-600"
               : item.tone === "warning"
-                ? "text-black"
+                ? "text-amber-600"
                 : "text-[var(--ink)]";
 
         const content = (

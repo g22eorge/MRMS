@@ -144,226 +144,291 @@ export default async function ClientsPage({
     Object.entries(filters).filter(([, value]) => typeof value === "string" && value.length > 0),
   ) as Record<string, string>;
   const hasClientFilters = Boolean(filters.q || segment !== "all");
-  const clientBrief = hasClientFilters
-    ? "Filtered client directory view is active. Use the KPI cards below for live totals and reset filters to return to the full book."
-    : "Use this directory to maintain accurate contact records, monitor client activity, and quickly open each customer timeline.";
-  const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
-  const fieldClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+
+  const paginationBar = totalPages > 1 ? (
+    <div className="flex items-center gap-1.5">
+      <Link
+        href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
+        aria-disabled={isPrevDisabled}
+        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
+          isPrevDisabled
+            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
+            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        }`}
+      >
+        ← Prev
+      </Link>
+      <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
+      <Link
+        href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
+        aria-disabled={isNextDisabled}
+        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
+          isNextDisabled
+            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
+            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        }`}
+      >
+        Next →
+      </Link>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Client Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
+
+      {/* ── Stat chips bar ── */}
+      <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">
+            <span className="font-bold text-[var(--ink)]">{totalClients}</span> total
+          </span>
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
+            <span className="font-bold">{activeClients}</span> active
+          </span>
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">
+            <span className="font-bold text-[var(--ink)]">{newClients}</span> no job
+          </span>
+          <span className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-1 text-[11px] font-semibold text-[#9A7A00]">
+            <span className="font-bold">{withManyJobs}</span> high activity
+          </span>
         </div>
+        {(user.role === "ADMIN" || user.role === "OPS") ? (
+          <Link
+            href="/clients?create=1"
+            className="shrink-0 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
+          >
+            + New Client
+          </Link>
+        ) : null}
       </div>
 
-      <div className="panel-shadow sticky top-14 z-20 grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 2xl:hidden">
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
-          <p className="text-sm font-semibold">{totalClients}</p>
-        </div>
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active</p>
-          <p className="text-sm font-semibold text-[var(--brand)]">{activeClients}</p>
-        </div>
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">No Job</p>
-          <p className="text-sm font-semibold">{newClients}</p>
-        </div>
-        <div className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">3+ Jobs</p>
-          <p className="text-sm font-semibold text-[#D4AF37]">{withManyJobs}</p>
-        </div>
-      </div>
+      {/* ── Filter panel ── */}
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <form className="flex flex-wrap items-center gap-2 p-3">
+          <input
+            name="q"
+            defaultValue={filters.q}
+            aria-label="Search clients"
+            placeholder="Search by name, phone, email…"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {(["all", "active", "new", "high"] as const).map((seg) => {
+              const labels = { all: "All", active: "Active", new: "No Job", high: "High Activity" };
+              const href = `/clients?segment=${seg}${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`;
+              return (
+                <Link
+                  key={seg}
+                  href={href}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    segment === seg
+                      ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                      : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {labels[seg]}
+                </Link>
+              );
+            })}
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[12px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+          >
+            Search
+          </button>
+          {hasClientFilters ? (
+            <Link
+              href="/clients"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+            >
+              Reset
+            </Link>
+          ) : null}
+        </form>
 
-      <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Total clients</p>
-          <p className="text-2xl font-semibold">{totalClients}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Active clients</p>
-          <p className="text-2xl font-semibold text-[var(--brand)]">{activeClients}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">No job yet</p>
-          <p className="text-2xl font-semibold">{newClients}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">3+ jobs</p>
-          <p className="text-2xl font-semibold text-[#D4AF37]">{withManyJobs}</p>
-        </div>
-      </div>
-
-      {(user.role === "ADMIN" || user.role === "OPS") ? (
-        <>
-          <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:hidden" open>
-            <summary className="list-none">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick Create Client</p>
-                <span className="text-[11px] text-[var(--ink-muted)]">Tap to fold</span>
-              </div>
-            </summary>
-            <form action={createClientAction} className="mt-3 space-y-2">
-              <input required name="fullName" placeholder="Full name" className={fieldClass} />
-              <input required name="phone" placeholder="Phone" className={fieldClass} />
-              <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-2">
-                <summary className="list-none text-xs font-medium text-[var(--ink-muted)]">Optional details</summary>
-                <div className="mt-2 grid gap-2">
-                  <input name="email" placeholder="Email" className={fieldClass} />
-                  <input name="organization" placeholder="Organization" className={fieldClass} />
-                </div>
-              </details>
-              <button className="btn-premium w-full rounded-lg px-3 py-2 text-sm">Create Client</button>
-            </form>
-          </details>
-
-          <form action={createClientAction} className="panel-shadow hidden space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:block">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create client</p>
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
-              <input required name="fullName" placeholder="Full name" className={controlClass} />
-              <input required name="phone" placeholder="Phone" className={controlClass} />
-              <input name="email" placeholder="Email" className={controlClass} />
-              <input name="organization" placeholder="Organization" className={controlClass} />
-              <button className="btn-premium justify-self-start rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Create</button>
+        {/* Inline create form for OPS/ADMIN — shown when ?create=1 or always on large screens */}
+        {(user.role === "ADMIN" || user.role === "OPS") ? (
+          <form action={createClientAction} className="border-t border-[var(--line)] px-3 pb-3 pt-2.5">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick create client</p>
+            <div className="flex flex-wrap gap-2">
+              <input required name="fullName" placeholder="Full name *" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input required name="phone" placeholder="Phone *" className="min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="email" placeholder="Email" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="organization" placeholder="Organization" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <button className="shrink-0 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90">
+                Create
+              </button>
             </div>
           </form>
-        </>
-      ) : null}
-
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:hidden">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          aria-label="Search clients"
-          placeholder="Search clients and press Enter"
-          className={fieldClass}
-        />
-      </form>
-
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 2xl:grid 2xl:grid-cols-3">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          aria-label="Search clients"
-          placeholder="Search by name, phone, email, or organization"
-          className={controlClass}
-        />
-        <select name="segment" defaultValue={segment} className={controlClass}>
-          <option value="all">All clients</option>
-          <option value="active">Active clients</option>
-          <option value="new">No-job clients</option>
-          <option value="high">3+ jobs clients</option>
-        </select>
-        <button className="btn-premium-secondary justify-self-start rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm">Apply</button>
-        <Link href="/clients" className="btn-premium-secondary justify-self-start rounded-lg px-3 py-1.5 text-[13px] text-center sm:py-2 sm:text-sm">Reset</Link>
-      </form>
-
-      <div className="flex flex-wrap gap-2 text-xs max-[360px]:grid max-[360px]:grid-cols-2">
-        <Link href={`/clients?segment=all${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`} className={`rounded-full px-3 py-1 text-center ${segment === "all" ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>All</Link>
-        <Link href={`/clients?segment=active${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`} className={`rounded-full px-3 py-1 text-center ${segment === "active" ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>Active</Link>
-        <Link href={`/clients?segment=new${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`} className={`rounded-full px-3 py-1 text-center ${segment === "new" ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>No Job Yet</Link>
-        <Link href={`/clients?segment=high${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`} className={`rounded-full px-3 py-1 text-center ${segment === "high" ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>High Activity</Link>
+        ) : null}
       </div>
 
+      {/* ── Clients table / cards ── */}
       {clients.length === 0 ? (
-        <div className="rounded-lg border border-[var(--line)] bg-white p-6 text-sm text-[var(--ink-muted)]">No clients match this view.</div>
+        <div className="panel-shadow flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+          <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
+            <circle cx="20" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
+            <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <p className="text-sm font-medium text-[var(--ink-muted)]">No clients match this view</p>
+          {hasClientFilters ? (
+            <Link href="/clients" className="text-xs text-[var(--accent)] hover:underline">Clear filters</Link>
+          ) : null}
+        </div>
       ) : (
         <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="space-y-3 p-3 lg:hidden">
-            <ProgressiveList initialCount={5} step={5}>
-              {(clients as ClientRow[]).map((client) => (
-                <details key={client.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3 max-[360px]:p-2.5">
-                <summary className="list-none">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--ink)]">{client.fullName}</p>
-                      <p className="truncate text-xs text-[var(--ink-muted)]">{client.phone}</p>
-                      <p className="truncate text-[11px] text-[var(--ink-muted)]">{client.organization || "No organization"}</p>
-                    </div>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">Jobs {client._count.jobs}</span>
-                  </div>
-                </summary>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-[var(--ink-muted)]">Organization</p>
-                    <p className="truncate font-medium text-[var(--ink)]">{client.organization ?? "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[var(--ink-muted)]">Email</p>
-                    <p className="truncate font-medium text-[var(--ink)]">{client.email ?? "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[var(--ink-muted)]">Updated</p>
-                    <p className="font-medium text-[var(--ink)]">{formatEATDate(client.updatedAt)}</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex gap-2 max-[360px]:grid max-[360px]:grid-cols-2">
-                  <Link
-                    href={`/clients/${client.id}`}
-                    className="btn-premium flex-1 rounded-md px-3 py-1.5 text-center text-[13px] font-medium sm:py-2 sm:text-sm"
-                  >
-                    Open
-                  </Link>
-                  {user.role === "ADMIN" ? (
-                    <form action={deleteClientAction} className="flex-1 max-[360px]:col-span-2">
-                      <input type="hidden" name="id" value={client.id} />
-                      <button
-                        disabled={client._count.jobs > 0}
-                        className="btn-premium-danger w-full rounded-md px-3 py-1.5 text-[13px] font-medium disabled:border-[var(--line)] disabled:bg-[var(--panel)] disabled:text-[var(--ink-muted)] sm:py-2 sm:text-sm"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  ) : null}
-                </div>
-                </details>
-              ))}
-            </ProgressiveList>
+          {/* Table header bar with count + pagination */}
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-xs text-[var(--ink-muted)]">
+              <span className="font-bold text-[var(--ink)]">{pageStart}–{pageEnd}</span>
+              {" of "}
+              <span className="font-bold text-[var(--ink)]">{total}</span>
+              {" clients"}
+            </p>
+            {paginationBar}
           </div>
 
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="min-w-[920px] w-full border-collapse text-sm">
-              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-3">Client</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Organization</th>
-                  <th className="px-4 py-3">Jobs</th>
-                  <th className="px-4 py-3">Updated</th>
-                  <th className="px-4 py-3">Actions</th>
+          {/* ── Mobile cards ── */}
+          <div className="xl:hidden">
+            <ProgressiveList initialCount={5} step={5}>
+              {(clients as ClientRow[]).map((client) => (
+                <div
+                  key={client.id}
+                  className="relative border-b border-[var(--line)] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[var(--panel-strong)]/30"
+                >
+                  {/* Activity indicator strip */}
+                  <span
+                    className={`absolute inset-y-0 left-0 w-[3px] rounded-r ${
+                      client._count.jobs >= 3
+                        ? "bg-[var(--accent)]"
+                        : client._count.jobs > 0
+                          ? "bg-blue-400"
+                          : "bg-slate-200"
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <div className="flex items-start justify-between gap-3 pl-2">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-[var(--ink)]">{client.fullName}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          client._count.jobs >= 3
+                            ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                            : client._count.jobs > 0
+                              ? "border border-blue-200 bg-blue-50 text-blue-700"
+                              : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                        }`}>
+                          {client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-[var(--ink-muted)]">{client.phone}</p>
+                      {client.organization ? (
+                        <p className="text-[11px] text-[var(--ink-muted)]">{client.organization}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1.5 pt-0.5">
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6 hover:text-[var(--accent)]"
+                      >
+                        Open
+                      </Link>
+                      {user.role === "ADMIN" ? (
+                        <form action={deleteClientAction}>
+                          <input type="hidden" name="id" value={client.id} />
+                          <button
+                            disabled={client._count.jobs > 0}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Del
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </ProgressiveList>
+
+            {totalPages > 1 ? (
+              <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-3">
+                <span className="text-xs text-[var(--ink-muted)]">
+                  <span className="font-semibold text-[var(--ink)]">{pageStart}–{pageEnd}</span> of {total}
+                </span>
+                {paginationBar}
+              </div>
+            ) : null}
+          </div>
+
+          {/* ── Desktop table ── */}
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="w-full min-w-[860px] border-collapse text-[13px]">
+              <thead>
+                <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
+                  <th className="w-[3px] p-0" aria-hidden="true" />
+                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Client</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Phone</th>
+                  <th className="hidden px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">Email</th>
+                  <th className="hidden px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">Organization</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Jobs</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Updated</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[var(--line)]">
                 {(clients as ClientRow[]).map((client) => (
-                  <tr key={`desktop-${client.id}`} className="align-middle text-[var(--ink)]">
-                    <td className="border-t border-[var(--line)] px-4 py-3 font-medium">{client.fullName}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">{client.phone}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">{client.email ?? "-"}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">{client.organization ?? "-"}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">{client._count.jobs}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">{client.updatedAt.toLocaleDateString()}</td>
-                    <td className="border-t border-[var(--line)] px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                  <tr key={`desktop-${client.id}`} className="group transition-colors hover:bg-[var(--panel-strong)]/40">
+                    {/* Activity strip */}
+                    <td className="w-[3px] p-0" aria-hidden="true">
+                      <div className={`h-full min-h-[3rem] w-[3px] ${
+                        client._count.jobs >= 3
+                          ? "bg-[var(--accent)]"
+                          : client._count.jobs > 0
+                            ? "bg-blue-400"
+                            : "bg-slate-200"
+                      }`} />
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]"
+                      >
+                        {client.fullName}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 align-middle text-[var(--ink-muted)]">{client.phone}</td>
+                    <td className="hidden px-4 py-3 align-middle text-[var(--ink-muted)] 2xl:table-cell">{client.email ?? <span className="opacity-40">—</span>}</td>
+                    <td className="hidden px-4 py-3 align-middle text-[var(--ink-muted)] 2xl:table-cell">{client.organization ?? <span className="opacity-40">—</span>}</td>
+                    <td className="px-4 py-3 align-middle">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        client._count.jobs >= 3
+                          ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                          : client._count.jobs > 0
+                            ? "border border-blue-200 bg-blue-50 text-blue-700"
+                            : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                      }`}>
+                        {client._count.jobs}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 align-middle text-[var(--ink-muted)]">
+                      {formatEATDate(client.updatedAt)}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/clients/${client.id}`}
-                          className="btn-premium rounded-md px-3 py-1.5 text-[13px]"
+                          className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
                         >
                           Open
                         </Link>
                         {user.role === "ADMIN" ? (
-                          <form action={deleteClientAction}>
+                          <form action={deleteClientAction} className="inline">
                             <input type="hidden" name="id" value={client.id} />
                             <button
                               disabled={client._count.jobs > 0}
-                              className="btn-premium-danger rounded-md px-3 py-1.5 text-[13px] disabled:border-[var(--line)] disabled:bg-[var(--panel)] disabled:text-[var(--ink-muted)]"
+                              className="whitespace-nowrap rounded-md border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               Delete
                             </button>
@@ -380,30 +445,6 @@ export default async function ClientsPage({
         </div>
       )}
 
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-sm text-[var(--ink-muted)]">
-        <p>
-          Showing <span className="font-semibold text-[var(--ink)]">{pageStart}-{pageEnd}</span> of <span className="font-semibold text-[var(--ink)]">{total}</span>
-        </p>
-        <div className="flex gap-2">
-          <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
-            aria-disabled={isPrevDisabled}
-            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isPrevDisabled ? "pointer-events-none opacity-50" : ""}`}
-          >
-            Prev
-          </Link>
-          <span className="inline-flex items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-xs font-medium text-[var(--ink-muted)]">
-            Page {page} / {totalPages}
-          </span>
-          <Link
-            href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
-            aria-disabled={isNextDisabled}
-            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${isNextDisabled ? "pointer-events-none opacity-50" : ""}`}
-          >
-            Next
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }

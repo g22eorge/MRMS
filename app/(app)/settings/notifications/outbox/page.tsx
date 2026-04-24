@@ -124,28 +124,29 @@ export default async function OutboxPage({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--ink)]">Outbox</h1>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Delivery queue for WhatsApp and email notifications. Showing latest 200.
-          </p>
+    <div className="space-y-4">
+      <div className="panel-shadow flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Status</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.PENDING ?? 0) > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+            {byStatus.PENDING ?? 0} pending
+          </span>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.FAILED ?? 0) > 0 ? "border-red-200 bg-red-50 text-red-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+            {byStatus.FAILED ?? 0} failed
+          </span>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+            {byStatus.SENT ?? 0} sent
+          </span>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.DEAD ?? 0) > 0 ? "border-[var(--line)] bg-[var(--ink)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+            {byStatus.DEAD ?? 0} dead
+          </span>
         </div>
-
         <form action={retryNowAction}>
-          <button className="btn-premium rounded-md px-4 py-2 text-sm">Run Retry</button>
+          <button className="btn-premium rounded-md px-3 py-1.5 text-xs">Run Retry</button>
         </form>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
-        <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1">Pending: {byStatus.PENDING ?? 0}</span>
-        <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1">Failed: {byStatus.FAILED ?? 0}</span>
-        <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1">Sent: {byStatus.SENT ?? 0}</span>
-        <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1">Dead: {byStatus.DEAD ?? 0}</span>
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="panel-shadow grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <form className="grid gap-3 md:grid-cols-4" method="GET">
           <select name="channel" defaultValue={channel ?? ""} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm">
             <option value="">All channels</option>

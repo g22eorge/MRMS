@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
 import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
-import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
@@ -152,17 +151,26 @@ function DashboardPeriodBar({
   actionLabel?: string;
 }) {
   return (
-    <div className="panel-shadow flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.95))] p-3">
-      <div className="flex items-center gap-2">
+    <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,247,248,0.94))] px-3 py-2.5">
+      {/* Period toggle */}
+      <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] bg-white p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
         <Link
           href={monthHref}
-          className={`rounded-lg px-2.5 py-1.5 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+          className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            period === "month"
+              ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+              : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          }`}
         >
           Monthly
         </Link>
         <Link
           href={yearHref}
-          className={`rounded-lg px-2.5 py-1.5 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+          className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            period === "year"
+              ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+              : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          }`}
         >
           Annual
         </Link>
@@ -173,10 +181,13 @@ function DashboardPeriodBar({
         options={selectorOptions}
         hiddenFields={{ period }}
         className="flex items-center"
-        selectClassName="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-sm"
+        selectClassName="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[var(--accent)]/50"
       />
       {actionHref && actionLabel ? (
-        <Link href={actionHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+        <Link
+          href={actionHref}
+          className="ml-auto rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+        >
           {actionLabel}
         </Link>
       ) : null}
@@ -200,17 +211,25 @@ function DashboardHero({
   secondaryLabel?: string;
 }) {
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(15,23,42,0.02),rgba(212,175,55,0.08))]">
-      <div className="px-3 py-3 sm:px-5 sm:py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] sm:text-[11px]">Operations Snapshot</p>
-        <p className="mt-1 text-sm font-semibold text-[var(--ink)] sm:text-base">{title}</p>
-        <p className="mt-1 text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere] sm:text-sm">{summary}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-xs text-white sm:text-sm">
+    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[linear-gradient(120deg,rgba(255,255,255,0.98),rgba(250,250,250,0.95))] px-4 py-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Overview</p>
+          <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">{title}</p>
+          <p className="mt-0.5 hidden text-[12px] leading-snug text-[var(--ink-muted)] 2xl:block">{summary}</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          <Link
+            href={primaryHref}
+            className="rounded-md border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1 text-[11px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
+          >
             {primaryLabel}
           </Link>
           {secondaryHref && secondaryLabel ? (
-            <Link href={secondaryHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs sm:text-sm">
+            <Link
+              href={secondaryHref}
+              className="rounded-md border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+            >
               {secondaryLabel}
             </Link>
           ) : null}
@@ -308,27 +327,27 @@ export default async function DashboardPage({
           ]}
         />
 
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
           <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{jobs.length}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open queue →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Open queue →</p>
           </Link>
           <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openCount}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs needing action →</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{openCount}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Jobs needing action →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedCount}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed jobs →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed jobs →</p>
           </Link>
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payout Outstanding</p>
             <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{formatMoneyCompact(outstandingTotal, currency)}</p>
             <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoneyCompact(paidTotal, currency)}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">
               <Link href="/technicians/payouts">View payout breakdown →</Link>
             </p>
           </div>
@@ -448,7 +467,7 @@ export default async function DashboardPage({
           secondaryLabel={canUpdatePricing ? "Resolve Pricing Queue" : "Focus Diagnosis Queue"}
         />
 
-        <div className="hidden lg:block">
+        <div className="hidden 2xl:block">
           <RepairStatusReference
             title="Full Repair Journey"
             guidance="Use this quick lane map while updating jobs so each handoff follows the standard process."
@@ -493,7 +512,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex items-center justify-between gap-2 group">
-                    <p className="truncate text-xs font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber}</p>
+                    <p className="truncate text-xs font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber}</p>
                     <span className="shrink-0 text-[10px] text-[var(--ink-muted)]">
                       {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                     </span>
@@ -504,30 +523,30 @@ export default async function DashboardPage({
           )}
         </PersistedDisclosure>
 
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
+        <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{assignedJobs.length}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View my jobs →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">View my jobs →</p>
           </Link>
           <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{diagnosing}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Needs diagnosis work →</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{diagnosing}</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Needs diagnosis work →</p>
           </Link>
           <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{inRepair}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Active repairs →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Active repairs →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completed}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Completed repairs →</p>
+            <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed repairs →</p>
           </Link>
         </div>
 
-        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
+        <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 2xl:block">
           <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
           {assignedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -536,7 +555,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center group">
-                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--brand)] transition-colors">{job.jobNumber} - {job.brand} {job.model}</p>
+                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber} - {job.brand} {job.model}</p>
                     <span className="text-xs text-[var(--ink-muted)]">
                       {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                     </span>
@@ -551,48 +570,28 @@ export default async function DashboardPage({
   }
 
   if (user.role === "ADMIN") {
-    const selectedMonth = parseMonth(filters.month);
-    const selectedYear = Number(filters.year) || new Date().getFullYear();
-    const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);
-    const prevRange =
-      period === "year"
-        ? yearRange(selectedYear - 1)
-        : monthRange(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
     const currency = getAppCurrency();
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
 
     const [
       statusGroup,
-      deviceGroup,
-      completedSelected,
-      completedPrev,
-      receivedSelectedCount,
-      receivedPrevCount,
-      closedSelectedCount,
-      closedPrevCount,
-      externalCount,
-      inHouseCount,
+      completedMtd,
       externalCompleted,
+      receivedToday,
+      completedToday,
+      pendingRequests,
+      recentActivity,
+      overdueJobs,
+      techWorkloadJobs,
+      unassignedActiveCount,
     ] = await Promise.all([
       prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
-      prisma.job.groupBy({ by: ["deviceType"], _count: { deviceType: true } }),
       prisma.job.findMany({
-        where: {
-          status: "COMPLETED",
-          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
-        },
+        where: { status: "COMPLETED", completedAt: { gte: mtdStart, lte: today } },
       }),
-      prisma.job.findMany({
-        where: {
-          status: "COMPLETED",
-          completedAt: { gte: prevRange.start, lte: prevRange.end },
-        },
-      }),
-      prisma.job.count({ where: { receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
-      prisma.job.count({ where: { receivedAt: { gte: prevRange.start, lte: prevRange.end } } }),
-      prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
-      prisma.job.count({ where: { status: "CLOSED", closedAt: { gte: prevRange.start, lte: prevRange.end } } }),
-      prisma.job.count({ where: { repairPath: "EXTERNAL", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
-      prisma.job.count({ where: { repairPath: "IN_HOUSE", receivedAt: { gte: selectedRange.start, lte: selectedRange.end } } }),
       prisma.job.findMany({
         where: {
           repairPath: "EXTERNAL",
@@ -601,28 +600,46 @@ export default async function DashboardPage({
         },
         select: { id: true, externalTechBill: true },
       }),
+      prisma.job.count({ where: { receivedAt: { gte: todayStart } } }),
+      prisma.job.count({ where: { completedAt: { gte: todayStart } } }),
+      prisma.repairRequest.count({ where: { requestStatus: "PENDING_INTAKE" } }),
+      prisma.job.findMany({
+        orderBy: { updatedAt: "desc" },
+        take: 7,
+        select: { id: true, jobNumber: true, status: true, updatedAt: true, brand: true, model: true },
+      }),
+      prisma.job.findMany({
+        where: {
+          status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+          receivedAt: { lt: threeDaysAgo },
+        },
+        select: { id: true, jobNumber: true, status: true, receivedAt: true, brand: true, model: true },
+        orderBy: { receivedAt: "asc" },
+        take: 10,
+      }),
+      prisma.job.findMany({
+        where: {
+          status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "WAITING_FOR_PARTS"] },
+          assignedToId: { not: null },
+        },
+        select: { status: true, assignedTo: { select: { id: true, name: true, role: true } } },
+      }),
+      prisma.job.count({
+        where: {
+          status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+          assignedToId: null,
+        },
+      }),
     ]);
-
-    const completedSelectedCount = completedSelected.length;
-    const completedPrevCount = completedPrev.length;
 
     const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
     const payoutOutstanding = externalCompleted
       .filter((job) => !payoutMap.get(job.id)?.externalPaid)
       .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
-    const pricedSubset = <T extends typeof completedSelected[number]>(jobs: T[]) =>
-      jobs.filter((job) => getClientBill(job) !== null);
-
-    const revenueFor = (jobs: typeof completedSelected) => pricedSubset(jobs).reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
-    const revenueSelected = revenueFor(completedSelected);
-    const revenuePrev = revenueFor(completedPrev);
-    const revenueDelta = revenueSelected - revenuePrev;
-    const marginSelected = pricedSubset(completedSelected).reduce(
-      (sum, job) => sum + ((getClientBill(job) ?? 0) - (getExternalTechBill(job) ?? 0)),
-      0,
-    );
-    const marginRate = revenueSelected > 0 ? (marginSelected / revenueSelected) * 100 : 0;
+    const revenueMtd = completedMtd
+      .filter((job) => getClientBill(job) !== null)
+      .reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
 
     const statusCount = new Map<string, number>();
     for (const item of statusGroup) {
@@ -635,168 +652,255 @@ export default async function DashboardPage({
       name: statusLabel[status],
       value: statusCount.get(status) ?? 0,
     }));
-    const deviceData = deviceGroup.map((d) => ({
-      name: deviceLabel[d.deviceType] ?? d.deviceType,
-      value: d._count.deviceType,
+
+    const awaitingApprovalCount = statusCount.get("AWAITING_APPROVAL") ?? 0;
+    const readyForPickupCount = statusCount.get("READY_FOR_PICKUP") ?? 0;
+    const totalActiveJobs = statusData
+      .filter((s) => !["COMPLETED", "CLOSED"].includes(s.key))
+      .reduce((sum, s) => sum + s.value, 0);
+
+    const overdueWithDays = overdueJobs.map((job) => ({
+      ...job,
+      ageDays: Math.floor((today.getTime() - job.receivedAt.getTime()) / (1000 * 60 * 60 * 24)),
     }));
 
-    const selectedMonthString = period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
-    const prevMonthString =
-      period === "year"
-        ? String(selectedYear - 1)
-        : monthLabel(new Date(selectedMonth.year, selectedMonth.month - 2, 1).getFullYear(), new Date(selectedMonth.year, selectedMonth.month - 2, 1).getMonth() + 1);
-    const selectedFrom = asDateInputValue(selectedRange.start);
-    const selectedTo = asDateInputValue(selectedRange.end);
-    const totalPath = inHouseCount + externalCount;
-    const externalRatio = totalPath > 0 ? (externalCount / totalPath) * 100 : 0;
-    const selectableMonths = period === "year" ? yearOptions(6) : monthOptions(18);
-    const receivedDelta = receivedSelectedCount - receivedPrevCount;
-    const completedDeltaCount = completedSelectedCount - completedPrevCount;
-    const closedDelta = closedSelectedCount - closedPrevCount;
-    const reportHref =
-      period === "year"
-        ? `/reports?period=year&year=${selectedYear}`
-        : `/reports?period=month&month=${selectedMonthString}`;
+    const techWorkloadMap = new Map<string, { name: string; role: string; count: number }>();
+    for (const job of techWorkloadJobs) {
+      if (!job.assignedTo) continue;
+      const existing = techWorkloadMap.get(job.assignedTo.id) ?? {
+        name: job.assignedTo.name,
+        role: job.assignedTo.role,
+        count: 0,
+      };
+      existing.count += 1;
+      techWorkloadMap.set(job.assignedTo.id, existing);
+    }
+    const techWorkloadRows = [...techWorkloadMap.values()].sort((a, b) => b.count - a.count).slice(0, 8);
+
+    const hasAlerts = overdueWithDays.length > 0 || awaitingApprovalCount > 0 || pendingRequests > 0 || unassignedActiveCount > 0;
+    const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
 
     return (
-      <div className="space-y-5">
-        <DashboardHero
-          title="Executive Command Center"
-          summary="Monitor operational momentum, financial health, and conversion trends here before drilling into detailed reports."
-          primaryHref="/reports"
-          primaryLabel="Open Reports"
-          secondaryHref={`/jobs?from=${selectedFrom}&to=${selectedTo}`}
-          secondaryLabel="Open Period Queue"
-        />
-
-        <StickyKpiRow
-          items={[
-            { label: "Received", value: String(receivedSelectedCount), href: `/jobs?from=${selectedFrom}&to=${selectedTo}` },
-            { label: "Completed", value: String(completedSelectedCount), href: `/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`, tone: "success" },
-            { label: "Closed", value: String(closedSelectedCount), href: `/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`, tone: "warning" },
-            { label: "Revenue", value: formatMoneyCompact(revenueSelected, currency), href: reportHref, tone: "brand" },
-          ]}
-        />
-
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
-          <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Received ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{receivedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${receivedDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {receivedDelta >= 0 ? "+" : ""}
-              {receivedDelta} vs {prevMonthString}
-            </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open intake view →</p>
-          </Link>
-          <Link href={`/jobs?status=COMPLETED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Completed ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${completedDeltaCount >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {completedDeltaCount >= 0 ? "+" : ""}
-              {completedDeltaCount} vs {prevMonthString}
-            </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open completion view →</p>
-          </Link>
-          <Link href={`/jobs?status=CLOSED&from=${selectedFrom}&to=${selectedTo}`} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Jobs Closed ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{closedSelectedCount}</p>
-            <p className={`mt-1 text-xs ${closedDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {closedDelta >= 0 ? "+" : ""}
-              {closedDelta} vs {prevMonthString}
-            </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open closure view →</p>
-          </Link>
-          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{formatMoneyCompact(revenueSelected, currency)}</p>
-            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {revenueDelta >= 0 ? "+" : "-"}
-              {formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}
-            </p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open report workspace →</p>
-          </Link>
-        </div>
-
-        <DashboardPeriodBar
-          period={period}
-          monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-          yearHref={`/dashboard?period=year&year=${new Date().getFullYear()}`}
-          selectorName={period === "year" ? "year" : "month"}
-          selectorValue={selectedMonthString}
-          selectorOptions={selectableMonths}
-          actionHref={reportHref}
-          actionLabel="Open Report Downloads"
-        />
-
-        <PersistedDisclosure
-          title="Monthly Financial Signals"
-          defaultOpen
-          storageKey="dashboard.admin.monthlySignals"
-          groupName="mobile-dashboard-sections"
-          className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
-        >
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
-              <p className="text-sm font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
+      <div className="space-y-4">
+        {/* Alert Banner */}
+        {hasAlerts ? (
+          <section className="panel-shadow overflow-hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800">Attention Required</span>
+              {awaitingApprovalCount > 0 ? (
+                <Link
+                  href="/jobs?status=AWAITING_APPROVAL"
+                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                >
+                  {awaitingApprovalCount} awaiting approval
+                </Link>
+              ) : null}
+              {overdueWithDays.length > 0 ? (
+                <span className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800">
+                  {overdueWithDays.length} overdue (3+ days)
+                </span>
+              ) : null}
+              {unassignedActiveCount > 0 ? (
+                <Link
+                  href="/jobs?assignedToId=unassigned"
+                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                >
+                  {unassignedActiveCount} unassigned
+                </Link>
+              ) : null}
+              {pendingRequests > 0 ? (
+                <Link
+                  href="/requests"
+                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                >
+                  {pendingRequests} pending requests
+                </Link>
+              ) : null}
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
-              <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-                {formatMoneyCompact(marginSelected, currency)}
-              </p>
+          </section>
+        ) : null}
+
+        {/* Live Repair Pipeline — with today's stats and quick actions in the header */}
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Live Repair Pipeline</p>
+            <div className="flex flex-1 flex-wrap items-center gap-1.5">
+              <Link
+                href={`/jobs?from=${asDateInputValue(todayStart)}&to=${asDateInputValue(today)}`}
+                className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] transition hover:border-[var(--accent)]/30"
+              >
+                <span className="text-[var(--ink-muted)]">In </span>
+                <span className="font-semibold text-[var(--ink)]">{receivedToday}</span>
+                <span className="mx-1 text-[var(--ink-muted)]">·</span>
+                <span className="text-[var(--ink-muted)]">Out </span>
+                <span className="font-semibold text-[#D4AF37]">{completedToday}</span>
+                <span className="ml-1 text-[var(--ink-muted)]">today</span>
+              </Link>
+              {overdueWithDays.length > 0 ? (
+                <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  {overdueWithDays.length} overdue
+                </span>
+              ) : null}
+              {pendingRequests > 0 ? (
+                <Link
+                  href="/requests"
+                  className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 transition hover:border-amber-300"
+                >
+                  {pendingRequests} requests
+                </Link>
+              ) : null}
+              {unassignedActiveCount > 0 ? (
+                <Link
+                  href="/jobs?assignedToId=unassigned"
+                  className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 transition hover:border-violet-300"
+                >
+                  {unassignedActiveCount} unassigned
+                </Link>
+              ) : null}
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">External Ratio</p>
-              <p className="text-sm font-semibold">{externalRatio.toFixed(0)}%</p>
+            <Link href="/jobs" className="text-[11px] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
+          </div>
+          <div className="flex snap-x overflow-x-auto [scrollbar-width:thin]">
+            {statusData
+              .filter((s) => s.key !== "CLOSED")
+              .map((s) => {
+                const isUrgent = s.key === "AWAITING_APPROVAL" && s.value > 0;
+                const isReady = s.key === "READY_FOR_PICKUP" && s.value > 0;
+                const isCompleted = s.key === "COMPLETED";
+                return (
+                  <Link
+                    key={s.key}
+                    href={`/jobs?status=${s.key}`}
+                    className={[
+                      "flex min-w-[88px] shrink-0 flex-col items-center border-r border-[var(--line)] px-3 py-3.5 text-center transition hover:bg-[var(--panel-strong)] last:border-r-0",
+                      isUrgent ? "bg-[#D4AF37]/5" : "",
+                    ].join(" ")}
+                  >
+                    <p className={`text-xl font-bold ${s.value === 0 ? "text-[var(--ink-muted)]" : isUrgent ? "text-[#D4AF37]" : isReady ? "text-[#D4AF37]" : isCompleted ? "text-emerald-600" : "text-[var(--ink)]"}`}>
+                      {s.value}
+                    </p>
+                    <p className="mt-0.5 text-[10px] leading-tight text-[var(--ink-muted)]">{s.name}</p>
+                  </Link>
+                );
+              })}
+          </div>
+        </section>
+
+        {/* Needs Attention + Technician Workload + Recent Activity */}
+        <div className="grid gap-3 lg:grid-cols-3">
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Needs Attention</p>
+              {overdueWithDays.length > 0 || unassignedActiveCount > 0 ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                  {overdueWithDays.length + unassignedActiveCount}
+                </span>
+              ) : null}
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-              <p className="text-sm font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
+            {overdueWithDays.length === 0 && unassignedActiveCount === 0 ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                <p className="text-[11px] font-medium text-emerald-700">All clear — no issues.</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {unassignedActiveCount > 0 ? (
+                  <Link
+                    href="/jobs?assignedToId=unassigned"
+                    className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 transition hover:border-violet-300"
+                  >
+                    <p className="text-xs font-semibold text-violet-800">Unassigned active jobs</p>
+                    <span className="ml-2 shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">{unassignedActiveCount}</span>
+                  </Link>
+                ) : null}
+                {overdueWithDays.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/jobs/${job.id}`}
+                    className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-amber-200"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold">{job.jobNumber}</p>
+                      <p className="truncate text-[10px] text-[var(--ink-muted)]">{job.brand} {job.model}</p>
+                    </div>
+                    <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${job.ageDays >= 8 ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
+                      {job.ageDays}d
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Technician Workload</p>
+            {techWorkloadRows.length === 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">No jobs currently assigned.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {techWorkloadRows.map((tech) => (
+                  <div key={tech.name} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold">{tech.name}</p>
+                      <p className="text-[10px] text-[var(--ink-muted)]">
+                        {tech.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}
+                      </p>
+                    </div>
+                    <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${tech.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                      {tech.count} active
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Recent Activity</p>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">No recent activity.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {recentActivity.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/jobs/${job.id}`}
+                    className="group flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/30"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold transition-colors group-hover:text-[var(--accent)]">{job.jobNumber}</p>
+                      <p className="truncate text-[10px] text-[var(--ink-muted)]">{job.brand} {job.model}</p>
+                    </div>
+                    <span className="ml-2 shrink-0 text-[10px] text-[var(--ink-muted)]">
+                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Financial Snapshot */}
+        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Financial Snapshot — MTD</p>
+            <Link href={`/reports?period=month&month=${mtdLabel}`} className="text-[11px] font-semibold text-[var(--accent)] hover:underline">Full Reports →</Link>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue MTD</p>
+              <p className="mt-0.5 text-sm font-semibold text-[var(--accent)]">{formatMoneyCompact(revenueMtd, currency)}</p>
+            </div>
+            <div className={`rounded-lg border px-3 py-2.5 ${payoutOutstanding > 0 ? "border-[#D4AF37]/30 bg-[#D4AF37]/10" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
+              <p className={`mt-0.5 text-sm font-semibold ${payoutOutstanding > 0 ? "text-[#D4AF37]" : "text-[var(--ink)]"}`}>{formatMoneyCompact(payoutOutstanding, currency)}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed MTD</p>
+              <p className="mt-0.5 text-sm font-semibold text-emerald-600">{completedMtd.length}</p>
             </div>
           </div>
-        </PersistedDisclosure>
-
-        <div className="hidden gap-4 lg:grid lg:grid-cols-4">
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-            <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
-            <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{revenueDelta >= 0 ? "+" : "-"}{formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}</p>
-          </div>
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair Margin</p>
-            <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>{formatMoneyCompact(marginSelected, currency)}</p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
-          </div>
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Ratio</p>
-            <p className="mt-1 text-2xl font-semibold">{externalRatio.toFixed(0)}%</p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalCount} external / {inHouseCount} in-house ({selectedMonthString})</p>
-          </div>
-          <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External Payouts Due</p>
-            <p className="mt-1 text-2xl font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">Unpaid completed external jobs (all months)</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm lg:hidden">
-          <p className="font-semibold text-[var(--ink)]">Quick mobile briefing</p>
-          <p className="mt-1 text-[var(--ink-muted)]">
-            For full trend charts and downloadable packs, use the Reports workspace.
-          </p>
-          <Link href={reportHref} className="mt-2 inline-block text-xs font-medium text-[var(--brand)] hover:underline">
-            Open Reports →
-          </Link>
-        </div>
-
-        <div className="hidden lg:block">
-          <ReportsCharts statusData={statusData} deviceData={deviceData} from={selectedFrom} to={selectedTo} />
-        </div>
-
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
-          Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."} Download detailed CSV packs from <Link href={reportHref} className="text-[var(--brand)] hover:underline">Reports</Link>.
-        </div>
+        </section>
       </div>
     );
   }
@@ -855,44 +959,51 @@ export default async function DashboardPage({
         />
 
         <DashboardHero
-          title="Operations Billing Monitor"
-          summary="Use this workspace to close billing loops, coordinate payout checks, and keep completion flow moving without backlog."
+          title="Ops Finance Monitor"
+          summary="Prioritize billable completions, payout exposure, and cash collection signals before drilling into Reports."
           primaryHref={reportHref}
-          primaryLabel="Open Reports"
+          primaryLabel="Open Financial Reports"
           secondaryHref="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL"
-          secondaryLabel="Open Pending Billing"
+          secondaryLabel="Billing Queue"
         />
 
         <StickyKpiRow
           items={[
             { label: "Revenue", value: formatMoneyCompact(monthRevenue, currency), href: "/reports" },
-            { label: "Completed", value: String(completedThisMonth.length), href: "/jobs?status=COMPLETED", tone: "success" },
             { label: "Pending", value: String(pendingBilling), href: "/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL", tone: "warning" },
             { label: "Payouts", value: formatMoneyCompact(payoutOutstanding, currency), href: "/reports", tone: "brand" },
+            { label: "Completed", value: String(completedThisMonth.length), href: "/jobs?status=COMPLETED", tone: "success" },
           ]}
         />
 
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
-          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold">{formatMoneyCompact(monthRevenue, currency)}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open reports →</p>
-          </Link>
-          <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedThisMonth.length}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Review completed jobs →</p>
-          </Link>
-          <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Pending billing path</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{pendingBilling}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Jobs before completion →</p>
-          </Link>
-          <Link href={reportHref} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">External payouts due</p>
-            <p className="mt-2 text-3xl font-semibold text-black">{formatMoneyCompact(payoutOutstanding, currency)}</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Track payouts →</p>
-          </Link>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Billing Queue</p>
+            <div className="mt-3 space-y-2">
+              <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[var(--accent)]/30">
+                <span>Pending billing jobs</span>
+                <span className="font-semibold">{pendingBilling}</span>
+              </Link>
+              <Link href="/jobs?status=COMPLETED" className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[var(--accent)]/30">
+                <span>Completed ({selectedPeriodLabel})</span>
+                <span className="font-semibold">{completedThisMonth.length}</span>
+              </Link>
+            </div>
+          </section>
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Cash Exposure</p>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
+                <span>Revenue ({selectedPeriodLabel})</span>
+                <span className="font-semibold">{formatMoneyCompact(monthRevenue, currency)}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
+                <span>External payouts due</span>
+                <span className="font-semibold">{formatMoneyCompact(payoutOutstanding, currency)}</span>
+              </div>
+              <Link href={reportHref} className="mt-1 inline-flex text-xs font-semibold text-[var(--accent)] hover:underline">Open detailed finance reports →</Link>
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -942,7 +1053,7 @@ export default async function DashboardPage({
           secondaryLabel="Open Approval Queue"
         />
 
-        <div className="hidden lg:block">
+        <div className="hidden 2xl:block">
           <RepairStatusReference
             title="Intake to Delivery Flow"
             guidance="Keep this sequence in view when briefing clients so status updates are clear and consistent."
@@ -953,49 +1064,45 @@ export default async function DashboardPage({
           <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Captured</p>
             <p className="mt-1 text-3xl font-semibold">{capturedThisMonth}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">New intake →</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">New intake →</p>
           </Link>
           <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open</p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--brand)]">{openFromIntake}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">In progress →</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--accent)]">{openFromIntake}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">In progress →</p>
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Approval</p>
             <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{awaitingApproval}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Follow up →</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">Follow up →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Ready</p>
             <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{readyForPickup}</p>
-            <p className="mt-1 text-[11px] font-medium text-[var(--brand)]">Pickup →</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">Pickup →</p>
           </Link>
         </div>
 
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 lg:grid-cols-2">
           <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Captured ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold sm:text-4xl">{capturedThisMonth}</p>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">Jobs registered by front desk intake</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open intake form →</p>
+            <p className="mt-2 text-3xl font-semibold">{capturedThisMonth}</p>
+            <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open intake form →</p>
           </Link>
           <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open client queue</p>
-            <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openFromIntake}</p>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">Jobs still in progress after intake</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">View open jobs →</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{openFromIntake}</p>
+            <p className="mt-2 text-xs font-medium text-[var(--accent)]">View open jobs →</p>
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting approval</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{awaitingApproval}</p>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">Follow up with clients for decisions</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open approval queue →</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{awaitingApproval}</p>
+            <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open approval queue →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Ready for pickup</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{readyForPickup}</p>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">Clients to notify for collection</p>
-            <p className="mt-3 text-xs font-medium text-[var(--brand)]">Open pickup list →</p>
+            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{readyForPickup}</p>
+            <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open pickup list →</p>
           </Link>
         </div>
       </div>
@@ -1031,30 +1138,27 @@ export default async function DashboardPage({
         ]}
       />
 
-      <div className="hidden gap-3 lg:grid lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs</p>
-          <p className="mt-2 text-3xl font-semibold sm:text-4xl">{totalJobs}</p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">All time recorded repairs</p>
-          <p className="mt-3 text-xs font-medium text-[var(--brand)]">View all jobs →</p>
+          <p className="mt-2 text-3xl font-semibold">{totalJobs}</p>
+          <p className="mt-2 text-xs font-medium text-[var(--accent)]">View all jobs →</p>
         </Link>
         <Link
           href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{openJobs}</p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">Awaiting active team action</p>
-          <p className="mt-3 text-xs font-medium text-[var(--brand)]">View open queue →</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{openJobs}</p>
+          <p className="mt-2 text-xs font-medium text-[var(--accent)]">View open queue →</p>
         </Link>
         <Link
           href="/jobs?status=COMPLETED"
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-          <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedJobs}</p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">Delivered successfully</p>
-          <p className="mt-3 text-xs font-medium text-[var(--brand)]">View completed jobs →</p>
+          <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{completedJobs}</p>
+          <p className="mt-2 text-xs font-medium text-[var(--accent)]">View completed jobs →</p>
         </Link>
       </div>
     </div>

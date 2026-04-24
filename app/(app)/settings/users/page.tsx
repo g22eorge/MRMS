@@ -415,15 +415,6 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">User Access Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
-            Manage user lifecycle, role posture, and extended permissions from one workspace.
-          </p>
-        </div>
-      </div>
-
       <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
         <div className="grid gap-2 lg:hidden">

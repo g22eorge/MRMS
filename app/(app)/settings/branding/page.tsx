@@ -233,15 +233,13 @@ export default async function BrandingPage({
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="text-sm font-semibold">Document Studio</p>
-        <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Manage logo, numbering, VAT defaults, terms, signatures, and quotation wording.
-        </p>
-        {params.profileSaved ? <p className="mt-2 text-sm text-[#D4AF37]">Branding settings saved.</p> : null}
-        {params.saved ? <p className="mt-2 text-sm text-[#D4AF37]">Logo updated successfully.</p> : null}
-        {params.error ? <p className="mt-2 text-sm text-black">{params.error.replaceAll("+", " ")}</p> : null}
-      </div>
+      {params.profileSaved || params.saved || params.error ? (
+        <div className={`panel-shadow rounded-xl border px-4 py-3 text-sm ${params.error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+          {params.profileSaved ? "Document settings saved." : null}
+          {params.saved ? "Logo updated successfully." : null}
+          {params.error ? params.error.replaceAll("+", " ") : null}
+        </div>
+      ) : null}
 
       <form action={saveBrandingAction} className="panel-shadow space-y-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 [&_*]:min-w-0">
         <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3" open>

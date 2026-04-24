@@ -12,22 +12,21 @@ export default async function NotificationSettingsPage() {
   const prefs = await getUserPreferences(user.id);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--ink)]">Notification Settings</h1>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">Choose which job events should alert you.</p>
-        {user.role === "ADMIN" || user.role === "OPS" ? (
-          <div className="mt-3">
-            <Link
-              href="/settings/notifications/outbox"
-              className="btn-premium-secondary inline-block rounded-md px-4 py-2 text-sm"
-            >
-              View Outbox
-            </Link>
+    <div className="space-y-4">
+      {user.role === "ADMIN" || user.role === "OPS" ? (
+        <div className="panel-shadow flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Message Outbox</p>
+            <p className="text-xs text-[var(--ink-muted)]">Review delivery status for WhatsApp and email notifications.</p>
           </div>
-        ) : null}
-      </div>
-
+          <Link
+            href="/settings/notifications/outbox"
+            className="btn-premium-secondary shrink-0 rounded-md px-3 py-1.5 text-xs"
+          >
+            View Outbox →
+          </Link>
+        </div>
+      ) : null}
       <NotificationPrefsForm prefs={prefs} />
     </div>
   );

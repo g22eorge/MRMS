@@ -151,7 +151,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
               onClick={() => setOpen(false)}
               className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
                 isActive(item.href)
-                  ? "text-[var(--brand)]"
+                  ? "text-[var(--accent)]"
                   : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
@@ -167,7 +167,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
               type="button"
               onClick={() => setOpen(true)}
               className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
-                anyExtraActive ? "text-[var(--brand)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                anyExtraActive ? "text-[var(--accent)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
               <span className={`transition-transform ${anyExtraActive ? "scale-110" : ""}`}>
@@ -182,7 +182,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
             onClick={() => setOpen(false)}
             className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
               isActive(ITEMS.profile.href)
-                ? "text-[var(--brand)]"
+                ? "text-[var(--accent)]"
                 : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
           >
@@ -221,8 +221,8 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
                   onClick={() => setOpen(false)}
                   className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition ${
                     isActive(item.href)
-                      ? "border-[var(--brand)]/40 bg-[var(--brand)]/10 text-[var(--brand)]"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--brand)]/30"
+                      ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[#9A7A00]"
+                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"
                   }`}
                 >
                   {item.icon}

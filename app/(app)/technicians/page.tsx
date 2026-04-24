@@ -1,7 +1,10 @@
 import Link from "next/link";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
+import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
+import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -43,25 +46,10 @@ function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
   return { label: "Normal", tone: "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]" };
 }
 
-function statusTone(status: JobStatus) {
-  if (status === "READY_FOR_PICKUP") return "bg-[#D4AF37] text-white border-[#D4AF37]";
-  // DELIVERED status is deprecated in UI; keep style fallback if historical data has it.
-  if (status === "DELIVERED") return "bg-black text-white border-black";
-  if (status === "IN_REPAIR") return "bg-black text-white border-black";
-  if (status === "AWAITING_APPROVAL") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
-  if (status === "DIAGNOSING") return "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30";
-  if (status === "CLOSED") return "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]";
-  return "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]";
-}
-
 function shortText(value: string | null, max = 78) {
   if (!value) return "No issue summary provided";
   if (value.length <= max) return value;
   return `${value.slice(0, max).trimEnd()}...`;
-}
-
-function statusLabel(status: JobStatus) {
-  return statusOptionLabel[normalizeJobStatus(status)];
 }
 
 function nextCourse(job: {
@@ -209,8 +197,6 @@ export default async function TechniciansPage({
   ];
   const controlClass =
     "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
-  const mobileControlClass =
-    "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
   const boardBrief = hasActiveFilters
     ? "Filtered queue view is active. Use the KPI cards below for live counts and clear filters to return to the full technician board."
     : "Use this board to triage work by readiness, approvals, and aging risk. KPI cards below provide live queue totals at a glance.";
@@ -222,307 +208,321 @@ export default async function TechniciansPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Board Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{boardBrief}</p>
-        </div>
-      </div>
+      {/* KPI Row */}
+      <StickyKpiRow
+        items={[
+          { label: "Assigned", value: String(assignedCount), href: "/technicians", tone: "default" },
+          { label: "Ready", value: String(readyCount), href: "/technicians?ready=1", tone: readyCount > 0 ? "brand" : "default" },
+          { label: "In Repair", value: String(inRepairCount), href: "/technicians?status=IN_REPAIR", tone: "default" },
+          { label: "Overdue", value: String(overdueCount), tone: overdueCount > 0 ? "warning" : "default" },
+        ]}
+        className="lg:grid-cols-4"
+      />
 
-      <div className="panel-shadow grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 lg:hidden">
-        <Link href="/technicians" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Assigned</p>
-          <p className="text-sm font-semibold">{assignedCount}</p>
-        </Link>
-        <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Ready</p>
-          <p className="text-sm font-semibold text-[#D4AF37]">{readyCount}</p>
-        </Link>
-        <Link href="/technicians?status=IN_REPAIR" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">In Repair</p>
-          <p className="text-sm font-semibold text-[var(--brand)]">{inRepairCount}</p>
-        </Link>
-        <Link href="/technicians?ready=1" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue</p>
-          <p className="text-sm font-semibold text-[#D4AF37]">{overdueCount}</p>
-        </Link>
-      </div>
-
-      <div className="hidden gap-3 lg:grid lg:grid-cols-4">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Assigned</p>
-          <p className="text-2xl font-semibold">{assignedCount}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Ready</p>
-          <p className="text-2xl font-semibold text-[#D4AF37]">{readyCount}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">In Repair</p>
-          <p className="text-2xl font-semibold text-[var(--brand)]">{inRepairCount}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Overdue</p>
-          <p className="text-2xl font-semibold text-[#D4AF37]">{overdueCount}</p>
-        </div>
-      </div>
-
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search job # / device and press Enter"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
-        />
-        <details className="mt-2 rounded-lg border border-[#D4AF37]/30 bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(245,245,245,0.9))] p-2">
-          <summary className="list-none">
-            <div className="flex items-center justify-between rounded-md border border-[#D4AF37]/30 bg-white/70 px-2 py-1.5">
-              <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Advanced filters</p>
-              <span className="text-xs text-[#D4AF37]">Status + Queue</span>
-            </div>
-          </summary>
-          <div className="mt-2 grid gap-2">
-            <select name="status" defaultValue={filters.status} className={mobileControlClass}>
+      {/* Filter + Quick Actions — unified panel */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <form>
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Search job # or device"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+            />
+            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50">
               <option value="">All statuses</option>
               {UI_JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{statusOptionLabel[status]}</option>
               ))}
             </select>
-            <select name="ready" defaultValue={filters.ready} className={mobileControlClass}>
-              <option value="">All queue</option>
-              <option value="1">Ready only</option>
-            </select>
+            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
+            <Link href="/technicians" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Reset</Link>
           </div>
-        </details>
-      </form>
+        </form>
 
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-4">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search job # / device"
-          className={controlClass}
-        />
-        <select name="status" defaultValue={filters.status} className={controlClass}>
-          <option value="">All statuses</option>
-            {UI_JOB_STATUSES.map((status) => (
-              <option key={status} value={status}>{statusOptionLabel[status]}</option>
-            ))}
-        </select>
-        <select name="ready" defaultValue={filters.ready} className={controlClass}>
-          <option value="">All queue</option>
-          <option value="1">Ready only</option>
-        </select>
-        <div className="flex gap-2">
-          <button className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
-          <Link href="/technicians" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Reset</Link>
-        </div>
-      </form>
-
-      {hasActiveFilters ? (
-        <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active filters</span>
-          {filters.q ? (
-            <Link href={routeWith({ q: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-              Search: {filters.q} x
-            </Link>
-          ) : null}
-          {filters.status ? (
-            <Link href={routeWith({ status: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-              Status: {statusOptionLabel[normalizeJobStatus(filters.status as JobStatus)] ?? filters.status} x
-            </Link>
-          ) : null}
-          {filters.ready === "1" ? (
-            <Link href={routeWith({ ready: "" })} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-              Ready only x
-            </Link>
-          ) : null}
-          <Link href="/technicians" className="btn-premium-secondary rounded-md px-2 py-1 text-[11px]">Clear all</Link>
-        </div>
-      ) : null}
-
-      <div className="panel-shadow grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2">
-        {quickActions.map((action) => (
-          <Link
-            key={action.label}
-            href={action.href}
-            className={`rounded-md px-3 py-1.5 text-center text-xs ${action.active ? "btn-premium text-white" : "btn-premium-secondary"}`}
-          >
-            {action.label} ({action.count})
-          </Link>
-        ))}
-      </div>
-
-      <div className="flex">
-        <Link
-          href={user.role === "TECHNICIAN_EXTERNAL" ? "/technicians/payouts" : `/jobs?status=IN_REPAIR&returnTo=${encodeURIComponent(boardReturnTo)}`}
-          className="btn-premium-secondary rounded-md px-3 py-1.5 text-xs"
-        >
-          {user.role === "TECHNICIAN_EXTERNAL" ? "My Payouts" : "Add Timeline Note"}
-        </Link>
-      </div>
-
-      <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <summary className="list-none cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-          Queue Map
-        </summary>
-        <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
-          {statusCounts.map((status) => (
-            <div key={`mobile-${status.key}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{(statusOptionLabel as Record<string, string>)[status.key] ?? status.key}</p>
-              <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 hidden gap-2 lg:grid lg:grid-cols-5">
-          {statusCounts.map((status) => (
-            <div key={status.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] text-[var(--ink-muted)]">{(statusOptionLabel as Record<string, string>)[status.key] ?? status.key}</p>
-              <p className="text-lg font-semibold text-[var(--ink)]">{status.count}</p>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4" open>
-        <summary className="mb-2 flex list-none cursor-pointer items-center justify-between gap-2">
-          <p className="text-sm font-semibold">Priority Spotlight</p>
-          <span className="text-xs text-[var(--ink-muted)]">Top actionables</span>
-        </summary>
-        {spotlightJobs.length === 0 ? (
-          <p className="text-sm text-[var(--ink-muted)]">Nothing urgent right now.</p>
-        ) : (
-          <div className="grid gap-3 lg:grid-cols-3">
-            {spotlightJobs.map((job) => (
-              <article
-                key={`spotlight-${job.id}`}
-                className="overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(160deg,#ffffff_0%,#f4f9f8_52%,#eef6f5_100%)] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.05)]"
+        {/* Quick filter chips + secondary action */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+          <div className="flex flex-wrap gap-1.5">
+            {quickActions.map((action) => (
+              <Link
+                key={action.label}
+                href={action.href}
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${action.active ? "border-[#D4AF37] bg-[#D4AF37] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="mono truncate text-[11px] font-semibold text-[var(--ink-muted)]">{job.jobNumber}</p>
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
-                    {job.priority.label}
-                  </span>
-                </div>
-                <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 86)}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>{statusLabel(job.status)}</span>
-                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
-                    Assigned: {job.assignedTo?.name ?? "Unassigned"}
-                  </span>
-                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">Age {job.ageDays}d</span>
-                </div>
-
-                {typeof job.etaProgress === "number" ? (
-                  <div className="mt-2">
-                    <div className="h-1.5 rounded-full bg-[var(--panel-strong)]">
-                      <div
-                        className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
-                        style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                <p className="mt-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11px] text-[var(--ink-muted)]">
-                  Next: {nextCourse(job)}
-                </p>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Link
-                    href={`/jobs/${job.id}?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
-                    className="btn-premium flex-1 rounded-md px-2 py-1.5 text-center text-xs text-white"
-                  >
-                    Open
-                  </Link>
-                  <Link
-                    href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
-                    className="btn-premium-secondary flex-1 rounded-md px-2 py-1.5 text-center text-xs"
-                  >
-                    Update
-                  </Link>
-                </div>
-              </article>
+                {action.label} <span className={action.active ? "opacity-80" : "text-[var(--ink-muted)]"}>({action.count})</span>
+              </Link>
             ))}
+            {hasActiveFilters ? (
+              <Link href="/technicians" className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:border-red-200 hover:text-red-600">
+                Clear filters
+              </Link>
+            ) : null}
           </div>
-        )}
-      </details>
+          <Link
+            href={user.role === "TECHNICIAN_EXTERNAL" ? "/technicians/payouts" : `/jobs?status=IN_REPAIR&returnTo=${encodeURIComponent(boardReturnTo)}`}
+            className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-xs"
+          >
+            {user.role === "TECHNICIAN_EXTERNAL" ? "My Payouts →" : "Timeline Notes →"}
+          </Link>
+        </div>
+      </section>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="mb-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Work Queue</p>
-        {sortedJobs.length === 0 ? (
-          <p className="text-sm text-[var(--ink-muted)]">No jobs in this queue. Try changing filters.</p>
-        ) : (
-          <ul className="space-y-3 text-sm">
-            <ProgressiveList initialCount={5} step={5}>
-              {sortedJobs.map((job) => (
-                <li key={job.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-                  <div className="flex items-start justify-between gap-2">
+      {/* Priority Spotlight */}
+      {spotlightJobs.length > 0 ? (
+        <section className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Priority Spotlight</p>
+            <span className="text-[11px] text-[var(--ink-muted)]">Top {spotlightJobs.length} urgent</span>
+          </div>
+          <div className="grid gap-0 lg:grid-cols-3 lg:divide-x lg:divide-[var(--line)]">
+            {spotlightJobs.map((job) => {
+              const strip = statusStripClass(job.status);
+              return (
+                <article
+                  key={`spotlight-${job.id}`}
+                  className="relative flex flex-col gap-3 border-b border-[var(--line)] bg-white p-4 last:border-b-0 lg:border-b-0"
+                >
+                  {/* Left status strip */}
+                  <span className={`absolute inset-y-0 left-0 w-[3px] ${strip}`} aria-hidden="true" />
+
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-2 pl-2">
                     <div className="min-w-0">
-                      <p className="mono truncate text-[11px] font-semibold text-[var(--ink-muted)]">{job.jobNumber}</p>
-                      <p className="truncate text-sm font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                      <span className="mono block text-[11px] font-bold text-[var(--ink-muted)]">{job.jobNumber}</span>
+                      <p className="truncate text-[15px] font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
                     </div>
-                    <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
+                    <span className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
                       {job.priority.label}
                     </span>
                   </div>
 
-                  <p className="mt-1 text-xs text-[var(--ink-muted)]">{shortText(job.issueDescription, 104)}</p>
+                  {/* Issue summary */}
+                  <p className="pl-2 text-xs leading-relaxed text-[var(--ink-muted)]">{shortText(job.issueDescription, 90)}</p>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className={`rounded-full border px-2 py-0.5 font-medium ${statusTone(job.status)}`}>
-                      {statusLabel(job.status)}
+                  {/* Meta row */}
+                  <div className="flex flex-wrap items-center gap-1.5 pl-2">
+                    <JobStatusBadge status={job.status} />
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                      <svg viewBox="0 0 12 12" fill="currentColor" className="h-2.5 w-2.5 opacity-40" aria-hidden="true"><circle cx="6" cy="4" r="2.5"/><path d="M1 10c0-2.21 2.24-4 5-4s5 1.79 5 4H1Z"/></svg>
+                      {job.assignedTo?.name ?? "Unassigned"}
                     </span>
-                    <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">
-                      Assigned: {job.assignedTo?.name ?? "Unassigned"}
+                    <span className="inline-flex items-center rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                      {job.ageDays}d old
                     </span>
-                    <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[var(--ink-muted)]">Age {job.ageDays}d</span>
-                    {job.repairTimeline ? <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[#D4AF37]">ETA {job.repairTimeline}</span> : null}
-                    {job.overdue ? <span className="rounded-full border border-black bg-black px-2 py-0.5 text-white">Overdue</span> : null}
+                    {job.repairTimeline ? (
+                      <span className="inline-flex items-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/8 px-2 py-0.5 text-[10px] font-medium text-[#9A7A00]">
+                        ETA {job.repairTimeline}
+                      </span>
+                    ) : null}
                   </div>
 
+                  {/* ETA progress bar */}
                   {typeof job.etaProgress === "number" ? (
-                    <div className="mt-2">
-                      <div className="h-1.5 rounded-full bg-[var(--panel-strong)]">
+                    <div className="pl-2">
+                      <div className="h-1 rounded-full bg-[var(--line)]">
                         <div
-className={`h-1.5 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--brand)]"}`}
+                          className={`h-1 rounded-full transition-all ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]/40"}`}
                           style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
                         />
                       </div>
-                      <p className="mt-1 text-[11px] text-[var(--ink-muted)]">Elapsed {Math.floor(job.elapsedMinutes / 60)}h of ETA budget</p>
                     </div>
                   ) : null}
 
-                  <p className="mt-2 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11px] text-[var(--ink-muted)]">
-                    Next: {nextCourse(job)}
+                  {/* Next action hint */}
+                  <p className="pl-2 text-[11px] italic text-[var(--ink-muted)]">
+                    → {nextCourse(job)}
                   </p>
 
-                  {job.timelineNote ? (
-                    <p className="mt-2 rounded-md border border-black bg-black px-2 py-1 text-[11px] text-white">Delay note: {shortText(job.timelineNote, 88)}</p>
-                  ) : null}
-
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] text-[var(--ink-muted)]">
-                      {user.role === "TECHNICIAN_EXTERNAL" ? "Use Work Order for estimate and timeline updates" : "Use Work Order for repair log and completion updates"}
-                    </p>
-                    <div className="flex gap-2">
-                      <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`} className="btn-premium-secondary rounded-md px-2.5 py-1 text-xs">
-                        Open
-                      </Link>
-                      {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
-                        <Link href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`} className="btn-premium rounded-md px-2.5 py-1 text-xs text-white">
-                          Complete
-                        </Link>
-                      ) : null}
-                    </div>
+                  {/* Actions */}
+                  <div className="mt-auto grid grid-cols-2 gap-2 pl-2">
+                    <Link
+                      href={`/jobs/${job.id}?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
+                      className="btn-premium rounded-md py-2 text-center text-xs font-semibold text-white"
+                    >
+                      Open
+                    </Link>
+                    <Link
+                      href={`/jobs/${job.id}/edit?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
+                      className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] py-2 text-center text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]/20 hover:bg-[var(--panel)]"
+                    >
+                      Update
+                    </Link>
                   </div>
-                </li>
-              ))}
-            </ProgressiveList>
-          </ul>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Work Queue */}
+      <section className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+          <p className="text-xs text-[var(--ink-muted)]">
+            <span className="font-bold text-[var(--ink)]">{sortedJobs.length}</span> jobs
+          </p>
+          <Link href="/jobs" className="text-[11px] font-semibold text-[var(--accent)] hover:underline">All Jobs →</Link>
+        </div>
+
+        {sortedJobs.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-[var(--ink-muted)]">
+            No jobs in this queue. Try changing filters.
+          </div>
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="xl:hidden">
+              <ProgressiveList initialCount={6} step={5}>
+                {sortedJobs.map((job) => {
+                  const strip = statusStripClass(job.status);
+                  return (
+                    <div
+                      key={job.id}
+                      className="relative border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[var(--panel-strong)]/30"
+                    >
+                      <span className={`absolute inset-y-0 left-0 w-[3px] rounded-r ${strip}`} aria-hidden="true" />
+                      <div className="flex items-start justify-between gap-3 pl-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="mono text-[13px] font-bold text-[var(--ink)]">{job.jobNumber}</span>
+                            <JobStatusBadge status={job.status} />
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
+                              {job.priority.label}
+                            </span>
+                          </div>
+                          <p className="font-medium text-[var(--ink)]">{job.brand} {job.model}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--ink-muted)]">
+                            <span>{job.assignedTo?.name ?? "Unassigned"}</span>
+                            <span>{formatEATDate(job.receivedAt)}</span>
+                            <span>{job.ageDays}d old</span>
+                            {job.repairTimeline ? <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[#D4AF37]">ETA {job.repairTimeline}</span> : null}
+                            {job.overdue ? <span className="rounded-full bg-black px-2 py-0.5 text-white text-[10px]">Overdue</span> : null}
+                          </div>
+                          {typeof job.etaProgress === "number" ? (
+                            <div className="h-1 rounded-full bg-[var(--line)]">
+                              <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
+                            </div>
+                          ) : null}
+                          {job.timelineNote ? (
+                            <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+                              Delay: {shortText(job.timelineNote, 88)}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+                          <Link
+                            href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6 hover:text-[var(--accent)]"
+                          >
+                            Open
+                          </Link>
+                          {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
+                            <Link
+                              href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
+                              className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white"
+                            >
+                              Complete
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </ProgressiveList>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto xl:block">
+              <table className="w-full min-w-[800px] border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
+                    <th className="w-[3px] p-0" aria-hidden="true" />
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Job #</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Device</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Status</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Assigned</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Received</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Age / ETA</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Priority</th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--line)]">
+                    {sortedJobs.map((job) => {
+                      const strip = statusStripClass(job.status);
+                      return (
+                        <tr key={job.id} className="group transition-colors hover:bg-[var(--panel-strong)]/40">
+                          <td className="p-0 w-[3px]" aria-hidden="true">
+                            <div className={`h-full min-h-[3rem] w-[3px] ${strip}`} />
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <Link
+                              href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
+                              className="mono block font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]"
+                            >
+                              {job.jobNumber}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <JobStatusBadge status={job.status} />
+                          </td>
+                          <td className="px-4 py-3 align-middle text-[var(--ink-muted)]">
+                            {job.assignedTo?.name ?? "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 align-middle text-[var(--ink-muted)]">
+                            {formatEATDate(job.receivedAt)}
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <p className="text-[var(--ink-muted)]">{job.ageDays}d old</p>
+                            {job.repairTimeline ? (
+                              <p className="text-[11px] text-[#D4AF37]">ETA {job.repairTimeline}</p>
+                            ) : null}
+                            {typeof job.etaProgress === "number" ? (
+                              <div className="mt-1 h-1 w-20 rounded-full bg-[var(--line)]">
+                                <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
+                              {job.priority.label}
+                            </span>
+                            {job.overdue ? (
+                              <span className="ml-1 inline-flex rounded-full bg-black px-2 py-0.5 text-[10px] font-semibold text-white">Overdue</span>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
+                                className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                              >
+                                Open
+                              </Link>
+                              {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
+                                <Link
+                                  href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
+                                  className="btn-premium whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
+                                >
+                                  Complete
+                                </Link>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
-      </div>
+      </section>
     </div>
   );
 }

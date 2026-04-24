@@ -663,12 +663,15 @@ export function IntakeClient({
   return (
     <>
       {/* brief */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] mb-5">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Intake Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{brief}</p>
-        </div>
-      </div>
+      <details className="panel-shadow mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open={pendingCount > 0}>
+        <summary className="list-none">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>
+            <span className="text-[11px] text-[var(--ink-muted)]">Expand</span>
+          </div>
+        </summary>
+        <p className="mt-2 border-t border-[var(--line)] pt-2 text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere]">{brief}</p>
+      </details>
 
       {/* filter tabs */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -713,7 +716,7 @@ export function IntakeClient({
       ) : (
         <>
           {/* ── MOBILE CARD VIEW ── */}
-          <div className="space-y-3 lg:hidden">
+          <div className="space-y-3 xl:hidden">
             {filtered.map((req) => (
               <MobileCard
                 key={req.id}
@@ -735,7 +738,7 @@ export function IntakeClient({
           </div>
 
           {/* ── DESKTOP TABLE VIEW ── */}
-          <div className="hidden lg:block rounded-xl border border-[var(--line)] bg-white overflow-hidden shadow-sm">
+          <div className="hidden xl:block rounded-xl border border-[var(--line)] bg-white overflow-hidden shadow-sm">
             <table className="min-w-full divide-y divide-[var(--line)]">
               <thead className="bg-[var(--panel)]">
                 <tr>

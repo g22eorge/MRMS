@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
 import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
+import { RevenueLineChart, TechnicianBarChart } from "@/components/reports/ReportsCharts";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
@@ -275,6 +276,93 @@ export default async function ReportsPage({
     },
   });
 
+  const [completedForRevTrend, techPerfJobsRaw, approvalDelayJobs] = await Promise.all([
+    prisma.job.findMany({
+      where: {
+        status: "COMPLETED",
+        completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end },
+      },
+      select: { clientBill: true, externalTechBill: true, completedAt: true },
+    }),
+    prisma.job.findMany({
+      where: {
+        receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
+        assignedToId: { not: null },
+      },
+      select: {
+        status: true,
+        completedAt: true,
+        receivedAt: true,
+        clientBill: true,
+        externalTechBill: true,
+        assignedTo: { select: { id: true, name: true, role: true } },
+      },
+    }),
+    prisma.job.findMany({
+      where: { status: "AWAITING_APPROVAL" },
+      select: { id: true, jobNumber: true, receivedAt: true, updatedAt: true, brand: true, model: true },
+      orderBy: { updatedAt: "asc" },
+      take: 12,
+    }),
+  ]);
+
+  const nowTs = new Date();
+
+  const revenueTrend = trendMonths.map((m) => {
+    const monthJobs = completedForRevTrend.filter(
+      (j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end,
+    );
+    const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
+    const cost = monthJobs.reduce((sum, j) => sum + (getExternalTechBill(j) ?? 0), 0);
+    return { key: m.key, revenue, margin: revenue - cost };
+  });
+
+  const techPerfMap = new Map<
+    string,
+    { name: string; role: string; total: number; completed: number; open: number; turnaroundSum: number; turnaroundCount: number; revenue: number }
+  >();
+  for (const job of techPerfJobsRaw) {
+    if (!job.assignedTo) continue;
+    const existing = techPerfMap.get(job.assignedTo.id) ?? {
+      name: job.assignedTo.name,
+      role: job.assignedTo.role,
+      total: 0,
+      completed: 0,
+      open: 0,
+      turnaroundSum: 0,
+      turnaroundCount: 0,
+      revenue: 0,
+    };
+    existing.total += 1;
+    if (
+      ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+    ) {
+      existing.open += 1;
+    }
+    if (job.status === "COMPLETED") {
+      existing.completed += 1;
+      if (job.completedAt) {
+        existing.turnaroundSum += (job.completedAt.getTime() - job.receivedAt.getTime()) / 36e5;
+        existing.turnaroundCount += 1;
+      }
+      const bill = getClientBill(job);
+      if (typeof bill === "number") existing.revenue += bill;
+    }
+    techPerfMap.set(job.assignedTo.id, existing);
+  }
+  const techPerf = [...techPerfMap.values()]
+    .map((t) => ({
+      ...t,
+      completionRate: t.total > 0 ? (t.completed / t.total) * 100 : 0,
+      avgTurnaround: t.turnaroundCount > 0 ? t.turnaroundSum / t.turnaroundCount : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  const approvalDelays = approvalDelayJobs.map((job) => ({
+    ...job,
+    daysPending: Math.floor((nowTs.getTime() - job.updatedAt.getTime()) / (1000 * 60 * 60 * 24)),
+  }));
+
   const trendByDevice = new Map<string, Map<string, number>>();
   for (const job of trendJobs) {
     const device = deviceLabel[job.deviceType] ?? job.deviceType;
@@ -446,23 +534,33 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Finance Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{financeBrief}</p>
+      {/* ── Period + selector bar ── */}
+      <div className="panel-shadow flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        {/* Gold accent bar */}
+        <div className="h-7 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--accent)] to-[var(--accent)]/30" />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <p className="text-sm font-bold text-[var(--ink)]">Financial Reports</p>
+          <p className="hidden text-[12px] text-[var(--ink-muted)] md:block">{financeBrief.split(".")[0]}.</p>
         </div>
-      </div>
-      <div className="flex flex-wrap items-end justify-end gap-3">
-        <div className="flex items-center gap-2">
+        {/* Period toggle */}
+        <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5">
           <Link
             href={`/reports?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-            className={`rounded-md px-2 py-1 text-xs ${period === "month" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              period === "month"
+                ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            }`}
           >
             Monthly
           </Link>
           <Link
             href={`/reports?period=year&year=${new Date().getFullYear()}`}
-            className={`rounded-md px-2 py-1 text-xs ${period === "year" ? "btn-premium text-white" : "btn-premium-secondary"}`}
+            className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              period === "year"
+                ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            }`}
           >
             Annual
           </Link>
@@ -473,7 +571,7 @@ export default async function ReportsPage({
           options={selectableMonths}
           hiddenFields={{ period }}
           className="flex items-center"
-          selectClassName="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-sm"
+          selectClassName="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[var(--accent)]/50"
         />
       </div>
 
@@ -486,196 +584,166 @@ export default async function ReportsPage({
         ]}
       />
 
-      <PersistedDisclosure
-        title="Report Export Center"
-        defaultOpen
-        storageKey="reports.exportCenter"
-        groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
-      >
-        <div className="grid gap-2">
-          {exportItems.map((item) => (
-            <a
-              key={item.title}
-              href={item.href}
-              className="rounded-lg border border-[var(--line)] bg-white p-3"
-            >
-              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
-            </a>
+      {/* Business Signals */}
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Business Signals — {selectedMonthString}</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Revenue Δ</p>
+            <p className={`mt-0.5 text-sm font-semibold ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+              {revenueDelta >= 0 ? "+" : ""}{formatMoneyCompact(Math.abs(revenueDelta), currency)}
+            </p>
+            <p className="text-[9px] text-[var(--ink-muted)]">vs {prevMonthString}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Avg Repair Time</p>
+            <p className="mt-0.5 text-sm font-semibold">{averageRepairTimeHours.toFixed(1)}h</p>
+            <p className="text-[9px] text-[var(--ink-muted)]">all completed</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">External Ratio</p>
+            <p className="mt-0.5 text-sm font-semibold">{externalRatio.toFixed(0)}%</p>
+            <p className="text-[9px] text-[var(--ink-muted)]">{externalCount} ext / {inHouseCount} in-house</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Momentum</p>
+            <p className={`mt-0.5 text-sm font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+              {completionMomentum >= 0 ? "+" : ""}{completionMomentum}
+            </p>
+            <p className="text-[9px] text-[var(--ink-muted)]">completed vs prev period</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Queue Pressure</p>
+            <p className="mt-0.5 text-sm font-semibold text-[#D4AF37]">{queuePressure}</p>
+            <p className="text-[9px] text-[var(--ink-muted)]">diagn + approval + repair</p>
+          </div>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Aging Risk</p>
+            <p className={`mt-0.5 text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>
+              {delayedJobs.length}
+            </p>
+            <p className="text-[9px] text-[var(--ink-muted)]">open jobs &gt;3 days</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Revenue Trend */}
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">6-Month Revenue Trend</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+              Revenue & Margin — {trendMonths[0]?.key} to {trendMonths[trendMonths.length - 1]?.key}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-4 rounded-full bg-[#D4AF37]" />
+              Revenue
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+              Margin
+            </span>
+          </div>
+        </div>
+        <RevenueLineChart data={revenueTrend} />
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {revenueTrend.map((m) => (
+            <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+              <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+              <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+            </div>
           ))}
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Annual packages</p>
-            <div className="mt-2 grid gap-2">
-              {annualExportPackages.map((item) => (
-                <Link key={item.title} href={item.href} className="rounded-md border border-[var(--line)] bg-white p-2">
-                  <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
-                  <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
-                </Link>
+        </div>
+      </section>
+
+
+      {/* Technician Performance */}
+      {techPerf.length > 0 ? (
+        <>
+          <PersistedDisclosure
+            title="Technician Performance"
+            storageKey="reports.techPerf"
+            groupName="reports-mobile-sections"
+            className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
+          >
+            <div className="space-y-2">
+              {techPerf.map((tech) => (
+                <div key={tech.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{tech.name}</p>
+                      <p className="text-[10px] text-[var(--ink-muted)]">{tech.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tech.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                      {tech.completionRate.toFixed(0)}% done
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                    <div><p className="text-[var(--ink-muted)]">Assigned</p><p className="font-semibold">{tech.total}</p></div>
+                    <div><p className="text-[var(--ink-muted)]">Completed</p><p className="font-semibold text-[#D4AF37]">{tech.completed}</p></div>
+                    <div><p className="text-[var(--ink-muted)]">Avg Time</p><p className="font-semibold">{tech.avgTurnaround.toFixed(0)}h</p></div>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
-        </div>
-      </PersistedDisclosure>
+          </PersistedDisclosure>
 
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Downloads</p>
-            <p className="text-sm font-semibold text-[var(--ink)]">Report Export Center</p>
+          <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Technician Performance</p>
+                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{selectedMonthString} — Throughput, Completion & Revenue</p>
+              </div>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <TechnicianBarChart
+                data={techPerf.map((t) => ({ name: t.name, completed: t.completed, total: t.total }))}
+              />
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] text-sm">
+                  <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                    <tr>
+                      <th className="px-2 py-2">Technician</th>
+                      <th className="px-2 py-2">Type</th>
+                      <th className="px-2 py-2">Assigned</th>
+                      <th className="px-2 py-2">Completed</th>
+                      <th className="px-2 py-2">Open</th>
+                      <th className="px-2 py-2">Rate</th>
+                      <th className="px-2 py-2">Avg Time</th>
+                      <th className="px-2 py-2">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {techPerf.map((tech) => (
+                      <tr key={tech.name} className="border-t border-[var(--line)] hover:bg-[var(--panel-strong)]/50">
+                        <td className="px-2 py-2 font-medium">{tech.name}</td>
+                        <td className="px-2 py-2">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tech.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                            {tech.role === "TECHNICIAN_EXTERNAL" ? "Ext" : "Int"}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2">{tech.total}</td>
+                        <td className="px-2 py-2 font-medium text-[#D4AF37]">{tech.completed}</td>
+                        <td className="px-2 py-2">{tech.open}</td>
+                        <td className="px-2 py-2">
+                          <span className={`font-semibold ${tech.completionRate >= 70 ? "text-emerald-600" : tech.completionRate >= 40 ? "text-amber-600" : "text-black"}`}>
+                            {tech.completionRate.toFixed(0)}%
+                          </span>
+                        </td>
+                        <td className="px-2 py-2">{tech.avgTurnaround > 0 ? `${tech.avgTurnaround.toFixed(0)}h` : "—"}</td>
+                        <td className="px-2 py-2">{formatMoneyCompact(tech.revenue, currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-xs text-[var(--ink-muted)]">
-            CSV
-          </span>
-        </div>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {exportItems.map((item) => (
-            <a
-              key={item.title}
-              href={item.href}
-              className="group rounded-lg border border-[var(--line)] bg-white p-3 transition hover:-translate-y-[1px] hover:border-[var(--brand)]"
-            >
-              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
-              <p className="mt-2 text-xs font-medium text-[var(--brand)] group-hover:underline">Download CSV</p>
-            </a>
-          ))}
-        </div>
-        <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Annual packages</p>
-          <div className="mt-2 grid gap-2 md:grid-cols-2">
-            {annualExportPackages.map((item) => (
-              <Link key={item.title} href={item.href} className="rounded-md border border-[var(--line)] bg-white p-3">
-                <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
-                <p className="mt-2 text-xs font-medium text-[var(--brand)]">Open package view →</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <PersistedDisclosure
-        title="Performance Metrics"
-        defaultOpen
-        storageKey="reports.performanceMetrics"
-        groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
-      >
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue</p>
-            <p className="text-sm font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Margin</p>
-            <p className={`text-sm font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {formatMoneyCompact(marginSelected, currency)}
-            </p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed</p>
-            <p className="text-sm font-semibold">{completedSelected.length}</p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Avg Repair Time</p>
-            <p className="text-sm font-semibold">{averageRepairTimeHours.toFixed(1)}h</p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">External Ratio</p>
-            <p className="text-sm font-semibold">{externalRatio.toFixed(0)}%</p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-            <p className="text-sm font-semibold text-[#D4AF37]">{formatMoneyCompact(externalPayoutOutstandingTotal, currency)}</p>
-          </div>
-        </div>
-      </PersistedDisclosure>
-
-      <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue ({selectedMonthString})</p>
-          <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(revenueSelected, currency)}</p>
-          <p className={`mt-1 text-xs ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-            {revenueDelta >= 0 ? "+" : "-"}{formatMoneyCompact(Math.abs(revenueDelta), currency)} vs {prevMonthString}
-          </p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Repair margin ({selectedMonthString})</p>
-          <p className={`mt-1 text-2xl font-semibold ${marginSelected >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-            {formatMoneyCompact(marginSelected, currency)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">Margin rate {marginRate.toFixed(1)}%</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed jobs</p>
-          <p className="mt-1 text-2xl font-semibold">{completedSelected.length}</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">In selected month</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Avg repair time</p>
-          <p className="mt-1 text-2xl font-semibold">{averageRepairTimeHours.toFixed(1)}h</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">Across all completed jobs</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External ratio</p>
-          <p className="mt-1 text-2xl font-semibold">{externalRatio.toFixed(0)}%</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalCount} external / {inHouseCount} in-house ({selectedMonthString})</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">External payouts due</p>
-          <p className="mt-1 text-2xl font-semibold">{formatMoneyCompact(externalPayoutOutstandingTotal, currency)}</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">{externalPayoutOutstandingCount} completed external jobs unpaid (all months)</p>
-        </div>
-      </div>
-
-      <PersistedDisclosure
-        title="Signal Tiles"
-        storageKey="reports.signalTiles"
-        groupName="reports-mobile-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
-      >
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completion Momentum</p>
-            <p className={`text-sm font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-              {completionMomentum >= 0 ? "+" : ""}
-              {completionMomentum}
-            </p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Queue Pressure</p>
-            <p className="text-sm font-semibold text-[#D4AF37]">{queuePressure}</p>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Aging Risk</p>
-            <p className={`text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>{delayedJobs.length}</p>
-          </div>
-        </div>
-      </PersistedDisclosure>
-
-      <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completion Momentum</p>
-          <p className={`mt-2 text-3xl font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
-            {completionMomentum >= 0 ? "+" : ""}
-            {completionMomentum}
-          </p>
-          <p className="mt-2 text-xs text-[var(--ink-muted)]">Completed jobs vs previous month</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Queue Pressure</p>
-          <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{queuePressure}</p>
-          <p className="mt-2 text-xs text-[var(--ink-muted)]">Diagnosing + awaiting approval + in repair</p>
-        </div>
-        <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Aging Risk</p>
-          <p className={`mt-2 text-3xl font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>
-            {delayedJobs.length}
-          </p>
-          <p className="mt-2 text-xs text-[var(--ink-muted)]">Open jobs older than 3 days</p>
-        </div>
-      </div>
+        </>
+      ) : null}
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="panel-shadow rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 lg:col-span-2">
@@ -886,13 +954,119 @@ export default async function ReportsPage({
         </div>
       </div>
 
+      {/* Approval Delays */}
+      {approvalDelays.length > 0 ? (
+        <>
+          <PersistedDisclosure
+            title="Approval Delays"
+            storageKey="reports.approvalDelays"
+            groupName="reports-mobile-sections"
+            className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
+          >
+            <div className="space-y-2">
+              {approvalDelays.map((job) => (
+                <Link key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[#D4AF37]/30">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{job.jobNumber}</p>
+                    <p className="truncate text-xs text-[var(--ink-muted)]">{job.brand} {job.model}</p>
+                  </div>
+                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${job.daysPending >= 3 ? "bg-amber-50 text-amber-700" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                    {job.daysPending}d waiting
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </PersistedDisclosure>
+
+          <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Approval Delays</p>
+                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">Jobs currently awaiting client approval</p>
+              </div>
+              <Link href="/jobs?status=AWAITING_APPROVAL" className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]">
+                View all →
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  <tr>
+                    <th className="px-2 py-2">Job #</th>
+                    <th className="px-2 py-2">Device</th>
+                    <th className="px-2 py-2">Received</th>
+                    <th className="px-2 py-2">Last Updated</th>
+                    <th className="px-2 py-2">Days Waiting</th>
+                    <th className="px-2 py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approvalDelays.map((job) => (
+                    <tr key={job.id} className="border-t border-[var(--line)] hover:bg-[var(--panel-strong)]/50">
+                      <td className="px-2 py-2 font-medium">{job.jobNumber}</td>
+                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.brand} {job.model}</td>
+                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</td>
+                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.updatedAt.toLocaleDateString()}</td>
+                      <td className="px-2 py-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${job.daysPending >= 3 ? "bg-amber-50 text-amber-700" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                          {job.daysPending}d
+                        </span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Link href={`/jobs/${job.id}`} className="font-medium text-[var(--accent)] hover:underline">Open →</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {/* Export Center */}
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Export Center</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">Download CSV reports</p>
+          </div>
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-xs text-[var(--ink-muted)]">CSV</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {exportItems.map((item) => (
+            <a
+              key={item.title}
+              href={item.href}
+              className="group rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:-translate-y-[1px] hover:border-[var(--accent)]/40"
+            >
+              <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+              <p className="mt-2 text-xs font-medium text-[var(--accent)] group-hover:underline">Download CSV →</p>
+            </a>
+          ))}
+        </div>
+        <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Annual Packages</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {annualExportPackages.map((item) => (
+              <Link key={item.title} href={item.href} className="group rounded-md border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)]/30">
+                <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
+                <p className="mt-2 text-xs font-medium text-[var(--accent)] group-hover:underline">Open package view →</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--ink-muted)]">
         Insight: {marginSelected >= 0 ? "Margins are positive for the selected month." : "Margins are negative for the selected month."}
         {user.role === "ADMIN" ? (
           <>
             {" "}Use
             {" "}
-            <Link href={`/api/reports/export?type=revenue-variance&month=${monthlyExportMonth}`} className="text-[var(--brand)] hover:underline">
+            <Link href={`/api/reports/export?type=revenue-variance&month=${monthlyExportMonth}`} className="text-[var(--accent)] hover:underline">
               Repair Margin CSV
             </Link>
             {" "}

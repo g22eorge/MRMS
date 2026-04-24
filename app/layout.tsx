@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Manrope, Sora } from "next/font/google";
 import { Toaster } from "sonner";
 
 import "./globals.css";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-ui",
+  display: "swap",
+});
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://mrms.eagleinfosolutions.com";
 const ogImage = `${siteUrl}/eagle-info-logo.png`;
@@ -67,7 +80,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         {children}
         <Toaster richColors />

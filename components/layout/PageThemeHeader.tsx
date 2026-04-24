@@ -41,8 +41,11 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/technicians") return { title: "Technician Portal", description: "Prioritized queue for assigned repair work." };
   if (pathname === "/technicians/payouts") return { title: "Technician Payouts", description: "Track paid and unpaid fees across your external assignments." };
   if (pathname === "/settings/users") return { title: "User Management", description: "Create users, assign roles, and manage active access." };
-  if (pathname === "/settings/branding") return { title: "Branding", description: "Manage invoice logo and visual branding assets." };
+  if (pathname === "/settings/branding") return { title: "Branding", description: "Manage invoice logo, company details, VAT defaults, and document colours." };
   if (pathname === "/settings/profile") return { title: "Profile", description: "Update your personal account details and contact info." };
+  if (pathname === "/settings/notifications") return { title: "Notifications", description: "Choose which job events trigger alerts for your account." };
+  if (pathname === "/settings/notifications/outbox") return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
+  if (pathname === "/requests") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
   return { title: "Workspace" };
 }
 
@@ -67,6 +70,15 @@ function roleTag(role: Role) {
   if (role === "OPS") return "Operations";
   if (role === "INTAKE") return "Intake";
   return "Operations";
+}
+
+function roleTagStyle(role: Role) {
+  if (role === "ADMIN") return "bg-[var(--ink)] text-white";
+  if (role === "OPS") return "bg-[var(--accent)]/15 text-[#9A7A00] border border-[var(--accent)]/30";
+  if (role === "TECHNICIAN_INTERNAL") return "bg-blue-50 text-blue-700 border border-blue-200";
+  if (role === "TECHNICIAN_EXTERNAL") return "bg-purple-50 text-purple-700 border border-purple-200";
+  if (role === "INTAKE") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
 }
 
 export function PageThemeHeader({ role }: { role: Role }) {
@@ -103,18 +115,29 @@ export function PageThemeHeader({ role }: { role: Role }) {
   const subtitle = resolvedSubtitle?.path === pathname ? resolvedSubtitle.text : meta.subtitle;
 
   return (
-    <section className="panel-shadow relative rounded-2xl border border-[var(--line)] bg-[linear-gradient(120deg,#000000_0%,#1a1a1a_40%,#D4AF37_100%)] p-4 text-white md:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 panel-shadow">
+      {/* Gold left accent bar */}
+      <div className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--accent)] to-[var(--accent)]/40" />
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">{roleTag(role)} Workspace</p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{meta.title}</h1>
-          {subtitle ? <p className="mt-1 truncate text-xs text-white/75">{subtitle}</p> : null}
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h1 className="text-base font-bold tracking-tight text-[var(--ink)] md:text-lg">{meta.title}</h1>
+            {subtitle ? (
+              <span className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[11px] font-mono font-medium text-[var(--ink-muted)]">
+                {subtitle}
+              </span>
+            ) : null}
+          </div>
+          {meta.description ? (
+            <p className="mt-0.5 text-[12px] leading-snug text-[var(--ink-muted)]">{meta.description}</p>
+          ) : null}
         </div>
-        <span className="rounded-full border border-white/25 bg-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85">
-          Live
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${roleTagStyle(role)}`}>
+          {roleTag(role)}
         </span>
       </div>
-      {meta.description ? <p className="mt-2 max-w-3xl text-sm text-white/85">{meta.description}</p> : null}
     </section>
   );
 }

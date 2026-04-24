@@ -211,7 +211,7 @@ export default async function ClientDetailPage({
           </div>
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Open jobs</p>
-            <p className="text-xl font-semibold text-[var(--brand)]">{openJobs}</p>
+            <p className="text-xl font-semibold text-[var(--accent)]">{openJobs}</p>
           </div>
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completed</p>
