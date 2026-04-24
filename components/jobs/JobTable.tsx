@@ -162,14 +162,14 @@ export function JobTable({
     <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
 
       {/* ── Header bar ── */}
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
-        <p className="text-xs text-[var(--ink-muted)]">
+      <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
+        <p className="text-[11px] text-[var(--ink-muted)]">
           {hasPagination ? (
             <>
               <span className="font-bold text-[var(--ink)]">{pageStart}–{pageEnd}</span>
               {" of "}
               <span className="font-bold text-[var(--ink)]">{total}</span>
-              {" jobs"}
+              <span className="hidden sm:inline"> jobs</span>
             </>
           ) : (
             <><span className="font-bold text-[var(--ink)]">{jobs.length}</span> jobs</>
@@ -224,19 +224,19 @@ export function JobTable({
                 />
 
                 {/* Card content — pointer-events-none so taps fall through to link */}
-                <div className="pointer-events-none relative z-10 px-4 py-3.5 pl-6">
+                <div className="pointer-events-none relative z-10 px-4 py-3 pl-6">
 
-                  {/* Row 1: Job # (muted reference) + secondary actions */}
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ink-muted)]/70">
+                  {/* Row 1: Job # (muted reference) + secondary actions / tap cue */}
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="mono text-[10px] font-medium tracking-wide text-[var(--ink-muted)]/50">
                       {job.jobNumber}
                     </span>
                     {(canEditPage || (canDelete && deleteAction)) ? (
-                      <div className="pointer-events-auto flex items-center gap-2">
+                      <div className="pointer-events-auto flex items-center gap-3">
                         {canEditPage ? (
                           <Link
                             href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                            className="text-[11px] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+                            className="text-[10px] font-medium uppercase tracking-wide text-[var(--ink-muted)]/60 transition hover:text-[var(--ink-muted)]"
                           >
                             Edit
                           </Link>
@@ -244,22 +244,27 @@ export function JobTable({
                         {canDelete && deleteAction ? (
                           <form action={deleteAction}>
                             <input type="hidden" name="id" value={job.id} />
-                            <button className="text-[11px] font-medium text-red-400 transition hover:text-red-600">
-                              Delete
+                            <button className="text-[10px] font-medium uppercase tracking-wide text-[var(--ink-muted)]/50 transition hover:text-red-500">
+                              ✕
                             </button>
                           </form>
                         ) : null}
                       </div>
-                    ) : null}
+                    ) : (
+                      /* Tap affordance */
+                      <svg viewBox="0 0 6 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-1.5 shrink-0 text-[var(--ink-muted)]/25" aria-hidden="true">
+                        <path d="M1 1l4 4-4 4"/>
+                      </svg>
+                    )}
                   </div>
 
                   {/* Row 2: Device — the HERO element */}
-                  <p className="mb-2 truncate text-[15px] font-bold leading-tight text-[var(--ink)]">
+                  <p className="mb-1.5 truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">
                     {job.brand} {job.model}
                   </p>
 
                   {/* Row 3: Status + device type chip + flag */}
-                  <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
                     <JobStatusBadge status={job.status} />
                     <span className="inline-flex items-center gap-1 rounded-md bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
                       <DeviceIcon type={job.deviceType} />
@@ -276,7 +281,7 @@ export function JobTable({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1 text-[11px] text-[var(--ink-muted)]">
                       {canSeeClient && job.clientName ? (
-                        <span className="max-w-[9rem] truncate">{job.clientName}</span>
+                        <span className="min-w-0 truncate">{job.clientName}</span>
                       ) : null}
                       {canSeeClient && job.clientName ? (
                         <span className="shrink-0 opacity-40">·</span>
@@ -285,17 +290,19 @@ export function JobTable({
                       {canSeeAssignment && job.assignedTo ? (
                         <>
                           <span className="shrink-0 opacity-40">·</span>
-                          <span className="max-w-[6rem] truncate">{job.assignedTo}</span>
+                          <span className="max-w-[5rem] truncate">{job.assignedTo}</span>
                         </>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {costValue ? (
-                        <span className="text-[13px] font-bold text-[var(--ink)]">{costValue}</span>
-                      ) : null}
-                      {pricingBadge}
-                    </div>
+                    {costValue ? (
+                      <span className="shrink-0 text-[13px] font-bold text-[var(--ink)]">{costValue}</span>
+                    ) : null}
                   </div>
+
+                  {/* Row 5: Pricing badge — own line so it never crushes the footer */}
+                  {pricingBadge ? (
+                    <div className="mt-1.5">{pricingBadge}</div>
+                  ) : null}
 
                 </div>
               </div>
