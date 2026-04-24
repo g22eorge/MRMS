@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Prisma, JobStatus } from "@prisma/client";
 
 import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -27,11 +28,11 @@ export default async function PayoutFollowupsPage({
   const pageSize = 25;
   const currency = getAppCurrency();
 
-  const where = {
+  const where: Prisma.JobWhereInput = {
     repairPath: "EXTERNAL" as const,
     clientBill: { not: null },
     externalPaid: false,
-    status: { in: ["DELIVERED", "COMPLETED"] as const },
+    status: { in: ["DELIVERED", "COMPLETED"] as JobStatus[] },
     ...(filters.q
       ? {
           OR: [
