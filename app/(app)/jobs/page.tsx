@@ -353,10 +353,10 @@ export default async function JobsPage({
 
       {/* ── Filter panel ── */}
       <form className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        {/* Primary filter row */}
-        <div className="flex flex-wrap gap-2 p-3">
-          {/* Search */}
-          <div className="relative min-w-0 flex-1">
+        {/* Primary filter: 2-row on mobile, 1-row on sm+ */}
+        <div className="space-y-2 p-3">
+          {/* Search — full width on mobile */}
+          <div className="relative min-w-0">
             <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true">
               <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
             </svg>
@@ -369,23 +369,25 @@ export default async function JobsPage({
               className={`${ctrlClass} w-full pl-9`}
             />
           </div>
-          {/* Status */}
-          <select name="status" defaultValue={filters.status} className={`${ctrlClass} min-w-[140px]`}>
-            <option value="">All statuses</option>
-            {UI_JOB_STATUSES.map((s) => (
-              <option key={s} value={s}>{statusOptionLabel[s]}</option>
-            ))}
-          </select>
-          {/* Apply */}
-          <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-sm font-medium">
-            Apply
-          </button>
-          {/* Reset */}
-          {hasAnyFilter ? (
-            <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-center text-sm font-medium">
-              Reset
-            </Link>
-          ) : null}
+          {/* Status + actions row */}
+          <div className="flex items-center gap-2">
+            <select name="status" defaultValue={filters.status} className={`${ctrlClass} min-w-0 flex-1`}>
+              <option value="">All statuses</option>
+              {UI_JOB_STATUSES.map((s) => (
+                <option key={s} value={s}>{statusOptionLabel[s]}</option>
+              ))}
+            </select>
+            {/* Apply */}
+            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-sm font-medium">
+              Apply
+            </button>
+            {/* Reset */}
+            {hasAnyFilter ? (
+              <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-center text-sm font-medium">
+                Reset
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {/* Pricing quick pills (for approvers) */}

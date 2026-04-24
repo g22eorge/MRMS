@@ -171,6 +171,7 @@ pre,
 
 .mobile-page-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mobile-gap);
   max-width: 100%;
 }

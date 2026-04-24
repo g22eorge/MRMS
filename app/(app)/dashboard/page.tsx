@@ -574,7 +574,6 @@ export default async function DashboardPage({
       receivedToday,
       completedToday,
       pendingRequests,
-      recentActivity,
       overdueJobs,
       techWorkloadJobs,
       unassignedActiveCount,
@@ -594,11 +593,6 @@ export default async function DashboardPage({
       prisma.job.count({ where: { receivedAt: { gte: todayStart } } }),
       prisma.job.count({ where: { completedAt: { gte: todayStart } } }),
       prisma.repairRequest.count({ where: { requestStatus: "PENDING_INTAKE" } }),
-      prisma.job.findMany({
-        orderBy: { updatedAt: "desc" },
-        take: 7,
-        select: { id: true, jobNumber: true, status: true, updatedAt: true, brand: true, model: true },
-      }),
       prisma.job.findMany({
         where: {
           status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
@@ -697,7 +691,7 @@ export default async function DashboardPage({
               ) : null}
               {pendingRequests > 0 ? (
                 <Link
-                  href="/requests"
+                  href="/intake"
                   className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
                 >
                   {pendingRequests} pending requests
@@ -726,27 +720,62 @@ export default async function DashboardPage({
                 <span className="font-semibold text-[#D4AF37]">{completedToday}</span>
                 <span className="ml-1 text-[var(--ink-muted)]">today</span>
               </Link>
-              {overdueWithDays.length > 0 ? (
-                <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                  {overdueWithDays.length} overdue
-                </span>
-              ) : null}
-              {pendingRequests > 0 ? (
-                <Link
-                  href="/requests"
-                  className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 transition hover:border-amber-300"
-                >
-                  {pendingRequests} requests
-                </Link>
-              ) : null}
-              {unassignedActiveCount > 0 ? (
-                <Link
-                  href="/jobs?assignedToId=unassigned"
-                  className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 transition hover:border-violet-300"
-                >
-                  {unassignedActiveCount} unassigned
-                </Link>
-              ) : null}
+              <Link
+                href="/reports"
+                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
+              >
+                Revenue {formatMoney(revenueMtd, currency)}
+              </Link>
+              <Link
+                href="/payout-followups"
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  payoutOutstanding > 0
+                    ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#9A7A00] hover:border-[#D4AF37]/60"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                Payouts {formatMoney(payoutOutstanding, currency)}
+              </Link>
+              <Link
+                href="/jobs?status=AWAITING_APPROVAL"
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  awaitingApprovalCount > 0
+                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                Awaiting {awaitingApprovalCount}
+              </Link>
+              <Link
+                href="/jobs?status=DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,IN_EXTERNAL_REPAIR"
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  overdueWithDays.length > 0
+                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                Overdue {overdueWithDays.length}
+              </Link>
+              <Link
+                href="/jobs?assignedToId=unassigned"
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  unassignedActiveCount > 0
+                    ? "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                Unassigned {unassignedActiveCount}
+              </Link>
+              <Link
+                href="/intake"
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  pendingRequests > 0
+                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                Requests {pendingRequests}
+              </Link>
             </div>
           </div>
           <div className="flex snap-x overflow-x-auto [scrollbar-width:thin]">
@@ -773,10 +802,30 @@ export default async function DashboardPage({
                 );
               })}
           </div>
+          <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Finance Outlook</p>
+              <Link href={`/reports?period=month&month=${mtdLabel}`} className="text-[11px] font-semibold text-[var(--accent)] hover:underline">Open reports →</Link>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Link href={`/reports?period=month&month=${mtdLabel}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue MTD</p>
+                <p className="mt-0.5 text-sm font-semibold text-emerald-700">{formatMoney(revenueMtd, currency)}</p>
+              </Link>
+              <Link href="/payout-followups" className={`rounded-lg border px-3 py-2 transition ${payoutOutstanding > 0 ? "border-[#D4AF37]/35 bg-[#D4AF37]/10 hover:border-[#D4AF37]/60" : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]/35"}`}>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
+                <p className={`mt-0.5 text-sm font-semibold ${payoutOutstanding > 0 ? "text-[#9A7A00]" : "text-[var(--ink)]"}`}>{formatMoney(payoutOutstanding, currency)}</p>
+              </Link>
+              <Link href={`/jobs?status=COMPLETED&from=${asDateInputValue(mtdStart)}&to=${asDateInputValue(today)}`} className="col-span-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35 sm:col-span-1">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed MTD</p>
+                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{completedMtd.length}</p>
+              </Link>
+            </div>
+          </div>
         </section>
 
-        {/* Needs Attention + Technician Workload + Recent Activity */}
-        <div className="grid gap-3 lg:grid-cols-3">
+        {/* Needs Attention + Technician Workload */}
+        <div className="grid gap-3 lg:grid-cols-2">
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Needs Attention</p>
@@ -847,54 +896,7 @@ export default async function DashboardPage({
             )}
           </section>
 
-          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Recent Activity</p>
-            {recentActivity.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">No recent activity.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {recentActivity.map((job) => (
-                  <Link
-                    key={job.id}
-                    href={`/jobs/${job.id}`}
-                    className="group flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/30"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold transition-colors group-hover:text-[var(--accent)]">{job.jobNumber}</p>
-                      <p className="truncate text-[10px] text-[var(--ink-muted)]">{job.brand} {job.model}</p>
-                    </div>
-                    <span className="ml-2 shrink-0 text-[10px] text-[var(--ink-muted)]">
-                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
-
-        {/* Financial Snapshot */}
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Financial Snapshot — MTD</p>
-            <Link href={`/reports?period=month&month=${mtdLabel}`} className="text-[11px] font-semibold text-[var(--accent)] hover:underline">Full Reports →</Link>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue MTD</p>
-              <p className="mt-0.5 text-sm font-semibold text-[var(--accent)]">{formatMoneyCompact(revenueMtd, currency)}</p>
-            </div>
-            <div className={`rounded-lg border px-3 py-2.5 ${payoutOutstanding > 0 ? "border-[#D4AF37]/30 bg-[#D4AF37]/10" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
-              <p className={`mt-0.5 text-sm font-semibold ${payoutOutstanding > 0 ? "text-[#D4AF37]" : "text-[var(--ink)]"}`}>{formatMoneyCompact(payoutOutstanding, currency)}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed MTD</p>
-              <p className="mt-0.5 text-sm font-semibold text-emerald-600">{completedMtd.length}</p>
-            </div>
-          </div>
-        </section>
-
       </div>
     );
   }
@@ -951,15 +953,6 @@ export default async function DashboardPage({
           selectorName={period === "year" ? "year" : "month"}
           selectorValue={selectedPeriodLabel}
           selectorOptions={selectablePeriods}
-        />
-
-        <DashboardHero
-          title="Ops Finance Monitor"
-          summary="Prioritize billable completions, payout exposure, and cash collection signals before drilling into Reports."
-          primaryHref={reportHref}
-          primaryLabel="Open Financial Reports"
-          secondaryHref="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL"
-          secondaryLabel="Billing Queue"
         />
 
         <StickyKpiRow

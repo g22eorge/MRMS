@@ -38,15 +38,17 @@ function pageMeta(pathname: string, role: Role) {
     return { title: "Client Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "View client profile, job history, and notes timeline." };
   }
   if (pathname === "/reports") return { title: "Reports", description: "Operational and financial insights for repair performance." };
-  if (pathname === "/payout-followups") return { title: "Payout Follow-up", description: "Collected external jobs pending technician payout." };
+  if (pathname === "/inventory") return { title: "Inventory", description: "Track parts stock, reservations, and reorder risk." };
+  if (pathname === "/payout-followups") return { title: "Payment Follow-up", description: "Collected external jobs pending technician payout." };
   if (pathname === "/technicians") return { title: "Technician Portal", description: "Prioritized queue for assigned repair work." };
   if (pathname === "/technicians/payouts") return { title: "Technician Payouts", description: "Track paid and unpaid fees across your external assignments." };
   if (pathname === "/settings/users") return { title: "User Management", description: "Create users, assign roles, and manage active access." };
   if (pathname === "/settings/branding") return { title: "Branding", description: "Manage invoice logo, company details, VAT defaults, and document colours." };
   if (pathname === "/settings/profile") return { title: "Profile", description: "Update your personal account details and contact info." };
   if (pathname === "/settings/notifications") return { title: "Notifications", description: "Choose which job events trigger alerts for your account." };
+  if (pathname === "/settings/notifications/templates") return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
   if (pathname === "/settings/notifications/outbox") return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
-  if (pathname === "/requests") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
+  if (pathname === "/intake") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
   return { title: "Workspace" };
 }
 
