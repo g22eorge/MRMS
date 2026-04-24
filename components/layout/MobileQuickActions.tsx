@@ -45,22 +45,22 @@ function roleActions(role: Role, permissions: string[]): QuickAction[] {
   }
   if (role === "TECHNICIAN_INTERNAL") {
     return [
-      { href: "/jobs",        label: "Work Queue" },
-      { href: "/technicians", label: "Tech Board" },
-      { href: "/dashboard",   label: "Overview" },
+      { href: "/jobs",        label: "Jobs" },
+      { href: "/technicians", label: "Technicians" },
+      { href: "/dashboard",   label: "Dashboard" },
     ];
   }
   if (role === "TECHNICIAN_EXTERNAL") {
     return [
-      { href: "/jobs",                  label: "Work Orders" },
+      { href: "/jobs",                  label: "Jobs" },
       { href: "/technicians/payouts",   label: "Payouts" },
-      { href: "/dashboard",             label: "Overview" },
+      { href: "/dashboard",             label: "Dashboard" },
     ];
   }
   return [
-    { href: "/jobs",      label: "Work Queue" },
-    { href: "/dashboard", label: "Overview" },
-    { href: "/technicians", label: "Board" },
+    { href: "/jobs",      label: "Jobs" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/technicians", label: "Technicians" },
   ];
 }
 

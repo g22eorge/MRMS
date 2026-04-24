@@ -11,10 +11,11 @@ type NavGroup = "work" | "finance" | "admin" | "personal";
 const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
-  { href: "/intake", label: "Website Requests", group: "work", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
-  { href: "/technicians", label: "Board", group: "work", roles: "all" },
+  { href: "/intake", label: "Requests", group: "work", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
+  { href: "/technicians", label: "Technicians", group: "work", roles: "all" },
   { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
+  { href: "/payout-followups", label: "Payout Follow-up", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
@@ -23,7 +24,7 @@ const nav = [
 ] as const;
 
 const groupLabel: Record<NavGroup, string> = {
-  work: "Workspace",
+  work: "Main",
   finance: "Finance",
   admin: "Admin",
   personal: "Account",
@@ -37,12 +38,13 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/clients",
     "/technicians",
     "/reports",
+    "/payout-followups",
     "/settings/users",
     "/settings/branding",
     "/settings/profile",
     "/settings/notifications",
   ],
-  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile", "/settings/notifications"],
+  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/payout-followups", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/settings/profile", "/settings/notifications"],
@@ -137,36 +139,10 @@ function navIcon(href: string) {
   );
 }
 
-function roleLabel(role: Role, href: string, label: string) {
-  if (role === "TECHNICIAN_EXTERNAL") {
-    if (href === "/dashboard") return "Overview";
-    if (href === "/jobs") return "Work Orders";
-    if (href === "/technicians") return "Tech Board";
-    if (href === "/technicians/payouts") return "My Payouts";
-    if (href === "/settings/profile") return "Profile";
-  }
-  if (role === "TECHNICIAN_INTERNAL") {
-    if (href === "/jobs") return "Work Queue";
-    if (href === "/technicians") return "Technician Board";
-  }
-  if (role === "OPS") {
-    if (href === "/jobs") return "Operations";
-    if (href === "/reports") return "Finance";
-  }
-  if (role === "INTAKE") {
-    if (href === "/jobs") return "Intake Queue";
-  }
-  if (role === "ADMIN") {
-    if (href === "/jobs") return "Operations";
-    if (href === "/technicians") return "Technician Board";
-  }
-  return label;
-}
-
 function orderedNavForRole(role: Role, permissions: string[]) {
   if (role === "OPS") {
     const opsLinks = nav.filter((item) =>
-      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/settings/profile"].includes(item.href)
+      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/payout-followups", "/settings/profile", "/settings/notifications"].includes(item.href)
     );
     return opsLinks;
   }
@@ -228,7 +204,6 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
             </p>
             <div className="space-y-0.5">
               {section.items.map((item) => {
-                const label = roleLabel(role, item.href, item.label);
                 const active = isActive(pathname, item.href);
                 return (
                   <Link
@@ -257,7 +232,7 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
                       {navIcon(item.href)}
                     </span>
                     {/* Label */}
-                    <span className="truncate">{label}</span>
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 );
               })}

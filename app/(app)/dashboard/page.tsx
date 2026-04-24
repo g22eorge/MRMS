@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";
 import { StickyKpiRow } from "@/components/mobile/StickyKpiRow";
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
-import { getClientBill, getExternalTechBill } from "@/lib/billing";
+import { getClientBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
@@ -81,15 +81,6 @@ const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   READY_FOR_PICKUP: "Ready for Pickup",
   COMPLETED: "Completed",
   CLOSED: "Closed",
-};
-
-const deviceLabel: Record<string, string> = {
-  PHONE_ANDROID: "Android Phone",
-  PHONE_IPHONE: "iPhone",
-  TABLET: "Tablet",
-  WINDOWS_PC: "Windows PC",
-  MAC: "Mac",
-  OTHER: "Other",
 };
 
 const repairFlowReference = [
@@ -573,7 +564,7 @@ export default async function DashboardPage({
     const currency = getAppCurrency();
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
     const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
 
     const [
@@ -654,20 +645,16 @@ export default async function DashboardPage({
     }));
 
     const awaitingApprovalCount = statusCount.get("AWAITING_APPROVAL") ?? 0;
-    const readyForPickupCount = statusCount.get("READY_FOR_PICKUP") ?? 0;
-    const totalActiveJobs = statusData
-      .filter((s) => !["COMPLETED", "CLOSED"].includes(s.key))
-      .reduce((sum, s) => sum + s.value, 0);
-
     const overdueWithDays = overdueJobs.map((job) => ({
       ...job,
       ageDays: Math.floor((today.getTime() - job.receivedAt.getTime()) / (1000 * 60 * 60 * 24)),
     }));
 
-    const techWorkloadMap = new Map<string, { name: string; role: string; count: number }>();
+    const techWorkloadMap = new Map<string, { id: string; name: string; role: string; count: number }>();
     for (const job of techWorkloadJobs) {
       if (!job.assignedTo) continue;
       const existing = techWorkloadMap.get(job.assignedTo.id) ?? {
+        id: job.assignedTo.id,
         name: job.assignedTo.name,
         role: job.assignedTo.role,
         count: 0,
@@ -684,8 +671,8 @@ export default async function DashboardPage({
       <div className="space-y-4">
         {/* Alert Banner */}
         {hasAlerts ? (
-          <section className="panel-shadow overflow-hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
+          <section className="panel-shadow rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
               <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800">Attention Required</span>
               {awaitingApprovalCount > 0 ? (
                 <Link
@@ -722,9 +709,12 @@ export default async function DashboardPage({
 
         {/* Live Repair Pipeline — with today's stats and quick actions in the header */}
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Live Repair Pipeline</p>
-            <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          <div className="border-b border-[var(--line)] px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Live Repair Pipeline</p>
+              <Link href="/jobs" className="text-[11px] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Link
                 href={`/jobs?from=${asDateInputValue(todayStart)}&to=${asDateInputValue(today)}`}
                 className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] transition hover:border-[var(--accent)]/30"
@@ -758,7 +748,6 @@ export default async function DashboardPage({
                 </Link>
               ) : null}
             </div>
-            <Link href="/jobs" className="text-[11px] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
           </div>
           <div className="flex snap-x overflow-x-auto [scrollbar-width:thin]">
             {statusData
@@ -820,7 +809,11 @@ export default async function DashboardPage({
                   >
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold">{job.jobNumber}</p>
-                      <p className="truncate text-[10px] text-[var(--ink-muted)]">{job.brand} {job.model}</p>
+                      <p className="truncate text-[10px] text-[var(--ink-muted)]">
+                        {job.brand} {job.model}
+                        <span className="mx-1 text-[var(--line)]">·</span>
+                        {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                      </p>
                     </div>
                     <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${job.ageDays >= 8 ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
                       {job.ageDays}d
@@ -838,9 +831,9 @@ export default async function DashboardPage({
             ) : (
               <div className="space-y-1.5">
                 {techWorkloadRows.map((tech) => (
-                  <div key={tech.name} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                  <Link key={tech.id} href={`/jobs?assignedToId=${tech.id}`} className="group flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35 hover:bg-[var(--panel)]">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold">{tech.name}</p>
+                      <p className="truncate text-xs font-semibold transition-colors group-hover:text-[var(--accent)]">{tech.name}</p>
                       <p className="text-[10px] text-[var(--ink-muted)]">
                         {tech.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}
                       </p>
@@ -848,7 +841,7 @@ export default async function DashboardPage({
                     <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${tech.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
                       {tech.count} active
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -901,6 +894,7 @@ export default async function DashboardPage({
             </div>
           </div>
         </section>
+
       </div>
     );
   }
@@ -936,6 +930,7 @@ export default async function DashboardPage({
         select: { id: true, externalTechBill: true },
       }),
     ]);
+
 
     const completedRows = await prisma.job.findMany({
       where: { id: { in: completedThisMonth.map((job) => job.id) } },
@@ -1005,6 +1000,7 @@ export default async function DashboardPage({
             </div>
           </section>
         </div>
+
       </div>
     );
   }

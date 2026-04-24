@@ -77,6 +77,7 @@ const ITEMS = {
   intake:      { href: "/intake",                label: "Requests",  icon: intakeIcon },
   clients:     { href: "/clients",               label: "Clients",   icon: clientsIcon },
   reports:     { href: "/reports",               label: "Reports",   icon: reportsIcon },
+  payoutFollowups: { href: "/payout-followups",  label: "Payouts Due", icon: payoutsIcon },
   payouts:     { href: "/technicians/payouts",   label: "Payouts",   icon: payoutsIcon },
   users:       { href: "/settings/users",        label: "Users",     icon: usersIcon },
   branding:    { href: "/settings/branding",     label: "Branding",  icon: brandingIcon },
@@ -109,9 +110,9 @@ function getExtraItems(role: Role, permissions: string[]): NavItem[] {
   const permUser = { role, permissions };
 
   if (role === "ADMIN") {
-    items.push(ITEMS.clients, ITEMS.reports, ITEMS.board, ITEMS.users, ITEMS.branding);
+    items.push(ITEMS.clients, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.users, ITEMS.branding);
   } else if (role === "OPS") {
-    items.push(ITEMS.clients, ITEMS.reports, ITEMS.board);
+    items.push(ITEMS.clients, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board);
   } else if (role === "INTAKE") {
     items.push(ITEMS.clients, ITEMS.board);
   } else if (role === "TECHNICIAN_INTERNAL" && can.viewClientInfo(permUser)) {

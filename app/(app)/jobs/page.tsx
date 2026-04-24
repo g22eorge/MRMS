@@ -12,8 +12,10 @@ import { getCurrentUserRole } from "@/lib/session";
 type SearchParams = {
   status?: string;
   pricing?: string;
+  payout?: string;
   deviceType?: string;
   repairPath?: string;
+  assignedToId?: string;
   q?: string;
   from?: string;
   to?: string;
@@ -87,6 +89,7 @@ export default async function JobsPage({
       )
     : [];
   const pricingFilter = filters.pricing === "needs" || filters.pricing === "priced" ? filters.pricing : "";
+  const payoutFilter = filters.payout === "due" || filters.payout === "paid" ? filters.payout : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   const pageSize = 20;
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
@@ -95,18 +98,41 @@ export default async function JobsPage({
     user.role === "TECHNICIAN_INTERNAL"
     && (can.searchJobs(user) || can.approveInvoices(user));
 
-  const whereBase = {
-    ...(user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !internalCanSearchAll)
+  const assignedScopeFilter =
+    filters.assignedToId === "unassigned"
+      ? { assignedToId: null as string | null }
+      : filters.assignedToId
+        ? { assignedToId: filters.assignedToId }
+        : {};
+
+  const roleScopeFilter =
+    user.role === "TECHNICIAN_EXTERNAL" || (user.role === "TECHNICIAN_INTERNAL" && !internalCanSearchAll)
       ? { assignedToId: session.user.id }
-      : {}),
+      : {};
+
+  const whereBase = {
     ...(dbStatuses.length > 0 ? { status: { in: dbStatuses } } : {}),
     ...(pricingFilter === "needs"
       ? {
           clientBill: null,
-          status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[] },
+        status: { in: ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[] },
         }
       : pricingFilter === "priced"
         ? { clientBill: { not: null } }
+        : {}),
+    ...(payoutFilter === "due"
+      ? {
+          repairPath: "EXTERNAL" as const,
+          clientBill: { not: null },
+          externalPaid: false,
+          status: { in: ["DELIVERED", "COMPLETED"] as JobStatus[] },
+        }
+      : payoutFilter === "paid"
+        ? {
+            repairPath: "EXTERNAL" as const,
+            externalPaid: true,
+            status: { in: ["DELIVERED", "COMPLETED"] as JobStatus[] },
+          }
         : {}),
     ...(filters.deviceType ? { deviceType: filters.deviceType as never } : {}),
     ...(filters.repairPath ? { repairPath: filters.repairPath as never } : {}),
@@ -118,6 +144,8 @@ export default async function JobsPage({
           },
         }
       : {}),
+    ...assignedScopeFilter,
+    ...roleScopeFilter,
   };
 
   const where =

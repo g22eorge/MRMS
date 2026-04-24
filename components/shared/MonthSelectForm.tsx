@@ -87,7 +87,7 @@ export function MonthSelectForm({
         </button>
       </div>
       {oldest && newest ? (
-        <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
+        <p className="mt-1 hidden text-[11px] text-[var(--ink-muted)] sm:block">
           Reporting window: {oldest.label} to {newest.label}
         </p>
       ) : null}

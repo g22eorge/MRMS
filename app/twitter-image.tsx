@@ -78,7 +78,6 @@ export default function TwitterImage() {
                   overflow: "hidden",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={eagleLogo} width={72} height={72} style={{ objectFit: "cover" }} alt="" />
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>

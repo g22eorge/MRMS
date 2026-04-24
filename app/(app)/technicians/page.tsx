@@ -182,25 +182,11 @@ export default async function TechniciansPage({
   const spotlightJobs = spotlightCandidates.slice(0, 3);
   const boardReturnTo = routeWith({});
   const hasActiveFilters = Boolean(filters.q || filters.status || filters.ready);
-  const statusCounts = [
-    { key: "RECEIVED", count: normalized.filter((job) => job.status === "RECEIVED").length },
-    { key: "DIAGNOSING", count: normalized.filter((job) => job.status === "DIAGNOSING").length },
-    { key: "AWAITING_APPROVAL", count: awaitingApprovalCount },
-    { key: "IN_REPAIR", count: inRepairCount },
-    { key: "READY_FOR_PICKUP", count: normalized.filter((job) => job.status === "READY_FOR_PICKUP").length },
-  ];
-
   const quickActions = [
     { href: routeWith({ ready: "1", status: "" }), label: "Ready", count: readyCount, active: filters.ready === "1" },
     { href: routeWith({ status: "IN_REPAIR", ready: "" }), label: "In Repair", count: inRepairCount, active: filters.status === "IN_REPAIR" && filters.ready !== "1" },
     { href: routeWith({ status: "AWAITING_APPROVAL", ready: "" }), label: "Approval", count: awaitingApprovalCount, active: filters.status === "AWAITING_APPROVAL" },
   ];
-  const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
-  const boardBrief = hasActiveFilters
-    ? "Filtered queue view is active. Use the KPI cards below for live counts and clear filters to return to the full technician board."
-    : "Use this board to triage work by readiness, approvals, and aging risk. KPI cards below provide live queue totals at a glance.";
-
   function dismissSpotlightReturnTo(jobId: string) {
     const merged = new Set([...dismissedSpotlightIds, jobId]);
     return routeWith({ dismiss: Array.from(merged).join(",") });
@@ -222,21 +208,23 @@ export default async function TechniciansPage({
       {/* Filter + Quick Actions — unified panel */}
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <form>
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
+          <div className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
             <input
               name="q"
               defaultValue={filters.q}
               placeholder="Search job # or device"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
             />
-            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50">
-              <option value="">All statuses</option>
-              {UI_JOB_STATUSES.map((status) => (
-                <option key={status} value={status}>{statusOptionLabel[status]}</option>
-              ))}
-            </select>
-            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
-            <Link href="/technicians" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Reset</Link>
+            <div className="flex items-center gap-2">
+              <select name="status" defaultValue={filters.status} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50">
+                <option value="">All statuses</option>
+                {UI_JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>{statusOptionLabel[status]}</option>
+                ))}
+              </select>
+              <button className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm">Apply</button>
+              <Link href="/technicians" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm">Reset</Link>
+            </div>
           </div>
         </form>
 

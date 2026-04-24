@@ -38,6 +38,7 @@ function pageMeta(pathname: string, role: Role) {
     return { title: "Client Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "View client profile, job history, and notes timeline." };
   }
   if (pathname === "/reports") return { title: "Reports", description: "Operational and financial insights for repair performance." };
+  if (pathname === "/payout-followups") return { title: "Payout Follow-up", description: "Collected external jobs pending technician payout." };
   if (pathname === "/technicians") return { title: "Technician Portal", description: "Prioritized queue for assigned repair work." };
   if (pathname === "/technicians/payouts") return { title: "Technician Payouts", description: "Track paid and unpaid fees across your external assignments." };
   if (pathname === "/settings/users") return { title: "User Management", description: "Create users, assign roles, and manage active access." };
@@ -131,7 +132,7 @@ export function PageThemeHeader({ role }: { role: Role }) {
             ) : null}
           </div>
           {meta.description ? (
-            <p className="mt-0.5 text-[12px] leading-snug text-[var(--ink-muted)]">{meta.description}</p>
+            <p className="mt-0.5 hidden text-[12px] leading-snug text-[var(--ink-muted)] sm:block">{meta.description}</p>
           ) : null}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${roleTagStyle(role)}`}>

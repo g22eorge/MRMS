@@ -18,6 +18,7 @@ type SearchParams = {
   month?: string;
   year?: string;
   period?: string;
+  trendView?: string; // "monthly" | "annual"
 };
 
 function parseMonth(monthParam?: string) {
@@ -56,6 +57,17 @@ function monthSequence(endYear: number, endMonth: number, count: number) {
       key: monthLabel(d.getFullYear(), d.getMonth() + 1),
       start: new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0),
       end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  });
+}
+
+function yearSequence(endYear: number, count: number) {
+  return Array.from({ length: count }, (_, idx) => {
+    const y = endYear - (count - 1 - idx);
+    return {
+      key: String(y),
+      start: new Date(y, 0, 1, 0, 0, 0, 0),
+      end: new Date(y, 11, 31, 23, 59, 59, 999),
     };
   });
 }
@@ -167,7 +179,6 @@ export default async function ReportsPage({
       amount: externalPayoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0,
     }));
 
-  const externalPayoutOutstandingCount = unpaidPayouts.length;
   const externalPayoutOutstandingTotal = unpaidPayouts.reduce((sum, payout) => sum + payout.amount, 0);
 
   const statusCount = new Map(statusGroup.map((s) => [normalizeJobStatus(s.status as JobStatus), s._count.status]));
@@ -189,8 +200,6 @@ export default async function ReportsPage({
     (sum, job) => sum + ((getClientBill(job) ?? 0) - (getExternalTechBill(job) ?? 0)),
     0,
   );
-  const marginRate = revenueSelected > 0 ? (marginSelected / revenueSelected) * 100 : 0;
-
   const averageRepairTimeHours = (() => {
     const values = completedAll
       .filter((job) => job.completedAt)
@@ -260,8 +269,11 @@ export default async function ReportsPage({
   const currency = getAppCurrency();
   const selectableMonths = period === "year" ? yearOptions(6) : monthOptions(18);
   const monthlyExportMonth = monthLabel(selectedMonth.year, selectedMonth.month);
-  const trendAnchor = selectedRange.end;
-  const trendMonths = monthSequence(trendAnchor.getFullYear(), trendAnchor.getMonth() + 1, 6);
+  const trendView: "monthly" | "annual" = filters.trendView === "annual" ? "annual" : "monthly";
+  const trendNow = new Date();
+  const trendMonths = trendView === "annual"
+    ? yearSequence(trendNow.getFullYear(), 5)
+    : monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, 12);
 
   const trendJobs = await prisma.job.findMany({
     where: {
@@ -631,27 +643,48 @@ export default async function ReportsPage({
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">6-Month Revenue Trend</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue & Margin Trend</p>
             <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-              Revenue & Margin — {trendMonths[0]?.key} to {trendMonths[trendMonths.length - 1]?.key}
+              {trendView === "annual"
+                ? `${trendMonths[0]?.key} – ${trendMonths[trendMonths.length - 1]?.key} · Annual`
+                : `${trendMonths[0]?.key} to ${trendMonths[trendMonths.length - 1]?.key} · Monthly`}
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-4 rounded-full bg-[#D4AF37]" />
-              Revenue
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
-              Margin
-            </span>
+          <div className="flex items-center gap-2">
+            {/* Monthly / Annual toggle */}
+            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5 text-[11px] font-semibold">
+              <Link
+                href={`?${new URLSearchParams({ ...(filters.period ? { period: filters.period } : {}), ...(filters.month ? { month: filters.month } : {}), ...(filters.year ? { year: filters.year } : {}), trendView: "monthly" }).toString()}`}
+                className={`rounded-md px-3 py-1 transition-colors ${trendView === "monthly" ? "bg-white text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              >
+                Monthly
+              </Link>
+              <Link
+                href={`?${new URLSearchParams({ ...(filters.period ? { period: filters.period } : {}), ...(filters.month ? { month: filters.month } : {}), ...(filters.year ? { year: filters.year } : {}), trendView: "annual" }).toString()}`}
+                className={`rounded-md px-3 py-1 transition-colors ${trendView === "annual" ? "bg-white text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              >
+                Annual
+              </Link>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2 w-4 rounded-full bg-[#D4AF37]" />
+                Revenue
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+                Margin
+              </span>
+            </div>
           </div>
         </div>
         <RevenueLineChart data={revenueTrend} />
-        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className={`mt-3 grid gap-2 ${trendView === "annual" ? "grid-cols-5" : "grid-cols-4 sm:grid-cols-6 lg:grid-cols-12"}`}>
           {revenueTrend.map((m) => (
             <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
-              <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+              <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                {trendView === "annual" ? m.key : m.key.slice(5)}
+              </p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
               <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
             </div>
