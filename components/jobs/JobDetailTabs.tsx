@@ -10,6 +10,7 @@ import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { formatEATDateTime } from "@/lib/date-eat";
+import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
@@ -214,6 +215,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+  const canGenerateJobCard = can.generateJobCards(permissionUser);
+  const canGenerateQuotation =
+    ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role) ||
+    canViewFinancials ||
+    can.viewApprovedCost(permissionUser);
+  const canGenerateInvoice = ["ADMIN", "OPS"].includes(role) || canManageFinancials;
 
   const isSoftwareJob = (job.serviceType ?? "HARDWARE") !== "HARDWARE";
   const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
@@ -252,6 +259,22 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const repairCostBeforeVat = vatApplicable ? clientBillValue / 1.18 : clientBillValue;
   const vatAmount = vatApplicable ? Math.max(clientBillValue - repairCostBeforeVat, 0) : 0;
   const hasPayoutControls = canManagePayouts && job.repairPath === "EXTERNAL";
+  const quotationEligibleByStatus = canGenerateQuotationForStatus(job.status);
+  const invoiceEligibleByStatus = canGenerateInvoiceForStatus(job.status);
+  const showJobCardAction = canGenerateJobCard;
+  const showQuotationAction = canGenerateQuotation && quotationEligibleByStatus;
+  const showInvoiceAction = canGenerateInvoice && invoiceEligibleByStatus;
+  const documentHints: string[] = [];
+
+  if (!showJobCardAction && !showQuotationAction && !showInvoiceAction) {
+    documentHints.push("No document action is currently available for your role on this job.");
+  }
+  if (canGenerateQuotation && !quotationEligibleByStatus) {
+    documentHints.push("Quotation unlocks after diagnosis starts.");
+  }
+  if (canGenerateInvoice && !invoiceEligibleByStatus) {
+    documentHints.push("Invoice unlocks at Ready for Pickup, Completed, or Closed.");
+  }
 
   const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
   const assignedRole = job.assignedTo?.role;
@@ -472,6 +495,51 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             {tab}
           </button>
         ))}
+      </div>
+
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
+        <div className="flex w-full flex-wrap gap-2">
+          {showJobCardAction ? (
+            <a
+              href={`/api/jobs/${job.id}/job-card`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Job Card
+            </a>
+          ) : null}
+          {showQuotationAction ? (
+            <a
+              href={`/api/jobs/${job.id}/quotation`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Quotation
+            </a>
+          ) : null}
+          {showInvoiceAction ? (
+            <a
+              href={`/api/jobs/${job.id}/invoice`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Invoice
+            </a>
+          ) : null}
+        </div>
+        {documentHints.length > 0 ? (
+          <div className="mt-2 space-y-1">
+            {documentHints.map((hint) => (
+              <p key={hint} className="text-xs text-[var(--ink-muted)]">
+                {hint}
+              </p>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {active === "overview" ? (
@@ -1257,17 +1325,6 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Photo Evidence</p>
           <PhotoUploader jobId={job.id} photos={job.photos} canDelete={role === "ADMIN"} />
         </div>
-      ) : null}
-
-      {isTerminal ? (
-        <a
-          href={`/api/jobs/${job.id}/invoice`}
-          target="_blank"
-          rel="noreferrer"
-          className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
-        >
-          Generate Invoice
-        </a>
       ) : null}
 
       {statusActions.length > 0 && !isTerminal && !isIntake ? (

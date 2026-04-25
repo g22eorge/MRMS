@@ -46,7 +46,7 @@ export const can = {
   searchJobs: (user: PermissionUser) =>
     user.role !== "TECHNICIAN_EXTERNAL" || hasExtraPermission(user, "can_search_jobs"),
   generateJobCards: (user: PermissionUser) =>
-    ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_generate_job_cards"),
+    ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"].includes(user.role) || hasExtraPermission(user, "can_generate_job_cards"),
   viewApprovedCost: (user: PermissionUser) =>
     ["ADMIN", "OPS", "INTAKE"].includes(user.role) || hasExtraPermission(user, "can_view_approved_cost"),
   reviewExternalBills: (user: PermissionUser) =>
