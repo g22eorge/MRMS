@@ -874,17 +874,17 @@ export function IntakeClient({
           </div>
 
           {/* ── DESKTOP TABLE VIEW ── */}
-          <div className="hidden lg:block rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden panel-shadow">
+          <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden panel-shadow lg:block">
             <table className="min-w-full text-[13px]">
               <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                 <tr>
                   <th className="px-4 py-2.5">Request #</th>
                   <th className="px-4 py-2.5">Customer</th>
-                  <th className="px-4 py-2.5">Device</th>
-                  <th className="px-4 py-2.5">Handover</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">Device</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">Handover</th>
                   <th className="px-4 py-2.5">Status</th>
-                  <th className="px-4 py-2.5">Date</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">Date</th>
+                  <th className="hidden px-4 py-2.5 text-right lg:table-cell">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
@@ -899,22 +899,22 @@ export function IntakeClient({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-[var(--ink)]">{req.customerName}</div>
-                      <div className="text-xs text-[var(--ink-muted)]">{req.phone}</div>
+                      <div className="text-xs text-[var(--ink-muted)] md:hidden">{req.phone}</div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
                       <div className="text-sm text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
                       <div className="text-xs text-[var(--ink-muted)]">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">
                       <span className="text-xs text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge status={req.requestStatus} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)]">
+                    <td className="hidden px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)] lg:table-cell">
                       {fmt(req.createdAt)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <td className="hidden px-4 py-3 whitespace-nowrap text-right lg:table-cell">
                       <RowActions
                         req={req}
                         onStatusChange={handleStatusChange}
