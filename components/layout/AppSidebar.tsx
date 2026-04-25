@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { can } from "@/lib/permissions";
 
-type NavGroup = "work" | "finance" | "admin" | "personal";
+type NavGroup = "work" | "documents" | "finance" | "admin" | "personal";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
@@ -15,10 +15,10 @@ const nav = [
   { href: "/technicians", label: "Technicians", group: "work", roles: "all" },
   { href: "/inventory", label: "Inventory", group: "work", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
   { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
+  { href: "/documents/job-cards", label: "Job Cards", group: "documents", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/quotations", label: "Quotations", group: "documents", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/invoices", label: "Invoices", group: "documents", roles: ["ADMIN", "OPS"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
-  { href: "/documents/job-cards", label: "Intake Invoices", group: "finance", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
-  { href: "/documents/quotations", label: "Quotations", group: "finance", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
-  { href: "/documents/invoices", label: "Invoices", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/payout-followups", label: "Payment Follow-up", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
@@ -29,9 +29,10 @@ const nav = [
 ] as const;
 
 const groupLabel: Record<NavGroup, string> = {
-  work: "Main",
+  work: "Operations",
+  documents: "Documents",
   finance: "Finance",
-  admin: "Admin",
+  admin: "Administration",
   personal: "Account",
 };
 
@@ -43,10 +44,10 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/clients",
     "/technicians",
     "/inventory",
-    "/reports",
     "/documents/job-cards",
     "/documents/quotations",
     "/documents/invoices",
+    "/reports",
     "/payout-followups",
     "/settings/users",
     "/settings/branding",
@@ -54,18 +55,18 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/profile",
     "/settings/notifications",
   ],
-  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"],
+  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/reports", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile", "/settings/notifications"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
-  ADMIN: ["work", "finance", "admin", "personal"],
-  OPS: ["work", "finance", "personal"],
-  TECHNICIAN_INTERNAL: ["work", "personal"],
+  ADMIN: ["work", "documents", "finance", "admin", "personal"],
+  OPS: ["work", "documents", "finance", "personal"],
+  TECHNICIAN_INTERNAL: ["work", "documents", "personal"],
   TECHNICIAN_EXTERNAL: ["work", "finance", "personal"],
-  INTAKE: ["work", "personal"],
+  INTAKE: ["work", "documents", "personal"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
@@ -179,13 +180,6 @@ function navIcon(href: string) {
 }
 
 function orderedNavForRole(role: Role, permissions: string[]) {
-  if (role === "OPS") {
-    const opsLinks = nav.filter((item) =>
-      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"].includes(item.href)
-    );
-    return opsLinks;
-  }
-
   const visible = nav.filter((item) => isVisible(role, item.roles));
   const permissionUser = { role, permissions };
   if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/intake")) {
@@ -216,7 +210,7 @@ function orderedNavForRole(role: Role, permissions: string[]) {
 
 function groupedNavForRole(role: Role, permissions: string[]) {
   const ordered = orderedNavForRole(role, permissions);
-  const canonicalOrder: NavGroup[] = ["work", "finance", "admin", "personal"];
+  const canonicalOrder: NavGroup[] = ["work", "documents", "finance", "admin", "personal"];
   const baseGroups = roleGroupOrder[role] ?? ["work", "personal"];
   const missingGroups = canonicalOrder.filter(
     (group) => ordered.some((item) => item.group === group) && !baseGroups.includes(group),
