@@ -3,7 +3,10 @@ import path from "node:path";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4173";
 const port = new URL(baseURL).port || "4173";
-const databaseUrl = `file:${path.resolve(process.cwd(), "prisma/dev.db")}`;
+const databaseUrl =
+  process.env.E2E_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  `file:${path.resolve(process.cwd(), "prisma/dev.db")}`;
 const authEnv = `NEXT_PUBLIC_APP_URL=${baseURL} BETTER_AUTH_URL=${baseURL} BETTER_AUTH_SECRET=abcdefghijklmnopqrstuvwxyz123456 PROD=false DATABASE_URL=${databaseUrl}`;
 
 const webServerBoot = `${authEnv} bunx prisma db push --skip-generate && bunx prisma generate && ${authEnv} bun run seed`;

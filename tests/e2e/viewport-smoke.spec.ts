@@ -73,6 +73,15 @@ async function login(page: Page, email: string) {
   await page.context().addCookies(cookies);
 }
 
+async function waitForAppSettled(page: Page) {
+  await page.waitForLoadState("domcontentloaded");
+  try {
+    await page.waitForLoadState("networkidle", { timeout: 3000 });
+  } catch {
+    // Some pages keep background requests active; DOM is enough for overflow checks.
+  }
+}
+
 const viewports = [
   { width: 360, height: 780 },
   { width: 390, height: 844 },
@@ -100,7 +109,7 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const path of paths) {
       await page.goto(path);
-      await page.waitForLoadState("networkidle");
+      await waitForAppSettled(page);
 
       const overflowReport = await page.evaluate(() => {
         const offenders: string[] = [];
@@ -154,11 +163,11 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
     }
 
     await page.goto("/clients");
-    await page.waitForLoadState("networkidle");
+    await waitForAppSettled(page);
     const firstClientLink = page.getByRole("link", { name: "Open" }).first();
     if (await firstClientLink.isVisible()) {
       await firstClientLink.click();
-      await page.waitForLoadState("networkidle");
+      await waitForAppSettled(page);
       const detailOverflow = await page.evaluate(() => {
         const offenders: string[] = [];
         const nodes = Array.from(document.querySelectorAll<HTMLElement>("body *"));
@@ -205,11 +214,11 @@ test("layout has no horizontal overflow across target viewports", async ({ page 
     }
 
     await page.goto("/jobs");
-    await page.waitForLoadState("networkidle");
+    await waitForAppSettled(page);
     const firstJobLink = page.getByRole("link", { name: "Open" }).first();
     if (await firstJobLink.isVisible()) {
       await firstJobLink.click();
-      await page.waitForLoadState("networkidle");
+      await waitForAppSettled(page);
       const jobDetailOverflow = await page.evaluate(() => {
         const offenders: string[] = [];
         const nodes = Array.from(document.querySelectorAll<HTMLElement>("body *"));
