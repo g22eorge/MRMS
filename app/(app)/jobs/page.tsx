@@ -206,8 +206,45 @@ export default async function JobsPage({
     total = totalResult;
   } catch (error) {
     console.error("[jobs] failed to load jobs list", error);
-    jobs = [];
-    total = 0;
+    const bareJobs = await prisma.job.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    const [clientRows, assigneeRows, deviceRows] = await Promise.all([
+      prisma.client.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.clientId).filter(Boolean))) } },
+        select: { id: true, fullName: true },
+      }),
+      prisma.user.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.assignedToId).filter((id): id is string => Boolean(id)))) } },
+        select: { id: true, name: true },
+      }),
+      prisma.device.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.deviceId).filter(Boolean))) } },
+        select: { id: true, deviceType: true, brand: true, model: true },
+      }),
+    ]);
+
+    const clientMap = new Map(clientRows.map((client) => [client.id, client]));
+    const assigneeMap = new Map(assigneeRows.map((assignee) => [assignee.id, assignee]));
+    const deviceMap = new Map(deviceRows.map((device) => [device.id, device]));
+
+    jobs = bareJobs.map((job) => ({
+      ...job,
+      client: clientMap.get(job.clientId),
+      assignedTo: job.assignedToId ? assigneeMap.get(job.assignedToId) : null,
+      device: deviceMap.get(job.deviceId),
+      oneTimeExternalAssignment: null,
+    })) as Array<JobWithClient | JobWithoutClient>;
+
+    try {
+      total = await prisma.job.count({ where });
+    } catch {
+      total = bareJobs.length;
+    }
   }
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
