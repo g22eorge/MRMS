@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { runDataHeal } from "@/lib/data-heal";

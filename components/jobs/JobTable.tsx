@@ -212,8 +212,6 @@ export function JobTable({
                   : null
               : null;
 
-            const hasBadgeRow = flagCfg || pricingBadge;
-
             return (
               <div
                 key={job.id}
