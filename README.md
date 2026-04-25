@@ -37,8 +37,6 @@ bun run dev
 
 ## Sample Login
 
-- Email: `admin@eagle.local`
-- Password: `Admin123!`
 
 ## Useful Checks
 
