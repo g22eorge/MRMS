@@ -271,9 +271,10 @@ export default async function ReportsPage({
   const monthlyExportMonth = monthLabel(selectedMonth.year, selectedMonth.month);
   const trendView: "monthly" | "annual" = filters.trendView === "annual" ? "annual" : "monthly";
   const trendNow = new Date();
+  const yearToDateMonthCount = trendNow.getMonth() + 1;
   const trendMonths = trendView === "annual"
     ? yearSequence(trendNow.getFullYear(), 5)
-    : monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, 12);
+    : monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, yearToDateMonthCount);
 
   const trendJobs = await prisma.job.findMany({
     where: {
@@ -735,39 +736,40 @@ export default async function ReportsPage({
               <TechnicianBarChart
                 data={techPerf.map((t) => ({ name: t.name, completed: t.completed, total: t.total }))}
               />
+              <div className="overflow-hidden rounded-xl border border-[var(--line)]">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[480px] text-sm">
-                  <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                     <tr>
-                      <th className="px-2 py-2">Technician</th>
-                      <th className="px-2 py-2">Type</th>
-                      <th className="px-2 py-2">Assigned</th>
-                      <th className="px-2 py-2">Completed</th>
-                      <th className="px-2 py-2">Open</th>
-                      <th className="px-2 py-2">Rate</th>
-                      <th className="px-2 py-2">Avg Time</th>
-                      <th className="px-2 py-2">Revenue</th>
+                      <th className="px-3 py-2.5">Technician</th>
+                      <th className="px-3 py-2.5">Type</th>
+                      <th className="px-3 py-2.5">Assigned</th>
+                      <th className="px-3 py-2.5">Completed</th>
+                      <th className="px-3 py-2.5">Open</th>
+                      <th className="px-3 py-2.5">Rate</th>
+                      <th className="px-3 py-2.5">Avg Time</th>
+                      <th className="px-3 py-2.5">Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {techPerf.map((tech) => (
-                      <tr key={tech.name} className="border-t border-[var(--line)] hover:bg-[var(--panel-strong)]/50">
-                        <td className="px-2 py-2 font-medium">{tech.name}</td>
-                        <td className="px-2 py-2">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tech.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                      <tr key={tech.name} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/40">
+                        <td className="px-3 py-2.5 font-medium">{tech.name}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${tech.role === "TECHNICIAN_EXTERNAL" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
                             {tech.role === "TECHNICIAN_EXTERNAL" ? "Ext" : "Int"}
                           </span>
                         </td>
-                        <td className="px-2 py-2">{tech.total}</td>
-                        <td className="px-2 py-2 font-medium text-[#D4AF37]">{tech.completed}</td>
-                        <td className="px-2 py-2">{tech.open}</td>
-                        <td className="px-2 py-2">
-                          <span className={`font-semibold ${tech.completionRate >= 70 ? "text-emerald-600" : tech.completionRate >= 40 ? "text-amber-600" : "text-black"}`}>
+                        <td className="px-3 py-2.5">{tech.total}</td>
+                        <td className="px-3 py-2.5 font-semibold text-[#D4AF37]">{tech.completed}</td>
+                        <td className="px-3 py-2.5">{tech.open}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`font-semibold ${tech.completionRate >= 70 ? "text-emerald-600" : tech.completionRate >= 40 ? "text-amber-600" : "text-red-500"}`}>
                             {tech.completionRate.toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-2 py-2">{tech.avgTurnaround > 0 ? `${tech.avgTurnaround.toFixed(0)}h` : "—"}</td>
-                        <td className="px-2 py-2">{formatMoneyCompact(tech.revenue, currency)}</td>
+                        <td className="px-3 py-2.5">{tech.avgTurnaround > 0 ? `${tech.avgTurnaround.toFixed(0)}h` : "—"}</td>
+                        <td className="px-3 py-2.5">{formatMoneyCompact(tech.revenue, currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -775,6 +777,7 @@ export default async function ReportsPage({
               </div>
             </div>
           </div>
+        </div>
         </>
       ) : null}
 
@@ -833,48 +836,54 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="panel-shadow hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
-        <p className="mb-3 text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
+      <div className="panel-shadow hidden overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+        <div className="p-4 pb-3">
+          <p className="text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
+        </div>
         {deviceInsights.length === 0 ? (
-          <p className="text-sm text-[var(--ink-muted)]">No jobs found for this month.</p>
+          <p className="px-4 pb-4 text-sm text-[var(--ink-muted)]">No jobs found for this month.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
-              <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                 <tr>
-                  <th className="px-2 py-2">Device</th>
-                  <th className="px-2 py-2">Total</th>
-                  <th className="px-2 py-2">Open</th>
-                  <th className="px-2 py-2">Completed</th>
-                  <th className="px-2 py-2">Closed/Cancelled</th>
-                  <th className="px-2 py-2">Completion %</th>
-                  <th className="px-2 py-2">Avg Turnaround</th>
-                  <th className="px-2 py-2">Revenue</th>
-                  <th className="px-2 py-2">Margin</th>
-                  <th className="px-2 py-2">Avg Margin</th>
-                  <th className="px-2 py-2">Path Split</th>
-                  <th className="px-2 py-2">Top Tech</th>
-                  <th className="px-2 py-2">6-Month Trend</th>
+                  <th className="px-3 py-2.5">Device</th>
+                  <th className="px-3 py-2.5">Total</th>
+                  <th className="px-3 py-2.5">Open</th>
+                  <th className="px-3 py-2.5">Completed</th>
+                  <th className="px-3 py-2.5">Closed</th>
+                  <th className="px-3 py-2.5">Rate</th>
+                  <th className="px-3 py-2.5">Avg Time</th>
+                  <th className="px-3 py-2.5">Revenue</th>
+                  <th className="px-3 py-2.5">Margin</th>
+                  <th className="px-3 py-2.5">Avg Margin</th>
+                  <th className="px-3 py-2.5">Path Split</th>
+                  <th className="px-3 py-2.5">Top Tech</th>
+                  <th className="px-3 py-2.5">6-Mo Trend</th>
                 </tr>
               </thead>
               <tbody>
                 {deviceInsights.map((row) => (
-                  <tr key={row.device} className="border-t border-[var(--line)]">
-                    <td className="px-2 py-2 font-medium">{row.device}</td>
-                    <td className="px-2 py-2">{row.total}</td>
-                    <td className="px-2 py-2">{row.open}</td>
-                    <td className="px-2 py-2">{row.completed}</td>
-                    <td className="px-2 py-2">{row.cancelledOrClosed}</td>
-                    <td className="px-2 py-2">{row.completionRate.toFixed(1)}%</td>
-                    <td className="px-2 py-2">{row.avgTurnaroundHours.toFixed(1)}h</td>
-                    <td className="px-2 py-2">{formatMoney(row.revenue, currency)}</td>
-                    <td className={`px-2 py-2 ${row.margin >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+                  <tr key={row.device} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/40">
+                    <td className="px-3 py-2.5 font-medium">{row.device}</td>
+                    <td className="px-3 py-2.5">{row.total}</td>
+                    <td className="px-3 py-2.5">{row.open}</td>
+                    <td className="px-3 py-2.5 font-semibold text-[#D4AF37]">{row.completed}</td>
+                    <td className="px-3 py-2.5">{row.cancelledOrClosed}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`font-semibold ${row.completionRate >= 70 ? "text-emerald-600" : row.completionRate >= 40 ? "text-amber-600" : "text-red-500"}`}>
+                        {row.completionRate.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">{row.avgTurnaroundHours.toFixed(1)}h</td>
+                    <td className="px-3 py-2.5">{formatMoney(row.revenue, currency)}</td>
+                    <td className={`px-3 py-2.5 font-semibold ${row.margin >= 0 ? "text-[#D4AF37]" : "text-red-500"}`}>
                       {formatMoney(row.margin, currency)}
                     </td>
-                    <td className="px-2 py-2">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
-                    <td className="px-2 py-2">{row.ext} ext / {row.inHouse} in-house</td>
-                    <td className="px-2 py-2">{row.topTech}</td>
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-2.5">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
+                    <td className="px-3 py-2.5 text-[var(--ink-muted)]">{row.ext}ext / {row.inHouse}in</td>
+                    <td className="px-3 py-2.5">{row.topTech}</td>
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <svg width="68" height="28" viewBox="0 0 68 28" className="overflow-visible">
                           {(() => {
@@ -889,7 +898,7 @@ export default async function ReportsPage({
                             return <polyline points={points} fill="none" stroke="#D4AF37" strokeWidth="2" />;
                           })()}
                         </svg>
-                        <span className={`text-xs ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+                        <span className={`text-xs font-semibold ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-[#D4AF37]" : "text-red-500"}`}>
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "+" : ""}
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0)}
                         </span>

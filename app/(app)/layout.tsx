@@ -3,6 +3,9 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
 import { MobileQuickActions } from "@/components/layout/MobileQuickActions";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
+import { JobStatus, Prisma } from "@prisma/client";
+import { can } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
 export default async function AppLayout({
@@ -10,11 +13,52 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await getCurrentUserRole();
+  const { session, user } = await getCurrentUserRole();
+
+  const openStatuses: JobStatus[] = [
+    "RECEIVED",
+    "DIAGNOSING",
+    "IN_EXTERNAL_REPAIR",
+    "AWAITING_APPROVAL",
+    "IN_REPAIR",
+    "READY_FOR_PICKUP",
+    "WAITING_FOR_PARTS",
+  ];
+
+  const jobsWhere: Prisma.JobWhereInput =
+    user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
+      ? { status: { in: openStatuses }, assignedToId: session.user.id }
+      : { status: { in: openStatuses } };
+
+  const paymentWhere: Prisma.JobWhereInput = {
+    repairPath: "EXTERNAL" as const,
+    clientBill: { not: null },
+    externalPaid: false,
+    status: { in: ["DELIVERED", "COMPLETED"] },
+  };
+
+  const [activeJobsCount, partsForReorder, paymentFollowupCount] = await Promise.all([
+    prisma.job.count({ where: jobsWhere }),
+    prisma.part.findMany({
+      where: { isActive: true, reorderLevel: { gt: 0 } },
+      select: { qtyOnHand: true, reorderLevel: true },
+    }).catch(() => []),
+    (can.reviewExternalBills(user) || can.approveInvoices(user)) ? prisma.job.count({ where: paymentWhere }) : Promise.resolve(0),
+  ]);
+
+  const lowStockCount = partsForReorder.filter((part) => part.qtyOnHand <= part.reorderLevel).length;
 
   return (
     <div className="min-h-dvh overflow-x-clip md:flex md:h-screen md:overflow-hidden">
-      <AppSidebar role={user.role} permissions={user.permissions} />
+      <AppSidebar
+        role={user.role}
+        permissions={user.permissions}
+        badges={{
+          jobs: activeJobsCount,
+          inventory: lowStockCount,
+          paymentFollowups: paymentFollowupCount,
+        }}
+      />
       <div className="relative flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip md:h-full md:min-h-0">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(212,175,55,0.04),transparent_40%)]" />
         <Header userName={user.name} role={user.role} />

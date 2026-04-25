@@ -24,9 +24,6 @@ type PermissionUser = {
 };
 
 function hasExtraPermission(user: PermissionUser, permission: ExtraPermission) {
-  if (!["TECHNICIAN_INTERNAL", "OPS", "INTAKE"].includes(user.role)) {
-    return false;
-  }
   return Boolean(user.permissions?.includes(permission));
 }
 

@@ -13,12 +13,17 @@ const nav = [
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
   { href: "/intake", label: "Requests", group: "work", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
   { href: "/technicians", label: "Technicians", group: "work", roles: "all" },
+  { href: "/inventory", label: "Inventory", group: "work", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
   { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
-  { href: "/payout-followups", label: "Payout Follow-up", group: "finance", roles: ["ADMIN", "OPS"] },
+  { href: "/documents/job-cards", label: "Intake Invoices", group: "finance", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/quotations", label: "Quotations", group: "finance", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/invoices", label: "Invoices", group: "finance", roles: ["ADMIN", "OPS"] },
+  { href: "/payout-followups", label: "Payment Follow-up", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
+  { href: "/settings/notifications/templates", label: "Comms Templates", group: "admin", roles: ["ADMIN", "OPS"] },
   { href: "/settings/profile", label: "Profile", group: "personal", roles: "all" },
   { href: "/settings/notifications", label: "Notifications", group: "personal", roles: "all" },
 ] as const;
@@ -37,17 +42,22 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/intake",
     "/clients",
     "/technicians",
+    "/inventory",
     "/reports",
+    "/documents/job-cards",
+    "/documents/quotations",
+    "/documents/invoices",
     "/payout-followups",
     "/settings/users",
     "/settings/branding",
+    "/settings/notifications/templates",
     "/settings/profile",
     "/settings/notifications",
   ],
-  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/payout-followups", "/settings/profile", "/settings/notifications"],
-  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/settings/profile", "/settings/notifications"],
+  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"],
+  TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
-  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/settings/profile", "/settings/notifications"],
+  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile", "/settings/notifications"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
@@ -81,6 +91,13 @@ function navIcon(href: string) {
       </svg>
     );
   }
+  if (href === "/documents/job-cards" || href === "/documents/quotations" || href === "/documents/invoices") {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fillRule="evenodd" d="M5.25 2A2.25 2.25 0 0 0 3 4.25v11.5A2.25 2.25 0 0 0 5.25 18h9.5A2.25 2.25 0 0 0 17 15.75V6.56a2.25 2.25 0 0 0-.659-1.591L14.03 2.66A2.25 2.25 0 0 0 12.44 2H5.25Zm6.5 1.5v2.75c0 .414.336.75.75.75h2.75v8.75a.75.75 0 0 1-.75.75h-9.5a.75.75 0 0 1-.75-.75V4.25a.75.75 0 0 1 .75-.75h6.75Zm-5.5 6.25a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5H7a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+      </svg>
+    );
+  }
   if (href === "/intake") {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -110,10 +127,24 @@ function navIcon(href: string) {
       </svg>
     );
   }
+  if (href === "/payout-followups") {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fillRule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v.383a3.978 3.978 0 0 1 1.73.724.75.75 0 1 1-.922 1.182 2.48 2.48 0 0 0-.808-.396V8.5h1a.75.75 0 0 1 0 1.5h-1v4.102c.278-.078.54-.19.778-.334.267-.163.468-.348.601-.54a.75.75 0 1 1 1.232.854 3.45 3.45 0 0 1-1.052.955 4.481 4.481 0 0 1-1.559.586v.377a.75.75 0 0 1-1.5 0v-.36a4.776 4.776 0 0 1-2.045-.874.75.75 0 0 1 .967-1.147c.313.264.683.456 1.078.563V10h-1a.75.75 0 0 1 0-1.5h1V4.386a2.475 2.475 0 0 0-1.267.823.75.75 0 1 1-1.197-.904A3.968 3.968 0 0 1 9.25 2.9V2.5a.75.75 0 0 1 .75-.75Zm-.75 7.25V4.35a2.484 2.484 0 0 0-.915.425 2.5 2.5 0 0 0-.585.613A.984.984 0 0 0 8.53 9h.72Z" clipRule="evenodd" />
+      </svg>
+    );
+  }
   if (href === "/technicians") {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
+      </svg>
+    );
+  }
+  if (href === "/inventory") {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fillRule="evenodd" d="M2.5 5.75a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5Zm2-.5a.5.5 0 0 0-.5.5v2.75h12V5.75a.5.5 0 0 0-.5-.5h-11ZM16 10H4v4.25c0 .276.224.5.5.5h11a.5.5 0 0 0 .5-.5V10Z" clipRule="evenodd" />
       </svg>
     );
   }
@@ -131,6 +162,14 @@ function navIcon(href: string) {
       </svg>
     );
   }
+  if (href === "/settings/notifications" || href === "/settings/notifications/templates") {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M9.5 2.5a.5.5 0 0 1 1 0v.25a6.5 6.5 0 0 1 5.5 6.428v2.656c0 .555.22 1.086.612 1.478l.284.284a.75.75 0 0 1-.53 1.28H3.634a.75.75 0 0 1-.53-1.28l.284-.284A2.09 2.09 0 0 0 4 11.834V9.178A6.5 6.5 0 0 1 9.5 2.75V2.5Z" />
+        <path d="M7.25 15.5a2.75 2.75 0 0 0 5.5 0h-5.5Z" />
+      </svg>
+    );
+  }
   // profile / notifications / fallback
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -142,7 +181,7 @@ function navIcon(href: string) {
 function orderedNavForRole(role: Role, permissions: string[]) {
   if (role === "OPS") {
     const opsLinks = nav.filter((item) =>
-      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/reports", "/payout-followups", "/settings/profile", "/settings/notifications"].includes(item.href)
+      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"].includes(item.href)
     );
     return opsLinks;
   }
@@ -158,6 +197,18 @@ function orderedNavForRole(role: Role, permissions: string[]) {
   if (can.viewAccountsSummary(permissionUser) && !visible.some((item) => item.href === "/reports")) {
     visible.push(nav.find((item) => item.href === "/reports")!);
   }
+  if (can.viewFinancials(permissionUser) && !visible.some((item) => item.href === "/documents/invoices")) {
+    visible.push(nav.find((item) => item.href === "/documents/invoices")!);
+  }
+  if ((can.reviewExternalBills(permissionUser) || can.approveInvoices(permissionUser)) && !visible.some((item) => item.href === "/payout-followups")) {
+    visible.push(nav.find((item) => item.href === "/payout-followups")!);
+  }
+  if (can.viewFinancials(permissionUser) && !visible.some((item) => item.href === "/documents/quotations")) {
+    visible.push(nav.find((item) => item.href === "/documents/quotations")!);
+  }
+  if (can.generateJobCards(permissionUser) && !visible.some((item) => item.href === "/documents/job-cards")) {
+    visible.push(nav.find((item) => item.href === "/documents/job-cards")!);
+  }
   const ordered = roleOrder[role] ?? visible.map((item) => item.href);
   const ranking = new Map(ordered.map((href, index) => [href, index]));
   return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
@@ -165,7 +216,12 @@ function orderedNavForRole(role: Role, permissions: string[]) {
 
 function groupedNavForRole(role: Role, permissions: string[]) {
   const ordered = orderedNavForRole(role, permissions);
-  const groups = roleGroupOrder[role] ?? ["work", "personal"];
+  const canonicalOrder: NavGroup[] = ["work", "finance", "admin", "personal"];
+  const baseGroups = roleGroupOrder[role] ?? ["work", "personal"];
+  const missingGroups = canonicalOrder.filter(
+    (group) => ordered.some((item) => item.group === group) && !baseGroups.includes(group),
+  );
+  const groups = [...baseGroups, ...missingGroups];
   return groups
     .map((group) => ({
       group,
@@ -174,7 +230,19 @@ function groupedNavForRole(role: Role, permissions: string[]) {
     .filter((section) => section.items.length > 0);
 }
 
-export function AppSidebar({ role, permissions = [] }: { role: Role; permissions?: string[] }) {
+export function AppSidebar({
+  role,
+  permissions = [],
+  badges,
+}: {
+  role: Role;
+  permissions?: string[];
+  badges?: {
+    jobs?: number;
+    inventory?: number;
+    paymentFollowups?: number;
+  };
+}) {
   const pathname = usePathname();
   const groupedNav = groupedNavForRole(role, permissions);
 
@@ -205,6 +273,14 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const active = isActive(pathname, item.href);
+                const badge =
+                  item.href === "/jobs"
+                    ? badges?.jobs
+                    : item.href === "/inventory"
+                      ? badges?.inventory
+                      : item.href === "/payout-followups"
+                        ? badges?.paymentFollowups
+                        : undefined;
                 return (
                   <Link
                     key={item.href}
@@ -233,6 +309,11 @@ export function AppSidebar({ role, permissions = [] }: { role: Role; permissions
                     </span>
                     {/* Label */}
                     <span className="truncate">{item.label}</span>
+                    {typeof badge === "number" && badge > 0 ? (
+                      <span className="ml-auto rounded-full border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-muted)]">
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

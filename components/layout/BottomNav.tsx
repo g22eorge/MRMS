@@ -68,6 +68,30 @@ const payoutsIcon = (
     <line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
   </svg>
 );
+const inventoryIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 7h18v13H3z"/><path d="M3 7l3-4h12l3 4"/><path d="M9 12h6"/>
+  </svg>
+);
+const messagesIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const notificationsIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/>
+    <path d="M9 17a3 3 0 0 0 6 0"/>
+  </svg>
+);
+const invoiceIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <path d="M14 2v6h6"/>
+    <path d="M8 13h8"/>
+    <path d="M8 17h5"/>
+  </svg>
+);
 
 /* ── named items ── */
 const ITEMS = {
@@ -77,11 +101,17 @@ const ITEMS = {
   intake:      { href: "/intake",                label: "Requests",  icon: intakeIcon },
   clients:     { href: "/clients",               label: "Clients",   icon: clientsIcon },
   reports:     { href: "/reports",               label: "Reports",   icon: reportsIcon },
-  payoutFollowups: { href: "/payout-followups",  label: "Payouts Due", icon: payoutsIcon },
+  inventory:   { href: "/inventory",             label: "Inventory", icon: inventoryIcon },
+  payoutFollowups: { href: "/payout-followups",  label: "Payment Follow-up", icon: payoutsIcon },
   payouts:     { href: "/technicians/payouts",   label: "Payouts",   icon: payoutsIcon },
   users:       { href: "/settings/users",        label: "Users",     icon: usersIcon },
   branding:    { href: "/settings/branding",     label: "Branding",  icon: brandingIcon },
+  commsTemplates: { href: "/settings/notifications/templates", label: "Comms", icon: messagesIcon },
+  notifications: { href: "/settings/notifications", label: "Notifications", icon: notificationsIcon },
   profile:     { href: "/settings/profile",      label: "Profile",   icon: profileIcon },
+  jobCards:    { href: "/documents/job-cards",   label: "Intake Inv", icon: invoiceIcon },
+  quotations:  { href: "/documents/quotations",  label: "Quotes",    icon: invoiceIcon },
+  invoiceDocs: { href: "/documents/invoices",    label: "Invoices",  icon: invoiceIcon },
 } satisfies Record<string, NavItem>;
 
 /* ── role-based nav config ── */
@@ -110,15 +140,30 @@ function getExtraItems(role: Role, permissions: string[]): NavItem[] {
   const permUser = { role, permissions };
 
   if (role === "ADMIN") {
-    items.push(ITEMS.clients, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.users, ITEMS.branding);
+    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.clients, ITEMS.inventory, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.users, ITEMS.branding, ITEMS.commsTemplates);
   } else if (role === "OPS") {
-    items.push(ITEMS.clients, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board);
+    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.clients, ITEMS.inventory, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.commsTemplates);
   } else if (role === "INTAKE") {
-    items.push(ITEMS.clients, ITEMS.board);
+    items.push(ITEMS.jobCards, ITEMS.clients, ITEMS.board);
   } else if (role === "TECHNICIAN_INTERNAL" && can.viewClientInfo(permUser)) {
     // has can_intake — board wasn't in primary
-    items.push(ITEMS.clients, ITEMS.board);
+    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.clients, ITEMS.inventory, ITEMS.board);
+  } else if (role === "TECHNICIAN_INTERNAL") {
+    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.inventory);
   }
+  if (can.generateJobCards(permUser) && !items.some((item) => item.href === ITEMS.jobCards.href)) {
+    items.push(ITEMS.jobCards);
+  }
+  if (can.viewFinancials(permUser) && !items.some((item) => item.href === ITEMS.quotations.href)) {
+    items.push(ITEMS.quotations);
+  }
+  if (can.viewFinancials(permUser) && !items.some((item) => item.href === ITEMS.invoiceDocs.href)) {
+    items.push(ITEMS.invoiceDocs);
+  }
+  if ((can.reviewExternalBills(permUser) || can.approveInvoices(permUser)) && !items.some((item) => item.href === ITEMS.payoutFollowups.href)) {
+    items.push(ITEMS.payoutFollowups);
+  }
+  items.push(ITEMS.notifications);
   // TECHNICIAN_EXTERNAL: payouts is in primary; board goes in More
   if (role === "TECHNICIAN_EXTERNAL") {
     items.push(ITEMS.board);

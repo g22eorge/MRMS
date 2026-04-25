@@ -1,369 +1,272 @@
-import { hashPassword } from "better-auth/crypto";
 import { Role } from "@prisma/client";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
-import { ProgressiveList } from "@/components/mobile/ProgressiveList";
+import { UserAccessControlPanel } from "@/components/settings/UserAccessControlPanel";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { RoleActionButton, SubmitActionButton } from "@/components/settings/UserActionButtons";
-import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
 
-const createUserSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  password: z.string().min(8),
-  role: z.nativeEnum(Role),
-});
-
-const updateRoleSchema = z.object({
-  id: z.string().min(1),
-  role: z.nativeEnum(Role),
-});
-
-const updateDetailsSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Enter a valid email"),
-  phone: z.string().optional(),
-});
-
-const updatePasswordSchema = z.object({
-  id: z.string().min(1),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-const togglePermissionSchema = z.object({
-  id: z.string().min(1),
-  permission: z.string().min(3),
-  enabled: z.enum(["true", "false"]),
-});
-
-const applyPresetSchema = z.object({
-  id: z.string().min(1),
-  preset: z.enum(["standard", "extended_ops"]),
-});
-
-const EXTENDED_OPS_PRESET = [...EXTRA_PERMISSIONS];
-
-type UserDetailsState = {
-  error?: string;
-  success?: string;
+type SearchParams = {
+  q?: string;
+  userId?: string;
 };
 
-const roleChoices: Role[] = [
-  Role.ADMIN,
-  Role.OPS,
-  Role.INTAKE,
-  Role.TECHNICIAN_INTERNAL,
-  Role.TECHNICIAN_EXTERNAL,
+type PermissionOption = {
+  key: string;
+  group: string;
+  action: string;
+  label: string;
+  description: string;
+  permission?: (typeof EXTRA_PERMISSIONS)[number];
+  mutable: boolean;
+};
+
+const roleOptions: Array<{ value: Role; label: string; description: string }> = [
+  { value: Role.ADMIN, label: "Admin", description: "Full platform control including user management and financial approvals." },
+  { value: Role.INTAKE, label: "Intake Officer", description: "Handles intake conversion, customer details, and handover documents." },
+  { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
+  { value: Role.TECHNICIAN_EXTERNAL, label: "External Technician", description: "External workflow access without client identity or billing history." },
+  { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
 ];
 
-const roleDisplay: Partial<Record<Role, string>> = {
-  ADMIN: "Admin",
-  OPS: "Ops",
-  INTAKE: "Intake",
-  TECHNICIAN_INTERNAL: "Internal Tech",
-  TECHNICIAN_EXTERNAL: "External Tech",
+const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
+  ADMIN: [
+    "can_run_internal_repairs",
+    "can_intake",
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_view_job_progress",
+    "can_view_approved_cost",
+    "can_assign_jobs",
+    "can_view_external_updates",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+  ],
+  OPS: [
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_assign_jobs",
+    "can_view_external_updates",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+  ],
+  INTAKE: [
+    "can_intake",
+    "can_manage_intake",
+    "can_generate_job_cards",
+    "can_view_job_progress",
+    "can_search_jobs",
+  ],
+  TECHNICIAN_INTERNAL: [
+    "can_run_internal_repairs",
+    "can_search_jobs",
+    "can_view_job_progress",
+    "can_view_external_updates",
+  ],
+  TECHNICIAN_EXTERNAL: [],
 };
 
-const safeRoleChoices = roleChoices.filter(
-  (role): role is Role => typeof role === "string" && role.length > 0,
-);
+const roleCapabilities: Record<Role, string[]> = {
+  ADMIN: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_assign",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "tech_notes",
+    "parts_bills",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "users_manage",
+    "settings_admin",
+    "approval_cost",
+    "delete_records",
+    "download_docs",
+  ],
+  OPS: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_assign",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "tech_notes",
+    "parts_bills",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  INTAKE: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "download_docs",
+  ],
+  TECHNICIAN_INTERNAL: [
+    "dashboard_view",
+    "jobs_view",
+    "device_records",
+    "tech_notes",
+    "download_docs",
+  ],
+  TECHNICIAN_EXTERNAL: [
+    "dashboard_view",
+    "jobs_view",
+    "tech_notes",
+  ],
+};
 
-function prettyRole(role: Role) {
-  return role.replaceAll("_", " ");
-}
+const permissionOptions: PermissionOption[] = [
+  { key: "dashboard_view", group: "Dashboard Access", action: "View", label: "Dashboard overview", description: "Access the operational dashboard and queue counters.", mutable: false },
+  { key: "jobs_view", group: "Job Management", action: "View", label: "View jobs", description: "Open job queues and job detail screens.", permission: "can_search_jobs", mutable: true },
+  { key: "jobs_assign", group: "Job Management", action: "Assign", label: "Assign jobs", description: "Assign jobs to internal or external technicians.", permission: "can_assign_jobs", mutable: true },
+  { key: "jobs_create", group: "Job Management", action: "Create", label: "Create jobs", description: "Create intake jobs and convert requests into active jobs.", permission: "can_intake", mutable: true },
+  { key: "intake_manage", group: "Intake Process", action: "Edit", label: "Manage intake", description: "Update intake funnel and intake stage ownership.", permission: "can_manage_intake", mutable: true },
+  { key: "device_records", group: "Device Records", action: "Edit", label: "Update device records", description: "Edit serial, accessories, and condition records.", permission: "can_view_job_progress", mutable: true },
+  { key: "client_records", group: "Client Records", action: "View", label: "View client records", description: "Access client profile and contact details.", mutable: false },
+  { key: "tech_notes", group: "Technician Updates", action: "Edit", label: "Technician updates", description: "Add diagnosis, repair notes, and update progress.", permission: "can_run_internal_repairs", mutable: true },
+  { key: "parts_bills", group: "Parts and Bills", action: "View", label: "Review parts and external bills", description: "Review billables tied to parts and external costs.", permission: "can_review_external_bills", mutable: true },
+  { key: "invoices_view", group: "Invoices and Payments", action: "View", label: "View invoice and settlement", description: "Open invoice workspace and settlement records.", permission: "can_view_accounts_summary", mutable: true },
+  { key: "invoices_approve", group: "Invoices and Payments", action: "Approve", label: "Approve invoices", description: "Approve invoice-sensitive actions and finance approvals.", permission: "can_approve_invoices", mutable: true },
+  { key: "reports_export", group: "Reports", action: "Export", label: "Export reports", description: "View and export operational and finance reports.", permission: "can_view_accounts_summary", mutable: true },
+  { key: "users_manage", group: "User Management", action: "Edit", label: "Manage users", description: "Create, update, deactivate, and assign user access.", mutable: false },
+  { key: "settings_admin", group: "Settings", action: "Edit", label: "Admin settings", description: "Manage branding and system-level settings.", mutable: false },
+  { key: "approval_cost", group: "Approvals", action: "Approve", label: "Approve quoted cost", description: "Approve and publish final approved costs.", permission: "can_view_approved_cost", mutable: true },
+  { key: "delete_records", group: "Delete/Edit Restrictions", action: "Delete", label: "Delete records", description: "Delete/archive sensitive records when policy allows.", mutable: false },
+  { key: "download_docs", group: "Delete/Edit Restrictions", action: "Download", label: "Download documents", description: "Download handover, quotation, and invoice PDFs.", permission: "can_generate_job_cards", mutable: true },
+];
 
 function roleLabel(role: Role) {
-  return roleDisplay[role] ?? prettyRole(role);
+  if (role === "TECHNICIAN_INTERNAL") return "Internal Technician";
+  if (role === "TECHNICIAN_EXTERNAL") return "External Technician";
+  if (role === "INTAKE") return "Intake Officer";
+  if (role === "OPS") return "Operations/Accounts";
+  return "Admin";
 }
 
-export default async function UsersPage() {
-  const { session, user } = await getCurrentUserRole();
+function formatDateTime(value?: Date | null) {
+  if (!value) return "No activity yet";
+  return value.toLocaleString();
+}
+
+function searchMatches(user: {
+  name: string;
+  email: string;
+  phone: string | null;
+  role: Role;
+}, query: string) {
+  if (!query) return true;
+  const haystack = [
+    user.name,
+    user.email,
+    user.phone ?? "",
+    user.role,
+    roleLabel(user.role),
+  ].join(" ").toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
-  async function createUser(formData: FormData) {
+  async function saveAccessChanges(formData: FormData) {
     "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
 
-    const parsed = createUserSchema.safeParse({
-      name: String(formData.get("name") ?? "").trim(),
-      email: String(formData.get("email") ?? "").trim().toLowerCase(),
-      phone: String(formData.get("phone") ?? "").trim(),
-      password: String(formData.get("password") ?? ""),
-      role: String(formData.get("role") ?? "OPS"),
-    });
-    if (!parsed.success) return;
+    const { session, user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return;
 
-    const newUser = await prisma.user.create({
-      data: {
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone?.trim() || null,
-        role: parsed.data.role,
-        emailVerified: true,
-      },
-    });
+    const targetUserId = String(formData.get("userId") ?? "").trim();
+    const nextRole = String(formData.get("role") ?? "") as Role;
+    const permissionValues = formData
+      .getAll("permissions")
+      .map((value) => String(value).trim())
+      .filter((value): value is (typeof EXTRA_PERMISSIONS)[number] =>
+        EXTRA_PERMISSIONS.includes(value as (typeof EXTRA_PERMISSIONS)[number]),
+      );
 
-    await prisma.account.create({
-      data: {
-        accountId: newUser.id,
-        providerId: "credential",
-        userId: newUser.id,
-        password: await hashPassword(parsed.data.password),
-      },
-    });
-
-    revalidatePath("/settings/users");
-  }
-
-  async function updateRole(formData: FormData) {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
-
-    const parsed = updateRoleSchema.safeParse({
-      id: String(formData.get("id") ?? ""),
-      role: String(formData.get("role") ?? ""),
-    });
-    if (!parsed.success) return;
-    await prisma.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role } });
-
-    revalidatePath("/settings/users");
-  }
-
-  async function updateDetails(_prevState: UserDetailsState, formData: FormData): Promise<UserDetailsState> {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return { error: "Unauthorized action" };
-
-    const parsed = updateDetailsSchema.safeParse({
-      id: String(formData.get("id") ?? ""),
-      name: String(formData.get("name") ?? "").trim(),
-      email: String(formData.get("email") ?? "").trim().toLowerCase(),
-      phone: String(formData.get("phone") ?? "").trim(),
-    });
-    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid profile details" };
-
-    const existingEmail = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
-      select: { id: true },
-    });
-    if (existingEmail && existingEmail.id !== parsed.data.id) {
-      return { error: "Email is already used by another user" };
-    }
-
-    try {
-      await prisma.user.update({
-        where: { id: parsed.data.id },
-        data: {
-          name: parsed.data.name,
-          email: parsed.data.email,
-          phone: parsed.data.phone || null,
-        },
-      });
-    } catch {
-      return { error: "Could not update this user profile right now" };
-    }
-
-    revalidatePath("/settings/users");
-    return { success: "Profile updated" };
-  }
-
-  async function deactivate(formData: FormData) {
-    "use server";
-    const { session, user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
-
-    const id = String(formData.get("id"));
-    if (!id || id === session.user.id) return;
+    if (!targetUserId || !Object.values(Role).includes(nextRole)) return;
 
     const target = await prisma.user.findUnique({
-      where: { id },
-      select: { role: true },
-    });
-    if (!target || target.role === "ADMIN") return;
-
-    await prisma.user.update({ where: { id }, data: { isActive: false } });
-
-    revalidatePath("/settings/users");
-  }
-
-  async function reactivate(formData: FormData) {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
-
-    const id = String(formData.get("id") ?? "");
-    if (!id) return;
-
-    await prisma.user.update({ where: { id }, data: { isActive: true } });
-    revalidatePath("/settings/users");
-  }
-
-  async function deleteUser(formData: FormData) {
-    "use server";
-    const { session: currentSession, user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
-
-    const id = String(formData.get("id") ?? "");
-    if (!id || id === currentSession.user.id) return;
-
-    const usage = await prisma.user.findUnique({
-      where: { id },
+      where: { id: targetUserId },
       select: {
+        id: true,
         role: true,
-        _count: {
-          select: {
-            jobsCreated: true,
-            jobsAssigned: true,
-            payoutsMarked: true,
-            auditLogs: true,
-            clientNotes: true,
-          },
-        },
+        permissionGrants: { select: { permission: true } },
       },
     });
+    if (!target) return;
 
-    if (!usage) return;
-    if (usage.role === "ADMIN") return;
-
-    const hasLinkedRecords =
-      usage._count.jobsCreated > 0 ||
-      usage._count.jobsAssigned > 0 ||
-      usage._count.payoutsMarked > 0 ||
-      usage._count.auditLogs > 0 ||
-      usage._count.clientNotes > 0;
-
-    if (hasLinkedRecords) {
-      await prisma.user.update({ where: { id }, data: { isActive: false } });
-      revalidatePath("/settings/users");
+    if (target.id === session.user.id && nextRole !== "ADMIN") {
       return;
     }
 
-    await prisma.user.delete({ where: { id } });
-    revalidatePath("/settings/users");
-  }
+    const currentPermissions = new Set<string>(target.permissionGrants.map((grant) => grant.permission));
+    const nextPermissions = new Set<string>(permissionValues);
 
-  async function updatePassword(formData: FormData) {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
+    const added = [...nextPermissions].filter((permission) => !currentPermissions.has(permission));
+    const removed = [...currentPermissions].filter((permission) => !nextPermissions.has(permission));
+    const roleChanged = target.role !== nextRole;
+    const permissionChanged = added.length > 0 || removed.length > 0;
 
-    const parsed = updatePasswordSchema.safeParse({
-      id: String(formData.get("id") ?? ""),
-      password: String(formData.get("password") ?? ""),
-    });
-    if (!parsed.success) return;
+    if (!roleChanged && !permissionChanged) return;
 
-    const hashedPassword = await hashPassword(parsed.data.password);
-    const existingCredentialAccount = await prisma.account.findFirst({
-      where: { userId: parsed.data.id, providerId: "credential" },
-      select: { id: true },
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: targetUserId }, data: { role: nextRole } });
+      await tx.userPermission.deleteMany({ where: { userId: targetUserId } });
 
-    if (existingCredentialAccount) {
-      await prisma.account.update({
-        where: { id: existingCredentialAccount.id },
-        data: { password: hashedPassword },
-      });
-    } else {
-      await prisma.account.create({
+      if (permissionValues.length > 0) {
+        await tx.userPermission.createMany({
+          data: permissionValues.map((permission) => ({ userId: targetUserId, permission })),
+        });
+      }
+
+      await tx.userAccessAudit.create({
         data: {
-          accountId: parsed.data.id,
-          providerId: "credential",
-          userId: parsed.data.id,
-          password: hashedPassword,
+          actorUserId: session.user.id,
+          targetUserId,
+          action: roleChanged ? "ROLE_AND_PERMISSION_UPDATED" : "PERMISSION_UPDATED",
+          detail: JSON.stringify({
+            fromRole: target.role,
+            toRole: nextRole,
+            added,
+            removed,
+          }),
         },
       });
-    }
+    });
 
     revalidatePath("/settings/users");
   }
 
-  async function togglePermission(formData: FormData) {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
+  const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q.trim() : "";
 
-    const parsed = togglePermissionSchema.safeParse({
-      id: String(formData.get("id") ?? ""),
-      permission: String(formData.get("permission") ?? ""),
-      enabled: String(formData.get("enabled") ?? "false"),
-    });
-    if (!parsed.success) return;
-    if (!EXTRA_PERMISSIONS.includes(parsed.data.permission as (typeof EXTRA_PERMISSIONS)[number])) {
-      return;
-    }
-
-    if (parsed.data.enabled === "true") {
-      await prisma.userPermission.upsert({
-        where: {
-          userId_permission: {
-            userId: parsed.data.id,
-            permission: parsed.data.permission,
-          },
-        },
-        create: {
-          userId: parsed.data.id,
-          permission: parsed.data.permission,
-        },
-        update: {},
-      });
-    } else {
-      await prisma.userPermission.deleteMany({
-        where: {
-          userId: parsed.data.id,
-          permission: parsed.data.permission,
-        },
-      });
-    }
-
-    revalidatePath("/settings/users");
-  }
-
-  async function applyPermissionPreset(formData: FormData) {
-    "use server";
-    const { user: currentUser } = await getCurrentUserRole();
-    if (currentUser.role !== "ADMIN") return;
-
-    const parsed = applyPresetSchema.safeParse({
-      id: String(formData.get("id") ?? ""),
-      preset: String(formData.get("preset") ?? "standard"),
-    });
-    if (!parsed.success) return;
-
-    const target = await prisma.user.findUnique({
-      where: { id: parsed.data.id },
-      select: { role: true },
-    });
-    if (!target || (target.role !== "TECHNICIAN_INTERNAL" && target.role !== "OPS")) {
-      return;
-    }
-
-    const nextPermissions =
-      parsed.data.preset === "extended_ops" ? EXTENDED_OPS_PRESET : [];
-
-    await prisma.userPermission.deleteMany({ where: { userId: parsed.data.id } });
-
-    for (const permission of nextPermissions) {
-      await prisma.userPermission.create({
-        data: { userId: parsed.data.id, permission },
-      });
-    }
-
-    revalidatePath("/settings/users");
-  }
-
-  const usersBase = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
+  const users = await prisma.user.findMany({
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
@@ -371,279 +274,164 @@ export default async function UsersPage() {
       phone: true,
       role: true,
       isActive: true,
-      _count: {
+      createdAt: true,
+      updatedAt: true,
+      permissionGrants: {
         select: {
-          jobsCreated: true,
-          jobsAssigned: true,
-          payoutsMarked: true,
-          auditLogs: true,
-          clientNotes: true,
+          permission: true,
         },
+      },
+      sessions: {
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        select: { updatedAt: true },
+      },
+      auditLogs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
       },
     },
   });
 
-  let permissionMap = new Map<string, Array<{ permission: string }>>();
-  try {
-    const permissionRows = await prisma.$queryRaw<Array<{ userId: string; permission: string }>>`
-      SELECT userId, permission FROM "UserPermission"
-    `;
-    permissionMap = permissionRows.reduce((acc, row) => {
-      if (!acc.has(row.userId)) acc.set(row.userId, []);
-      acc.get(row.userId)?.push({ permission: row.permission });
-      return acc;
-    }, new Map<string, Array<{ permission: string }>>());
-  } catch {
-    permissionMap = new Map();
-  }
+  const filteredUsers = users.filter((item) => searchMatches(item, q));
+  const selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
 
-  const usersWithPermissions = usersBase.map((user) => ({
-    ...user,
-    permissionGrants: permissionMap.get(user.id) ?? [],
-  }));
-
-  const users = Array.from(
-    new Map(
-      usersWithPermissions.map((user) => {
-        const key = `${user.email.trim().toLowerCase()}::${user.role}`;
-        return [key, user] as const;
-      }),
-    ).values(),
-  );
-  const controlClass =
-    "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+  const accessAudit = selectedUser
+    ? await prisma.userAccessAudit.findMany({
+        where: { targetUserId: selectedUser.id },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        select: {
+          id: true,
+          action: true,
+          detail: true,
+          createdAt: true,
+          actorUser: { select: { name: true } },
+        },
+      })
+    : [];
 
   return (
     <div className="space-y-4">
-      <form action={createUser} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create user</p>
-        <div className="grid gap-2 lg:hidden">
-          <input required name="name" placeholder="Name" className={controlClass} />
-          <input required type="email" name="email" placeholder="Email" className={controlClass} />
-          <div className="grid grid-cols-2 gap-2">
-            <input required name="password" type="password" placeholder="Password" className={`min-w-0 ${controlClass}`} />
-            <select id="create-user-role" name="role" defaultValue={Role.OPS} className="min-w-0 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20">
-              {safeRoleChoices.map((role) => (
-                <option key={`mobile-${role}`} value={role}>{prettyRole(role)}</option>
-              ))}
-            </select>
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">User Selection</p>
+        <form method="GET" className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Search by name, phone, email, or role"
+            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <button className="btn-premium-secondary rounded-md px-3 py-2 text-sm">Search</button>
+            <Link href="/settings/users" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+              Reset
+            </Link>
           </div>
-          <details className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-            <summary className="list-none text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">Optional details</summary>
-            <input name="phone" placeholder="Phone" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
-          </details>
+        </form>
+
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {filteredUsers.map((item) => (
+            <Link
+              key={item.id}
+              href={`/settings/users?${new URLSearchParams({ q, userId: item.id }).toString()}`}
+              className={`rounded-lg border px-3 py-2 transition ${selectedUser?.id === item.id ? "border-[#D4AF37] bg-[#D4AF37]/10" : "border-[var(--line)] bg-white hover:border-[#D4AF37]/45"}`}
+            >
+              <p className="font-medium text-[var(--ink)]">{item.name}</p>
+              <p className="text-xs text-[var(--ink-muted)]">{item.email}</p>
+              <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{roleLabel(item.role)} • {item.isActive ? "Active" : "Inactive"}</p>
+            </Link>
+          ))}
         </div>
+      </section>
 
-        <div className="hidden gap-2 lg:grid lg:grid-cols-4">
-          <input required name="name" placeholder="Name" className={controlClass} />
-          <input required type="email" name="email" placeholder="Email" className={controlClass} />
-          <input name="phone" placeholder="Phone (optional)" className={controlClass} />
-          <input required name="password" type="password" placeholder="Password" className={controlClass} />
-        </div>
-
-        <div className="hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 lg:block">
-          <label htmlFor="create-user-role" className="mb-1 block text-xs uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-            Role
-          </label>
-          <div className="grid gap-2 lg:grid-cols-4">
-            {safeRoleChoices.map((role) => (
-              <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
-                <input type="radio" name="role" value={role} defaultChecked={role === Role.OPS} />
-                <span>{prettyRole(role)}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <SubmitActionButton
-          idleLabel="Create User"
-          pendingLabel="Creating..."
-          className="btn-premium w-full rounded-lg px-3 py-2 text-white md:w-auto"
-        />
-      </form>
-
-      <div className="space-y-2">
-        <ProgressiveList initialCount={4} step={4}>
-          {users.map((u) => {
-            const hasLinkedRecords =
-              u._count.jobsCreated > 0 ||
-              u._count.jobsAssigned > 0 ||
-              u._count.payoutsMarked > 0 ||
-              u._count.auditLogs > 0 ||
-              u._count.clientNotes > 0;
-
-            return (
-            <details key={u.id} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <summary className="list-none cursor-pointer">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{u.name}</p>
-                  <p className="truncate text-xs text-[var(--ink-muted)]">{u.email}</p>
-                  <p className="truncate text-xs text-[var(--ink-muted)]">{u.phone || "No phone"}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs">{roleLabel(u.role)}</span>
-                  <span className={`rounded-full px-2 py-1 text-xs ${u.isActive ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>
-                    {u.isActive ? "Account: Active" : "Account: Inactive"}
-                  </span>
-                  {hasLinkedRecords ? (
-                    <span className="rounded-full bg-[var(--panel-strong)] px-2 py-1 text-xs text-[var(--ink)]">Has history</span>
-                  ) : null}
-                  <span className="text-[11px] text-[var(--ink-muted)] sm:hidden">Tap to expand</span>
-                </div>
+      {selectedUser ? (
+        <>
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Profile Summary</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Name</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.name}</p>
               </div>
-            </summary>
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Contact</p>
+                <p className="mt-1 text-sm text-[var(--ink)]">{selectedUser.email}</p>
+                <p className="text-xs text-[var(--ink-muted)]">{selectedUser.phone ?? "No phone on file"}</p>
+              </div>
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Current Role</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{roleLabel(selectedUser.role)}</p>
+              </div>
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Status</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.isActive ? "Active" : "Inactive"}</p>
+              </div>
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Last Activity</p>
+                <p className="mt-1 text-sm text-[var(--ink)]">
+                  {formatDateTime(
+                    selectedUser.sessions[0]?.updatedAt
+                    ?? selectedUser.auditLogs[0]?.createdAt
+                    ?? selectedUser.updatedAt,
+                  )}
+                </p>
+              </div>
+              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Branch / Location</p>
+                <p className="mt-1 text-sm text-[var(--ink)]">Not assigned</p>
+              </div>
+            </div>
+          </section>
 
-            <UserDetailsForm id={u.id} name={u.name} email={u.email} phone={u.phone} action={updateDetails} />
+          <UserAccessControlPanel
+            userId={selectedUser.id}
+            initialRole={selectedUser.role}
+            initialPermissions={selectedUser.permissionGrants.map((grant) => grant.permission)}
+            roleOptions={roleOptions}
+            roleDefaultPermissions={roleDefaults}
+            roleDefaultCapabilities={roleCapabilities}
+            permissions={permissionOptions}
+            saveAction={saveAccessChanges}
+          />
 
-            <div className="grid gap-2">
-              <form action={updateRole} className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                <input type="hidden" name="id" value={u.id} />
-                {safeRoleChoices.map((role) => (
-                    <RoleActionButton
-                      key={role}
-                      role={role}
-                      currentRole={u.role}
-                      label={roleLabel(role)}
-                    />
-                  ))}
-              </form>
-              <form action={updatePassword} className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 sm:grid-cols-[1fr_auto]">
-                <input type="hidden" name="id" value={u.id} />
-                <input
-                  required
-                  name="password"
-                  type="password"
-                  minLength={8}
-                  placeholder="Set new password (min 8 chars)"
-                  className="min-w-0 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-                />
-                <SubmitActionButton
-                  idleLabel="Update Password"
-                  pendingLabel="Updating..."
-                  className="btn-premium w-full rounded-md px-3 py-2 text-sm text-white sm:w-auto"
-                />
-              </form>
-              <section className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-                {u.role === "TECHNICIAN_INTERNAL" || u.role === "OPS" ? (
-                  <>
-                    <input id={`permissions-toggle-${u.id}`} type="checkbox" className="peer sr-only" />
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Extended permissions</p>
-                      <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
-                        Extended access: {u.permissionGrants.length}/{EXTRA_PERMISSIONS.length} enabled
-                      </span>
-                      <label htmlFor={`permissions-toggle-${u.id}`} className="btn-premium-secondary cursor-pointer rounded-md px-2.5 py-1 text-xs">
-                        Manage
-                      </label>
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Access Audit Trail</p>
+            <div className="mt-3 space-y-2">
+              {accessAudit.length > 0 ? (
+                accessAudit.map((entry) => {
+                  let detail = "No detail";
+                  try {
+                    const parsed = entry.detail ? JSON.parse(entry.detail) as { added?: string[]; removed?: string[]; fromRole?: string; toRole?: string } : null;
+                    const roleLine = parsed && parsed.fromRole !== parsed.toRole
+                      ? `Role ${parsed.fromRole} -> ${parsed.toRole}`
+                      : "Role unchanged";
+                    const addedLine = parsed?.added?.length ? `Added: ${parsed.added.join(", ")}` : "Added: none";
+                    const removedLine = parsed?.removed?.length ? `Removed: ${parsed.removed.join(", ")}` : "Removed: none";
+                    detail = `${roleLine} • ${addedLine} • ${removedLine}`;
+                  } catch {
+                    detail = entry.detail ?? "No detail";
+                  }
+                  return (
+                    <div key={entry.id} className="rounded-md border border-[var(--line)] bg-white p-3 text-xs text-[var(--ink-muted)]">
+                      <p className="font-semibold text-[var(--ink)]">{entry.action}</p>
+                      <p className="mt-1">Changed by {entry.actorUser.name} • {entry.createdAt.toLocaleString()}</p>
+                      <p className="mt-1">{detail}</p>
                     </div>
-                    <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
-                      Base role controls default access. Extended permissions add controlled exceptions.
-                    </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      <form action={applyPermissionPreset}>
-                        <input type="hidden" name="id" value={u.id} />
-                        <input type="hidden" name="preset" value="standard" />
-                        <button className="btn-premium-secondary w-full rounded-md px-2.5 py-1.5 text-xs">
-                          Apply Standard
-                        </button>
-                      </form>
-                      <form action={applyPermissionPreset}>
-                        <input type="hidden" name="id" value={u.id} />
-                        <input type="hidden" name="preset" value="extended_ops" />
-                        <button className="btn-premium w-full rounded-md px-2.5 py-1.5 text-xs text-white">
-                          Apply Extended Ops
-                        </button>
-                      </form>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {u.permissionGrants.length > 0 ? (
-                        u.permissionGrants.map((grant) => (
-                          <span key={`${u.id}-chip-${grant.permission}`} className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[11px] text-[#D4AF37]">
-                            {grant.permission.replaceAll("_", " ")}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-[var(--ink-muted)]">No extended permissions enabled.</span>
-                      )}
-                    </div>
-                    <div className="mt-3 hidden gap-2 peer-checked:grid sm:grid-cols-2">
-                      {EXTRA_PERMISSIONS.map((permission) => {
-                        const enabled = u.permissionGrants.some((grant) => grant.permission === permission);
-                        return (
-                          <form key={`${u.id}-${permission}`} action={togglePermission} className="rounded-md border border-[var(--line)] bg-white p-2">
-                            <input type="hidden" name="id" value={u.id} />
-                            <input type="hidden" name="permission" value={permission} />
-                            <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
-                            <button className="w-full text-left text-xs">
-                              <p className="font-semibold text-[var(--ink)]">{permission.replaceAll("_", " ")}</p>
-                              <p className={`mt-1 ${enabled ? "text-[#D4AF37]" : "text-[var(--ink-muted)]"}`}>{enabled ? "Enabled" : "Disabled"}</p>
-                            </button>
-                          </form>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Extended permissions</p>
-                    <span className="text-xs text-[var(--ink-muted)]">Not applicable for this role</span>
-                  </div>
-                )}
-              </section>
-              {u.isActive ? (
-                <div className="flex flex-wrap gap-2">
-                  {u.role !== "ADMIN" ? (
-                    <form action={deactivate} className="sm:w-fit">
-                      <input type="hidden" name="id" value={u.id} />
-                      <SubmitActionButton
-                        idleLabel="Deactivate"
-                        pendingLabel="Deactivating..."
-                        className="btn-premium-danger w-full rounded-md px-3 py-2 text-sm sm:w-auto"
-                      />
-                    </form>
-                  ) : null}
-                  <form action={deleteUser} className="sm:w-fit">
-                    {u.role !== "ADMIN" ? (
-                      <>
-                        <input type="hidden" name="id" value={u.id} />
-                        <SubmitActionButton
-                          idleLabel={hasLinkedRecords ? "Archive" : "Delete"}
-                          pendingLabel={hasLinkedRecords ? "Archiving..." : "Deleting..."}
-                          className="btn-premium-secondary w-full rounded-md px-3 py-2 text-sm sm:w-auto"
-                        />
-                      </>
-                    ) : null}
-                  </form>
-                </div>
+                  );
+                })
               ) : (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-[var(--ink-muted)]">Inactive</span>
-                  <form action={reactivate} className="sm:w-fit">
-                    <input type="hidden" name="id" value={u.id} />
-                    <SubmitActionButton
-                      idleLabel="Activate"
-                      pendingLabel="Activating..."
-                      className="btn-premium w-full rounded-md px-3 py-2 text-sm text-white sm:w-auto"
-                    />
-                  </form>
-                  {u.id !== session.user.id && u.role !== "ADMIN" ? (
-                    <form action={deleteUser} className="sm:w-fit">
-                      <input type="hidden" name="id" value={u.id} />
-                      <SubmitActionButton
-                        idleLabel={hasLinkedRecords ? "Archive" : "Delete"}
-                        pendingLabel={hasLinkedRecords ? "Archiving..." : "Deleting..."}
-                        className="btn-premium-secondary w-full rounded-md px-3 py-2 text-sm sm:w-auto"
-                      />
-                    </form>
-                  ) : null}
-                </div>
+                <p className="text-sm text-[var(--ink-muted)]">No access changes recorded yet for this user.</p>
               )}
             </div>
-            </details>
-            );
-          })}
-        </ProgressiveList>
-      </div>
+          </section>
+        </>
+      ) : (
+        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--ink-muted)]">
+          No users match this search filter.
+        </section>
+      )}
     </div>
   );
 }

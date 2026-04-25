@@ -30,10 +30,15 @@ model User {
   jobsCreated  Job[]      @relation("CreatedBy")
   jobsAssigned Job[]      @relation("AssignedTo")
   payoutsMarked Job[]     @relation("PayoutMarkedBy")
+  clientPaymentsMarked Job[] @relation("ClientPaymentMarkedBy")
   auditLogs    AuditLog[]
   clientNotes  ClientNote[]
   notifications Notification[]
   notificationPreferences NotificationPreferences?
+  partReservations PartReservation[] @relation("PartReservedBy")
+  stockTransactions PartStockTransaction[] @relation("StockTxnBy")
+  accessAuditEntries UserAccessAudit[] @relation("AccessAuditTarget")
+  accessAuditChanges UserAccessAudit[] @relation("AccessAuditActor")
 }
 
 model UserPermission {
@@ -45,6 +50,20 @@ model UserPermission {
 
   @@unique([userId, permission])
   @@index([permission])
+}
+
+model UserAccessAudit {
+  id           String   @id @default(cuid())
+  targetUserId String
+  targetUser   User     @relation("AccessAuditTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  actorUserId  String
+  actorUser    User     @relation("AccessAuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  action       String
+  detail       String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
 }
 
 model Session {
@@ -172,6 +191,18 @@ enum WorkflowReason {
   OTHER
 }
 
+enum PartReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
+}
+
+enum StockTransactionType {
+  IN
+  OUT
+  ADJUST
+}
+
 model Client {
   id           String   @id @default(cuid())
   fullName     String
@@ -274,6 +305,13 @@ model Job {
   externalPaidById String?
   externalPaidBy  User?     @relation("PayoutMarkedBy", fields: [externalPaidById], references: [id])
   externalPaymentRef String?
+  clientPaid      Boolean   @default(false)
+  clientPaidAt    DateTime?
+  clientPaidById  String?
+  clientPaidBy    User?     @relation("ClientPaymentMarkedBy", fields: [clientPaidById], references: [id])
+  clientPaymentRef String?
+  invoiceNumber   String?   @unique
+  invoiceIssuedAt DateTime?
   clientApproved Boolean?
   approvalDate   DateTime?
   quotedAt       DateTime?
@@ -300,8 +338,63 @@ model Job {
   notifications Notification[]
   oneTimeExternalAssignment OneTimeExternalTechAssignment?
   outboundMessages OutboundMessage[]
+  partReservations PartReservation[]
+  stockTransactions PartStockTransaction[]
 
   @@index([deviceId])
+}
+
+model Part {
+  id             String   @id @default(cuid())
+  sku            String   @unique
+  name           String
+  manufacturer   String?
+  unitCost       Float?
+  qtyOnHand      Int      @default(0)
+  reorderLevel   Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  reservations   PartReservation[]
+  transactions   PartStockTransaction[]
+}
+
+model PartReservation {
+  id             String                @id @default(cuid())
+  jobId           String
+  job             Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  partId          String
+  part            Part                  @relation(fields: [partId], references: [id], onDelete: Restrict)
+  quantity        Int
+  status          PartReservationStatus @default(RESERVED)
+  unitCostSnapshot Float?
+  reservedById    String?
+  reservedBy      User?                 @relation("PartReservedBy", fields: [reservedById], references: [id], onDelete: SetNull)
+  reservedAt      DateTime              @default(now())
+  consumedAt      DateTime?
+  releasedAt      DateTime?
+  note            String?
+
+  @@index([jobId, status])
+  @@index([partId, status])
+}
+
+model PartStockTransaction {
+  id             String               @id @default(cuid())
+  partId          String
+  part            Part                 @relation(fields: [partId], references: [id], onDelete: Cascade)
+  type            StockTransactionType
+  quantity        Int
+  reason          String?
+  jobId           String?
+  job             Job?                 @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  createdById     String?
+  createdBy       User?                @relation("StockTxnBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+
+  @@index([partId, createdAt])
+  @@index([jobId])
 }
 
 model OneTimeExternalTechAssignment {
@@ -386,6 +479,9 @@ enum OutboundMessageType {
   INTAKE_REJECTED
   JOB_CREATED
   JOB_COMPLETED
+  JOB_STATUS_UPDATE
+  READY_FOR_PICKUP_NUDGE_1
+  READY_FOR_PICKUP_NUDGE_2
   REPAIR_REQUEST_EMAIL_ALERT
   ADMIN_TEST
 }
@@ -469,6 +565,35 @@ model NotificationPreferences {
   
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model CommunicationTemplate {
+  id          String   @id @default(cuid())
+  key         String
+  channel     OutboundMessageChannel
+  label       String
+  subject     String?
+  body        String
+  variables   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([key, channel])
+  @@index([channel, isActive])
+}
+
+model CommunicationPolicy {
+  id               String    @id @default(cuid())
+  status           JobStatus @unique
+  dashboardEnabled Boolean   @default(true)
+  whatsappEnabled  Boolean   @default(false)
+  emailEnabled     Boolean   @default(false)
+  templateKey      String?
+  nudge1Hours      Int?
+  nudge2Hours      Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model DocumentBrandingSettings {
