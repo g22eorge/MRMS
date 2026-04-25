@@ -1,7 +1,9 @@
+import { hashPassword } from "better-auth/crypto";
 import { Role } from "@prisma/client";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { UserAccessControlPanel } from "@/components/settings/UserAccessControlPanel";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
@@ -12,6 +14,14 @@ type SearchParams = {
   q?: string;
   userId?: string;
 };
+
+const createUserSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  password: z.string().min(8),
+  role: z.nativeEnum(Role),
+});
 
 type PermissionOption = {
   key: string;
@@ -283,6 +293,48 @@ export default async function UsersPage({
     redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
   }
 
+  async function createUser(formData: FormData) {
+    "use server";
+
+    const { user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return;
+
+    const parsed = createUserSchema.safeParse({
+      name: String(formData.get("name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim().toLowerCase(),
+      phone: String(formData.get("phone") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+      role: String(formData.get("role") ?? "OPS"),
+    });
+
+    if (!parsed.success) {
+      revalidatePath("/settings/users");
+      redirect("/settings/users");
+    }
+
+    const created = await prisma.user.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone || null,
+        role: parsed.data.role,
+        emailVerified: true,
+      },
+    });
+
+    await prisma.account.create({
+      data: {
+        accountId: created.id,
+        providerId: "credential",
+        userId: created.id,
+        password: await hashPassword(parsed.data.password),
+      },
+    });
+
+    revalidatePath("/settings/users");
+    redirect(`/settings/users?${new URLSearchParams({ userId: created.id }).toString()}`);
+  }
+
   let q = "";
   let filteredUsers: Array<{
     id: string;
@@ -385,6 +437,22 @@ export default async function UsersPage({
 
   return (
     <div className="space-y-4">
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create User</p>
+        <form action={createUser} className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input name="phone" placeholder="Phone" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input required minLength={8} type="password" name="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <select name="role" defaultValue="OPS" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+            {roleOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <button className="btn-premium rounded-md px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create User</button>
+        </form>
+      </section>
+
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">User Selection</p>
         <form method="GET" className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
