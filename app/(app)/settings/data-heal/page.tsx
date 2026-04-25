@@ -21,9 +21,6 @@ export default async function DataHealPage({
   if (feedback.run === "dry" || feedback.run === "apply") {
     const dryRun = feedback.run === "dry";
     const result = await runDataHeal(prisma, { dryRun, actorUserId: user.id });
-    revalidatePath("/settings/data-heal");
-    revalidatePath("/dashboard");
-    revalidatePath("/jobs");
     redirect(
       `/settings/data-heal?mode=${dryRun ? "dry" : "apply"}&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}`,
     );
