@@ -199,7 +199,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
+              className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-2 text-[10px] font-medium transition-all ${
                 isActive(item.href)
                   ? "text-[var(--accent)]"
                   : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -216,7 +216,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
+              className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-2 text-[10px] font-medium transition-all ${
                 anyExtraActive ? "text-[var(--accent)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
@@ -230,7 +230,7 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
           <Link
             href={ITEMS.profile.href}
             onClick={() => setOpen(false)}
-            className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
+            className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-2 text-[10px] font-medium transition-all ${
               isActive(ITEMS.profile.href)
                 ? "text-[var(--accent)]"
                 : "text-[var(--ink-muted)] hover:text-[var(--ink)]"

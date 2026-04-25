@@ -543,14 +543,14 @@ function MobileRequestActions({
           <button
             disabled={pending}
             onClick={() => act("APPROVED")}
-            className="inline-flex min-w-[92px] items-center justify-center rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="btn-premium flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
           >
             {pending ? "Saving..." : "Approve"}
           </button>
           <button
             disabled={pending}
             onClick={() => act("REJECTED")}
-            className="inline-flex min-w-[92px] items-center justify-center rounded-lg border border-black bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="btn-premium-secondary flex-1 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
             Reject
           </button>
@@ -561,7 +561,7 @@ function MobileRequestActions({
         <button
           disabled={pending}
           onClick={() => act("CONVERTED_TO_JOB")}
-          className="inline-flex min-w-[124px] items-center justify-center rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          className="btn-premium w-full rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
         >
           {pending ? "Saving..." : "Convert to Job"}
         </button>
