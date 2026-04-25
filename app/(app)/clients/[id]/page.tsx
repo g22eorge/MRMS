@@ -184,6 +184,12 @@ export default async function ClientDetailPage({
 
   return (
     <div className="space-y-5">
+      <div>
+        <Link href="/clients" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All clients
+        </Link>
+      </div>
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Client Brief</p>
@@ -200,24 +206,24 @@ export default async function ClientDetailPage({
               {client.phone} {client.email ? `• ${client.email}` : ""}
             </p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
             Last activity: {formatEATDateTime(latestActivity)}
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Total jobs</p>
             <p className="text-xl font-semibold">{totalJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Open jobs</p>
             <p className="text-xl font-semibold text-[var(--accent)]">{openJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completed</p>
             <p className="text-xl font-semibold text-[var(--accent)]">{completedJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completion rate</p>
             <p className="text-xl font-semibold">{completionRate.toFixed(0)}%</p>
           </div>
@@ -335,7 +341,7 @@ export default async function ClientDetailPage({
             <p className="text-sm text-[var(--ink-muted)]">No timeline notes yet.</p>
           ) : (
             client.notesEntries.map((note: ClientDetail["notesEntries"][number]) => (
-              <div key={note.id} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+              <div key={note.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-sm">{note.body}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">
                   {note.author.name} • {formatEATDateTime(note.createdAt)}

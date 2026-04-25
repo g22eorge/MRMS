@@ -343,7 +343,8 @@ export default async function JobsPage({
       {/* Desktop: chips wrap, New Job stays right */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Scrollable chip rail */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
+        <div className="relative min-w-0 flex-1 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-r after:from-transparent after:to-[var(--page-bg)] after:content-[''] sm:after:hidden">
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
           {/* Active */}
           <Link
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
@@ -396,6 +397,7 @@ export default async function JobsPage({
             <span className="font-bold tabular-nums text-[var(--ink)]">{completedCount}</span>
             <span className="text-[var(--ink-muted)]">Done</span>
           </Link>
+        </div>
         </div>
 
         {/* New Job CTA — always visible, never scrolls away */}
