@@ -34,6 +34,7 @@ function SaveButton() {
 
 type Props = {
   userId: string;
+  queryText: string;
   initialRole: string;
   initialPermissions: string[];
   roleOptions: RoleOption[];
@@ -45,6 +46,7 @@ type Props = {
 
 export function UserAccessControlPanel({
   userId,
+  queryText,
   initialRole,
   initialPermissions,
   roleOptions,
@@ -118,6 +120,7 @@ export function UserAccessControlPanel({
       }}
     >
       <input type="hidden" name="userId" value={userId} />
+      <input type="hidden" name="q" value={queryText} />
       <input type="hidden" name="role" value={role} />
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 panel-shadow">

@@ -200,6 +200,7 @@ export default async function UsersPage({
     if (actor.role !== "ADMIN") return;
 
     const targetUserId = String(formData.get("userId") ?? "").trim();
+    const q = String(formData.get("q") ?? "").trim();
     const nextRole = String(formData.get("role") ?? "") as Role;
     const permissionValues = formData
       .getAll("permissions")
@@ -208,7 +209,9 @@ export default async function UsersPage({
         EXTRA_PERMISSIONS.includes(value as (typeof EXTRA_PERMISSIONS)[number]),
       );
 
-    if (!targetUserId || !Object.values(Role).includes(nextRole)) return;
+    if (!targetUserId || !Object.values(Role).includes(nextRole)) {
+      redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
+    }
 
     const target = await prisma.user.findUnique({
       where: { id: targetUserId },
@@ -218,10 +221,12 @@ export default async function UsersPage({
         permissionGrants: { select: { permission: true } },
       },
     });
-    if (!target) return;
+    if (!target) {
+      redirect(`/settings/users${q ? `?${new URLSearchParams({ q }).toString()}` : ""}`);
+    }
 
     if (target.id === session.user.id && nextRole !== "ADMIN") {
-      return;
+      redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
     }
 
     const currentPermissions = new Set<string>(target.permissionGrants.map((grant) => grant.permission));
@@ -232,7 +237,9 @@ export default async function UsersPage({
     const roleChanged = target.role !== nextRole;
     const permissionChanged = added.length > 0 || removed.length > 0;
 
-    if (!roleChanged && !permissionChanged) return;
+    if (!roleChanged && !permissionChanged) {
+      redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: targetUserId }, data: { role: nextRole } });
@@ -264,6 +271,7 @@ export default async function UsersPage({
     }
 
     revalidatePath("/settings/users");
+    redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
   }
 
   const params = await searchParams;
@@ -404,6 +412,7 @@ export default async function UsersPage({
           <UserAccessControlPanel
             key={selectedUser.id}
             userId={selectedUser.id}
+            queryText={q}
             initialRole={selectedUser.role}
             initialPermissions={selectedUser.permissionGrants.map((grant) => grant.permission)}
             roleOptions={roleOptions}
