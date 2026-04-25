@@ -279,13 +279,18 @@ export default async function JobsPage({
 
   const rows: JobRow[] = jobs.map((job) => {
     const withWorkflow = job as typeof job & { workflowReason?: JobRow["workflowReason"] };
+    const fallbackFields = job as typeof job & {
+      deviceType?: string;
+      brand?: string | null;
+      model?: string | null;
+    };
     return {
       id: job.id,
       jobNumber: job.jobNumber,
       status: job.status,
-      deviceType: job.device?.deviceType ?? "OTHER",
-      brand: job.device?.brand ?? "",
-      model: job.device?.model ?? "",
+      deviceType: job.device?.deviceType ?? fallbackFields.deviceType ?? "OTHER",
+      brand: job.device?.brand ?? fallbackFields.brand ?? "",
+      model: job.device?.model ?? fallbackFields.model ?? "",
       clientName: "client" in job ? job.client?.fullName : undefined,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
