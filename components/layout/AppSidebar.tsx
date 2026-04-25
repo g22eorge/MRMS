@@ -244,7 +244,7 @@ export function AppSidebar({
   return (
     <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
       {/* ── Brand ── */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)]">
+      <Link href="/" className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)] hover:bg-[var(--panel)] transition-colors">
         <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
           <Image
             src="/eagle-info-logo.png"
@@ -259,7 +259,7 @@ export function AppSidebar({
           <p className="text-[13px] font-bold tracking-tight text-[var(--ink)] leading-none">Eagle Info</p>
           <p className="text-[10px] font-semibold text-[var(--accent)] tracking-wide mt-0.5">Repair Manager</p>
         </div>
-      </div>
+      </Link>
 
       {/* ── Navigation ── */}
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">

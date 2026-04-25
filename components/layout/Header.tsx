@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -54,7 +55,7 @@ export function Header({ userName, role }: HeaderProps) {
       <div className="mx-auto flex w-full max-w-lg items-center gap-3 md:max-w-[1240px] xl:max-w-[1360px]">
 
         {/* Mobile brand (hidden on desktop where sidebar shows) */}
-        <div className="flex items-center gap-2.5 lg:hidden">
+        <Link href="/" className="flex items-center gap-2.5 lg:hidden hover:opacity-80 transition-opacity">
           <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-white shadow-sm">
             <Image
               src="/eagle-info-logo.png"
@@ -66,7 +67,7 @@ export function Header({ userName, role }: HeaderProps) {
             />
           </div>
           <span className="text-[13px] font-bold text-[var(--ink)] tracking-tight">Eagle Info</span>
-        </div>
+        </Link>
 
         {/* Spacer */}
         <div className="flex-1" />
