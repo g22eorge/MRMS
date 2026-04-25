@@ -144,12 +144,12 @@ function DashboardPeriodBar({
   return (
     <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
       {/* Period toggle */}
-      <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] bg-white p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+      <div className="flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-1">
         <Link
           href={monthHref}
-          className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
             period === "month"
-              ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+              ? "bg-[var(--accent)] text-white shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
           }`}
         >
@@ -157,9 +157,9 @@ function DashboardPeriodBar({
         </Link>
         <Link
           href={yearHref}
-          className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
             period === "year"
-              ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+              ? "bg-[var(--accent)] text-white shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
           }`}
         >

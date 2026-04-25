@@ -556,12 +556,12 @@ export default async function ReportsPage({
           <p className="hidden text-[12px] text-[var(--ink-muted)] md:block">{financeBrief.split(".")[0]}.</p>
         </div>
         {/* Period toggle */}
-        <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5">
+        <div className="flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-1">
           <Link
             href={`/reports?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
-            className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
               period === "month"
-                ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                ? "bg-[var(--accent)] text-white shadow-sm"
                 : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
           >
@@ -569,9 +569,9 @@ export default async function ReportsPage({
           </Link>
           <Link
             href={`/reports?period=year&year=${new Date().getFullYear()}`}
-            className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
               period === "year"
-                ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                ? "bg-[var(--accent)] text-white shadow-sm"
                 : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
           >

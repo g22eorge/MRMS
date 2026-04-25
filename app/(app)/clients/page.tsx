@@ -214,15 +214,33 @@ export default async function ClientsPage({
 
       {/* ── Filter panel ── */}
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <form className="flex flex-wrap items-center gap-2 p-3">
-          <input
-            name="q"
-            defaultValue={filters.q}
-            aria-label="Search clients"
-            placeholder="Search by name, phone, email…"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
-          />
-          <div className="flex flex-wrap gap-1.5">
+        <form className="space-y-2.5 p-3">
+          {/* Row 1: search + action buttons */}
+          <div className="flex items-center gap-2">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              aria-label="Search clients"
+              placeholder="Search by name, phone, email…"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+            />
+            <button
+              type="submit"
+              className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-medium"
+            >
+              Search
+            </button>
+            {hasClientFilters ? (
+              <Link
+                href="/clients"
+                className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+              >
+                Reset
+              </Link>
+            ) : null}
+          </div>
+          {/* Row 2: segment chips — horizontal scroll on mobile */}
+          <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 pb-0.5 [scrollbar-width:none]">
             {(["all", "active", "new", "high"] as const).map((seg) => {
               const labels = { all: "All", active: "Active", new: "No Job", high: "High Activity" };
               const href = `/clients?segment=${seg}${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`;
@@ -230,10 +248,10 @@ export default async function ClientsPage({
                 <Link
                   key={seg}
                   href={href}
-                  className={`rounded-full px-3 py-2 text-[11px] font-semibold transition-colors ${
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
                     segment === seg
-                      ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
-                      : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
                   }`}
                 >
                   {labels[seg]}
@@ -241,20 +259,6 @@ export default async function ClientsPage({
               );
             })}
           </div>
-          <button
-            type="submit"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-[12px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
-          >
-            Search
-          </button>
-          {hasClientFilters ? (
-            <Link
-              href="/clients"
-               className="rounded-lg border border-[var(--line)] px-3 py-2.5 text-[12px] text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
-            >
-              Reset
-            </Link>
-          ) : null}
         </form>
 
         {/* Inline create form for OPS/ADMIN — shown when ?create=1 or always on large screens */}
