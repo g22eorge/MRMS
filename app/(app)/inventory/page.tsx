@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { InventoryActions } from "@/components/inventory/InventoryActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -50,6 +51,8 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-4">
+      <InventoryActions parts={parts.map((part) => ({ id: part.id, sku: part.sku, name: part.name }))} />
+
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active Parts</p>
@@ -69,12 +72,13 @@ export default async function InventoryPage() {
         </article>
       </section>
 
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <header className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--ink)]">Stock Monitor</h2>
-            <p className="text-xs text-[var(--ink-muted)]">Parts at or below reorder level are highlighted.</p>
-          </div>
+      <section className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+        <header className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
+          <p className="text-[11px] text-[var(--ink-muted)]">
+            <span className="font-bold text-[var(--ink)]">{parts.length}</span> active parts
+            <span className="mx-1.5 text-[var(--line)]">•</span>
+            <span className="font-bold text-[var(--accent)]">{lowStock.length}</span> low stock
+          </p>
           <Link href="/jobs" className="btn-premium-secondary rounded-lg px-3 py-2 text-xs">
             Open Jobs
           </Link>
@@ -90,6 +94,7 @@ export default async function InventoryPage() {
                   <th className="px-4 py-2.5 text-left">Part</th>
                   <th className="px-4 py-2.5 text-left">SKU</th>
                   <th className="px-4 py-2.5 text-left">Maker</th>
+                  <th className="px-4 py-2.5 text-right">Unit Cost</th>
                   <th className="px-4 py-2.5 text-right">On Hand</th>
                   <th className="px-4 py-2.5 text-right">Reorder</th>
                 </tr>
@@ -100,8 +105,11 @@ export default async function InventoryPage() {
                   return (
                     <tr key={part.id} className={"border-t border-[var(--line)] transition-colors " + (isLow ? "bg-[var(--accent)]/10" : "hover:bg-[var(--panel-strong)]/40")}>
                       <td className="px-4 py-2.5 text-[var(--ink)]">{part.name}</td>
-                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{part.sku}</td>
+                      <td className="px-4 py-2.5 mono text-[12px] font-medium text-[var(--ink-muted)]">{part.sku}</td>
                       <td className="px-4 py-2.5 text-[var(--ink-muted)]">{part.manufacturer ?? "-"}</td>
+                      <td className="px-4 py-2.5 text-right text-[var(--ink-muted)]">
+                        {typeof part.unitCost === "number" ? `UGX ${Math.round(part.unitCost).toLocaleString()}` : "-"}
+                      </td>
                       <td className="px-4 py-2.5 text-right text-[var(--ink)]">{part.qtyOnHand}</td>
                       <td className="px-4 py-2.5 text-right text-[var(--ink-muted)]">{part.reorderLevel}</td>
                     </tr>
