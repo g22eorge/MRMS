@@ -33,14 +33,14 @@ export default async function JobCardsPage() {
         Intake records for received and active jobs. Generate printable PDFs directly from this queue.
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)]">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-sm lg:min-w-[760px]">
           <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
             <tr>
               <th className="px-3 py-2">Job</th>
-              <th className="px-3 py-2">Client</th>
-              <th className="px-3 py-2">Device</th>
+              <th className="hidden px-3 py-2 md:table-cell">Client</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Device</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Received</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Received</th>
               <th className="px-3 py-2">Action</th>
             </tr>
           </thead>
@@ -52,10 +52,10 @@ export default async function JobCardsPage() {
                     {job.jobNumber}
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-[var(--ink-muted)]">{job.client.fullName}</td>
-                <td className="px-3 py-2 text-[var(--ink-muted)]">{job.brand} {job.model}</td>
+                <td className="hidden px-3 py-2 text-[var(--ink-muted)] md:table-cell">{job.client.fullName}</td>
+                <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{job.brand} {job.model}</td>
                 <td className="px-3 py-2 text-[var(--ink-muted)]">{job.status.replaceAll("_", " ")}</td>
-                <td className="px-3 py-2 text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</td>
+                <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{job.receivedAt.toLocaleDateString()}</td>
                 <td className="px-3 py-2">
                   <a
                     href={`/api/jobs/${job.id}/job-card`}

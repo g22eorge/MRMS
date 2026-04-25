@@ -54,15 +54,14 @@ export default async function QuotationsPage() {
         Review quote-ready jobs and generate client quotations with one click.
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)]">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-sm lg:min-w-[820px]">
           <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
             <tr>
               <th className="px-3 py-2">Job</th>
-              <th className="px-3 py-2">Client</th>
-              <th className="px-3 py-2">Device</th>
+              <th className="hidden px-3 py-2 md:table-cell">Device</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Quote Number</th>
-              <th className="px-3 py-2">Estimate</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Quote #</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Estimate</th>
               <th className="px-3 py-2">Action</th>
             </tr>
           </thead>
@@ -84,11 +83,10 @@ export default async function QuotationsPage() {
                       {job.jobNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{job.client.fullName}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{job.brand} {job.model}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] md:table-cell">{job.brand} {job.model}</td>
                   <td className="px-3 py-2 text-[var(--ink-muted)]">{job.status.replaceAll("_", " ")}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{canGenerateQuotationForStatus(job.status) ? quoteNumber : "Not eligible"}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{typeof estimate === "number" ? estimate.toLocaleString() : "Pending"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{canGenerateQuotationForStatus(job.status) ? quoteNumber : "-"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof estimate === "number" ? estimate.toLocaleString() : "Pending"}</td>
                   <td className="px-3 py-2">
                     {canGenerateQuotationForStatus(job.status) ? (
                       <a
@@ -108,7 +106,7 @@ export default async function QuotationsPage() {
             })}
             {jobs.length === 0 ? (
               <tr className="border-t border-[var(--line)]">
-                <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={7}>
+                <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={6}>
                   No quote-ready jobs yet. Move a job into diagnosis to unlock quotation generation.
                 </td>
               </tr>

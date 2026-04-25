@@ -44,15 +44,14 @@ export default async function InvoicesPage() {
         Track issued invoices, payment state, and generate final invoice PDFs.
       </p>
       <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)]">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-sm lg:min-w-[820px]">
           <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
             <tr>
               <th className="px-3 py-2">Job</th>
-              <th className="px-3 py-2">Client</th>
-              <th className="px-3 py-2">Invoice #</th>
+              <th className="hidden px-3 py-2 md:table-cell">Invoice #</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Paid</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Amount</th>
+              <th className="hidden px-3 py-2 lg:table-cell">Paid</th>
               <th className="px-3 py-2">Action</th>
             </tr>
           </thead>
@@ -66,11 +65,10 @@ export default async function InvoicesPage() {
                       {job.jobNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{job.client.fullName}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{job.invoiceNumber ?? "-"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] md:table-cell">{job.invoiceNumber ?? "-"}</td>
                   <td className="px-3 py-2 text-[var(--ink-muted)]">{job.status.replaceAll("_", " ")}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{typeof amount === "number" ? amount.toLocaleString() : "Pending"}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{job.clientPaid ? "Paid" : "Unpaid"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof amount === "number" ? amount.toLocaleString() : "Pending"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{job.clientPaid ? "Paid" : "Unpaid"}</td>
                   <td className="px-3 py-2">
                     {canGenerateInvoiceForStatus(job.status) ? (
                       <a
@@ -90,7 +88,7 @@ export default async function InvoicesPage() {
             })}
             {jobs.length === 0 ? (
               <tr className="border-t border-[var(--line)]">
-                <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={7}>
+                <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={6}>
                   No invoice-ready jobs yet. Set job status to Ready for Pickup or Completed.
                 </td>
               </tr>
