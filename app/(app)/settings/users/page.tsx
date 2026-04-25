@@ -402,6 +402,7 @@ export default async function UsersPage({
           </section>
 
           <UserAccessControlPanel
+            key={selectedUser.id}
             userId={selectedUser.id}
             initialRole={selectedUser.role}
             initialPermissions={selectedUser.permissionGrants.map((grant) => grant.permission)}
