@@ -592,6 +592,8 @@ export default async function DashboardPage({
       overdueJobs,
       techWorkloadJobs,
       unassignedActiveCount,
+      unresolvedDeviceFields,
+      lastDataHeal,
     ] = await Promise.all([
       prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
       prisma.job.findMany({
@@ -641,6 +643,16 @@ export default async function DashboardPage({
           status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
           assignedToId: null,
         },
+      }),
+      prisma.job.count({
+        where: {
+          OR: [{ brand: "Unknown" }, { model: "Unknown" }, { deviceType: "OTHER" }],
+        },
+      }),
+      prisma.auditLog.findFirst({
+        where: { action: "DATA_HEAL_JOB_DEVICE_FIELDS" },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
       }),
     ]);
 
@@ -727,6 +739,31 @@ export default async function DashboardPage({
             </div>
           </section>
         ) : null}
+
+        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Data Quality</p>
+              <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+                Placeholder device values auto-heal daily. Run manual heal if anything is still unresolved.
+              </p>
+            </div>
+            <Link
+              href="/settings/data-heal"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
+            >
+              Open data-heal
+            </Link>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${unresolvedDeviceFields > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+              {unresolvedDeviceFields} unresolved
+            </span>
+            <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] text-[var(--ink-muted)]">
+              Last heal: {lastDataHeal ? new Date(lastDataHeal.createdAt).toLocaleString() : "Never"}
+            </span>
+          </div>
+        </section>
 
         {/* Live Repair Pipeline — with today's stats and quick actions in the header */}
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
