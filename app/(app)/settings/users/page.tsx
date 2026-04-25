@@ -283,55 +283,21 @@ export default async function UsersPage({
     redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
   }
 
-  const params = await searchParams;
-  const q = typeof params.q === "string" ? params.q.trim() : "";
-
-  const users = await prisma.user.findMany({
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-      sessions: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        select: { updatedAt: true },
-      },
-      auditLogs: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { createdAt: true },
-      },
-    },
-  });
-
-  let permissionMap = new Map<string, string[]>();
-  try {
-    const rows = await prisma.$queryRaw<Array<{ userId: string; permission: string }>>`
-      SELECT userId, permission FROM "UserPermission"
-    `;
-    permissionMap = rows.reduce((acc, row) => {
-      if (!acc.has(row.userId)) acc.set(row.userId, []);
-      acc.get(row.userId)?.push(row.permission);
-      return acc;
-    }, new Map<string, string[]>());
-  } catch {
-    permissionMap = new Map();
-  }
-
-  const usersWithPermissions = users.map((entry) => ({
-    ...entry,
-    permissionGrants: (permissionMap.get(entry.id) ?? []).map((permission) => ({ permission })),
-  }));
-
-  const filteredUsers = usersWithPermissions.filter((item) => searchMatches(item, q));
-  const selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
-
+  let q = "";
+  let filteredUsers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: Role;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    sessions: Array<{ updatedAt: Date }>;
+    auditLogs: Array<{ createdAt: Date }>;
+    permissionGrants: Array<{ permission: string }>;
+  }> = [];
+  let selectedUser: (typeof filteredUsers)[number] | null = null;
   let accessAudit: Array<{
     id: string;
     action: string;
@@ -340,23 +306,81 @@ export default async function UsersPage({
     actorUser: { name: string };
   }> = [];
 
-  if (selectedUser) {
-    try {
-      accessAudit = await prisma.userAccessAudit.findMany({
-        where: { targetUserId: selectedUser.id },
-        orderBy: { createdAt: "desc" },
-        take: 12,
-        select: {
-          id: true,
-          action: true,
-          detail: true,
-          createdAt: true,
-          actorUser: { select: { name: true } },
+  try {
+    const params = await searchParams;
+    q = typeof params.q === "string" ? params.q.trim() : "";
+
+    const users = await prisma.user.findMany({
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        sessions: {
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          select: { updatedAt: true },
         },
-      });
+        auditLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true },
+        },
+      },
+    });
+
+    let permissionMap = new Map<string, string[]>();
+    try {
+      const rows = await prisma.$queryRaw<Array<{ userId: string; permission: string }>>`
+        SELECT userId, permission FROM "UserPermission"
+      `;
+      permissionMap = rows.reduce((acc, row) => {
+        if (!acc.has(row.userId)) acc.set(row.userId, []);
+        acc.get(row.userId)?.push(row.permission);
+        return acc;
+      }, new Map<string, string[]>());
     } catch {
-      accessAudit = [];
+      permissionMap = new Map();
     }
+
+    const usersWithPermissions = users.map((entry) => ({
+      ...entry,
+      permissionGrants: (permissionMap.get(entry.id) ?? []).map((permission) => ({ permission })),
+    }));
+
+    filteredUsers = usersWithPermissions.filter((item) => searchMatches(item, q));
+    selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
+
+    if (selectedUser) {
+      try {
+        accessAudit = await prisma.userAccessAudit.findMany({
+          where: { targetUserId: selectedUser.id },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+          select: {
+            id: true,
+            action: true,
+            detail: true,
+            createdAt: true,
+            actorUser: { select: { name: true } },
+          },
+        });
+      } catch {
+        accessAudit = [];
+      }
+    }
+  } catch (error) {
+    console.error("[settings/users] failed to load", error);
+    return (
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--ink-muted)]">
+        Could not load user access controls right now. Please retry after a moment.
+      </section>
+    );
   }
 
   return (
