@@ -24,12 +24,12 @@ type SearchParams = {
 };
 
 type JobWithClient = Prisma.JobGetPayload<{
-  include: { client: true; assignedTo: true };
+  include: { client: true; assignedTo: true; device: true };
 }> & {
   oneTimeExternalAssignment?: { technicianName: string } | null;
 };
 type JobWithoutClient = Prisma.JobGetPayload<{
-  include: { assignedTo: true };
+  include: { assignedTo: true; device: true };
 }> & {
   oneTimeExternalAssignment?: { technicianName: string } | null;
 };
@@ -134,7 +134,7 @@ export default async function JobsPage({
             status: { in: ["DELIVERED", "COMPLETED"] as JobStatus[] },
           }
         : {}),
-    ...(filters.deviceType ? { deviceType: filters.deviceType as never } : {}),
+    ...(filters.deviceType ? { device: { deviceType: filters.deviceType as never } } : {}),
     ...(filters.repairPath ? { repairPath: filters.repairPath as never } : {}),
     ...(filters.from || filters.to
       ? {
@@ -169,8 +169,8 @@ export default async function JobsPage({
 
   const includeBase =
     user.role === "TECHNICIAN_EXTERNAL"
-      ? ({ assignedTo: true } as const)
-      : ({ client: true, assignedTo: true } as const);
+      ? ({ assignedTo: true, device: true } as const)
+      : ({ client: true, assignedTo: true, device: true } as const);
 
   const includeWithOneTime = supportsOneTimeExternal
     ? ({
@@ -225,9 +225,9 @@ export default async function JobsPage({
       id: job.id,
       jobNumber: job.jobNumber,
       status: job.status,
-      deviceType: job.deviceType,
-      brand: job.brand,
-      model: job.model,
+      deviceType: job.device?.deviceType ?? job.deviceType,
+      brand: job.device?.brand ?? job.brand,
+      model: job.device?.model ?? job.model,
       clientName: "client" in job ? job.client?.fullName : undefined,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
