@@ -53,8 +53,8 @@ export default async function QuotationsPage() {
       <p className="mt-1 text-sm text-[var(--ink-muted)]">
         Review quote-ready jobs and generate client quotations with one click.
       </p>
-      <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)]">
-        <table className="w-full min-w-[600px] text-left text-sm lg:min-w-[820px]">
+      <div className="mt-4 overflow-hidden rounded-lg border border-[var(--line)]">
+        <table className="w-full text-left text-sm">
           <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
             <tr>
               <th className="px-3 py-2">Job</th>
