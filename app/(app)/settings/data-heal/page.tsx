@@ -1,5 +1,4 @@
 import { revalidatePath } from "next/cache";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { runDataHeal } from "@/lib/data-heal";
@@ -9,7 +8,7 @@ import { getCurrentUserRole } from "@/lib/session";
 export default async function DataHealPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; run?: string }>;
+  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
@@ -17,14 +16,6 @@ export default async function DataHealPage({
   }
 
   const feedback = await searchParams;
-
-  if (feedback.run === "dry" || feedback.run === "apply") {
-    const dryRun = feedback.run === "dry";
-    const result = await runDataHeal(prisma, { dryRun, actorUserId: user.id });
-    redirect(
-      `/settings/data-heal?mode=${dryRun ? "dry" : "apply"}&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}`,
-    );
-  }
 
   const [unresolved, lastHealedAt, preview] = await Promise.all([
     prisma.job.count({
@@ -37,6 +28,26 @@ export default async function DataHealPage({
     }),
     runDataHeal(prisma, { dryRun: true, limit: 25 }),
   ]);
+
+  async function runDry() {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return;
+    const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
+    redirect(
+      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,
+    );
+  }
+
+  async function runApply() {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return;
+    const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
+    redirect(
+      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -60,16 +71,17 @@ export default async function DataHealPage({
         {feedback.mode ? (
           <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink)]">
             {feedback.mode === "dry" ? "Dry check complete" : "Heal run complete"}: checked {feedback.checked ?? "0"},
-            fixable {feedback.fixed ?? "0"}, pending {feedback.pending ?? "0"}.
+            fixable {feedback.fixed ?? "0"}, pending {feedback.pending ?? "0"}
+            {feedback.at ? ` (run ${new Date(Number(feedback.at)).toLocaleTimeString()})` : ""}.
           </div>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Link href="/settings/data-heal?run=dry" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
-            Run Dry Check
-          </Link>
-          <Link href="/settings/data-heal?run=apply" className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">
-            Run Heal Now
-          </Link>
+          <form action={runDry}>
+            <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Run Dry Check</button>
+          </form>
+          <form action={runApply}>
+            <button className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">Run Heal Now</button>
+          </form>
         </div>
       </section>
 
