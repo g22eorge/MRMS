@@ -1,7 +1,6 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
-import { MobileQuickActions } from "@/components/layout/MobileQuickActions";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
 import { JobStatus, Prisma } from "@prisma/client";
 import { can } from "@/lib/permissions";
@@ -64,7 +63,6 @@ export default async function AppLayout({
         <Header userName={user.name} role={user.role} />
         <main className="fade-in flex-1 overflow-x-hidden px-4 pb-[var(--mobile-shell-bottom)] pt-[var(--mobile-shell-top)] md:min-h-0 md:overflow-y-auto md:px-6 md:pb-8">
           <div className="mobile-page-shell mx-auto w-full max-w-lg md:max-w-[1240px] md:space-y-5 xl:max-w-[1360px]">
-            <MobileQuickActions role={user.role} permissions={user.permissions} />
             <PageThemeHeader role={user.role} />
             {children}
           </div>

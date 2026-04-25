@@ -206,6 +206,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const [isRepairPending, startRepairTransition] = useTransition();
   const [isFinancialPending, startFinancialTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!savedSection) return;
@@ -275,6 +276,17 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   if (canGenerateInvoice && !invoiceEligibleByStatus) {
     documentHints.push("Invoice unlocks at Ready for Pickup, Completed, or Closed.");
   }
+
+  const mobilePrimaryAction =
+    job.status === "COMPLETED"
+      ? { type: "tab" as const, label: "Mark Paid / Close", tab: "financials" as const }
+      : showInvoiceAction
+        ? { type: "link" as const, label: "Generate Invoice", href: `/api/jobs/${job.id}/invoice` }
+        : showQuotationAction
+          ? { type: "link" as const, label: "Generate Quote", href: `/api/jobs/${job.id}/quotation` }
+          : showJobCardAction
+            ? { type: "link" as const, label: "Generate Job Card", href: `/api/jobs/${job.id}/job-card` }
+            : null;
 
   const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
   const assignedRole = job.assignedTo?.role;
@@ -497,7 +509,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         ))}
       </div>
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+      <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
         <div className="flex w-full flex-wrap gap-2">
           {showJobCardAction ? (
@@ -1398,6 +1410,77 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           {savedSection === "status" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-shell-bottom)+0.2rem)] z-30 px-3 lg:hidden">
+        <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)]/96 p-2 shadow-xl backdrop-blur">
+          {mobilePrimaryAction ? (
+            mobilePrimaryAction.type === "link" ? (
+              <a
+                href={mobilePrimaryAction.href}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-premium flex-1 rounded-lg px-3 py-2 text-center text-sm"
+              >
+                {mobilePrimaryAction.label}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActive(mobilePrimaryAction.tab)}
+                className="btn-premium flex-1 rounded-lg px-3 py-2 text-sm"
+              >
+                {mobilePrimaryAction.label}
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={() => setActive("overview")}
+              className="btn-premium-secondary flex-1 rounded-lg px-3 py-2 text-sm"
+            >
+              Open Details
+            </button>
+          )}
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMobileMoreOpen((v) => !v)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+              aria-label="More actions"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="19" cy="12" r="1" />
+                <circle cx="5" cy="12" r="1" />
+              </svg>
+            </button>
+            {mobileMoreOpen ? (
+              <div className="absolute bottom-12 right-0 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl">
+                {role !== "TECHNICIAN_EXTERNAL" ? (
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); router.push(`/jobs/${job.id}/edit`); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">
+                    Edit Job
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("diagnosis"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Diagnosis</button>
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("repair"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Repair Log</button>
+                {canViewFinancials ? (
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("financials"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Financials</button>
+                ) : null}
+                {showJobCardAction ? (
+                  <a href={`/api/jobs/${job.id}/job-card`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Print Job Card</a>
+                ) : null}
+                {showQuotationAction ? (
+                  <a href={`/api/jobs/${job.id}/quotation`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Download Quote</a>
+                ) : null}
+                {showInvoiceAction ? (
+                  <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Download Invoice</a>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { can } from "@/lib/permissions";
+import { authClient } from "@/lib/auth-client";
 import type { Role } from "@prisma/client";
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
+};
+
+type NavGroup = {
+  title: string;
+  items: NavItem[];
 };
 
 /* ── icons ── */
@@ -118,73 +125,70 @@ const ITEMS = {
 function getPrimaryItems(role: Role, permissions: string[]): NavItem[] {
   const permUser = { role, permissions };
 
-  if (role === "TECHNICIAN_EXTERNAL") {
-    return [ITEMS.dashboard, ITEMS.jobs, ITEMS.payouts];
+  if (role === "TECHNICIAN_EXTERNAL" || !can.viewIntake(permUser)) {
+    return [ITEMS.dashboard, ITEMS.jobs, ITEMS.board];
   }
-  if (role === "INTAKE") {
-    return [ITEMS.dashboard, ITEMS.intake, ITEMS.jobs];
-  }
-  if (role === "ADMIN" || role === "OPS") {
-    return [ITEMS.dashboard, ITEMS.jobs, ITEMS.intake];
-  }
-  // TECHNICIAN_INTERNAL
-  if (can.viewClientInfo(permUser)) {
-    // has can_intake permission
-    return [ITEMS.dashboard, ITEMS.intake, ITEMS.jobs];
-  }
-  return [ITEMS.dashboard, ITEMS.jobs, ITEMS.board];
+  return [ITEMS.dashboard, ITEMS.intake, ITEMS.jobs];
 }
 
-function getExtraItems(role: Role, permissions: string[]): NavItem[] {
-  const items: NavItem[] = [];
+function getMoreGroups(role: Role, permissions: string[]): NavGroup[] {
   const permUser = { role, permissions };
+  const allow = (href: string) => {
+    if (href === ITEMS.clients.href) return can.viewClientInfo(permUser);
+    if (href === ITEMS.reports.href) return can.viewAccountsSummary(permUser);
+    if (href === ITEMS.invoiceDocs.href) return can.viewFinancials(permUser);
+    if (href === ITEMS.quotations.href) return can.viewFinancials(permUser) || role === "TECHNICIAN_INTERNAL";
+    if (href === ITEMS.jobCards.href) return can.generateJobCards(permUser);
+    if (href === ITEMS.payoutFollowups.href) return can.reviewExternalBills(permUser) || can.approveInvoices(permUser);
+    if (href === ITEMS.users.href || href === ITEMS.branding.href) return role === "ADMIN";
+    if (href === ITEMS.inventory.href) return ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role);
+    if (href === ITEMS.board.href) return role !== "TECHNICIAN_EXTERNAL";
+    if (href === ITEMS.commsTemplates.href) return ["ADMIN", "OPS"].includes(role);
+    if (href === ITEMS.notifications.href) return true;
+    return true;
+  };
 
-  if (role === "ADMIN") {
-    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.clients, ITEMS.inventory, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.users, ITEMS.branding, ITEMS.commsTemplates);
-  } else if (role === "OPS") {
-    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.clients, ITEMS.inventory, ITEMS.reports, ITEMS.payoutFollowups, ITEMS.board, ITEMS.commsTemplates);
-  } else if (role === "INTAKE") {
-    items.push(ITEMS.jobCards, ITEMS.clients, ITEMS.board);
-  } else if (role === "TECHNICIAN_INTERNAL" && can.viewClientInfo(permUser)) {
-    // has can_intake — board wasn't in primary
-    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.clients, ITEMS.inventory, ITEMS.board);
-  } else if (role === "TECHNICIAN_INTERNAL") {
-    items.push(ITEMS.jobCards, ITEMS.quotations, ITEMS.inventory);
-  }
-  if (can.generateJobCards(permUser) && !items.some((item) => item.href === ITEMS.jobCards.href)) {
-    items.push(ITEMS.jobCards);
-  }
-  if (can.viewFinancials(permUser) && !items.some((item) => item.href === ITEMS.quotations.href)) {
-    items.push(ITEMS.quotations);
-  }
-  if (can.viewFinancials(permUser) && !items.some((item) => item.href === ITEMS.invoiceDocs.href)) {
-    items.push(ITEMS.invoiceDocs);
-  }
-  if ((can.reviewExternalBills(permUser) || can.approveInvoices(permUser)) && !items.some((item) => item.href === ITEMS.payoutFollowups.href)) {
-    items.push(ITEMS.payoutFollowups);
-  }
-  items.push(ITEMS.notifications);
-  // TECHNICIAN_EXTERNAL: payouts is in primary; board goes in More
-  if (role === "TECHNICIAN_EXTERNAL") {
-    items.push(ITEMS.board);
-  }
-  // Plain TECHNICIAN_INTERNAL (no can_intake): no extra items needed
+  const groups: NavGroup[] = [
+    {
+      title: "Documents",
+      items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs],
+    },
+    {
+      title: "Operations",
+      items: [ITEMS.clients, ITEMS.inventory, ITEMS.payoutFollowups, ITEMS.board],
+    },
+    {
+      title: "Management",
+      items: [ITEMS.users, ITEMS.reports, ITEMS.branding, ITEMS.notifications],
+    },
+    {
+      title: "Communication",
+      items: [ITEMS.commsTemplates],
+    },
+  ];
 
-  return items;
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => allow(item.href)),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function BottomNav({ role, permissions = [] }: { role: Role; permissions: string[] }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const primaryItems = getPrimaryItems(role, permissions);
-  const extraItems   = getExtraItems(role, permissions);
-  const hasExtra     = extraItems.length > 0;
+  const moreGroups   = getMoreGroups(role, permissions);
+  const hasExtra     = moreGroups.length > 0;
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
-  const anyExtraActive = extraItems.some((e) => isActive(e.href));
+  const anyExtraActive = moreGroups.some((group) => group.items.some((item) => isActive(item.href)));
 
   return (
     <>
@@ -246,35 +250,62 @@ export function BottomNav({ role, permissions = [] }: { role: Role; permissions:
             className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed inset-x-0 bottom-16 z-50 mx-auto max-w-sm rounded-t-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xl lg:hidden">
+          <div className="fixed inset-x-0 bottom-16 z-50 mx-auto max-h-[76vh] max-w-sm overflow-hidden rounded-t-2xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl lg:hidden">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">More</p>
+              <p className="px-4 pt-4 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">More</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full p-1 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+                className="mr-3 mt-3 rounded-full p-1 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                 </svg>
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {extraItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition ${
-                    isActive(item.href)
-                      ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[#9A7A00]"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </Link>
+            <div className="max-h-[calc(76vh-64px)] space-y-4 overflow-y-auto px-4 pb-4">
+              {moreGroups.map((group) => (
+                <div key={group.title}>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">{group.title}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center gap-2 rounded-xl border px-2.5 py-2.5 text-[12px] font-medium transition ${
+                          isActive(item.href)
+                            ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[#9A7A00]"
+                            : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"
+                        }`}
+                      >
+                        <span className="shrink-0">{item.icon}</span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
+
+              <button
+                type="button"
+                disabled={isSigningOut}
+                onClick={async () => {
+                  setIsSigningOut(true);
+                  const result = await authClient.signOut();
+                  if (result.error) {
+                    toast.error(result.error.message || "Sign out failed");
+                    setIsSigningOut(false);
+                    return;
+                  }
+                  setOpen(false);
+                  router.push("/login");
+                  router.refresh();
+                }}
+                className="w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-left text-[12px] font-medium text-[var(--ink-muted)] transition hover:border-black/30 hover:text-[var(--ink)] disabled:opacity-50"
+              >
+                {isSigningOut ? "Signing out..." : "Sign out"}
+              </button>
             </div>
           </div>
         </>

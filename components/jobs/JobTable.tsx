@@ -138,29 +138,31 @@ export function JobTable({
 
   const paginationBar = hasPagination && (totalPages ?? 0) > 1 ? (
     <div className="flex items-center gap-1.5">
-      <Link
-        href={prevPageHref ?? "#"}
-        aria-disabled={isPrevDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
-          isPrevDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        ← Prev
-      </Link>
+      {isPrevDisabled || !prevPageHref ? (
+        <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+          ← Prev
+        </span>
+      ) : (
+        <Link
+          href={prevPageHref}
+          className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        >
+          ← Prev
+        </Link>
+      )}
       <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
-      <Link
-        href={nextPageHref ?? "#"}
-        aria-disabled={isNextDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
-          isNextDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        Next →
-      </Link>
+      {isNextDisabled || !nextPageHref ? (
+        <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+          Next →
+        </span>
+      ) : (
+        <Link
+          href={nextPageHref}
+          className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        >
+          Next →
+        </Link>
+      )}
     </div>
   ) : null;
 
