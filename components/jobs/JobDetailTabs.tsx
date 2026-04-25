@@ -504,9 +504,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             type="button"
             key={tab}
             onClick={() => setActive(tab)}
-            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition ${
+            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition active:opacity-80 ${
               active === tab
-                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                ? "border-[var(--accent)] bg-[var(--accent)] font-semibold text-white"
                 : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/50"
             }`}
           >
@@ -1408,7 +1408,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   type="text"
                   name="deliveredTo"
                   placeholder="Received by (name)"
-                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
+                  className="rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
                 />
               </div>
             </div>
@@ -1418,14 +1418,14 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       ) : null}
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-shell-bottom)+0.2rem)] z-30 px-3 lg:hidden">
-        <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)]/96 p-2 shadow-xl backdrop-blur">
+        <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/96 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.14)] backdrop-blur-md">
           {mobilePrimaryAction ? (
             mobilePrimaryAction.type === "link" ? (
               <a
                 href={mobilePrimaryAction.href}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-premium flex-1 rounded-lg px-3 py-2 text-center text-sm"
+                className="btn-premium flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-bold"
               >
                 {mobilePrimaryAction.label}
               </a>
@@ -1433,7 +1433,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               <button
                 type="button"
                 onClick={() => setActive(mobilePrimaryAction.tab)}
-                className="btn-premium flex-1 rounded-lg px-3 py-2 text-sm"
+                className="btn-premium flex-1 rounded-xl px-4 py-2.5 text-sm font-bold"
               >
                 {mobilePrimaryAction.label}
               </button>
@@ -1442,7 +1442,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             <button
               type="button"
               onClick={() => setActive("overview")}
-              className="btn-premium-secondary flex-1 rounded-lg px-3 py-2 text-sm"
+              className="btn-premium-secondary flex-1 rounded-xl px-4 py-2.5 text-sm"
             >
               Open Details
             </button>
@@ -1452,35 +1452,56 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             <button
               type="button"
               onClick={() => setMobileMoreOpen((v) => !v)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--ink)]"
               aria-label="More actions"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="19" cy="12" r="1" />
-                <circle cx="5" cy="12" r="1" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
               </svg>
             </button>
             {mobileMoreOpen ? (
-              <div className="absolute bottom-12 right-0 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl">
+              <div className="absolute bottom-14 right-0 w-52 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
                 {role !== "TECHNICIAN_EXTERNAL" ? (
-                  <button type="button" onClick={() => { setMobileMoreOpen(false); router.push(`/jobs/${job.id}/edit`); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); router.push(`/jobs/${job.id}/edit`); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Edit Job
                   </button>
                 ) : null}
-                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("diagnosis"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Diagnosis</button>
-                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("repair"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Repair Log</button>
+                <div className="mx-3 my-1 border-t border-[var(--line)]" />
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("diagnosis"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Diagnosis
+                </button>
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("repair"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                  Repair Log
+                </button>
                 {canViewFinancials ? (
-                  <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("financials"); }} className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Financials</button>
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("financials"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Financials
+                  </button>
+                ) : null}
+                {showJobCardAction || showQuotationAction || showInvoiceAction ? (
+                  <div className="mx-3 my-1 border-t border-[var(--line)]" />
                 ) : null}
                 {showJobCardAction ? (
-                  <a href={`/api/jobs/${job.id}/job-card`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Print Job Card</a>
+                  <a href={`/api/jobs/${job.id}/job-card`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Print Job Card
+                  </a>
                 ) : null}
                 {showQuotationAction ? (
-                  <a href={`/api/jobs/${job.id}/quotation`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Download Quote</a>
+                  <a href={`/api/jobs/${job.id}/quotation`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Download Quote
+                  </a>
                 ) : null}
                 {showInvoiceAction ? (
-                  <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="flex w-full px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel-strong)]">Download Invoice</a>
+                  <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Download Invoice
+                  </a>
                 ) : null}
               </div>
             ) : null}

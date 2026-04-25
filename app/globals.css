@@ -355,6 +355,33 @@ a:hover .nav-icon-premium {
   }
 }
 
+/* ── Touch press feedback (touch devices only) ───────────────────────────── */
+/* Gives every interactive element a physical "press" feel on mobile        */
+
+@media (hover: none) and (pointer: coarse) {
+  a:active, button:active {
+    opacity: 0.72;
+    transform: scale(0.975);
+    transition: opacity 60ms ease, transform 60ms ease;
+  }
+
+  /* Pill chips and filter links get a lighter press */
+  a[class*="rounded-full"]:active,
+  a[class*="rounded-lg"]:active,
+  a[class*="rounded-xl"]:active {
+    opacity: 0.78;
+    transform: scale(0.97);
+  }
+
+  /* Destructive / premium buttons get a tighter press */
+  .btn-premium:active,
+  .btn-premium-dark:active,
+  .btn-premium-danger:active {
+    transform: scale(0.96) translateY(1px);
+    filter: brightness(0.94);
+  }
+}
+
 /* ── Base Form Elements ──────────────────────────────────────────────────── */
 
 :where(button, a[class*="btn-premium"]) {

@@ -775,7 +775,7 @@ export default async function DashboardPage({
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Link
                 href={`/jobs?from=${asDateInputValue(todayStart)}&to=${asDateInputValue(today)}`}
-                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] transition hover:border-[var(--accent)]/30"
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[11px] transition hover:border-[var(--accent)]/30"
               >
                 <span className="text-[var(--ink-muted)]">In </span>
                 <span className="font-semibold text-[var(--ink)]">{receivedToday}</span>
@@ -786,13 +786,13 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/reports"
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
               >
                 Revenue {formatMoney(revenueMtd, currency)}
               </Link>
               <Link
                 href="/payout-followups"
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   payoutOutstanding > 0
                     ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[#9A7A00] hover:border-[var(--accent)]/60"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -802,7 +802,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?status=AWAITING_APPROVAL"
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   awaitingApprovalCount > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -812,7 +812,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?status=DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,IN_EXTERNAL_REPAIR"
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   overdueWithDays.length > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -822,7 +822,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?assignedToId=unassigned"
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   unassignedActiveCount > 0
                     ? "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -832,7 +832,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/intake"
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   pendingRequests > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"

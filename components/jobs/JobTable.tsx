@@ -139,26 +139,26 @@ export function JobTable({
   const paginationBar = hasPagination && (totalPages ?? 0) > 1 ? (
     <div className="flex items-center gap-1.5">
       {isPrevDisabled || !prevPageHref ? (
-        <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
           ← Prev
         </span>
       ) : (
         <Link
           href={prevPageHref}
-          className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
         >
           ← Prev
         </Link>
       )}
       <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
       {isNextDisabled || !nextPageHref ? (
-        <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
           Next →
         </span>
       ) : (
         <Link
           href={nextPageHref}
-          className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
         >
           Next →
         </Link>
@@ -452,14 +452,14 @@ export function JobTable({
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                        className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
                       >
                         Open
                       </Link>
                       {canEditPage ? (
                         <Link
                           href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                          className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
+                          className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
                         >
                           Edit
                         </Link>
@@ -467,7 +467,7 @@ export function JobTable({
                       {canDelete && deleteAction ? (
                         <form action={deleteAction} className="inline">
                           <input type="hidden" name="id" value={job.id} />
-                          <button className="whitespace-nowrap rounded-md border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600">
+                          <button className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600">
                             Delete
                           </button>
                         </form>

@@ -400,13 +400,26 @@ export default async function JobsPage({
         </div>
         </div>
 
-        {/* New Job CTA — always visible, never scrolls away */}
+        {/* New Job CTA — visible in chip rail on sm+, hidden on mobile (replaced by FAB) */}
         {can.createJob(user) ? (
-          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold sm:px-4 sm:py-2 sm:text-sm">
+          <Link href="/jobs/new" className="btn-premium hidden shrink-0 rounded-lg px-4 py-2 text-sm font-semibold sm:inline-flex">
             + New Job
           </Link>
         ) : null}
       </div>
+
+      {/* ── FAB: New Job — mobile only, floats above bottom nav ── */}
+      {can.createJob(user) ? (
+        <Link
+          href="/jobs/new"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_4px_20px_rgba(212,175,55,0.45)] transition-transform sm:hidden"
+          aria-label="New Job"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </Link>
+      ) : null}
 
       {/* ── External tech notice ── */}
       {isExternalTech ? (
