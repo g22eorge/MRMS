@@ -218,7 +218,6 @@ export default async function UsersPage({
       select: {
         id: true,
         role: true,
-        permissionGrants: { select: { permission: true } },
       },
     });
     if (!target) {
@@ -229,7 +228,17 @@ export default async function UsersPage({
       redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
     }
 
-    const currentPermissions = new Set<string>(target.permissionGrants.map((grant) => grant.permission));
+    let currentPermissionValues: string[] = [];
+    try {
+      const rows = await prisma.$queryRaw<Array<{ permission: string }>>`
+        SELECT permission FROM "UserPermission" WHERE userId = ${targetUserId}
+      `;
+      currentPermissionValues = rows.map((row) => row.permission).filter(Boolean);
+    } catch {
+      currentPermissionValues = [];
+    }
+
+    const currentPermissions = new Set<string>(currentPermissionValues);
     const nextPermissions = new Set<string>(permissionValues);
 
     const added = [...nextPermissions].filter((permission) => !currentPermissions.has(permission));
@@ -288,11 +297,6 @@ export default async function UsersPage({
       isActive: true,
       createdAt: true,
       updatedAt: true,
-      permissionGrants: {
-        select: {
-          permission: true,
-        },
-      },
       sessions: {
         orderBy: { updatedAt: "desc" },
         take: 1,
@@ -306,7 +310,26 @@ export default async function UsersPage({
     },
   });
 
-  const filteredUsers = users.filter((item) => searchMatches(item, q));
+  let permissionMap = new Map<string, string[]>();
+  try {
+    const rows = await prisma.$queryRaw<Array<{ userId: string; permission: string }>>`
+      SELECT userId, permission FROM "UserPermission"
+    `;
+    permissionMap = rows.reduce((acc, row) => {
+      if (!acc.has(row.userId)) acc.set(row.userId, []);
+      acc.get(row.userId)?.push(row.permission);
+      return acc;
+    }, new Map<string, string[]>());
+  } catch {
+    permissionMap = new Map();
+  }
+
+  const usersWithPermissions = users.map((entry) => ({
+    ...entry,
+    permissionGrants: (permissionMap.get(entry.id) ?? []).map((permission) => ({ permission })),
+  }));
+
+  const filteredUsers = usersWithPermissions.filter((item) => searchMatches(item, q));
   const selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
 
   let accessAudit: Array<{
