@@ -5,11 +5,17 @@ import { runDataHeal } from "@/lib/data-heal";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
-export default async function DataHealPage() {
+export default async function DataHealPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string }>;
+}) {
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
     redirect("/dashboard");
   }
+
+  const feedback = await searchParams;
 
   const [unresolved, lastHealedAt, preview] = await Promise.all([
     prisma.job.count({
@@ -27,18 +33,24 @@ export default async function DataHealPage() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
     if (actor.role !== "ADMIN") return;
-    await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
+    const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
     revalidatePath("/settings/data-heal");
+    redirect(
+      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&dry=1`,
+    );
   }
 
   async function runApply() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
     if (actor.role !== "ADMIN") return;
-    await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
+    const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
     revalidatePath("/settings/data-heal");
     revalidatePath("/dashboard");
     revalidatePath("/jobs");
+    redirect(
+      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}`,
+    );
   }
 
   return (
@@ -60,6 +72,12 @@ export default async function DataHealPage() {
       </section>
 
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        {feedback.mode ? (
+          <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink)]">
+            {feedback.mode === "dry" ? "Dry check complete" : "Heal run complete"}: checked {feedback.checked ?? "0"},
+            fixable {feedback.fixed ?? "0"}, pending {feedback.pending ?? "0"}.
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <form action={runDry}>
             <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Run Dry Check</button>
