@@ -57,7 +57,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20"
           placeholder="you@eagleinfo.com"
         />
       </div>
@@ -71,7 +71,7 @@ export function LoginForm() {
             name="password"
             type={showPassword ? "text" : "password"}
             required
-            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 pr-24 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 pr-24 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20"
             placeholder="Enter your password"
           />
           <button
@@ -86,10 +86,10 @@ export function LoginForm() {
 
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-[var(--ink-muted)]">
-          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border border-[var(--line)] text-[#D4AF37]" />
+          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border border-[var(--line)] text-[var(--accent)]" />
           Remember me
         </label>
-        <a href="mailto:support@eagleinfo.com" className="text-[#D4AF37] hover:underline">
+        <a href="mailto:support@eagleinfo.com" className="text-[var(--accent)] hover:underline">
           Forgot password?
         </a>
       </div>
@@ -97,7 +97,7 @@ export function LoginForm() {
       <button
         disabled={isPending}
         type="submit"
-        className="btn-premium w-full rounded-md px-3 py-2 text-white disabled:opacity-60"
+        className="btn-premium w-full rounded-lg px-3 py-2 text-white disabled:opacity-60"
       >
         {isPending ? "Signing in..." : "Sign in"}
       </button>

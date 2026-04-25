@@ -16,8 +16,8 @@ function getActionMeta(action: string): ActionMeta {
   if (action.includes("CREATED")) {
     return {
       icon: "+",
-      chipClass: "bg-[#D4AF37] text-white border-[#D4AF37]",
-      panelClass: "border-[#D4AF37]",
+      chipClass: "bg-[var(--accent)] text-white border-[var(--accent)]",
+      panelClass: "border-[var(--accent)]",
     };
   }
   if (action.includes("STATUS") || action.includes("UPDATE")) {
@@ -111,7 +111,7 @@ export function AuditTimeline({ items }: { items: AuditItem[] }) {
         const actionMeta = getActionMeta(item.action);
 
         return (
-          <div key={item.id} className={`rounded-md border bg-white p-3 ${actionMeta.panelClass}`}>
+          <div key={item.id} className={`rounded-lg border bg-[var(--panel-strong)] p-3 ${actionMeta.panelClass}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-bold ${actionMeta.chipClass}`}>
@@ -123,7 +123,7 @@ export function AuditTimeline({ items }: { items: AuditItem[] }) {
             </div>
             <p className="text-xs text-[var(--ink-muted)]">by {item.user.name}</p>
             {trainingSummary ? (
-              <p className="mt-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-1 text-xs text-[#D4AF37]">{trainingSummary}</p>
+              <p className="mt-2 rounded-md border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2 py-1 text-xs text-[var(--accent)]">{trainingSummary}</p>
             ) : null}
             {detailEntries.length > 0 ? (
               <dl className="mt-2 grid gap-2 sm:grid-cols-2">

@@ -53,7 +53,7 @@ export function MonthSelectForm({
             submitMonth(options[currentIndex + 1].value);
           }}
           disabled={currentIndex < 0 || currentIndex >= options.length - 1}
-          className="btn-premium-secondary rounded-md px-2 py-1 text-xs disabled:opacity-40"
+          className="btn-premium-secondary rounded-lg px-2 py-1 text-xs disabled:opacity-40"
           aria-label="Previous month"
           title="Previous month"
         >
@@ -79,7 +79,7 @@ export function MonthSelectForm({
             submitMonth(options[currentIndex - 1].value);
           }}
           disabled={currentIndex <= 0}
-          className="btn-premium-secondary rounded-md px-2 py-1 text-xs disabled:opacity-40"
+          className="btn-premium-secondary rounded-lg px-2 py-1 text-xs disabled:opacity-40"
           aria-label="Next month"
           title="Next month"
         >
@@ -92,7 +92,7 @@ export function MonthSelectForm({
         </p>
       ) : null}
       <noscript>
-        <button className="btn-premium-secondary ml-2 rounded-md px-3 py-1 text-sm">Go</button>
+        <button className="btn-premium-secondary ml-2 rounded-lg px-3 py-1 text-sm">Go</button>
       </noscript>
     </form>
   );

@@ -30,7 +30,7 @@ function Toggle({ name, label, hint, defaultChecked }: { name: keyof Prefs; labe
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        className="mt-1 h-4 w-4 shrink-0 accent-[#D4AF37]"
+        className="mt-1 h-4 w-4 shrink-0 accent-[var(--accent)]"
       />
     </label>
   );
@@ -42,8 +42,8 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
 
   return (
     <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-      <div className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#D4AF37]">Alert Scope</p>
+      <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">Alert Scope</p>
         <p className="mt-1 text-sm text-[var(--ink)]">These switches control which notifications are generated for you.</p>
       </div>
 
@@ -68,7 +68,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       </div>
 
       {state.error ? <p className="text-sm text-black">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-[#D4AF37]">{state.success}</p> : null}
+      {state.success ? <p className="text-sm text-[var(--accent)]">{state.success}</p> : null}
 
       <button className="btn-premium rounded-lg px-3 py-2 text-sm font-medium text-white">Save Preferences</button>
     </form>

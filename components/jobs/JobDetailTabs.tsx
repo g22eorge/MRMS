@@ -69,9 +69,9 @@ const panelShellClass =
 const softSectionClass =
   "space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/70 p-3";
 const fieldClass =
-  "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+  "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 const areaClass =
-  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
 type Props = {
   role: Role;
@@ -357,16 +357,16 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       key: "status",
       label: "Current Status",
       value: prettyEnum(job.status),
-      tone: "text-[#D4AF37]",
-      accent: "bg-[#D4AF37]/10 border-[#D4AF37]/30",
+      tone: "text-[var(--accent)]",
+      accent: "bg-[var(--accent)]/10 border-[var(--accent)]/30",
       priority: 90,
     },
     {
       key: "watch",
       label: "Watch",
       value: watchLabel ? `${watchLabel} (${statusAgeHours}h)` : `Healthy (${statusAgeHours}h in state)`,
-      tone: watchLabel ? "text-black" : "text-[#D4AF37]",
-      accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[#D4AF37]/10 border-[#D4AF37]/30",
+      tone: watchLabel ? "text-black" : "text-[var(--accent)]",
+      accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[var(--accent)]/10 border-[var(--accent)]/30",
       priority: watchLabel ? 88 : 40,
     },
     {
@@ -450,7 +450,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           <div>
             <h1 className="text-xl font-semibold">{job.jobNumber}</h1>
             <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
-              {job.deviceType} / {job.brand} {job.model}
+              {job.deviceType}{[job.brand, job.model].filter(v => v && v !== "Unknown").length > 0 ? " / " + [job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") : ""}
             </p>
           </div>
           <JobStatusBadge status={job.status} />
@@ -465,8 +465,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             onClick={() => setActive(tab)}
             className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition ${
               active === tab
-                ? "border-[#D4AF37] bg-[#D4AF37] text-white"
-                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[#D4AF37]/50"
+                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/50"
             }`}
           >
             {tab}
@@ -487,9 +487,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     key={label}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
                       isCurrent
-                        ? "border-[#D4AF37] bg-[#D4AF37] text-white"
+                        ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                         : isDone
-                          ? "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]"
+                          ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]"
                           : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"
                     }`}
                   >
@@ -505,8 +505,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </div>
           </div>
 
-          <div className="mb-4 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#D4AF37]">Executive Brief</p>
+          <div className="mb-4 rounded-md border border-[var(--accent)]/30 bg-[var(--accent)]/10 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--accent)]">Executive Brief</p>
             <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{narrativeBits.join(" ")}</p>
           </div>
 
@@ -591,7 +591,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     key={h.id}
                     type="button"
                     onClick={() => router.push(`/jobs/${h.id}`)}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[#D4AF37]/40"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[var(--accent)]/40"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[var(--ink)]">{h.jobNumber}</p>
@@ -667,12 +667,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 <button
                   type="submit"
                   disabled={isAssignPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Save Assignment
                 </button>
                 {savedSection === "assignment" ? (
-                  <p className="text-xs text-[#D4AF37]">Saved</p>
+                  <p className="text-xs text-[var(--accent)]">Saved</p>
                 ) : null}
             </form>
           ) : null}
@@ -829,12 +829,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 <button
                   type="submit"
                   disabled={isOneTimeExternalPending}
-                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   {oneTimeExternal ? "Update External Assignment" : "Assign One-Time External Tech"}
                 </button>
                 {savedSection === "oneTimeExternal" ? (
-                  <p className="text-xs text-[#D4AF37]">Saved</p>
+                  <p className="text-xs text-[var(--accent)]">Saved</p>
                 ) : null}
               </div>
             </form>
@@ -888,7 +888,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 name="clientConversationNote"
                 defaultValue={job.clientConversationNote ?? ""}
                 placeholder="Client communication note"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
               />
               {job.lastClientContactAt ? (
                 <p className="text-xs text-[var(--ink-muted)]">
@@ -898,12 +898,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               <button
                 type="submit"
                 disabled={isCommunicationPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
               >
                 Save Communication
               </button>
               {savedSection === "communication" ? (
-                <p className="text-xs text-[#D4AF37]">Saved</p>
+                <p className="text-xs text-[var(--accent)]">Saved</p>
               ) : null}
             </form>
           ) : null}
@@ -966,17 +966,17 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 name="statusNote"
                 defaultValue={job.statusNote ?? ""}
                 placeholder="Context note (optional)"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
               />
               <button
                 type="submit"
                 disabled={isContextPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
               >
                 Save Context
               </button>
               {savedSection === "context" ? (
-                <p className="text-xs text-[#D4AF37]">Saved</p>
+                <p className="text-xs text-[var(--accent)]">Saved</p>
               ) : null}
             </form>
           ) : null}
@@ -1054,10 +1054,10 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               Repair path: <span className="font-medium">{derivedRepairPath}</span>
             </div>
           ) : null}
-            <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
+            <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
               Save
             </button>
-          {savedSection === "diagnosis" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          {savedSection === "diagnosis" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -1081,8 +1081,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         >
           <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Work done" className={areaClass} />
           <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="Parts replaced" className={areaClass} />
-          <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
-          {savedSection === "repair" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
+          {savedSection === "repair" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -1146,17 +1146,17 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </p>
           ) : null}
           {canManageFinancials ? (
-              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
                 Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${formatBillAmount(existingMargin)}`}
               </p>
           ) : null}
           {hasPayoutControls ? (
             <div className={softSectionClass}>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">External Technician Payout</p>
-              <div className="rounded-lg border border-[var(--line)] bg-white p-2">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-[var(--ink-muted)]">Payout status</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[#D4AF37] text-white" : "bg-[#D4AF37]/20 text-[#D4AF37]"}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[var(--accent)] text-white" : "bg-[var(--accent)]/20 text-[var(--accent)]"}`}>
                     {job.externalPaid ? "Paid" : "Not paid"}
                   </span>
                 </div>
@@ -1183,7 +1183,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 placeholder="Payment reference (optional)"
                 className={fieldClass}
               />
-              <p className={`text-xs ${job.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
+              <p className={`text-xs ${job.externalPaid ? "text-[var(--accent)]" : "text-[var(--accent)]"}`}>
                 {job.externalPaidAt
                   ? `Paid on ${formatUtcDateTime(job.externalPaidAt)}`
                   : "Not yet marked as paid"}
@@ -1192,7 +1192,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 <button
                   type="submit"
                   disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Save Billing
                 </button>
@@ -1201,7 +1201,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   name="externalPaid"
                   value="true"
                   disabled={isFinancialPending || job.externalPaid === true}
-                  className="btn-premium-success w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium-success w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Paid
                 </button>
@@ -1210,7 +1210,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   name="externalPaid"
                   value="false"
                   disabled={isFinancialPending || job.externalPaid === false}
-                  className="btn-premium-warning w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium-warning w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Unpaid
                 </button>
@@ -1236,12 +1236,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           {!hasPayoutControls ? (
             <button
               disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-              className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
             >
               Save Billing
             </button>
           ) : null}
-          {savedSection === "financials" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          {savedSection === "financials" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
 
@@ -1264,7 +1264,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           href={`/api/jobs/${job.id}/invoice`}
           target="_blank"
           rel="noreferrer"
-          className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-md px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+          className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
         >
           Generate Invoice
         </a>
@@ -1310,7 +1310,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     event.preventDefault();
                   }
                 }}
-                className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px]"
+                className="btn-premium-dark rounded-lg px-3 py-1.5 text-[13px]"
               >
                 Set {prettyEnum(status)}
               </button>
@@ -1338,7 +1338,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               </div>
             </div>
           ) : null}
-          {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          {savedSection === "status" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
     </div>

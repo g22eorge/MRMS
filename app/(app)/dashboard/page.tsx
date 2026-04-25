@@ -87,10 +87,10 @@ const repairFlowReference = [
   { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "IN_EXTERNAL_REPAIR", label: "External Repair", href: "/jobs?status=IN_EXTERNAL_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]" },
+  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]" },
   { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
-  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[#D4AF37] bg-[#D4AF37] text-white" },
+  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[var(--accent)] bg-[var(--accent)] text-white" },
+  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[var(--accent)] bg-[var(--accent)] text-white" },
   { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]" },
 ] as const;
 
@@ -142,7 +142,7 @@ function DashboardPeriodBar({
   actionLabel?: string;
 }) {
   return (
-    <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,247,248,0.94))] px-3 py-2.5">
+    <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
       {/* Period toggle */}
       <div className="flex items-center gap-1 rounded-lg border border-[var(--line)] bg-white p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
         <Link
@@ -177,7 +177,7 @@ function DashboardPeriodBar({
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="ml-auto rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+          className="ml-auto rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
         >
           {actionLabel}
         </Link>
@@ -202,7 +202,7 @@ function DashboardHero({
   secondaryLabel?: string;
 }) {
   return (
-    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[linear-gradient(120deg,rgba(255,255,255,0.98),rgba(250,250,250,0.95))] px-4 py-3">
+    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Overview</p>
@@ -212,14 +212,14 @@ function DashboardHero({
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           <Link
             href={primaryHref}
-            className="rounded-md border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1 text-[11px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
+            className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
           >
             {primaryLabel}
           </Link>
           {secondaryHref && secondaryLabel ? (
             <Link
               href={secondaryHref}
-              className="rounded-md border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
             >
               {secondaryLabel}
             </Link>
@@ -290,7 +290,7 @@ export default async function DashboardPage({
       .reduce((sum, job) => sum + (payouts.get(job.id)?.externalTechFee ?? 0), 0);
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -320,23 +320,23 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
           <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned Jobs ({selectedPeriodLabel})</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned Jobs ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{jobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Open queue →</p>
           </Link>
           <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs ({selectedPeriodLabel})</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Jobs ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{openCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Jobs needing action →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completedCount}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{completedCount}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed jobs →</p>
           </Link>
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payout Outstanding</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{formatMoneyCompact(outstandingTotal, currency)}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payout Outstanding</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{formatMoneyCompact(outstandingTotal, currency)}</p>
             <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoneyCompact(paidTotal, currency)}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">
               <Link href="/technicians/payouts">View payout breakdown →</Link>
@@ -365,7 +365,7 @@ export default async function DashboardPage({
                   <div>
                     <p className="text-xs text-[var(--ink-muted)]">Fee</p>
                     <p className="font-medium">{formatMoney(payouts.get(job.id)?.externalTechFee ?? 0, currency)}</p>
-                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
+                    <p className={`text-xs ${payouts.get(job.id)?.externalPaid ? "text-[var(--accent)]" : "text-[var(--accent)]"}`}>
                       {payouts.get(job.id)?.externalPaid ? "Paid" : "Unpaid"}
                     </p>
                   </div>
@@ -454,7 +454,7 @@ export default async function DashboardPage({
     const marginTotal = clientBillingTotal - externalCostTotal;
 
     return (
-      <div className="space-y-3 sm:space-y-5">
+      <div className="space-y-4">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -482,22 +482,22 @@ export default async function DashboardPage({
 
         {canUpdatePricing ? (
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37] sm:text-[11px]">Pricing Controls</p>
+            <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[11px]">Pricing Controls</p>
               <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
             </div>
             <div className="grid gap-2 p-3 grid-cols-2 sm:grid-cols-3">
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[#D4AF37]">Needs Pricing</p>
-                <p className="mt-1 text-lg font-semibold text-[#D4AF37]">{pricingPendingCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--accent)]">Needs Pricing</p>
+                <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{pricingPendingCount}</p>
               </Link>
-              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[#D4AF37]">Priced Jobs</p>
-                <p className="mt-1 text-lg font-semibold text-[#D4AF37]">{pricedCount}</p>
+              <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--accent)]">Priced Jobs</p>
+                <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{pricedCount}</p>
               </Link>
               <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-center col-span-2 sm:col-span-1">
                 <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
-                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+                <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
                   {marginTotal >= 0 ? "+" : ""}{formatMoneyCompact(marginTotal, getAppCurrency())}
                 </p>
               </Link>
@@ -531,23 +531,23 @@ export default async function DashboardPage({
 
         <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
           <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold sm:text-4xl">{assignedJobs.length}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">View my jobs →</p>
           </Link>
           <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{diagnosing}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Needs diagnosis work →</p>
           </Link>
           <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{inRepair}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{inRepair}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Active repairs →</p>
           </Link>
           <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37] sm:text-4xl">{completed}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{completed}</p>
             <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed repairs →</p>
           </Link>
         </div>
@@ -561,7 +561,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center group">
-                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber} - {job.device?.brand ?? "Unknown"} {job.device?.model ?? "Device"}</p>
+                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber} — {[job.device?.brand, job.device?.model].filter(v => v && v !== "Unknown").join(" ") || "Device"}</p>
                     <span className="text-xs text-[var(--ink-muted)]">
                       {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                     </span>
@@ -738,26 +738,26 @@ export default async function DashboardPage({
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Link
                 href={`/jobs?from=${asDateInputValue(todayStart)}&to=${asDateInputValue(today)}`}
-                className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] transition hover:border-[var(--accent)]/30"
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] transition hover:border-[var(--accent)]/30"
               >
                 <span className="text-[var(--ink-muted)]">In </span>
                 <span className="font-semibold text-[var(--ink)]">{receivedToday}</span>
                 <span className="mx-1 text-[var(--ink-muted)]">·</span>
                 <span className="text-[var(--ink-muted)]">Out </span>
-                <span className="font-semibold text-[#D4AF37]">{completedToday}</span>
+                <span className="font-semibold text-[var(--accent)]">{completedToday}</span>
                 <span className="ml-1 text-[var(--ink-muted)]">today</span>
               </Link>
               <Link
                 href="/reports"
-                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
               >
                 Revenue {formatMoney(revenueMtd, currency)}
               </Link>
               <Link
                 href="/payout-followups"
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
                   payoutOutstanding > 0
-                    ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#9A7A00] hover:border-[#D4AF37]/60"
+                    ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[#9A7A00] hover:border-[var(--accent)]/60"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
@@ -765,7 +765,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?status=AWAITING_APPROVAL"
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
                   awaitingApprovalCount > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -775,7 +775,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?status=DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,IN_EXTERNAL_REPAIR"
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
                   overdueWithDays.length > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -785,7 +785,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/jobs?assignedToId=unassigned"
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
                   unassignedActiveCount > 0
                     ? "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -795,7 +795,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/intake"
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-0.5 text-[11px] font-semibold transition ${
                   pendingRequests > 0
                     ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -818,10 +818,10 @@ export default async function DashboardPage({
                     href={`/jobs?status=${s.key}`}
                     className={[
                       "flex min-w-[88px] shrink-0 flex-col items-center border-r border-[var(--line)] px-3 py-3.5 text-center transition hover:bg-[var(--panel-strong)] last:border-r-0",
-                      isUrgent ? "bg-[#D4AF37]/5" : "",
+                      isUrgent ? "bg-[var(--accent)]/5" : "",
                     ].join(" ")}
                   >
-                    <p className={`text-xl font-bold ${s.value === 0 ? "text-[var(--ink-muted)]" : isUrgent ? "text-[#D4AF37]" : isReady ? "text-[#D4AF37]" : isCompleted ? "text-emerald-600" : "text-[var(--ink)]"}`}>
+                    <p className={`text-xl font-bold ${s.value === 0 ? "text-[var(--ink-muted)]" : isUrgent ? "text-[var(--accent)]" : isReady ? "text-[var(--accent)]" : isCompleted ? "text-emerald-600" : "text-[var(--ink)]"}`}>
                       {s.value}
                     </p>
                     <p className="mt-0.5 text-[10px] leading-tight text-[var(--ink-muted)]">{s.name}</p>
@@ -836,15 +836,15 @@ export default async function DashboardPage({
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Link href={`/reports?period=month&month=${mtdLabel}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Revenue MTD</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue MTD</p>
                 <p className="mt-0.5 text-sm font-semibold text-emerald-700">{formatMoney(revenueMtd, currency)}</p>
               </Link>
-              <Link href="/payout-followups" className={`rounded-lg border px-3 py-2 transition ${payoutOutstanding > 0 ? "border-[#D4AF37]/35 bg-[#D4AF37]/10 hover:border-[#D4AF37]/60" : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]/35"}`}>
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payouts Due</p>
+              <Link href="/payout-followups" className={`rounded-lg border px-3 py-2 transition ${payoutOutstanding > 0 ? "border-[var(--accent)]/35 bg-[var(--accent)]/10 hover:border-[var(--accent)]/60" : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]/35"}`}>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payouts Due</p>
                 <p className={`mt-0.5 text-sm font-semibold ${payoutOutstanding > 0 ? "text-[#9A7A00]" : "text-[var(--ink)]"}`}>{formatMoney(payoutOutstanding, currency)}</p>
               </Link>
               <Link href={`/jobs?status=COMPLETED&from=${asDateInputValue(mtdStart)}&to=${asDateInputValue(today)}`} className="col-span-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35 sm:col-span-1">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Completed MTD</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed MTD</p>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{completedMtd.length}</p>
               </Link>
             </div>
@@ -886,7 +886,7 @@ export default async function DashboardPage({
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold">{job.jobNumber}</p>
                       <p className="truncate text-[10px] text-[var(--ink-muted)]">
-                        {job.device?.brand ?? "Unknown"} {job.device?.model ?? "Device"}
+                        {[job.device?.brand, job.device?.model].filter(v => v && v !== "Unknown").join(" ") || "Device"}
                         <span className="mx-1 text-[var(--line)]">·</span>
                         {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                       </p>
@@ -972,7 +972,7 @@ export default async function DashboardPage({
       .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -1050,7 +1050,7 @@ export default async function DashboardPage({
     ]);
 
     return (
-      <div className="space-y-3 sm:space-y-5">
+      <div className="space-y-4">
         <DashboardPeriodBar
           period={period}
           monthHref={`/dashboard?period=month&month=${monthLabel(new Date().getFullYear(), new Date().getMonth() + 1)}`}
@@ -1089,35 +1089,35 @@ export default async function DashboardPage({
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Approval</p>
-            <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{awaitingApproval}</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--accent)]">{awaitingApproval}</p>
             <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">Follow up →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center transition hover:-translate-y-[1px]">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Ready</p>
-            <p className="mt-1 text-3xl font-semibold text-[#D4AF37]">{readyForPickup}</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--accent)]">{readyForPickup}</p>
             <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">Pickup →</p>
           </Link>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2">
           <Link href="/jobs/new" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Captured ({selectedPeriodLabel})</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Captured ({selectedPeriodLabel})</p>
             <p className="mt-2 text-3xl font-semibold">{capturedThisMonth}</p>
             <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open intake form →</p>
           </Link>
           <Link href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open client queue</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open client queue</p>
             <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{openFromIntake}</p>
             <p className="mt-2 text-xs font-medium text-[var(--accent)]">View open jobs →</p>
           </Link>
           <Link href="/jobs?status=AWAITING_APPROVAL" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting approval</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{awaitingApproval}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Awaiting approval</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{awaitingApproval}</p>
             <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open approval queue →</p>
           </Link>
           <Link href="/jobs?status=READY_FOR_PICKUP" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Ready for pickup</p>
-            <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{readyForPickup}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Ready for pickup</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{readyForPickup}</p>
             <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open pickup list →</p>
           </Link>
         </div>
@@ -1156,7 +1156,7 @@ export default async function DashboardPage({
 
       <div className="grid gap-3 lg:grid-cols-3">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Total Jobs</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Total Jobs</p>
           <p className="mt-2 text-3xl font-semibold">{totalJobs}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View all jobs →</p>
         </Link>
@@ -1164,7 +1164,7 @@ export default async function DashboardPage({
           href="/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Jobs</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Jobs</p>
           <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{openJobs}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View open queue →</p>
         </Link>
@@ -1172,8 +1172,8 @@ export default async function DashboardPage({
           href="/jobs?status=COMPLETED"
           className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:-translate-y-[2px] sm:p-5"
         >
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Completed</p>
-          <p className="mt-2 text-3xl font-semibold text-[#D4AF37]">{completedJobs}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--accent)]">{completedJobs}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View completed jobs →</p>
         </Link>
       </div>

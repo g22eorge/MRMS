@@ -46,8 +46,8 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
   },
   READY_FOR_PICKUP: {
     dot: "bg-white",
-    badge: "border-[#D4AF37] bg-[#D4AF37] text-white",
-    strip: "bg-[#D4AF37]",
+    badge: "border-[var(--accent)] bg-[var(--accent)] text-white",
+    strip: "bg-[var(--accent)]",
     label: "Ready ✓",
     help: "Repair complete — ready for client pickup.",
   },

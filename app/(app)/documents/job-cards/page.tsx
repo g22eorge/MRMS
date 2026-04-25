@@ -11,7 +11,7 @@ export default async function JobCardsPage() {
 
   return (
     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Documents</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Documents</p>
       <h1 className="mt-1 text-lg font-semibold text-[var(--ink)]">Job Cards</h1>
       <p className="mt-1 text-sm text-[var(--ink-muted)]">
         Generate and review job card records from the jobs workspace.

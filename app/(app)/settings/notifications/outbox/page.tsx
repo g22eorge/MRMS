@@ -142,13 +142,13 @@ export default async function OutboxPage({
           </span>
         </div>
         <form action={retryNowAction}>
-          <button className="btn-premium rounded-md px-3 py-1.5 text-xs">Run Retry</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm">Run Retry</button>
         </form>
       </div>
 
       <div className="panel-shadow grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <form className="grid gap-3 md:grid-cols-4" method="GET">
-          <select name="channel" defaultValue={channel ?? ""} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm">
+          <select name="channel" defaultValue={channel ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             <option value="">All channels</option>
             {CHANNELS.map((c) => (
               <option key={c} value={c}>
@@ -156,7 +156,7 @@ export default async function OutboxPage({
               </option>
             ))}
           </select>
-          <select name="status" defaultValue={status ?? ""} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm">
+          <select name="status" defaultValue={status ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -168,39 +168,39 @@ export default async function OutboxPage({
               name="type"
               defaultValue={type ?? ""}
               placeholder="Type (optional)"
-              className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
           <input
             name="q"
             defaultValue={q}
             placeholder="Search id/to/error"
-            className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <div className="md:col-span-4">
-            <button className="btn-premium-secondary rounded-md px-4 py-2 text-sm">Apply Filters</button>
+            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply Filters</button>
           </div>
         </form>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel)] text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+          <thead className="bg-[var(--panel-strong)]/50 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
             <tr>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Channel</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2">To</th>
-              <th className="px-3 py-2">Attempts</th>
-              <th className="px-3 py-2">Last Error</th>
-              <th className="px-3 py-2">Provider</th>
-              <th className="px-3 py-2">Delivery</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-4 py-2.5">Status</th>
+              <th className="px-4 py-2.5">Channel</th>
+              <th className="px-4 py-2.5">Type</th>
+              <th className="px-4 py-2.5">To</th>
+              <th className="px-4 py-2.5">Attempts</th>
+              <th className="px-4 py-2.5">Last Error</th>
+              <th className="px-4 py-2.5">Provider</th>
+              <th className="px-4 py-2.5">Delivery</th>
+              <th className="px-4 py-2.5">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-t border-[var(--line)] align-top">
-                <td className="px-3 py-2">
+                <td className="px-4 py-2.5">
                   <span className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-xs font-semibold">
                     {r.status}
                   </span>
@@ -233,11 +233,11 @@ export default async function OutboxPage({
                     <span>-</span>
                   )}
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-4 py-2.5">
                   <div className="flex flex-wrap gap-2">
                     <form action={retryOneAction}>
                       <input type="hidden" name="id" value={r.id} />
-                      <button className="btn-premium-secondary rounded-md px-3 py-1 text-xs">Retry</button>
+                      <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Retry</button>
                     </form>
                     {r.status !== "DEAD" ? (
                       <form action={markDeadAction}>

@@ -266,7 +266,7 @@ export default async function ClientsPage({
 
       {/* ── Clients table / cards ── */}
       {clients.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <circle cx="20" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
             <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -277,7 +277,7 @@ export default async function ClientsPage({
           ) : null}
         </div>
       ) : (
-        <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
 
           {/* Table header bar with count + pagination */}
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
@@ -291,7 +291,7 @@ export default async function ClientsPage({
           </div>
 
           {/* ── Mobile cards ── */}
-          <div className="xl:hidden">
+          <div className="lg:hidden">
             <ProgressiveList initialCount={5} step={5}>
               {(clients as ClientRow[]).map((client) => (
                 <div
@@ -363,7 +363,7 @@ export default async function ClientsPage({
           </div>
 
           {/* ── Desktop table ── */}
-          <div className="hidden overflow-x-auto xl:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[860px] border-collapse text-[13px]">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">

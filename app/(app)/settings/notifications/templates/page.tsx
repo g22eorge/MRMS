@@ -11,7 +11,7 @@ export default async function NotificationTemplatesPage() {
 
   return (
     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Settings</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Settings</p>
       <h1 className="mt-1 text-lg font-semibold text-[var(--ink)]">Communication Templates</h1>
       <p className="mt-1 text-sm text-[var(--ink-muted)]">
         Manage reusable WhatsApp and email message templates for client updates.

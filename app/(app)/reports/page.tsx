@@ -313,7 +313,7 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: { status: "AWAITING_APPROVAL" },
-      select: { id: true, jobNumber: true, receivedAt: true, updatedAt: true, brand: true, model: true },
+      select: { id: true, jobNumber: true, receivedAt: true, updatedAt: true, brand: true, model: true, deviceType: true },
       orderBy: { updatedAt: "asc" },
       take: 12,
     }),
@@ -603,7 +603,7 @@ export default async function ReportsPage({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Revenue Δ</p>
-            <p className={`mt-0.5 text-sm font-semibold ${revenueDelta >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${revenueDelta >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
               {revenueDelta >= 0 ? "+" : ""}{formatMoneyCompact(Math.abs(revenueDelta), currency)}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">vs {prevMonthString}</p>
@@ -620,19 +620,19 @@ export default async function ReportsPage({
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Momentum</p>
-            <p className={`mt-0.5 text-sm font-semibold ${completionMomentum >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${completionMomentum >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
               {completionMomentum >= 0 ? "+" : ""}{completionMomentum}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">completed vs prev period</p>
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Queue Pressure</p>
-            <p className="mt-0.5 text-sm font-semibold text-[#D4AF37]">{queuePressure}</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--accent)]">{queuePressure}</p>
             <p className="text-[9px] text-[var(--ink-muted)]">diagn + approval + repair</p>
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Aging Risk</p>
-            <p className={`mt-0.5 text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[#D4AF37]"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[var(--accent)]"}`}>
               {delayedJobs.length}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">open jobs &gt;3 days</p>
@@ -669,7 +669,7 @@ export default async function ReportsPage({
             </div>
             <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-2 w-4 rounded-full bg-[#D4AF37]" />
+                <span className="inline-block h-2 w-4 rounded-full bg-[var(--accent)]" />
                 Revenue
               </span>
               <span className="flex items-center gap-1.5">
@@ -717,7 +717,7 @@ export default async function ReportsPage({
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                     <div><p className="text-[var(--ink-muted)]">Assigned</p><p className="font-semibold">{tech.total}</p></div>
-                    <div><p className="text-[var(--ink-muted)]">Completed</p><p className="font-semibold text-[#D4AF37]">{tech.completed}</p></div>
+                    <div><p className="text-[var(--ink-muted)]">Completed</p><p className="font-semibold text-[var(--accent)]">{tech.completed}</p></div>
                     <div><p className="text-[var(--ink-muted)]">Avg Time</p><p className="font-semibold">{tech.avgTurnaround.toFixed(0)}h</p></div>
                   </div>
                 </div>
@@ -739,37 +739,37 @@ export default async function ReportsPage({
               <div className="overflow-hidden rounded-xl border border-[var(--line)]">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[480px] text-sm">
-                  <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                     <tr>
-                      <th className="px-3 py-2.5">Technician</th>
-                      <th className="px-3 py-2.5">Type</th>
-                      <th className="px-3 py-2.5">Assigned</th>
-                      <th className="px-3 py-2.5">Completed</th>
-                      <th className="px-3 py-2.5">Open</th>
-                      <th className="px-3 py-2.5">Rate</th>
-                      <th className="px-3 py-2.5">Avg Time</th>
-                      <th className="px-3 py-2.5">Revenue</th>
+                      <th className="px-4 py-2.5">Technician</th>
+                      <th className="px-4 py-2.5">Type</th>
+                      <th className="px-4 py-2.5">Assigned</th>
+                      <th className="px-4 py-2.5">Completed</th>
+                      <th className="px-4 py-2.5">Open</th>
+                      <th className="px-4 py-2.5">Rate</th>
+                      <th className="px-4 py-2.5">Avg Time</th>
+                      <th className="px-4 py-2.5">Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {techPerf.map((tech) => (
                       <tr key={tech.name} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/40">
-                        <td className="px-3 py-2.5 font-medium">{tech.name}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-4 py-2.5 font-medium">{tech.name}</td>
+                        <td className="px-4 py-2.5">
                           <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${tech.role === "TECHNICIAN_EXTERNAL" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
                             {tech.role === "TECHNICIAN_EXTERNAL" ? "Ext" : "Int"}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">{tech.total}</td>
-                        <td className="px-3 py-2.5 font-semibold text-[#D4AF37]">{tech.completed}</td>
-                        <td className="px-3 py-2.5">{tech.open}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-4 py-2.5">{tech.total}</td>
+                        <td className="px-4 py-2.5 font-semibold text-[var(--accent)]">{tech.completed}</td>
+                        <td className="px-4 py-2.5">{tech.open}</td>
+                        <td className="px-4 py-2.5">
                           <span className={`font-semibold ${tech.completionRate >= 70 ? "text-emerald-600" : tech.completionRate >= 40 ? "text-amber-600" : "text-red-500"}`}>
                             {tech.completionRate.toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">{tech.avgTurnaround > 0 ? `${tech.avgTurnaround.toFixed(0)}h` : "—"}</td>
-                        <td className="px-3 py-2.5">{formatMoneyCompact(tech.revenue, currency)}</td>
+                        <td className="px-4 py-2.5">{tech.avgTurnaround > 0 ? `${tech.avgTurnaround.toFixed(0)}h` : "—"}</td>
+                        <td className="px-4 py-2.5">{formatMoneyCompact(tech.revenue, currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -822,7 +822,7 @@ export default async function ReportsPage({
               <summary className="list-none">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-[var(--ink)]">{row.device}</p>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">{row.total} jobs</span>
+                  <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">{row.total} jobs</span>
                 </div>
               </summary>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -836,7 +836,7 @@ export default async function ReportsPage({
         </div>
       </PersistedDisclosure>
 
-      <div className="panel-shadow hidden overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+      <div className="panel-shadow hidden overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
         <div className="p-4 pb-3">
           <p className="text-sm font-semibold">Device Performance Drill-down ({selectedMonthString})</p>
         </div>
@@ -845,45 +845,45 @@ export default async function ReportsPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+              <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                 <tr>
-                  <th className="px-3 py-2.5">Device</th>
-                  <th className="px-3 py-2.5">Total</th>
-                  <th className="px-3 py-2.5">Open</th>
-                  <th className="px-3 py-2.5">Completed</th>
-                  <th className="px-3 py-2.5">Closed</th>
-                  <th className="px-3 py-2.5">Rate</th>
-                  <th className="px-3 py-2.5">Avg Time</th>
-                  <th className="px-3 py-2.5">Revenue</th>
-                  <th className="px-3 py-2.5">Margin</th>
-                  <th className="px-3 py-2.5">Avg Margin</th>
-                  <th className="px-3 py-2.5">Path Split</th>
-                  <th className="px-3 py-2.5">Top Tech</th>
-                  <th className="px-3 py-2.5">6-Mo Trend</th>
+                  <th className="px-4 py-2.5">Device</th>
+                  <th className="px-4 py-2.5">Total</th>
+                  <th className="px-4 py-2.5">Open</th>
+                  <th className="px-4 py-2.5">Completed</th>
+                  <th className="px-4 py-2.5">Closed</th>
+                  <th className="px-4 py-2.5">Rate</th>
+                  <th className="px-4 py-2.5">Avg Time</th>
+                  <th className="px-4 py-2.5">Revenue</th>
+                  <th className="px-4 py-2.5">Margin</th>
+                  <th className="px-4 py-2.5">Avg Margin</th>
+                  <th className="px-4 py-2.5">Path Split</th>
+                  <th className="px-4 py-2.5">Top Tech</th>
+                  <th className="px-4 py-2.5">6-Mo Trend</th>
                 </tr>
               </thead>
               <tbody>
                 {deviceInsights.map((row) => (
                   <tr key={row.device} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/40">
-                    <td className="px-3 py-2.5 font-medium">{row.device}</td>
-                    <td className="px-3 py-2.5">{row.total}</td>
-                    <td className="px-3 py-2.5">{row.open}</td>
-                    <td className="px-3 py-2.5 font-semibold text-[#D4AF37]">{row.completed}</td>
-                    <td className="px-3 py-2.5">{row.cancelledOrClosed}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-4 py-2.5 font-medium">{row.device}</td>
+                    <td className="px-4 py-2.5">{row.total}</td>
+                    <td className="px-4 py-2.5">{row.open}</td>
+                    <td className="px-4 py-2.5 font-semibold text-[var(--accent)]">{row.completed}</td>
+                    <td className="px-4 py-2.5">{row.cancelledOrClosed}</td>
+                    <td className="px-4 py-2.5">
                       <span className={`font-semibold ${row.completionRate >= 70 ? "text-emerald-600" : row.completionRate >= 40 ? "text-amber-600" : "text-red-500"}`}>
                         {row.completionRate.toFixed(1)}%
                       </span>
                     </td>
-                    <td className="px-3 py-2.5">{row.avgTurnaroundHours.toFixed(1)}h</td>
-                    <td className="px-3 py-2.5">{formatMoney(row.revenue, currency)}</td>
-                    <td className={`px-3 py-2.5 font-semibold ${row.margin >= 0 ? "text-[#D4AF37]" : "text-red-500"}`}>
+                    <td className="px-4 py-2.5">{row.avgTurnaroundHours.toFixed(1)}h</td>
+                    <td className="px-4 py-2.5">{formatMoney(row.revenue, currency)}</td>
+                    <td className={`px-3 py-2.5 font-semibold ${row.margin >= 0 ? "text-[var(--accent)]" : "text-red-500"}`}>
                       {formatMoney(row.margin, currency)}
                     </td>
-                    <td className="px-3 py-2.5">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
-                    <td className="px-3 py-2.5 text-[var(--ink-muted)]">{row.ext}ext / {row.inHouse}in</td>
-                    <td className="px-3 py-2.5">{row.topTech}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-4 py-2.5">{formatMoney(row.avgMarginPerCompleted, currency)}</td>
+                    <td className="px-4 py-2.5 text-[var(--ink-muted)]">{row.ext}ext / {row.inHouse}in</td>
+                    <td className="px-4 py-2.5">{row.topTech}</td>
+                    <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <svg width="68" height="28" viewBox="0 0 68 28" className="overflow-visible">
                           {(() => {
@@ -898,7 +898,7 @@ export default async function ReportsPage({
                             return <polyline points={points} fill="none" stroke="#D4AF37" strokeWidth="2" />;
                           })()}
                         </svg>
-                        <span className={`text-xs font-semibold ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-[#D4AF37]" : "text-red-500"}`}>
+                        <span className={`text-xs font-semibold ${(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "text-[var(--accent)]" : "text-red-500"}`}>
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0) >= 0 ? "+" : ""}
                           {(row.trend[row.trend.length - 1] ?? 0) - (row.trend[0] ?? 0)}
                         </span>
@@ -926,7 +926,7 @@ export default async function ReportsPage({
             ) : (
               <div className="space-y-2">
                 {agingRows.map((row) => (
-                  <div key={`mobile-${row.status}`} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                  <div key={`mobile-${row.status}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
                     <p className="font-medium">{row.status}</p>
                     <p className="text-[var(--ink-muted)]">3-7 days: {row.threeToSeven} • 8+ days: {row.eightPlus}</p>
                   </div>
@@ -941,7 +941,7 @@ export default async function ReportsPage({
               <div className="flex items-center justify-between"><span>Awaiting approval</span><span className="font-semibold">{funnel.awaitingApproval}</span></div>
               <div className="flex items-center justify-between"><span>In repair</span><span className="font-semibold">{funnel.inRepair}</span></div>
               <div className="flex items-center justify-between"><span>Ready for pickup</span><span className="font-semibold">{funnel.readyForPickup}</span></div>
-              <div className="flex items-center justify-between"><span>Completed</span><span className="font-semibold text-[#D4AF37]">{funnel.completed}</span></div>
+              <div className="flex items-center justify-between"><span>Completed</span><span className="font-semibold text-[var(--accent)]">{funnel.completed}</span></div>
             </div>
           </div>
         </div>
@@ -990,7 +990,7 @@ export default async function ReportsPage({
             </div>
             <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
               <span>Completed</span>
-              <span className="font-semibold text-[#D4AF37]">{funnel.completed}</span>
+              <span className="font-semibold text-[var(--accent)]">{funnel.completed}</span>
             </div>
           </div>
         </div>
@@ -1007,10 +1007,10 @@ export default async function ReportsPage({
           >
             <div className="space-y-2">
               {approvalDelays.map((job) => (
-                <Link key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[#D4AF37]/30">
+                <Link key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[var(--accent)]/30">
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{job.jobNumber}</p>
-                    <p className="truncate text-xs text-[var(--ink-muted)]">{job.brand} {job.model}</p>
+                    <p className="truncate text-xs text-[var(--ink-muted)]">{[job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") || "Device"}</p>
                   </div>
                   <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${job.daysPending >= 3 ? "bg-amber-50 text-amber-700" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                     {job.daysPending}d waiting
@@ -1026,35 +1026,35 @@ export default async function ReportsPage({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Approval Delays</p>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">Jobs currently awaiting client approval</p>
               </div>
-              <Link href="/jobs?status=AWAITING_APPROVAL" className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]">
+              <Link href="/jobs?status=AWAITING_APPROVAL" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]">
                 View all →
               </Link>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                   <tr>
-                    <th className="px-2 py-2">Job #</th>
-                    <th className="px-2 py-2">Device</th>
-                    <th className="px-2 py-2">Received</th>
-                    <th className="px-2 py-2">Last Updated</th>
-                    <th className="px-2 py-2">Days Waiting</th>
-                    <th className="px-2 py-2">Action</th>
+                    <th className="px-4 py-2.5">Job #</th>
+                    <th className="px-4 py-2.5">Device</th>
+                    <th className="px-4 py-2.5">Received</th>
+                    <th className="px-4 py-2.5">Last Updated</th>
+                    <th className="px-4 py-2.5">Days Waiting</th>
+                    <th className="px-4 py-2.5">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {approvalDelays.map((job) => (
                     <tr key={job.id} className="border-t border-[var(--line)] hover:bg-[var(--panel-strong)]/50">
-                      <td className="px-2 py-2 font-medium">{job.jobNumber}</td>
-                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.brand} {job.model}</td>
-                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</td>
-                      <td className="px-2 py-2 text-[var(--ink-muted)]">{job.updatedAt.toLocaleDateString()}</td>
-                      <td className="px-2 py-2">
+                      <td className="px-4 py-2.5 font-medium">{job.jobNumber}</td>
+                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{[job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") || "—"}</td>
+                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{job.receivedAt.toLocaleDateString()}</td>
+                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{job.updatedAt.toLocaleDateString()}</td>
+                      <td className="px-4 py-2.5">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${job.daysPending >= 3 ? "bg-amber-50 text-amber-700" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                           {job.daysPending}d
                         </span>
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-4 py-2.5">
                         <Link href={`/jobs/${job.id}`} className="font-medium text-[var(--accent)] hover:underline">Open →</Link>
                       </td>
                     </tr>
@@ -1092,7 +1092,7 @@ export default async function ReportsPage({
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Annual Packages</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {annualExportPackages.map((item) => (
-              <Link key={item.title} href={item.href} className="group rounded-md border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)]/30">
+              <Link key={item.title} href={item.href} className="group rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 transition hover:border-[var(--accent)]/30">
                 <p className="text-sm font-semibold text-[var(--ink)]">{item.title}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">{item.caption}</p>
                 <p className="mt-2 text-xs font-medium text-[var(--accent)] group-hover:underline">Open package view →</p>

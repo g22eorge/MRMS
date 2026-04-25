@@ -141,7 +141,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="btn-premium rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+        className="btn-premium rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
       >
         {pending ? "Creating..." : "Create Job"}
       </button>
@@ -157,7 +157,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             type="button"
             onClick={() => setStep(idx)}
             className={`rounded-full px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm ${
-              idx === step ? "bg-[#D4AF37] text-white" : "bg-[var(--panel-strong)] text-[var(--ink)]"
+              idx === step ? "bg-[var(--accent)] text-white" : "bg-[var(--panel-strong)] text-[var(--ink)]"
             }`}
           >
             {idx + 1}. {label}
@@ -189,7 +189,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <input name="email" value={form.email} onChange={onInput} placeholder="Email" className="rounded-md border border-[var(--line)] px-3 py-2" />
           <input name="organization" value={form.organization} onChange={onInput} placeholder="Organization" className="rounded-md border border-[var(--line)] px-3 py-2" />
           {existingClient ? (
-            <p className="text-xs text-[#D4AF37] md:col-span-2">
+            <p className="text-xs text-[var(--accent)] md:col-span-2">
               Existing client found by phone: {existingClient.fullName}. Submitting will update this client profile.
             </p>
           ) : null}
@@ -203,7 +203,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             <button
               type="button"
               onClick={() => setDevices((prev) => [...prev, blankDevice()])}
-              className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px]"
+              className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px]"
             >
               Add another device
             </button>
@@ -272,7 +272,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                     className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
                   />
 
-                  <div className="md:col-span-2 grid gap-2 rounded-lg border border-[var(--line)] bg-white p-3">
+                  <div className="md:col-span-2 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-[var(--ink)]">Service Type</p>
@@ -340,7 +340,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                           </div>
                         </div>
 
-                        <label className="flex items-start gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+                        <label className="flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
                           <input
                             type="checkbox"
                             checked={device.softwareLicenseAttested}
@@ -429,7 +429,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           type="button"
           disabled={step === 0}
           onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
-          className="btn-premium-secondary rounded-md px-3 py-1.5 text-[13px] disabled:opacity-50 sm:py-2 sm:text-sm"
+          className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-50 sm:py-2 sm:text-sm"
         >
           Back
         </button>
@@ -438,7 +438,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           <button
             type="button"
             onClick={() => setStep((prev) => Math.min(prev + 1, steps.length - 1))}
-            className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
+            className="btn-premium-dark rounded-lg px-3 py-1.5 text-[13px] sm:py-2 sm:text-sm"
           >
             Next
           </button>

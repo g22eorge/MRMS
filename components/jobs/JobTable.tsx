@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 
+function deviceName(brand?: string | null, model?: string | null) {
+  const b = brand && brand !== "Unknown" ? brand : "";
+  const m = model && model !== "Unknown" ? model : "";
+  return [b, m].filter(Boolean).join(" ") || null;
+}
+
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
@@ -179,7 +185,7 @@ export function JobTable({
       </div>
 
       {/* ── Mobile list ── */}
-      <div className="xl:hidden">
+      <div className="lg:hidden">
         <ProgressiveList initialCount={5} step={6}>
           {jobs.map((job) => {
             const strip = statusStripClass(job.status);
@@ -260,7 +266,7 @@ export function JobTable({
 
                   {/* Row 2: Device — the HERO element */}
                   <p className="mb-1.5 truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">
-                    {job.brand} {job.model}
+                    {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
                   </p>
 
                   {/* Row 3: Status + device type chip + flag */}
@@ -322,7 +328,7 @@ export function JobTable({
       </div>
 
       {/* ── Desktop table ── */}
-      <div className="hidden overflow-x-auto xl:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[900px] border-collapse text-[13px]">
           <thead>
             <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
@@ -366,7 +372,9 @@ export function JobTable({
 
                   {/* Device */}
                   <td className="px-4 py-3 align-middle">
-                    <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                    <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">
+                      {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
+                    </p>
                     <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
                       <DeviceIcon type={job.deviceType} />
                       {deviceLabel[job.deviceType] ?? job.deviceType}

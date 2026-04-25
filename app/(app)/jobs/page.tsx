@@ -284,8 +284,8 @@ export default async function JobsPage({
       jobNumber: job.jobNumber,
       status: job.status,
       deviceType: job.device?.deviceType ?? "OTHER",
-      brand: job.device?.brand ?? "Unknown",
-      model: job.device?.model ?? "Unknown",
+      brand: job.device?.brand ?? "",
+      model: job.device?.model ?? "",
       clientName: "client" in job ? job.client?.fullName : undefined,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
@@ -328,10 +328,10 @@ export default async function JobsPage({
   const hasAdvancedFilters = Boolean(filters.deviceType || filters.repairPath || filters.pricing || filters.from || filters.to || sort === "job_number_desc");
   const hasAnyFilter = Boolean(filters.q || filters.status || hasAdvancedFilters);
 
-  const ctrlClass = "rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14";
+  const ctrlClass = "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
 
       {/* ── Stats + CTA bar ── */}
       {/* Mobile: single row — chips scroll horizontally, New Job button fixed right */}
@@ -342,7 +342,7 @@ export default async function JobsPage({
           {/* Active */}
           <Link
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-xs transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
           >
             <span className="font-bold tabular-nums text-[var(--accent)]">{openNow}</span>
             <span className="text-[var(--ink-muted)]">Active</span>
@@ -386,7 +386,7 @@ export default async function JobsPage({
           {/* Done */}
           <Link
             href={pulseHref("COMPLETED")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-xs transition hover:border-[var(--accent)]/30"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/30"
           >
             <span className="font-bold tabular-nums text-[var(--ink)]">{completedCount}</span>
             <span className="text-[var(--ink-muted)]">Done</span>
@@ -438,12 +438,12 @@ export default async function JobsPage({
               ))}
             </select>
             {/* Apply */}
-            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-sm font-medium">
+            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium">
               Apply
             </button>
             {/* Reset */}
             {hasAnyFilter ? (
-              <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-center text-sm font-medium">
+              <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-center text-sm font-medium">
                 Reset
               </Link>
             ) : null}
@@ -453,7 +453,7 @@ export default async function JobsPage({
         {/* Pricing quick pills (for approvers) — hidden on mobile, use Advanced Filters instead */}
         {!isExternalTech && can.approveInvoices(user) ? (
           <div className="hidden items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/50 px-3 py-2 sm:flex">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Pricing</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Pricing</span>
             <Link
               href="/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
               className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
@@ -483,7 +483,7 @@ export default async function JobsPage({
         {/* Advanced filters */}
         <details open={hasAdvancedFilters} className="group">
           <summary className="flex cursor-pointer select-none list-none items-center justify-between border-t border-[var(--line)] px-3 py-1.5 hover:bg-[var(--panel-strong)]/40 transition-colors">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Advanced filters</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Advanced filters</span>
             <span className="text-[11px] text-[var(--accent)]">Device · Path · Date</span>
           </summary>
           <div className={`border-t border-[var(--line)] bg-[var(--panel-strong)]/40 p-3 ${

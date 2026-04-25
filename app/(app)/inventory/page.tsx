@@ -57,7 +57,7 @@ export default async function InventoryPage() {
         </article>
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Low Stock</p>
-          <p className="mt-1 text-2xl font-semibold text-[#D4AF37]">{lowStock.length}</p>
+          <p className="mt-1 text-2xl font-semibold text-[var(--accent)]">{lowStock.length}</p>
         </article>
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reserved</p>
@@ -85,25 +85,25 @@ export default async function InventoryPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+              <thead className="bg-[var(--panel-strong)]/50 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">Part</th>
-                  <th className="px-4 py-2 text-left font-medium">SKU</th>
-                  <th className="px-4 py-2 text-left font-medium">Maker</th>
-                  <th className="px-4 py-2 text-right font-medium">On Hand</th>
-                  <th className="px-4 py-2 text-right font-medium">Reorder</th>
+                  <th className="px-4 py-2.5 text-left">Part</th>
+                  <th className="px-4 py-2.5 text-left">SKU</th>
+                  <th className="px-4 py-2.5 text-left">Maker</th>
+                  <th className="px-4 py-2.5 text-right">On Hand</th>
+                  <th className="px-4 py-2.5 text-right">Reorder</th>
                 </tr>
               </thead>
               <tbody>
                 {parts.map((part) => {
                   const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
                   return (
-                    <tr key={part.id} className={isLow ? "bg-[#D4AF37]/10" : ""}>
-                      <td className="px-4 py-2 text-[var(--ink)]">{part.name}</td>
-                      <td className="px-4 py-2 text-[var(--ink-muted)]">{part.sku}</td>
-                      <td className="px-4 py-2 text-[var(--ink-muted)]">{part.manufacturer ?? "-"}</td>
-                      <td className="px-4 py-2 text-right font-medium text-[var(--ink)]">{part.qtyOnHand}</td>
-                      <td className="px-4 py-2 text-right text-[var(--ink-muted)]">{part.reorderLevel}</td>
+                    <tr key={part.id} className={"border-t border-[var(--line)] transition-colors " + (isLow ? "bg-[var(--accent)]/10" : "hover:bg-[var(--panel-strong)]/40")}>
+                      <td className="px-4 py-2.5 text-[var(--ink)]">{part.name}</td>
+                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{part.sku}</td>
+                      <td className="px-4 py-2.5 text-[var(--ink-muted)]">{part.manufacturer ?? "-"}</td>
+                      <td className="px-4 py-2.5 text-right text-[var(--ink)]">{part.qtyOnHand}</td>
+                      <td className="px-4 py-2.5 text-right text-[var(--ink-muted)]">{part.reorderLevel}</td>
                     </tr>
                   );
                 })}

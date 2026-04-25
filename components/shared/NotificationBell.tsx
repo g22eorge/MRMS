@@ -121,12 +121,12 @@ export function NotificationBell() {
         </svg>
         <span className="hidden text-xs font-bold sm:inline">Alerts</span>
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#D4AF37] text-[10px] font-bold text-black">
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-black">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
-      {error && <span className="ml-2 text-[10px] text-[#D4AF37]">{error}</span>}
+      {error && <span className="ml-2 text-[10px] text-[var(--accent)]">{error}</span>}
 
       {isOpen && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
@@ -135,7 +135,7 @@ export function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[11px] text-[#D4AF37] hover:underline"
+                className="text-[11px] text-[var(--accent)] hover:underline"
               >
                 Mark all read
               </button>
@@ -157,13 +157,13 @@ export function NotificationBell() {
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
                   className={`w-full border-b border-[var(--line)] px-4 py-3 text-left transition hover:bg-[var(--panel-strong)] ${
-                    !notif.isRead ? "bg-[#D4AF37]/5" : ""
+                    !notif.isRead ? "bg-[var(--accent)]/5" : ""
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     <div
                       className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                        notif.isRead ? "bg-transparent" : "bg-[#D4AF37]"
+                        notif.isRead ? "bg-transparent" : "bg-[var(--accent)]"
                       }`}
                     />
                     <div className="min-w-0 flex-1">
@@ -191,7 +191,7 @@ export function NotificationBell() {
                 router.push("/settings/notifications");
                 setIsOpen(false);
             }}
-              className="w-full text-center text-xs text-[#D4AF37] hover:underline"
+              className="w-full text-center text-xs text-[var(--accent)] hover:underline"
             >
               Notification Settings
             </button>

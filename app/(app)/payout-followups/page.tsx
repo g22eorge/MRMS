@@ -120,8 +120,8 @@ export default async function PayoutFollowupsPage({
               <option key={tech.id} value={tech.id}>{tech.name}</option>
             ))}
           </select>
-          <button className="btn-premium-secondary rounded-md px-3 py-1 text-xs">Apply</button>
-          <Link href="/payout-followups" className="rounded-md border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
+          <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
+          <Link href="/payout-followups" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
         </form>
       </section>
 
@@ -131,16 +131,16 @@ export default async function PayoutFollowupsPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+              <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                 <tr>
-                  <th className="px-3 py-2.5">Job</th>
-                  <th className="px-3 py-2.5">Client</th>
-                  <th className="px-3 py-2.5">Technician</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="px-3 py-2.5">Client Bill</th>
-                  <th className="px-3 py-2.5">Payout Due</th>
-                  <th className="px-3 py-2.5">Done At</th>
-                  <th className="px-3 py-2.5">Action</th>
+                  <th className="px-4 py-2.5">Job</th>
+                  <th className="px-4 py-2.5">Client</th>
+                  <th className="px-4 py-2.5">Technician</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Client Bill</th>
+                  <th className="px-4 py-2.5">Payout Due</th>
+                  <th className="px-4 py-2.5">Done At</th>
+                  <th className="px-4 py-2.5">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,18 +153,18 @@ export default async function PayoutFollowupsPage({
                   const doneAt = job.deliveredAt ?? job.completedAt;
                   return (
                     <tr key={job.id} className="border-t border-[var(--line)]">
-                      <td className="px-3 py-2.5 font-semibold">{job.jobNumber}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-4 py-2.5 font-semibold">{job.jobNumber}</td>
+                      <td className="px-4 py-2.5">
                         <p className="font-medium">{job.client?.fullName ?? "-"}</p>
                         <p className="text-xs text-[var(--ink-muted)]">{job.client?.phone ?? "-"}</p>
                       </td>
-                      <td className="px-3 py-2.5">{job.assignedTo?.name ?? "Unassigned"}</td>
-                      <td className="px-3 py-2.5">{job.status}</td>
-                      <td className="px-3 py-2.5">{typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "-"}</td>
-                      <td className="px-3 py-2.5 font-semibold text-amber-700">{formatMoneyCompact(payoutDue, currency)}</td>
-                      <td className="px-3 py-2.5 text-xs text-[var(--ink-muted)]">{doneAt ? new Date(doneAt).toLocaleDateString() : "-"}</td>
-                      <td className="px-3 py-2.5">
-                        <Link href={`/jobs/${job.id}`} className="btn-premium-secondary rounded-md px-2.5 py-1 text-xs">Open</Link>
+                      <td className="px-4 py-2.5">{job.assignedTo?.name ?? "Unassigned"}</td>
+                      <td className="px-4 py-2.5">{job.status}</td>
+                      <td className="px-4 py-2.5">{typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "-"}</td>
+                      <td className="px-4 py-2.5 font-semibold text-amber-700">{formatMoneyCompact(payoutDue, currency)}</td>
+                      <td className="px-4 py-2.5 text-xs text-[var(--ink-muted)]">{doneAt ? new Date(doneAt).toLocaleDateString() : "-"}</td>
+                      <td className="px-4 py-2.5">
+                        <Link href={`/jobs/${job.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Open</Link>
                       </td>
                     </tr>
                   );
@@ -180,7 +180,7 @@ export default async function PayoutFollowupsPage({
           <Link
             href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
             aria-disabled={page <= 1}
-            className={`btn-premium-secondary rounded-md px-3 py-1 text-xs ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-sm ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
           >
             Prev
           </Link>
@@ -188,7 +188,7 @@ export default async function PayoutFollowupsPage({
           <Link
             href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
             aria-disabled={page >= totalPages}
-            className={`btn-premium-secondary rounded-md px-3 py-1 text-xs ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`}
+            className={`btn-premium-secondary rounded-lg px-3 py-1.5 text-sm ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`}
           >
             Next
           </Link>

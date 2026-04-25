@@ -66,29 +66,29 @@ export function ExternalTechJobView({
     { label: "3-5d", min: "3", max: "5", unit: "DAY" },
   ];
   const fieldClass =
-    "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
   return (
     <div className="min-w-0 space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <div className="mb-3 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#D4AF37]">External Work Brief</p>
+        <div className="mb-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">External Work Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)]">Update diagnosis, required parts, and ETA only. Client identity remains hidden in this workspace.</p>
         </div>
         <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
         {job.status === "IN_REPAIR" && job.clientApproved ? (
-          <div className="mt-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-2 text-sm text-[#D4AF37]">
+          <div className="mt-2 rounded-md border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-sm text-[var(--accent)]">
             Client approved. You can proceed with repair now.
             {job.approvalDate ? ` Approved on ${formatEATDateTime(job.approvalDate)}.` : ""}
           </div>
         ) : null}
         {job.status === "AWAITING_APPROVAL" ? (
-          <div className="mt-2 rounded-md border border-[#D4AF37] bg-[#D4AF37]/10 px-3 py-2 text-sm text-[#D4AF37]">
+          <div className="mt-2 rounded-md border border-[var(--accent)] bg-[var(--accent)]/10 px-3 py-2 text-sm text-[var(--accent)]">
             Awaiting client approval. Hold repair work until approval is confirmed.
           </div>
         ) : null}
         <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
-          {job.deviceType} / {job.brand} {job.model}
+          {job.deviceType}{[job.brand, job.model].filter(v => v && v !== "Unknown").length > 0 ? " / " + [job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") : ""}
         </p>
         <p className="mt-1 text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Serial/IMEI: {job.serialOrImei ?? "-"}</p>
         <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Accessories: {job.accessories ?? "-"}</p>
@@ -116,13 +116,13 @@ export function ExternalTechJobView({
           name="externalDiagnosis"
           defaultValue={job.externalDiagnosis ?? ""}
           placeholder="Diagnosis summary"
-          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
         />
         <textarea
           name="partsNeeded"
           defaultValue={job.partsNeeded ?? ""}
           placeholder="Parts needed"
-          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+          className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
         />
         <input
           name="externalTechBill"
@@ -145,7 +145,7 @@ export function ExternalTechJobView({
                   setMinValue(chip.min);
                   setMaxValue(chip.max);
                 }}
-                className="rounded-full border border-[var(--line)] bg-white px-2 py-1 text-xs transition hover:border-[#D4AF37]/50"
+                className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-xs transition hover:border-[var(--accent)]/50"
               >
                 {chip.label}
               </button>
@@ -199,7 +199,7 @@ export function ExternalTechJobView({
               name="timelineNote"
               defaultValue={job.timelineNote ?? ""}
               placeholder="Delay reason (optional)"
-              className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+              className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
 
             <input type="hidden" name="repairTimeline" value={timelinePreview === "No timeline selected" ? "" : timelinePreview} />
@@ -214,7 +214,7 @@ export function ExternalTechJobView({
         <div className="flex flex-wrap gap-2">
           <button
             disabled={isPending}
-            className="btn-premium w-full whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
+            className="btn-premium w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
           >
             {isPending ? "Saving..." : "Save"}
           </button>
@@ -224,14 +224,14 @@ export function ExternalTechJobView({
               name="nextStatus"
               value="COMPLETED"
               disabled={isPending}
-              className="btn-premium-success w-full whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              className="btn-premium-success w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
             >
               Mark Completed
             </button>
           ) : null}
           <a
             href={returnTo}
-            className="btn-premium-secondary inline-flex w-full items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
+            className="btn-premium-secondary inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
           >
             Cancel
           </a>

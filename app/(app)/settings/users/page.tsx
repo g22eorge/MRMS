@@ -440,16 +440,16 @@ export default async function UsersPage({
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create User</p>
         <form action={createUser} className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="phone" placeholder="Phone" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input required minLength={8} type="password" name="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <select name="role" defaultValue="OPS" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+          <input required name="name" placeholder="Name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input required type="email" name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="phone" placeholder="Phone" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input required minLength={8} type="password" name="password" placeholder="Password" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <select name="role" defaultValue="OPS" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             {roleOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <button className="btn-premium rounded-md px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create User</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm text-white md:col-span-2 xl:col-span-1">Create User</button>
         </form>
       </section>
 
@@ -460,11 +460,11 @@ export default async function UsersPage({
             name="q"
             defaultValue={q}
             placeholder="Search by name, phone, email, or role"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <div className="flex gap-2">
-            <button className="btn-premium-secondary rounded-md px-3 py-2 text-sm">Search</button>
-            <Link href="/settings/users" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Search</button>
+            <Link href="/settings/users" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Reset
             </Link>
           </div>
@@ -475,7 +475,7 @@ export default async function UsersPage({
             <Link
               key={item.id}
               href={`/settings/users?${new URLSearchParams({ q, userId: item.id }).toString()}`}
-              className={`rounded-lg border px-3 py-2 transition ${selectedUser?.id === item.id ? "border-[#D4AF37] bg-[#D4AF37]/10" : "border-[var(--line)] bg-white hover:border-[#D4AF37]/45"}`}
+              className={`rounded-lg border px-3 py-2 transition ${selectedUser?.id === item.id ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/45"}`}
             >
               <p className="font-medium text-[var(--ink)]">{item.name}</p>
               <p className="text-xs text-[var(--ink-muted)]">{item.email}</p>
@@ -490,24 +490,24 @@ export default async function UsersPage({
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Profile Summary</p>
             <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Name</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.name}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Contact</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">{selectedUser.email}</p>
                 <p className="text-xs text-[var(--ink-muted)]">{selectedUser.phone ?? "No phone on file"}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Current Role</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{roleLabel(selectedUser.role)}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Status</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.isActive ? "Active" : "Inactive"}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Last Activity</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">
                   {formatDateTime(
@@ -517,7 +517,7 @@ export default async function UsersPage({
                   )}
                 </p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Branch / Location</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">Not assigned</p>
               </div>
@@ -555,7 +555,7 @@ export default async function UsersPage({
                     detail = entry.detail ?? "No detail";
                   }
                   return (
-                    <div key={entry.id} className="rounded-md border border-[var(--line)] bg-white p-3 text-xs text-[var(--ink-muted)]">
+                    <div key={entry.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-xs text-[var(--ink-muted)]">
                       <p className="font-semibold text-[var(--ink)]">{entry.action}</p>
                       <p className="mt-1">Changed by {entry.actorUser.name} • {entry.createdAt.toLocaleString()}</p>
                       <p className="mt-1">{detail}</p>

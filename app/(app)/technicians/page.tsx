@@ -8,6 +8,22 @@ import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
+function deviceName(brand?: string | null, model?: string | null) {
+  const b = brand && brand !== "Unknown" ? brand : "";
+  const m = model && model !== "Unknown" ? model : "";
+  return [b, m].filter(Boolean).join(" ") || null;
+}
+
+const deviceLabel: Record<string, string> = {
+  PHONE_ANDROID: "Android",
+  PHONE_IPHONE: "iPhone",
+  TABLET: "Tablet",
+  WINDOWS_PC: "Windows",
+  MAC: "Mac",
+  OTHER: "Other",
+};
+
+
 type SearchParams = {
   q?: string;
   status?: string;
@@ -41,8 +57,8 @@ function clamp(value: number, min: number, max: number) {
 
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
   if (overdue) return { label: "Attention", tone: "bg-black text-white border-black" };
-  if (ready) return { label: "High", tone: "bg-[#D4AF37] text-white border-[#D4AF37]" };
-  if (ageDays >= 2) return { label: "Medium", tone: "bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30" };
+  if (ready) return { label: "High", tone: "bg-[var(--accent)] text-white border-[var(--accent)]" };
+  if (ageDays >= 2) return { label: "Medium", tone: "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" };
   return { label: "Normal", tone: "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]" };
 }
 
@@ -213,10 +229,10 @@ export default async function TechniciansPage({
               name="q"
               defaultValue={filters.q}
               placeholder="Search job # or device"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
             />
             <div className="flex items-center gap-2">
-              <select name="status" defaultValue={filters.status} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[#D4AF37]/50">
+              <select name="status" defaultValue={filters.status} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50">
                 <option value="">All statuses</option>
                 {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
@@ -235,13 +251,13 @@ export default async function TechniciansPage({
               <Link
                 key={action.label}
                 href={action.href}
-                className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${action.active ? "border-[#D4AF37] bg-[#D4AF37] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${action.active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
               >
                 {action.label} <span className={action.active ? "opacity-80" : "text-[var(--ink-muted)]"}>({action.count})</span>
               </Link>
             ))}
             {hasActiveFilters ? (
-              <Link href="/technicians" className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:border-red-200 hover:text-red-600">
+              <Link href="/technicians" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:border-red-200 hover:text-red-600">
                 Clear filters
               </Link>
             ) : null}
@@ -257,7 +273,7 @@ export default async function TechniciansPage({
 
       {/* Priority Spotlight */}
       {spotlightJobs.length > 0 ? (
-        <section className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Priority Spotlight</p>
             <span className="text-[11px] text-[var(--ink-muted)]">Top {spotlightJobs.length} urgent</span>
@@ -268,7 +284,7 @@ export default async function TechniciansPage({
               return (
                 <article
                   key={`spotlight-${job.id}`}
-                  className="relative flex flex-col gap-3 border-b border-[var(--line)] bg-white p-4 last:border-b-0 lg:border-b-0"
+                  className="relative flex flex-col gap-3 border-b border-[var(--line)] bg-[var(--panel)] p-4 last:border-b-0 lg:border-b-0"
                 >
                   {/* Left status strip */}
                   <span className={`absolute inset-y-0 left-0 w-[3px] ${strip}`} aria-hidden="true" />
@@ -277,7 +293,7 @@ export default async function TechniciansPage({
                   <div className="flex items-start justify-between gap-2 pl-2">
                     <div className="min-w-0">
                       <span className="mono block text-[11px] font-bold text-[var(--ink-muted)]">{job.jobNumber}</span>
-                      <p className="truncate text-[15px] font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                      <p className="truncate text-[15px] font-semibold text-[var(--ink)]">{deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType as keyof typeof deviceLabel] ?? job.deviceType}</p>
                     </div>
                     <span className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${job.priority.tone}`}>
                       {job.priority.label}
@@ -298,7 +314,7 @@ export default async function TechniciansPage({
                       {job.ageDays}d old
                     </span>
                     {job.repairTimeline ? (
-                      <span className="inline-flex items-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/8 px-2 py-0.5 text-[10px] font-medium text-[#9A7A00]">
+                      <span className="inline-flex items-center rounded-md border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-2 py-0.5 text-[10px] font-medium text-[#9A7A00]">
                         ETA {job.repairTimeline}
                       </span>
                     ) : null}
@@ -309,7 +325,7 @@ export default async function TechniciansPage({
                     <div className="pl-2">
                       <div className="h-1 rounded-full bg-[var(--line)]">
                         <div
-                          className={`h-1 rounded-full transition-all ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]/40"}`}
+                          className={`h-1 rounded-full transition-all ${job.etaProgress >= 100 ? "bg-[var(--accent)]" : "bg-[var(--ink)]/40"}`}
                           style={{ width: `${Math.min(job.etaProgress, 100)}%` }}
                         />
                       </div>
@@ -325,7 +341,7 @@ export default async function TechniciansPage({
                   <div className="mt-auto grid grid-cols-2 gap-2 pl-2">
                     <Link
                       href={`/jobs/${job.id}?returnTo=${encodeURIComponent(dismissSpotlightReturnTo(job.id))}`}
-                      className="btn-premium rounded-md py-2 text-center text-xs font-semibold text-white"
+                      className="btn-premium rounded-lg py-1.5 text-center text-sm font-semibold text-white"
                     >
                       Open
                     </Link>
@@ -344,7 +360,7 @@ export default async function TechniciansPage({
       ) : null}
 
       {/* Work Queue */}
-      <section className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-xs text-[var(--ink-muted)]">
@@ -360,7 +376,7 @@ export default async function TechniciansPage({
         ) : (
           <>
             {/* Mobile cards */}
-            <div className="xl:hidden">
+            <div className="lg:hidden">
               <ProgressiveList initialCount={6} step={5}>
                 {sortedJobs.map((job) => {
                   const strip = statusStripClass(job.status);
@@ -379,17 +395,17 @@ export default async function TechniciansPage({
                               {job.priority.label}
                             </span>
                           </div>
-                          <p className="font-medium text-[var(--ink)]">{job.brand} {job.model}</p>
+                          <p className="font-medium text-[var(--ink)]">{deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType as keyof typeof deviceLabel] ?? job.deviceType}</p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--ink-muted)]">
                             <span>{job.assignedTo?.name ?? "Unassigned"}</span>
                             <span>{formatEATDate(job.receivedAt)}</span>
                             <span>{job.ageDays}d old</span>
-                            {job.repairTimeline ? <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[#D4AF37]">ETA {job.repairTimeline}</span> : null}
+                            {job.repairTimeline ? <span className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2 py-0.5 text-[var(--accent)]">ETA {job.repairTimeline}</span> : null}
                             {job.overdue ? <span className="rounded-full bg-black px-2 py-0.5 text-white text-[10px]">Overdue</span> : null}
                           </div>
                           {typeof job.etaProgress === "number" ? (
                             <div className="h-1 rounded-full bg-[var(--line)]">
-                              <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
+                              <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[var(--accent)]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
                             </div>
                           ) : null}
                           {job.timelineNote ? (
@@ -422,7 +438,7 @@ export default async function TechniciansPage({
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto xl:block">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[800px] border-collapse text-[13px]">
                 <thead>
                   <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
@@ -454,7 +470,7 @@ export default async function TechniciansPage({
                             </Link>
                           </td>
                           <td className="px-4 py-3 align-middle">
-                            <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                            <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">{deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType as keyof typeof deviceLabel] ?? job.deviceType}</p>
                           </td>
                           <td className="px-4 py-3 align-middle">
                             <JobStatusBadge status={job.status} />
@@ -468,11 +484,11 @@ export default async function TechniciansPage({
                           <td className="px-4 py-3 align-middle">
                             <p className="text-[var(--ink-muted)]">{job.ageDays}d old</p>
                             {job.repairTimeline ? (
-                              <p className="text-[11px] text-[#D4AF37]">ETA {job.repairTimeline}</p>
+                              <p className="text-[11px] text-[var(--accent)]">ETA {job.repairTimeline}</p>
                             ) : null}
                             {typeof job.etaProgress === "number" ? (
                               <div className="mt-1 h-1 w-20 rounded-full bg-[var(--line)]">
-                                <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[#D4AF37]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
+                                <div className={`h-1 rounded-full ${job.etaProgress >= 100 ? "bg-[var(--accent)]" : "bg-[var(--ink)]"}`} style={{ width: `${Math.min(job.etaProgress, 100)}%` }} />
                               </div>
                             ) : null}
                           </td>
@@ -495,7 +511,7 @@ export default async function TechniciansPage({
                               {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
                                 <Link
                                   href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
-                                  className="btn-premium whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
+                                  className="btn-premium whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-white"
                                 >
                                   Complete
                                 </Link>
