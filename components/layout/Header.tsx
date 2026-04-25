@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -54,11 +55,15 @@ export function Header({ userName, role }: HeaderProps) {
 
         {/* Mobile brand (hidden on desktop where sidebar shows) */}
         <div className="flex items-center gap-2.5 lg:hidden">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--ink)]">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-              <path d="M12 3L4 7.5V12.5C4 16.09 7.58 19.43 12 21C16.42 19.43 20 16.09 20 12.5V7.5L12 3Z" fill="#D4AF37" opacity="0.9" />
-              <path d="M9 12L11 14L15 10" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-white shadow-sm">
+            <Image
+              src="/eagle-info-logo.png"
+              alt="Eagle Info logo"
+              width={28}
+              height={28}
+              className="h-7 w-7 object-cover"
+              priority
+            />
           </div>
           <span className="text-[13px] font-bold text-[var(--ink)] tracking-tight">Eagle Info</span>
         </div>

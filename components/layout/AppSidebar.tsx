@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
@@ -244,12 +245,15 @@ export function AppSidebar({
     <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
       {/* ── Brand ── */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)]">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ink)] shadow-sm">
-          {/* Eagle mark */}
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-            <path d="M12 3L4 7.5V12.5C4 16.09 7.58 19.43 12 21C16.42 19.43 20 16.09 20 12.5V7.5L12 3Z" fill="#D4AF37" opacity="0.9" />
-            <path d="M9 12L11 14L15 10" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+          <Image
+            src="/eagle-info-logo.png"
+            alt="Eagle Info logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 object-cover"
+            priority
+          />
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-bold tracking-tight text-[var(--ink)] leading-none">Eagle Info</p>
