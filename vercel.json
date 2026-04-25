@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/whatsapp-retry",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/data-heal",
+      "schedule": "30 2 * * *"
     }
   ]
 }

@@ -79,8 +79,25 @@ Set these environment variables:
 - `NEXT_PUBLIC_APP_URL`
 - `BETTER_AUTH_URL`
 - `BETTER_AUTH_SECRET`
+- `CRON_SECRET` (for protected manual cron triggers)
 
 When `PROD=true`, Prisma uses Turso via the libSQL adapter.
+
+### Scheduled maintenance crons
+
+Configured in `vercel.json`:
+
+- `/api/cron/whatsapp-retry` daily at `07:00` UTC
+- `/api/cron/data-heal` daily at `02:30` UTC
+
+`/api/cron/data-heal` repairs placeholder job device values (`Unknown`/`OTHER`) using linked `Device` and `RepairRequest` records and writes audit entries.
+
+Manual trigger examples:
+
+```bash
+curl -X POST "https://<your-domain>/api/cron/data-heal?secret=$CRON_SECRET&dry=1"
+curl -X POST "https://<your-domain>/api/cron/data-heal?secret=$CRON_SECRET"
+```
 
 ### Local SQLite / single server
 
