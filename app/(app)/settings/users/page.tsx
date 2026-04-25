@@ -243,8 +243,10 @@ export default async function UsersPage({
           data: permissionValues.map((permission) => ({ userId: targetUserId, permission })),
         });
       }
+    });
 
-      await tx.userAccessAudit.create({
+    try {
+      await prisma.userAccessAudit.create({
         data: {
           actorUserId: session.user.id,
           targetUserId,
@@ -257,7 +259,9 @@ export default async function UsersPage({
           }),
         },
       });
-    });
+    } catch {
+      // Keep access updates successful even when audit table is not yet migrated.
+    }
 
     revalidatePath("/settings/users");
   }
@@ -297,8 +301,17 @@ export default async function UsersPage({
   const filteredUsers = users.filter((item) => searchMatches(item, q));
   const selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
 
-  const accessAudit = selectedUser
-    ? await prisma.userAccessAudit.findMany({
+  let accessAudit: Array<{
+    id: string;
+    action: string;
+    detail: string | null;
+    createdAt: Date;
+    actorUser: { name: string };
+  }> = [];
+
+  if (selectedUser) {
+    try {
+      accessAudit = await prisma.userAccessAudit.findMany({
         where: { targetUserId: selectedUser.id },
         orderBy: { createdAt: "desc" },
         take: 12,
@@ -309,8 +322,11 @@ export default async function UsersPage({
           createdAt: true,
           actorUser: { select: { name: true } },
         },
-      })
-    : [];
+      });
+    } catch {
+      accessAudit = [];
+    }
+  }
 
   return (
     <div className="space-y-4">
