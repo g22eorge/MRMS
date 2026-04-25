@@ -1,5 +1,5 @@
 import { PageLoadingSkeleton } from "@/components/shared/PageLoadingSkeleton";
 
-export default function AppLoading() {
+export default function ClientsLoading() {
   return <PageLoadingSkeleton />;
 }

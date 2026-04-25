@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
@@ -103,7 +103,7 @@ export default async function ClientDetailPage({
   }
 
   if (!clientData) {
-    redirect("/clients");
+    notFound();
   }
 
   type ClientDetail = Prisma.ClientGetPayload<{

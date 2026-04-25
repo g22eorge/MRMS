@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 
 import {
   updateNotificationPrefsAction,
@@ -40,6 +41,18 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
   const initialState: UpdateNotificationPrefsState = {};
   const [state, formAction] = useActionState(updateNotificationPrefsAction, initialState);
 
+  function SubmitButton() {
+    const { pending } = useFormStatus();
+    return (
+      <button
+        disabled={pending}
+        className="btn-premium rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {pending ? "Saving..." : "Save Preferences"}
+      </button>
+    );
+  }
+
   return (
     <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
       <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
@@ -70,7 +83,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       {state.error ? <p className="text-sm text-black">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-[var(--accent)]">{state.success}</p> : null}
 
-      <button className="btn-premium rounded-lg px-3 py-2 text-sm font-medium text-white">Save Preferences</button>
+      <SubmitButton />
     </form>
   );
 }

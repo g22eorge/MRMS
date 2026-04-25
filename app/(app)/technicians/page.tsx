@@ -229,17 +229,17 @@ export default async function TechniciansPage({
               name="q"
               defaultValue={filters.q}
               placeholder="Search job # or device"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
             />
             <div className="flex items-center gap-2">
-              <select name="status" defaultValue={filters.status} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50">
+              <select name="status" defaultValue={filters.status} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]/50">
                 <option value="">All statuses</option>
                 {UI_JOB_STATUSES.map((status) => (
                   <option key={status} value={status}>{statusOptionLabel[status]}</option>
                 ))}
               </select>
-              <button className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm">Apply</button>
-              <Link href="/technicians" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm">Reset</Link>
+              <button className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Apply</button>
+              <Link href="/technicians" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Reset</Link>
             </div>
           </div>
         </form>
@@ -251,13 +251,13 @@ export default async function TechniciansPage({
               <Link
                 key={action.label}
                 href={action.href}
-                className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${action.active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition ${action.active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
               >
                 {action.label} <span className={action.active ? "opacity-80" : "text-[var(--ink-muted)]"}>({action.count})</span>
               </Link>
             ))}
             {hasActiveFilters ? (
-              <Link href="/technicians" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:border-red-200 hover:text-red-600">
+              <Link href="/technicians" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[11px] font-semibold text-[var(--ink-muted)] hover:border-red-200 hover:text-red-600">
                 Clear filters
               </Link>
             ) : null}
