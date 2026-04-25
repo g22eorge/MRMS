@@ -265,7 +265,7 @@ export default async function DashboardPage({
       },
     });
 
-    const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
+    const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id)).catch(() => new Map());
 
     const currency = getAppCurrency();
     const openCount = jobs.filter((job) => [
@@ -395,7 +395,22 @@ export default async function DashboardPage({
         ],
       },
       orderBy: { updatedAt: "desc" },
-      select: { id: true, jobNumber: true, status: true, brand: true, model: true },
+      select: { id: true, jobNumber: true, status: true, device: { select: { brand: true, model: true } } },
+    }).catch(async () => {
+      const fallback = await prisma.job.findMany({
+        where: {
+          assignedToId: session.user.id,
+          OR: [
+            { receivedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+            { updatedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+            { completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+          ],
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, jobNumber: true, status: true },
+      });
+
+      return fallback.map((job) => ({ ...job, device: null }));
     });
 
     const diagnosing = assignedJobs.filter((job) => job.status === "DIAGNOSING").length;
@@ -546,7 +561,7 @@ export default async function DashboardPage({
               {assignedJobs.slice(0, 6).map((job) => (
                 <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
                   <Link href={`/jobs/${job.id}`} className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center group">
-                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber} - {job.brand} {job.model}</p>
+                    <p className="truncate font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber} - {job.device?.brand ?? "Unknown"} {job.device?.model ?? "Device"}</p>
                     <span className="text-xs text-[var(--ink-muted)]">
                       {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                     </span>
@@ -592,15 +607,27 @@ export default async function DashboardPage({
       }),
       prisma.job.count({ where: { receivedAt: { gte: todayStart } } }),
       prisma.job.count({ where: { completedAt: { gte: todayStart } } }),
-      prisma.repairRequest.count({ where: { requestStatus: "PENDING_INTAKE" } }),
+      prisma.repairRequest.count({ where: { requestStatus: "PENDING_INTAKE" } }).catch(() => 0),
       prisma.job.findMany({
         where: {
           status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
           receivedAt: { lt: threeDaysAgo },
         },
-        select: { id: true, jobNumber: true, status: true, receivedAt: true, brand: true, model: true },
+        select: { id: true, jobNumber: true, status: true, receivedAt: true, device: { select: { brand: true, model: true } } },
         orderBy: { receivedAt: "asc" },
         take: 10,
+      }).catch(async () => {
+        const fallback = await prisma.job.findMany({
+          where: {
+            status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+            receivedAt: { lt: threeDaysAgo },
+          },
+          select: { id: true, jobNumber: true, status: true, receivedAt: true },
+          orderBy: { receivedAt: "asc" },
+          take: 10,
+        });
+
+        return fallback.map((job) => ({ ...job, device: null }));
       }),
       prisma.job.findMany({
         where: {
@@ -617,7 +644,7 @@ export default async function DashboardPage({
       }),
     ]);
 
-    const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
+    const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
     const payoutOutstanding = externalCompleted
       .filter((job) => !payoutMap.get(job.id)?.externalPaid)
       .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
@@ -859,7 +886,7 @@ export default async function DashboardPage({
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold">{job.jobNumber}</p>
                       <p className="truncate text-[10px] text-[var(--ink-muted)]">
-                        {job.brand} {job.model}
+                        {job.device?.brand ?? "Unknown"} {job.device?.model ?? "Device"}
                         <span className="mx-1 text-[var(--line)]">·</span>
                         {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                       </p>
@@ -939,7 +966,7 @@ export default async function DashboardPage({
     });
     const monthRevenue = completedRows.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
 
-    const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id));
+    const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
     const payoutOutstanding = externalCompleted
       .filter((job) => !payoutMap.get(job.id)?.externalPaid)
       .reduce((sum, job) => sum + (payoutMap.get(job.id)?.externalTechFee ?? job.externalTechBill ?? 0), 0);
@@ -1108,8 +1135,8 @@ export default async function DashboardPage({
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 
-    return (
-      <div className="space-y-4">
+  return (
+    <div className="space-y-4">
       <DashboardHero
         title="System Overview"
         summary="Use this overview to orient team focus, then open the queue and reporting workspaces for deeper action."

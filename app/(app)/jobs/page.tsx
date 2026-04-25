@@ -179,25 +179,73 @@ export default async function JobsPage({
       } as const)
     : includeBase;
 
-  const jobsPromise = prisma.job
-    .findMany({
-      where,
-      include: includeWithOneTime,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
-    .catch(() =>
-      prisma.job.findMany({
+  let jobs: Array<JobWithClient | JobWithoutClient> = [];
+  let total = 0;
+
+  try {
+    const jobsResult = await prisma.job
+      .findMany({
         where,
-        include: includeBase,
+        include: includeWithOneTime,
         orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
-      }),
-    );
+      })
+      .catch(() =>
+        prisma.job.findMany({
+          where,
+          include: includeBase,
+          orderBy,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+      );
 
-  const [jobs, total] = await Promise.all([jobsPromise, prisma.job.count({ where })]);
+    const totalResult = await prisma.job.count({ where });
+    jobs = jobsResult as Array<JobWithClient | JobWithoutClient>;
+    total = totalResult;
+  } catch (error) {
+    console.error("[jobs] failed to load jobs list", error);
+    const bareJobs = await prisma.job.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    const [clientRows, assigneeRows, deviceRows] = await Promise.all([
+      prisma.client.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.clientId).filter(Boolean))) } },
+        select: { id: true, fullName: true },
+      }),
+      prisma.user.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.assignedToId).filter((id): id is string => Boolean(id)))) } },
+        select: { id: true, name: true },
+      }),
+      prisma.device.findMany({
+        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.deviceId).filter(Boolean))) } },
+        select: { id: true, deviceType: true, brand: true, model: true },
+      }),
+    ]);
+
+    const clientMap = new Map(clientRows.map((client) => [client.id, client]));
+    const assigneeMap = new Map(assigneeRows.map((assignee) => [assignee.id, assignee]));
+    const deviceMap = new Map(deviceRows.map((device) => [device.id, device]));
+
+    jobs = bareJobs.map((job) => ({
+      ...job,
+      client: clientMap.get(job.clientId),
+      assignedTo: job.assignedToId ? assigneeMap.get(job.assignedToId) : null,
+      device: deviceMap.get(job.deviceId),
+      oneTimeExternalAssignment: null,
+    })) as Array<JobWithClient | JobWithoutClient>;
+
+    try {
+      total = await prisma.job.count({ where });
+    } catch {
+      total = bareJobs.length;
+    }
+  }
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -219,15 +267,15 @@ export default async function JobsPage({
     revalidatePath("/jobs");
   }
 
-  const rows: JobRow[] = (jobs as Array<JobWithClient | JobWithoutClient>).map((job) => {
+  const rows: JobRow[] = jobs.map((job) => {
     const withWorkflow = job as typeof job & { workflowReason?: JobRow["workflowReason"] };
     return {
       id: job.id,
       jobNumber: job.jobNumber,
       status: job.status,
-      deviceType: job.device?.deviceType ?? job.deviceType,
-      brand: job.device?.brand ?? job.brand,
-      model: job.device?.model ?? job.model,
+      deviceType: job.device?.deviceType ?? "OTHER",
+      brand: job.device?.brand ?? "Unknown",
+      model: job.device?.model ?? "Unknown",
       clientName: "client" in job ? job.client?.fullName : undefined,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
