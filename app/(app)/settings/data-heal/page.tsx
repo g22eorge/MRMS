@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { runDataHeal } from "@/lib/data-heal";
@@ -8,7 +9,7 @@ import { getCurrentUserRole } from "@/lib/session";
 export default async function DataHealPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string }>;
+  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; run?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
@@ -16,6 +17,17 @@ export default async function DataHealPage({
   }
 
   const feedback = await searchParams;
+
+  if (feedback.run === "dry" || feedback.run === "apply") {
+    const dryRun = feedback.run === "dry";
+    const result = await runDataHeal(prisma, { dryRun, actorUserId: user.id });
+    revalidatePath("/settings/data-heal");
+    revalidatePath("/dashboard");
+    revalidatePath("/jobs");
+    redirect(
+      `/settings/data-heal?mode=${dryRun ? "dry" : "apply"}&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}`,
+    );
+  }
 
   const [unresolved, lastHealedAt, preview] = await Promise.all([
     prisma.job.count({
@@ -28,30 +40,6 @@ export default async function DataHealPage({
     }),
     runDataHeal(prisma, { dryRun: true, limit: 25 }),
   ]);
-
-  async function runDry() {
-    "use server";
-    const { user: actor } = await getCurrentUserRole();
-    if (actor.role !== "ADMIN") return;
-    const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
-    revalidatePath("/settings/data-heal");
-    redirect(
-      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&dry=1`,
-    );
-  }
-
-  async function runApply() {
-    "use server";
-    const { user: actor } = await getCurrentUserRole();
-    if (actor.role !== "ADMIN") return;
-    const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
-    revalidatePath("/settings/data-heal");
-    revalidatePath("/dashboard");
-    revalidatePath("/jobs");
-    redirect(
-      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}`,
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -79,12 +67,12 @@ export default async function DataHealPage({
           </div>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <form action={runDry}>
-            <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Run Dry Check</button>
-          </form>
-          <form action={runApply}>
-            <button className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">Run Heal Now</button>
-          </form>
+          <Link href="/settings/data-heal?run=dry" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
+            Run Dry Check
+          </Link>
+          <Link href="/settings/data-heal?run=apply" className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">
+            Run Heal Now
+          </Link>
         </div>
       </section>
 
