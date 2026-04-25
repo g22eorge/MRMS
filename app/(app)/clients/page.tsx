@@ -22,6 +22,7 @@ type SearchParams = {
   q?: string;
   segment?: string;
   page?: string;
+  createError?: string;
 };
 
 export default async function ClientsPage({
@@ -99,7 +100,14 @@ export default async function ClientsPage({
       organization: String(formData.get("organization") ?? ""),
     });
 
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      const field = String(firstIssue?.path[0] ?? "input");
+      const msg = field === "fullName" ? "Full name must be at least 2 characters"
+        : field === "phone" ? "Phone number must be at least 3 characters"
+        : "Invalid input";
+      redirect(`/clients?createError=${encodeURIComponent(msg)}`);
+    }
 
     const normalizedPhone = sanitizeText(parsed.data.phone);
     const existingByPhone = await prisma.client.findFirst({
@@ -107,7 +115,9 @@ export default async function ClientsPage({
       select: { id: true },
     });
 
-    if (existingByPhone) return;
+    if (existingByPhone) {
+      redirect(`/clients?createError=${encodeURIComponent("A client with this phone number already exists")}`);
+    }
 
     await prisma.client.create({
       data: {
@@ -251,6 +261,11 @@ export default async function ClientsPage({
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <form action={createClientAction} className="border-t border-[var(--line)] px-3 pb-3 pt-2.5">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick create client</p>
+            {filters.createError ? (
+              <p className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                {filters.createError}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <input required name="fullName" placeholder="Full name *" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
               <input required name="phone" placeholder="Phone *" className="min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
