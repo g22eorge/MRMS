@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Sora } from "next/font/google";
+import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
@@ -75,15 +76,24 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get("theme")?.value as "light" | "dark" | undefined;
+  let initialTheme: "light" | "dark" = "light";
+  if (stored === "light" || stored === "dark") {
+    initialTheme = stored;
+  } else {
+    initialTheme = "light";
+  }
+
   return (
-    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
+    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased ${initialTheme === "dark" ? "theme-blackgold" : ""}`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
-        <ThemeProvider>
+        <ThemeProvider initialTheme={initialTheme}>
           {children}
           <Toaster richColors />
         </ThemeProvider>
