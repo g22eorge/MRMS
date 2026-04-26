@@ -61,6 +61,9 @@ const features = [
   { title: "Notifications with delivery tracking", body: "Retry history and failure reasons." },
 ];
 
+const deviceBrands = ["Apple", "Microsoft", "Dell", "HP", "Lenovo", "APC"];
+const softwareBrands = ["Adobe", "Kaspersky", "AutoCAD", "ArchiCAD"];
+
 const commitments = [
   { title: "Transparent pricing", body: "Written quote before work starts — no surprises." },
   { title: "No fix, no fee", body: "Can't repair it? You pay nothing for the attempt." },
@@ -103,8 +106,13 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* Value prop */}
+        <p className="fade-in mb-5 max-w-2xl text-balance text-[15px] font-semibold leading-snug text-white/85" style={{ animationDelay: "18ms" }}>
+          Phone, laptop, tablet, and software repair in Kampala with written quotes, audit trails, and a 30-day warranty.
+        </p>
+
         {/* CTA row — instant access for customers and visitors */}
-        <div className="fade-in mb-5 flex flex-wrap gap-2.5" style={{ animationDelay: "30ms" }}>
+        <div className="fade-in mb-6 flex flex-wrap gap-2.5" style={{ animationDelay: "30ms" }}>
           <Link
             href="/repair"
             className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-black shadow-[0_4px_18px_rgba(212,175,55,0.3)]"
@@ -131,7 +139,7 @@ export default async function HomePage() {
             style={{ animationDelay: "60ms" }}
           >
             <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
-            <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">How it works</p>
+            <p className="relative text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">How it works</p>
             <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Fast. Clear. Traceable.</h1>
             <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">
               Submit a request, approve a quote, then pickup with a recorded repair history.
@@ -155,7 +163,7 @@ export default async function HomePage() {
           {/* Right column */}
           <div className="grid gap-3">
 
-            {/* Customer card — bold gold treatment */}
+            {/* Trust card — proof and policy */}
             <div
               className="fade-in relative overflow-hidden rounded-2xl border border-[var(--accent)]/35 p-5 text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/55 hover:shadow-[0_0_32px_rgba(212,175,55,0.12)]"
               style={{
@@ -166,10 +174,25 @@ export default async function HomePage() {
             >
               <div className="pointer-events-none absolute -right-6 -top-6 h-36 w-36 rounded-full bg-[var(--accent)]/15 blur-2xl" />
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/20 to-transparent" />
-              <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]/60">For customers</p>
-              <h2 className="relative mt-1.5 text-xl font-extrabold text-white">Need a repair?</h2>
-              <p className="relative mt-1 text-sm leading-5 text-white/60">
-                Submit a repair request online. Our team will review it and get back to you.
+              <p className="relative text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]/70">Repair you can trust</p>
+              <h2 className="relative mt-1.5 text-xl font-extrabold text-white">Clear quote. Clean handoff.</h2>
+              <p className="relative mt-1 text-sm leading-5 text-white/65">
+                Your repair stays traceable from intake to pickup, with written approval before work starts.
+              </p>
+
+              <div className="relative mt-4 flex flex-wrap gap-2">
+                {["Written quote", "No fix, no fee", "30-day warranty"].map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold text-white/80"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+
+              <p className="relative mt-3 text-[11px] text-white/55">
+                Prefer to visit first? Use the Find Us button above for directions.
               </p>
             </div>
 
@@ -178,7 +201,7 @@ export default async function HomePage() {
               className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/14 hover:bg-[#222]"
               style={{ animationDelay: "180ms" }}
             >
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">What&apos;s inside</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">What&apos;s inside</p>
               <div className="mt-2.5 grid gap-2 text-sm">
                 {features.map((f) => (
                   <div key={f.title} className="flex items-start gap-2.5">
@@ -199,14 +222,29 @@ export default async function HomePage() {
         <div className="fade-in my-5 flex-1" style={{ animationDelay: "220ms" }}>
           <div className="mb-3 flex items-center gap-3">
             <div className="h-px flex-1 bg-[var(--line)]" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Devices we service</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">Devices we service</p>
             <div className="h-px flex-1 bg-[var(--line)]" />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {["Apple", "Microsoft", "Dell", "HP", "Lenovo", "Adobe", "Kaspersky", "APC", "AutoCAD", "ArchiCAD"].map((brand) => (
+            {deviceBrands.map((brand) => (
               <span
                 key={brand}
                 className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] font-medium tracking-wide text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]/80"
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <span className="text-[11px] font-semibold text-[var(--ink-muted)]">Software & licenses</span>
+            <span className="h-px w-10 bg-[var(--line)]" />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            {softwareBrands.map((brand) => (
+              <span
+                key={brand}
+                className="rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/5 px-3 py-1 text-[11px] font-medium tracking-wide text-white/70 transition-colors hover:border-[var(--accent)]/35 hover:text-white"
               >
                 {brand}
               </span>
@@ -217,7 +255,7 @@ export default async function HomePage() {
         {/* Commitment strip */}
         <div className="fade-in mt-5" style={{ animationDelay: "240ms" }}>
           <div className="mb-3 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Our commitment to you</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">Our commitment to you</p>
             <div className="h-px flex-1 bg-[var(--line)]" />
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -279,9 +317,9 @@ export default async function HomePage() {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 012 1.18 2 2 0 014 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
             +256 772 006 344
           </a>
-          <span className="text-[11px] text-white/30">·</span>
+          <span className="text-[11px] text-[var(--ink-muted)]/60">·</span>
           <a href="tel:+256754006344" className="text-[11px] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">+256 754 006 344</a>
-          <span className="text-[11px] text-white/30">·</span>
+          <span className="text-[11px] text-[var(--ink-muted)]/60">·</span>
           <a
             href="https://www.google.com/maps/search/?api=1&query=Eagle+Info+Solutions%2C+Shop+L28%2C+1st+Floor%2C+Nalubega+Complex%2C+Bombo+Road%2C+Kampala%2C+Uganda"
             target="_blank"
