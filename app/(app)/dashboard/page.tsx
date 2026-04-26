@@ -249,24 +249,6 @@ export default async function DashboardPage({
   const filters = await searchParams;
   const period: "month" | "year" = filters.period === "year" ? "year" : "month";
 
-  // Revenue & Margin Trend — shared across all role dashboards
-  const nowTs = new Date();
-  const trendMonths = monthSequence(nowTs.getFullYear(), nowTs.getMonth() + 1, 6);
-  const [completedForRevTrend, revenueCurrency] = await Promise.all([
-    prisma.job.findMany({
-      where: { status: "COMPLETED", completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
-      select: { clientBill: true, externalTechBill: true, completedAt: true },
-    }),
-    Promise.resolve(getAppCurrency()),
-  ]);
-  const revenueTrend = trendMonths.map((m) => {
-    const monthJobs = completedForRevTrend.filter((j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end);
-    const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
-    const cost = monthJobs.reduce((sum, j) => sum + (j.externalTechBill ?? 0), 0);
-    return { key: m.key, revenue, margin: revenue - cost };
-  });
-  const currency = revenueCurrency;
-
   if (user.role === "TECHNICIAN_EXTERNAL") {
     const selectedMonth = parseMonth(filters.month);
     const selectedYear = Number(filters.year) || new Date().getFullYear();
@@ -1199,6 +1181,26 @@ export default async function DashboardPage({
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 
+  const showRevenueTrend = user.role === "ADMIN" || user.role === "OPS";
+  const currency = getAppCurrency();
+  let revenueTrend: { key: string; revenue: number; margin: number }[] = [];
+  let trendMonths: { key: string; start: Date; end: Date }[] = [];
+
+  if (showRevenueTrend) {
+    const nowTs = new Date();
+    trendMonths = monthSequence(nowTs.getFullYear(), nowTs.getMonth() + 1, 6);
+    const completedForRevTrend = await prisma.job.findMany({
+      where: { status: "COMPLETED", completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
+      select: { clientBill: true, externalTechBill: true, completedAt: true },
+    });
+    revenueTrend = trendMonths.map((m) => {
+      const monthJobs = completedForRevTrend.filter((j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end);
+      const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
+      const cost = monthJobs.reduce((sum, j) => sum + (j.externalTechBill ?? 0), 0);
+      return { key: m.key, revenue, margin: revenue - cost };
+    });
+  }
+
   return (
     <div className="space-y-4">
       <DashboardHero
@@ -1243,7 +1245,7 @@ export default async function DashboardPage({
       </div>
 
       {/* Revenue & Margin Trend */}
-      {revenueTrend.some((m) => m.revenue > 0) && (
+      {showRevenueTrend && revenueTrend.some((m) => m.revenue > 0) && (
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
