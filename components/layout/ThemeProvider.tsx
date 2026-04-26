@@ -18,7 +18,6 @@ export function useTheme() {
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   try {
-    if (document.documentElement.classList.contains("theme-blackgold")) return "dark";
     const stored = localStorage.getItem("theme") as Theme | null;
     if (stored === "dark" || stored === "light") return stored;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -37,14 +36,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       root.classList.remove("theme-blackgold");
     }
+    localStorage.setItem("theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem("theme") as Theme | null;
+    if (stored !== null) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => {
+      setTheme(e.matches ? "dark" : "light");
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   function toggle() {
-    setTheme((prev) => {
-      const next = prev === "light" ? "dark" : "light";
-      localStorage.setItem("theme", next);
-      return next;
-    });
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   }
 
   return (

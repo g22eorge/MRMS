@@ -81,7 +81,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
+    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         <ThemeProvider>
           {children}
