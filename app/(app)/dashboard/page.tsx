@@ -804,7 +804,7 @@ export default async function DashboardPage({
                 Revenue
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[color:var(--ink)] opacity-70" />
                 Margin
               </span>
             </div>
@@ -1152,7 +1152,7 @@ export default async function DashboardPage({
                 Revenue
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[color:var(--ink)] opacity-70" />
                 Margin
               </span>
             </div>

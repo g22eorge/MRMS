@@ -1,6 +1,7 @@
 "use client";
 
 import { Role } from "@prisma/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -481,10 +482,10 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   return (
     <div className="min-w-0 space-y-4">
       <div>
-        <a href="/jobs" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           All jobs
-        </a>
+        </Link>
       </div>
       <div className={panelShellClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
