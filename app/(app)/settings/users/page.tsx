@@ -344,6 +344,7 @@ export default async function UsersPage({
           actorUserId: session.user.id,
           targetUserId: parsed.data.userId,
           action: "PASSWORD_RESET",
+          detail: JSON.stringify({ method: "ADMIN_RESET", signedOutAllSessions: true }),
         },
       });
     } catch {
