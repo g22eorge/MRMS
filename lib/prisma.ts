@@ -2,7 +2,14 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-const DEFAULT_LOCAL_DATABASE_URL = "file:./prisma/dev.db";
+const DEFAULT_LOCAL_DATABASE_URL = (() => {
+  const cwd = process.cwd();
+  // Support running from `.next/standalone` where relative paths break.
+  if (cwd.includes(".next/standalone")) {
+    return `file:${cwd}/../../prisma/dev.db`;
+  }
+  return `file:${cwd}/prisma/dev.db`;
+})();
 
 function toSqliteAbsoluteUrl(url: string) {
   if (!url.startsWith("file:")) return url;
@@ -21,6 +28,13 @@ function toSqliteAbsoluteUrl(url: string) {
 function createPrismaClient() {
   // Use TURSO_DATABASE_URL to detect production mode
   const isProduction = !!process.env.TURSO_DATABASE_URL;
+
+  // When Next runs `next build`, NODE_ENV is production; allow local sqlite during build.
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+  if (process.env.NODE_ENV === "production" && !isProduction && !isBuildPhase && process.env.ALLOW_SQLITE_PRODUCTION !== "1") {
+    // Prefer a clear error over a noisy sqlite "unable to open" failure on serverless.
+    throw new Error("Missing TURSO_DATABASE_URL (set Turso env vars for production runtime)");
+  }
 
   if (!isProduction) {
     const databaseUrl = process.env.DATABASE_URL?.trim();
