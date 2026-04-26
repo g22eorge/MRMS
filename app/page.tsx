@@ -284,7 +284,7 @@ export default async function HomePage() {
               href="/login"
               className="text-[11px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]"
             >
-              Staff sign in
+              Staff login
             </Link>
             <a
               href="https://eagleinfosolutions.com"
