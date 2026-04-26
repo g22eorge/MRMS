@@ -56,9 +56,9 @@ const jsonLd = {
 };
 
 const features = [
-  { title: "Jobs, timelines & audit logs", body: "Every repair tracked end-to-end." },
-  { title: "Website repair request intake", body: "Approve, reject, or convert to jobs." },
-  { title: "Notifications with delivery tracking", body: "Retry history and failure reasons." },
+  { title: "Written quote", body: "Approve before work begins." },
+  { title: "Status updates", body: "Diagnosis, approval, and completion notifications." },
+  { title: "Warranty record", body: "Keep your job reference for follow-ups." },
 ];
 
 const deviceBrands = ["Apple", "Dell", "HP", "Lenovo"];
@@ -108,7 +108,7 @@ export default async function HomePage() {
 
         {/* Value prop */}
         <p className="fade-in mb-5 max-w-2xl text-balance text-[15px] font-semibold leading-snug text-white/85" style={{ animationDelay: "18ms" }}>
-          Phone, laptop, tablet, and software repair in Kampala with written quotes, audit trails, and a 30-day warranty.
+          Phone, laptop, tablet, and software repair in Kampala with written quotes, status updates, and a 30-day warranty.
         </p>
 
         {/* CTA row — instant access for customers and visitors */}
@@ -140,14 +140,12 @@ export default async function HomePage() {
           >
             <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
             <p className="relative text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">How it works</p>
-            <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Fast. Clear. Traceable.</h1>
-            <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">
-              Submit a request, approve a quote, then pickup with a recorded repair history.
-            </p>
+            <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Fast repair workflow</h1>
+            <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">Three steps, no confusion.</p>
 
-            <div className="relative mt-4 grid gap-2">
+            <ol className="relative mt-4 space-y-2">
               {steps.map((step, index) => (
-                <div key={step.title} className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#141414] px-4 py-3">
+                <li key={step.title} className="flex items-start gap-3 rounded-xl border border-white/8 bg-[#141414] px-4 py-3">
                   <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-bold text-[var(--accent)]">
                     {index + 1}
                   </span>
@@ -155,9 +153,9 @@ export default async function HomePage() {
                     <p className="text-xs font-semibold text-[var(--ink)]">{step.title}</p>
                     <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{step.body}</p>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
 
           {/* Right column */}
@@ -201,7 +199,7 @@ export default async function HomePage() {
               className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/14 hover:bg-[#222]"
               style={{ animationDelay: "180ms" }}
             >
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">What&apos;s inside</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">What you get</p>
               <div className="mt-2.5 grid gap-2 text-sm">
                 {features.map((f) => (
                   <div key={f.title} className="flex items-start gap-2.5">
