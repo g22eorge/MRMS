@@ -32,7 +32,7 @@ export default async function LoginPage() {
                 Repair jobs, without the chaos
               </h1>
               <p className="mt-4 max-w-prose text-sm leading-6 text-white/90">
-                Secure job tracking for intake, technicians, and operations. Clear status, clear accountability.
+                Staff access for intake, technicians, and operations. Clear status, clear accountability.
               </p>
             </div>
 
@@ -57,7 +57,7 @@ export default async function LoginPage() {
         <section className="order-1 flex items-center justify-center bg-[var(--panel)] px-4 py-5 sm:px-6 sm:py-8 lg:order-2 lg:px-10">
           <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.45)] sm:p-6">
             <div className="mb-3 flex items-center gap-3">
-              <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-sm">
                 <Image
                   src="/eagle-info-logo.png"
                   alt="Eagle Info logo"
@@ -73,7 +73,7 @@ export default async function LoginPage() {
               </div>
             </div>
             <h2 className="mt-2 text-xl font-semibold text-[var(--ink)] sm:text-2xl">Machine Repair Management System</h2>
-            <p className="mt-2 text-sm text-[var(--ink-muted)]">Sign in to continue to your secure repair workspace.</p>
+            <p className="mt-2 text-sm text-[var(--ink-muted)]">Staff login to manage jobs, approvals, and updates.</p>
 
             <div className="mt-6">
               <LoginForm />
