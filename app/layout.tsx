@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Sora } from "next/font/google";
 import { Toaster } from "sonner";
 
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -82,8 +83,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
-        {children}
-        <Toaster richColors />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.classList.add('theme-blackgold')}else if(t===null&&window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('theme-blackgold')}}catch(e){}})()`,
+          }}
+        />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );
