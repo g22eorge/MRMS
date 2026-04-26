@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Sora } from "next/font/google";
-import Script from "next/script";
 import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
@@ -82,11 +81,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.classList.add('theme-blackgold')}else if(t===null&&window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('theme-blackgold')}}catch(e){}})()`}
-        </Script>
         <ThemeProvider>
           {children}
           <Toaster richColors />

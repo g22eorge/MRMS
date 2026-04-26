@@ -136,6 +136,7 @@ function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
+      suppressHydrationWarning
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition-all hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
