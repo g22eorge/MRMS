@@ -346,16 +346,17 @@ pre,
 
 .btn-premium-secondary {
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, #ffffff 0%, #f5f3ef 100%);
+  /* Uses theme tokens so it stays readable in dark mode. */
+  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-strong) 100%);
   color: var(--ink);
   font-weight: 500;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 1px 2px rgba(17, 17, 17, 0.06), 0 3px 8px rgba(17, 17, 17, 0.05);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 2px rgba(17, 17, 17, 0.06), 0 3px 8px rgba(17, 17, 17, 0.05);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .btn-premium-secondary:hover {
   border-color: #c4bfb8;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 1px 3px rgba(17, 17, 17, 0.08), 0 4px 12px rgba(17, 17, 17, 0.09);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 1px 3px rgba(17, 17, 17, 0.08), 0 4px 12px rgba(17, 17, 17, 0.09);
 }
 
 .btn-premium-danger {
@@ -520,20 +521,20 @@ a:hover .nav-icon-premium {
 :where(input, select, textarea) {
   border-radius: 0.625rem;
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: var(--panel);
   color: var(--ink);
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
 :where(input, select, textarea)::placeholder {
-  color: #9E9890;
+  color: var(--ink-muted);
 }
 
 :where(input, select, textarea):focus {
   outline: none;
   border-color: rgba(212, 175, 55, 0.6);
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
-  background: #ffffff;
+  background: var(--panel);
 }
 
 :where(input, select, textarea):focus-visible {
