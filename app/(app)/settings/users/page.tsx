@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { UserAccessControlPanel } from "@/components/settings/UserAccessControlPanel";
+import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
+import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -15,12 +17,38 @@ type SearchParams = {
   userId?: string;
 };
 
+type UserDetailsState = {
+  error?: string;
+  success?: string;
+};
+
+type UserPasswordResetState = {
+  error?: string;
+  success?: string;
+};
+
 const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   phone: z.string().optional(),
   password: z.string().min(8),
   role: z.nativeEnum(Role),
+});
+
+const updateUserDetailsSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(2).max(80),
+  email: z.string().email(),
+  phone: z.string().optional(),
+});
+
+const resetPasswordSchema = z.object({
+  userId: z.string().min(1),
+  password: z.string().min(8),
+  confirm: z.string().min(8),
+}).refine((data) => data.password === data.confirm, {
+  message: "Passwords do not match",
+  path: ["confirm"],
 });
 
 type PermissionOption = {
@@ -201,6 +229,129 @@ export default async function UsersPage({
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
     redirect("/dashboard");
+  }
+
+  async function updateUserDetails(state: UserDetailsState, formData: FormData): Promise<UserDetailsState> {
+    "use server";
+
+    const { session, user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return { error: "Not authorized" };
+
+    const parsed = updateUserDetailsSchema.safeParse({
+      id: String(formData.get("id") ?? "").trim(),
+      name: String(formData.get("name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim().toLowerCase(),
+      phone: String(formData.get("phone") ?? "").trim(),
+    });
+
+    if (!parsed.success) return { error: "Invalid user details" };
+
+    const existing = await prisma.user.findUnique({
+      where: { id: parsed.data.id },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    if (!existing) return { error: "User not found" };
+
+    const emailConflict = await prisma.user.findFirst({
+      where: { email: parsed.data.email, NOT: { id: parsed.data.id } },
+      select: { id: true },
+    });
+    if (emailConflict) return { error: "Email is already in use by another user" };
+
+    const nextPhone = parsed.data.phone ? parsed.data.phone : null;
+    const changed = {
+      name: existing.name !== parsed.data.name,
+      email: existing.email !== parsed.data.email,
+      phone: (existing.phone ?? null) !== nextPhone,
+    };
+
+    if (!changed.name && !changed.email && !changed.phone) {
+      return { success: "No changes to save" };
+    }
+
+    await prisma.user.update({
+      where: { id: parsed.data.id },
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: nextPhone,
+      },
+    });
+
+    try {
+      await prisma.userAccessAudit.create({
+        data: {
+          actorUserId: session.user.id,
+          targetUserId: parsed.data.id,
+          action: "USER_DETAILS_UPDATED",
+          detail: JSON.stringify({
+            from: { name: existing.name, email: existing.email, phone: existing.phone ?? null },
+            to: { name: parsed.data.name, email: parsed.data.email, phone: nextPhone },
+          }),
+        },
+      });
+    } catch {
+      // ignore if audit table isn't migrated yet
+    }
+
+    revalidatePath("/settings/users");
+    return { success: "User details saved" };
+  }
+
+  async function resetUserPassword(state: UserPasswordResetState, formData: FormData): Promise<UserPasswordResetState> {
+    "use server";
+
+    const { session, user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return { error: "Not authorized" };
+
+    const parsed = resetPasswordSchema.safeParse({
+      userId: String(formData.get("userId") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+      confirm: String(formData.get("confirm") ?? ""),
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid password" };
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: parsed.data.userId }, select: { id: true } });
+    if (!target) return { error: "User not found" };
+
+    const hashed = await hashPassword(parsed.data.password);
+
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.account.updateMany({
+        where: { userId: parsed.data.userId, providerId: "credential" },
+        data: { password: hashed },
+      });
+      if (updated.count === 0) {
+        await tx.account.create({
+          data: {
+            accountId: parsed.data.userId,
+            providerId: "credential",
+            userId: parsed.data.userId,
+            password: hashed,
+          },
+        });
+      }
+
+      // Force re-login everywhere after reset.
+      await tx.session.deleteMany({ where: { userId: parsed.data.userId } });
+    });
+
+    try {
+      await prisma.userAccessAudit.create({
+        data: {
+          actorUserId: session.user.id,
+          targetUserId: parsed.data.userId,
+          action: "PASSWORD_RESET",
+        },
+      });
+    } catch {
+      // ignore
+    }
+
+    revalidatePath("/settings/users");
+    return { success: "Password reset. User has been signed out." };
   }
 
   async function saveAccessChanges(formData: FormData) {
@@ -521,6 +672,28 @@ export default async function UsersPage({
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Branch / Location</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">Not assigned</p>
               </div>
+            </div>
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Edit User Details</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Update name, email, and phone. Email changes take effect immediately.</p>
+            <div className="mt-3">
+              <UserDetailsForm
+                id={selectedUser.id}
+                name={selectedUser.name}
+                email={selectedUser.email}
+                phone={selectedUser.phone}
+                action={updateUserDetails}
+              />
+            </div>
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Reset Password</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Use this when a user forgets their password. A reset signs them out everywhere.</p>
+            <div className="mt-3">
+              <UserPasswordResetForm userId={selectedUser.id} action={resetUserPassword} />
             </div>
           </section>
 

@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export function LoginForm() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -47,7 +48,7 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1">
         <label className="text-sm font-medium" htmlFor="email">
           Email
@@ -89,9 +90,19 @@ export function LoginForm() {
           <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border border-[var(--line)] text-[var(--accent)]" />
           Remember me
         </label>
-        <a href="mailto:support@eagleinfo.com" className="text-[var(--accent)] hover:underline">
+        <button
+          type="button"
+          onClick={() => {
+            const emailInput = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]');
+            const email = (emailInput?.value ?? "").trim();
+            const message = `Hi Eagle Info Support, please reset my MRMS password. Email: ${email || "<your email>"}`;
+            const url = `https://wa.me/256772006344?text=${encodeURIComponent(message)}`;
+            window.open(url, "_blank", "noopener,noreferrer");
+          }}
+          className="text-[var(--accent)] hover:underline"
+        >
           Forgot password?
-        </a>
+        </button>
       </div>
 
       <button
