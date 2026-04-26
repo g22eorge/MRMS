@@ -150,12 +150,6 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-
-            <div className="relative mt-4">
-              <Link href="/repair" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
-                Request a Repair
-              </Link>
-            </div>
           </div>
 
           {/* Right column */}
@@ -177,18 +171,6 @@ export default async function HomePage() {
               <p className="relative mt-1 text-sm leading-5 text-white/60">
                 Submit a repair request online. Our team will review it and get back to you.
               </p>
-              <div className="relative mt-4 flex flex-wrap gap-2">
-                <Link
-                  href="/repair"
-                  className="rounded-md px-3.5 py-1.5 text-sm font-bold text-black shadow-[0_4px_14px_rgba(212,175,55,0.35)]"
-                  style={{ background: "linear-gradient(180deg, #E8C84A 0%, #C9A020 100%)" }}
-                >
-                  Request Repair
-                </Link>
-                <Link href="/address" className="rounded-md border border-white/20 bg-white/[0.07] px-3.5 py-1.5 text-sm font-semibold text-white/85 transition-colors hover:bg-white/[0.12]">
-                  Find Us
-                </Link>
-              </div>
             </div>
 
             {/* Features card */}
