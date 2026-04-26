@@ -70,12 +70,10 @@ const commitments = [
   { title: "You're kept informed", body: "Updates at diagnosis, approval, and completion." },
 ];
 
-const shortLinks = [
-  { slug: "/app",     label: "MRMS App" },
-  { slug: "/repair",  label: "Repair Request" },
-  { slug: "/address", label: "Our Location" },
-  { slug: "/company", label: "Company Site" },
-  { slug: "/profile", label: "Company Profile" },
+const steps = [
+  { title: "Request", body: "Submit your issue and device details online." },
+  { title: "Approve", body: "Get a clear quote before work starts." },
+  { title: "Collect", body: "Pickup with a recorded job history and warranty." },
 ];
 
 export default async function HomePage() {
@@ -129,40 +127,36 @@ export default async function HomePage() {
         {/* Hero grid */}
         <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
 
-          {/* Staff card */}
+          {/* How it works */}
           <div
             className="fade-in relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_28px_56px_rgba(0,0,0,0.55)]"
             style={{ animationDelay: "60ms" }}
           >
             <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
-            <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">Internal Operations</p>
-            <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Repair Manager</h1>
-            <p className="relative mt-1 text-[11px] font-medium tracking-wide text-[var(--accent)]/70">Every job tracked. Every handoff accountable.</p>
+            <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">How it works</p>
+            <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Fast. Clear. Traceable.</h1>
             <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">
-              End-to-end repair management — from first contact to device return, built for speed, auditability, and client privacy.
+              Submit a request, approve a quote, then pickup with a recorded repair history.
             </p>
-            <div className="relative mt-4">
-              <Link href="/login" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
-                Sign In
-              </Link>
+
+            <div className="relative mt-4 grid gap-2">
+              {steps.map((step, index) => (
+                <div key={step.title} className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#141414] px-4 py-3">
+                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-bold text-[var(--accent)]">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--ink)]">{step.title}</p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{step.body}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+
             <div className="relative mt-4">
-              <p className="mb-2 text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Quick links</p>
-              <div className="flex flex-col gap-0.5">
-                {shortLinks.map(({ slug, label }) => (
-                  <Link
-                    key={slug}
-                    href={slug}
-                    className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 transition-all hover:bg-[var(--accent)]/10"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="h-1 w-1 rounded-full bg-[var(--accent)]/40 transition-colors group-hover:bg-[var(--accent)]" />
-                      <span className="text-xs text-[var(--ink-muted)] transition-colors group-hover:text-[var(--ink)]">{label}</span>
-                    </div>
-                    <span className="font-mono text-[10px] text-[var(--accent)]/80 transition-colors group-hover:text-[var(--accent)]">{slug}</span>
-                  </Link>
-                ))}
-              </div>
+              <Link href="/repair" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
+                Request a Repair
+              </Link>
             </div>
           </div>
 
@@ -266,16 +260,22 @@ export default async function HomePage() {
 
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-[var(--line)] px-4 py-5 text-center">
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <span className="text-[11px] text-[var(--ink-muted)]">© 2026 Eagle Info Solutions SMC Limited</span>
-          <a
-            href="https://eagleinfosolutions.com"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1 text-[11px] font-semibold text-white/70 transition-all hover:border-[var(--accent)]/35 hover:text-[var(--accent)]"
-          >
+        {/* Footer */}
+        <div className="border-t border-[var(--line)] px-4 py-5 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <span className="text-[11px] text-[var(--ink-muted)]">© 2026 Eagle Info Solutions SMC Limited</span>
+            <Link
+              href="/login"
+              className="text-[11px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]"
+            >
+              Staff sign in
+            </Link>
+            <a
+              href="https://eagleinfosolutions.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1 text-[11px] font-semibold text-white/70 transition-all hover:border-[var(--accent)]/35 hover:text-[var(--accent)]"
+            >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             eagleinfosolutions.com
           </a>
