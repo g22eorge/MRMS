@@ -82,6 +82,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
+      {/* c8 ignore next */}
+      <script dangerouslySetInnerHTML={{ __html: 'try{var e=localStorage.getItem("theme");if("dark"===e){document.documentElement.classList.add("theme-blackgold")}else if("light"===e){document.documentElement.classList.add("light")}else{if(window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches){document.documentElement.classList.add("theme-blackgold")}}}catch(t){}' }} />
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         <ThemeProvider initialTheme="light">
           {children}
