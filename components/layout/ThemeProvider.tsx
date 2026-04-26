@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark";
+type Theme = "system" | "dark" | "light";
 
 interface ThemeContextValue {
   theme: Theme;
   toggle: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue>({ theme: "light", toggle: () => {} });
+const ThemeContext = createContext<ThemeContextValue>({ theme: "system", toggle: () => {} });
 
 export function useTheme() {
   return useContext(ThemeContext);
@@ -26,28 +26,34 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
+    root.classList.remove("theme-blackgold", "light");
     if (theme === "dark") {
       root.classList.add("theme-blackgold");
-    } else {
-      root.classList.remove("theme-blackgold");
+    } else if (theme === "light") {
+      root.classList.add("light");
     }
     localStorage.setItem("theme", theme);
   }, [theme]);
 
   useEffect(() => {
     const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored !== null) return;
+    if (stored !== null && stored !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? "dark" : "light");
+      if (theme === "system") {
+        setTheme(e.matches ? "system" : "system");
+      }
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [theme]);
 
   function toggle() {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
+    if (theme === "system" || theme === "dark") {
+      setTheme("light");
+    } else {
+      setTheme("dark");
+    }
   }
 
   return (

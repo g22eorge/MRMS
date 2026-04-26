@@ -22,7 +22,24 @@
   --mobile-stack-offset: var(--mobile-header-height);
 }
 
-/* Dark black + gold theme (used on landing/login only). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page-bg: #050505;
+    --ink: rgba(255, 255, 255, 0.92);
+    --ink-muted: rgba(255, 255, 255, 0.52);
+    --panel: #141414;
+    --panel-strong: #1c1c1c;
+    --line: rgba(255, 255, 255, 0.12);
+    --brand: #D4AF37;
+    --brand-deep: #B8960C;
+    --accent: #D4AF37;
+    --accent-muted: rgba(212, 175, 55, 0.14);
+    --accent-border: rgba(212, 175, 55, 0.35);
+    --sidebar-bg: #0a0a0a;
+  }
+}
+
+/* Manual dark mode override — applies on top of system preference */
 .theme-blackgold {
   --page-bg: #050505;
   --ink: rgba(255, 255, 255, 0.92);
@@ -36,6 +53,22 @@
   --accent-muted: rgba(212, 175, 55, 0.14);
   --accent-border: rgba(212, 175, 55, 0.35);
   --sidebar-bg: #0a0a0a;
+}
+
+/* Manual light mode override — explicitly sets light vars to override system preference */
+.light {
+  --page-bg: #F5F3EF;
+  --ink: #111111;
+  --ink-muted: #6B6B6B;
+  --panel: #FFFFFF;
+  --panel-strong: #EDEAE4;
+  --line: #E2DED8;
+  --brand: #111111;
+  --brand-deep: #000000;
+  --accent: #D4AF37;
+  --accent-muted: rgba(212, 175, 55, 0.12);
+  --accent-border: rgba(212, 175, 55, 0.35);
+  --sidebar-bg: #FFFFFF;
 }
 
 /* Inputs inside the dark theme must have dark backgrounds and light text. */
