@@ -342,6 +342,13 @@ model Job {
   stockTransactions PartStockTransaction[]
 
   @@index([deviceId])
+  @@index([clientId])
+  @@index([createdById])
+  @@index([status, updatedAt])
+  @@index([status, receivedAt])
+  @@index([assignedToId, status])
+  @@index([completedAt])
+  @@index([repairPath])
 }
 
 model Part {
@@ -358,6 +365,8 @@ model Part {
 
   reservations   PartReservation[]
   transactions   PartStockTransaction[]
+
+  @@index([isActive])
 }
 
 model PartReservation {
@@ -431,6 +440,8 @@ model Photo {
   url         String
   label       String?
   uploadedAt DateTime @default(now())
+
+  @@index([jobId, uploadedAt])
 }
 
 model AuditLog {
@@ -442,6 +453,9 @@ model AuditLog {
   action    String
   detail    String?
   createdAt DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([userId, createdAt])
 }
 
 enum NotificationType {
@@ -682,6 +696,9 @@ model RepairRequest {
   updatedAt DateTime @updatedAt
 
   outboundMessages OutboundMessage[]
+
+  @@index([requestStatus, createdAt])
+  @@index([phone])
 }
 
 // Allocates human-friendly repair request numbers safely under concurrency.
