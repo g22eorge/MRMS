@@ -17,7 +17,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
   PENDING_INTAKE:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
   APPROVED:         { label: "Approved",       cls: "bg-[var(--accent)] text-white" },
   REJECTED:         { label: "Rejected",       cls: "bg-black text-white" },
-  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-[var(--ink)] text-white" },
+  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-black text-white" },
 };
 
 const HANDOVER_LABEL: Record<string, string> = {

@@ -370,8 +370,8 @@ export default async function JobsPage({
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
               staleOpenCount > 0
-                ? "border-[var(--ink)] bg-[var(--ink)] text-white hover:opacity-80"
-                : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--ink)]/20 text-[var(--ink-muted)]"
+                ? "border-black bg-black text-white hover:opacity-80"
+                : "border-[var(--line)] bg-[var(--panel)] hover:border-black/30 text-[var(--ink-muted)]"
             }`}
           >
             <span className={`font-bold tabular-nums ${staleOpenCount > 0 ? "text-white" : "text-[var(--ink)]"}`}>{staleOpenCount}</span>

@@ -28,7 +28,8 @@ function roleDisplay(role: string) {
 
 function roleAccent(role: string): string {
   switch (role) {
-    case "ADMIN": return "bg-[var(--ink)] text-white";
+    // Don't use --ink as a background: in dark theme it's near-white.
+    case "ADMIN": return "bg-[var(--accent)] text-black border border-[var(--accent)]/35";
     case "OPS": return "bg-[var(--accent)]/15 text-[#9A7A00] border border-[var(--accent)]/30";
     case "TECHNICIAN_INTERNAL": return "bg-blue-50 text-blue-700 border border-blue-200";
     case "TECHNICIAN_EXTERNAL": return "bg-purple-50 text-purple-700 border border-purple-200";
@@ -81,7 +82,7 @@ export function Header({ userName, role }: HeaderProps) {
           {/* User pill */}
           <div className="hidden sm:flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel-strong)]/60 pl-1.5 pr-3 py-1">
             {/* Avatar */}
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[10px] font-bold text-white select-none">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-black select-none">
               {initials(userName)}
             </div>
             {/* Name */}
@@ -95,7 +96,7 @@ export function Header({ userName, role }: HeaderProps) {
           </div>
 
           {/* Mobile user avatar only */}
-          <div className="sm:hidden flex h-7 w-7 items-center justify-center rounded-full bg-[var(--ink)] text-[10px] font-bold text-white select-none">
+          <div className="sm:hidden flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-black select-none">
             {initials(userName)}
           </div>
 
