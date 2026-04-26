@@ -61,7 +61,7 @@ const features = [
   { title: "Notifications with delivery tracking", body: "Retry history and failure reasons." },
 ];
 
-const deviceBrands = ["Apple", "Dell", "HP", "Lenovo", "APC"];
+const deviceBrands = ["Apple", "Dell", "HP", "Lenovo"];
 const softwareBrands = ["Microsoft", "Adobe", "Kaspersky", "AutoCAD", "ArchiCAD"];
 
 const commitments = [
