@@ -29,9 +29,18 @@ function createPrismaClient() {
   // Use TURSO_DATABASE_URL to detect production mode
   const isProduction = !!process.env.TURSO_DATABASE_URL;
 
+  // GitHub Actions/CI runs Next in production mode but uses local sqlite.
+  const isCi = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+
   // When Next runs `next build`, NODE_ENV is production; allow local sqlite during build.
   const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
-  if (process.env.NODE_ENV === "production" && !isProduction && !isBuildPhase && process.env.ALLOW_SQLITE_PRODUCTION !== "1") {
+  if (
+    process.env.NODE_ENV === "production" &&
+    !isProduction &&
+    !isBuildPhase &&
+    !isCi &&
+    process.env.ALLOW_SQLITE_PRODUCTION !== "1"
+  ) {
     // Prefer a clear error over a noisy sqlite "unable to open" failure on serverless.
     throw new Error("Missing TURSO_DATABASE_URL (set Turso env vars for production runtime)");
   }
