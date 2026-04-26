@@ -32,27 +32,13 @@ export function ThemeProvider({
     } else if (theme === "light") {
       root.classList.add("light");
     }
-    localStorage.setItem("theme", theme);
+    // Cookie is the canonical persistence layer (read on SSR).
     document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
   }, [theme]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored !== null && stored !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => {
-      if (theme === "system") {
-        setTheme(e.matches ? "system" : "system");
-      }
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [theme]);
-
   function toggle() {
-    const next = theme === "system" || theme === "dark" ? "light" : "dark";
+    const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    localStorage.setItem("theme", next);
     document.cookie = `theme=${next};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
   }
 
