@@ -63,6 +63,12 @@ function monthSequence(endYear: number, endMonth: number, count: number) {
   });
 }
 
+function monthCountInclusive(startYear: number, startMonth: number, endYear: number, endMonth: number) {
+  const startIndex = startYear * 12 + (startMonth - 1);
+  const endIndex = endYear * 12 + (endMonth - 1);
+  return Math.max(1, endIndex - startIndex + 1);
+}
+
 function monthOptions(count: number) {
   const now = new Date();
   return Array.from({ length: count }, (_, index) => {
@@ -709,7 +715,10 @@ export default async function DashboardPage({
     const hasAlerts = overdueWithDays.length > 0 || awaitingApprovalCount > 0 || pendingRequests > 0 || unassignedActiveCount > 0;
     const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
 
-    const trendMonths = monthSequence(today.getFullYear(), today.getMonth() + 1, 6);
+    const trendEndYear = today.getFullYear();
+    const trendEndMonth = today.getMonth() + 1;
+    const trendCount = monthCountInclusive(2026, 1, trendEndYear, trendEndMonth);
+    const trendMonths = monthSequence(trendEndYear, trendEndMonth, trendCount);
     const completedForRevTrend = await prisma.job.findMany({
       where: {
         status: "COMPLETED",
@@ -817,14 +826,16 @@ export default async function DashboardPage({
           ) : null}
 
           <RevenueLineChart data={revenueTrend} />
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {revenueTrend.map((m) => (
-              <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-                <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
-              </div>
-            ))}
+          <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+            <div className="flex w-max gap-2">
+              {revenueTrend.map((m) => (
+                <div key={m.key} className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+                  <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+                  <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -1040,7 +1051,11 @@ export default async function DashboardPage({
         ? `/reports?period=year&year=${selectedYear}`
         : `/reports?period=month&month=${selectedPeriodLabel}`;
 
-    const trendMonths = monthSequence(new Date().getFullYear(), new Date().getMonth() + 1, 6);
+    const trendNow = new Date();
+    const trendEndYear = trendNow.getFullYear();
+    const trendEndMonth = trendNow.getMonth() + 1;
+    const trendCount = monthCountInclusive(2026, 1, trendEndYear, trendEndMonth);
+    const trendMonths = monthSequence(trendEndYear, trendEndMonth, trendCount);
 
     const [completedThisMonth, pendingBilling, externalCompleted, completedForRevTrend] = await Promise.all([
       prisma.job.findMany({
@@ -1165,14 +1180,16 @@ export default async function DashboardPage({
           ) : null}
 
           <RevenueLineChart data={revenueTrend} />
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {revenueTrend.map((m) => (
-              <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-                <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
-              </div>
-            ))}
+          <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+            <div className="flex w-max gap-2">
+              {revenueTrend.map((m) => (
+                <div key={m.key} className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+                  <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+                  <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
