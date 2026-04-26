@@ -709,6 +709,21 @@ export default async function DashboardPage({
     const hasAlerts = overdueWithDays.length > 0 || awaitingApprovalCount > 0 || pendingRequests > 0 || unassignedActiveCount > 0;
     const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
 
+    const trendMonths = monthSequence(today.getFullYear(), today.getMonth() + 1, 6);
+    const completedForRevTrend = await prisma.job.findMany({
+      where: {
+        status: "COMPLETED",
+        completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end },
+      },
+      select: { clientBill: true, externalTechBill: true, completedAt: true },
+    });
+    const revenueTrend = trendMonths.map((m) => {
+      const monthJobs = completedForRevTrend.filter((j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end);
+      const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
+      const cost = monthJobs.reduce((sum, j) => sum + (j.externalTechBill ?? 0), 0);
+      return { key: m.key, revenue, margin: revenue - cost };
+    });
+
     return (
       <div className="space-y-4">
         {/* Alert Banner */}
@@ -771,6 +786,45 @@ export default async function DashboardPage({
             <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] text-[var(--ink-muted)]">
               Last heal: {lastDataHeal ? new Date(lastDataHeal.createdAt).toLocaleString() : "Never"}
             </span>
+          </div>
+        </section>
+
+        {/* Revenue & Margin Trend */}
+        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue & Margin Trend</p>
+              <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+                {trendMonths[0]?.key} – {trendMonths[trendMonths.length - 1]?.key} · Last 6 Months
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2 w-4 rounded-full bg-[var(--accent)]" />
+                Revenue
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+                Margin
+              </span>
+            </div>
+          </div>
+
+          {revenueTrend.every((m) => m.revenue === 0 && m.margin === 0) ? (
+            <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">
+              No completed job revenue yet for this period.
+            </div>
+          ) : null}
+
+          <RevenueLineChart data={revenueTrend} />
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {revenueTrend.map((m) => (
+              <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+                <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -986,7 +1040,9 @@ export default async function DashboardPage({
         ? `/reports?period=year&year=${selectedYear}`
         : `/reports?period=month&month=${selectedPeriodLabel}`;
 
-    const [completedThisMonth, pendingBilling, externalCompleted] = await Promise.all([
+    const trendMonths = monthSequence(new Date().getFullYear(), new Date().getMonth() + 1, 6);
+
+    const [completedThisMonth, pendingBilling, externalCompleted, completedForRevTrend] = await Promise.all([
       prisma.job.findMany({
         where: { status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
         select: { id: true, jobNumber: true, completedAt: true },
@@ -1004,6 +1060,13 @@ export default async function DashboardPage({
         },
         select: { id: true, externalTechBill: true },
       }),
+      prisma.job.findMany({
+        where: {
+          status: "COMPLETED",
+          completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end },
+        },
+        select: { clientBill: true, externalTechBill: true, completedAt: true },
+      }),
     ]);
 
 
@@ -1011,6 +1074,13 @@ export default async function DashboardPage({
       where: { id: { in: completedThisMonth.map((job) => job.id) } },
     });
     const monthRevenue = completedRows.reduce((sum, job) => sum + (getClientBill(job) ?? 0), 0);
+
+    const revenueTrend = trendMonths.map((m) => {
+      const monthJobs = completedForRevTrend.filter((j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end);
+      const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
+      const cost = monthJobs.reduce((sum, j) => sum + (j.externalTechBill ?? 0), 0);
+      return { key: m.key, revenue, margin: revenue - cost };
+    });
 
     const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
     const payoutOutstanding = externalCompleted
@@ -1066,6 +1136,45 @@ export default async function DashboardPage({
             </div>
           </section>
         </div>
+
+        {/* Revenue & Margin Trend */}
+        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue & Margin Trend</p>
+              <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+                {trendMonths[0]?.key} – {trendMonths[trendMonths.length - 1]?.key} · Last 6 Months
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2 w-4 rounded-full bg-[var(--accent)]" />
+                Revenue
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
+                Margin
+              </span>
+            </div>
+          </div>
+
+          {revenueTrend.every((m) => m.revenue === 0 && m.margin === 0) ? (
+            <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">
+              No completed job revenue yet for this period.
+            </div>
+          ) : null}
+
+          <RevenueLineChart data={revenueTrend} />
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {revenueTrend.map((m) => (
+              <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+                <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+                <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
       </div>
     );
@@ -1181,25 +1290,6 @@ export default async function DashboardPage({
     prisma.job.count({ where: { status: "COMPLETED" } }),
   ]);
 
-  const showRevenueTrend = user.role === "ADMIN" || user.role === "OPS";
-  const currency = getAppCurrency();
-  let revenueTrend: { key: string; revenue: number; margin: number }[] = [];
-  let trendMonths: { key: string; start: Date; end: Date }[] = [];
-
-  if (showRevenueTrend) {
-    const nowTs = new Date();
-    trendMonths = monthSequence(nowTs.getFullYear(), nowTs.getMonth() + 1, 6);
-    const completedForRevTrend = await prisma.job.findMany({
-      where: { status: "COMPLETED", completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
-      select: { clientBill: true, externalTechBill: true, completedAt: true },
-    });
-    revenueTrend = trendMonths.map((m) => {
-      const monthJobs = completedForRevTrend.filter((j) => j.completedAt && j.completedAt >= m.start && j.completedAt <= m.end);
-      const revenue = monthJobs.reduce((sum, j) => sum + (getClientBill(j) ?? 0), 0);
-      const cost = monthJobs.reduce((sum, j) => sum + (j.externalTechBill ?? 0), 0);
-      return { key: m.key, revenue, margin: revenue - cost };
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -1244,41 +1334,6 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      {/* Revenue & Margin Trend */}
-      {showRevenueTrend && revenueTrend.some((m) => m.revenue > 0) && (
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue & Margin Trend</p>
-              <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-                {trendMonths[0]?.key} – {trendMonths[trendMonths.length - 1]?.key} · Last 6 Months
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block h-2 w-4 rounded-full bg-[var(--accent)]" />
-                Revenue
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[#111111]" />
-                Margin
-              </span>
-            </div>
-          </div>
-          <RevenueLineChart data={revenueTrend} />
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {revenueTrend.map((m) => (
-              <div key={m.key} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
-                <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                  {m.key.slice(5)}
-                </p>
-                <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-                <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
