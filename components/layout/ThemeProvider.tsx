@@ -33,6 +33,7 @@ export function ThemeProvider({
       root.classList.add("light");
     }
     localStorage.setItem("theme", theme);
+    document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
   }, [theme]);
 
   useEffect(() => {
@@ -49,11 +50,10 @@ export function ThemeProvider({
   }, [theme]);
 
   function toggle() {
-    if (theme === "system" || theme === "dark") {
-      setTheme("light");
-    } else {
-      setTheme("dark");
-    }
+    const next = theme === "system" || theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.cookie = `theme=${next};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
   }
 
   return (
