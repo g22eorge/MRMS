@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { setThemeCookieAction } from "@/app/actions/set-theme-cookie";
 
 type Theme = "light" | "dark";
 
@@ -32,6 +31,7 @@ export function ThemeProvider({
     } else {
       root.classList.remove("theme-blackgold");
     }
+    localStorage.setItem("theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -48,8 +48,6 @@ export function ThemeProvider({
   function toggle() {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
-    localStorage.setItem("theme", next);
-    void setThemeCookieAction(next);
   }
 
   return (

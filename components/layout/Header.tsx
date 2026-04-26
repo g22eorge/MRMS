@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
