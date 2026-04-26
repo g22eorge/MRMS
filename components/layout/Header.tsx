@@ -57,7 +57,7 @@ export function Header({ userName, role }: HeaderProps) {
 
         {/* Mobile brand (hidden on desktop where sidebar shows) */}
         <Link href="/" className="flex items-center gap-2.5 lg:hidden hover:opacity-80 transition-opacity">
-          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-white shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-sm">
             <Image
               src="/eagle-info-logo.png"
               alt="Eagle Info logo"

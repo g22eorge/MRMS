@@ -129,7 +129,7 @@ export function NotificationBell() {
       {error && <span className="ml-2 text-[10px] text-[var(--accent)]">{error}</span>}
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-lg">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
             <p className="text-sm font-semibold text-[var(--ink)]">Notifications</p>
             {unreadCount > 0 && (

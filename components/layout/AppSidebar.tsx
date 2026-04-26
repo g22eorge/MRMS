@@ -245,7 +245,7 @@ export function AppSidebar({
     <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
       {/* ── Brand ── */}
       <Link href="/" className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)] hover:bg-[var(--panel)] transition-colors">
-        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-sm">
           <Image
             src="/eagle-info-logo.png"
             alt="Eagle Info logo"

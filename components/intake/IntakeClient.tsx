@@ -173,7 +173,7 @@ function RequestDrawer({
       <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={onClose} />
 
       {/* drawer */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-[var(--panel)] shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)] bg-[var(--panel)]">
           <div>
@@ -225,7 +225,7 @@ function RequestDrawer({
 
         {/* actions bar */}
         {canManageIntake && !isConverted && !isRejected && (
-          <div className="px-6 py-3 border-b border-[var(--line)] bg-white flex items-center gap-2 flex-wrap">
+          <div className="px-6 py-3 border-b border-[var(--line)] bg-[var(--panel)] flex items-center gap-2 flex-wrap">
             {isPending && (
               <>
                 <ActionBtn
@@ -584,7 +584,7 @@ function MobileRequestActions({
             <circle cx="5" cy="12" r="1" />
           </svg>
         </summary>
-        <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-xl">
+        <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-xl">
           <button
             type="button"
             onClick={onSelect}
@@ -656,7 +656,7 @@ function MobileCard({
   return (
     <div
       onClick={onSelect}
-      className="rounded-xl border border-[var(--line)] bg-white shadow-sm cursor-pointer transition-colors hover:border-[var(--line)] active:bg-[var(--panel)] overflow-visible"
+      className="rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-sm cursor-pointer transition-colors hover:border-[var(--line)] hover:bg-[var(--panel-strong)]/40 active:bg-[var(--panel-strong)]/55 overflow-visible"
     >
       {/* header: req # + status */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -817,7 +817,7 @@ export function IntakeClient({
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors
                 ${active
                   ? "bg-black text-white"
-                  : "bg-white border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel)]"
+                  : "bg-[var(--panel)] border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
                 }`}
             >
               {tab.label}

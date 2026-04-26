@@ -804,20 +804,20 @@ export default async function DashboardPage({
               {awaitingApprovalCount > 0 ? (
                 <Link
                   href="/jobs?status=AWAITING_APPROVAL"
-                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
                 >
                   {awaitingApprovalCount} awaiting approval
                 </Link>
               ) : null}
               {overdueWithDays.length > 0 ? (
-                <span className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800">
+                <span className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800">
                   {overdueWithDays.length} overdue (3+ days)
                 </span>
               ) : null}
               {unassignedActiveCount > 0 ? (
                 <Link
                   href="/jobs?assignedToId=unassigned"
-                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
                 >
                   {unassignedActiveCount} unassigned
                 </Link>
@@ -825,7 +825,7 @@ export default async function DashboardPage({
               {pendingRequests > 0 ? (
                 <Link
                   href="/intake"
-                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
                 >
                   {pendingRequests} pending requests
                 </Link>
