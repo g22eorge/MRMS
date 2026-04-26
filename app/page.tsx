@@ -61,8 +61,8 @@ const features = [
   { title: "Notifications with delivery tracking", body: "Retry history and failure reasons." },
 ];
 
-const deviceBrands = ["Apple", "Microsoft", "Dell", "HP", "Lenovo", "APC"];
-const softwareBrands = ["Adobe", "Kaspersky", "AutoCAD", "ArchiCAD"];
+const deviceBrands = ["Apple", "Dell", "HP", "Lenovo", "APC"];
+const softwareBrands = ["Microsoft", "Adobe", "Kaspersky", "AutoCAD", "ArchiCAD"];
 
 const commitments = [
   { title: "Transparent pricing", body: "Written quote before work starts — no surprises." },
