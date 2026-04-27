@@ -1164,7 +1164,7 @@ export default async function DashboardPage({
     );
   }
 
-  if (user.role === "FRONT_DESK") {
+  if (user.role === "FRONT_DESK" || user.role === "INTAKE") {
     const selectedMonth = parseMonth(filters.month);
     const selectedYear = Number(filters.year) || new Date().getFullYear();
     const selectedRange = period === "year" ? yearRange(selectedYear) : monthRange(selectedMonth.year, selectedMonth.month);

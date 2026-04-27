@@ -28,7 +28,7 @@ function roleActions(role: Role, permissions: string[]): QuickAction[] {
       { href: "/clients",   label: "Clients" },
     ];
   }
-  if (role === "FRONT_DESK") {
+  if (role === "FRONT_DESK" || role === "INTAKE") {
     return [
       { href: "/jobs/new",  label: "New Job" },
       { href: "/intake",    label: "Requests" },

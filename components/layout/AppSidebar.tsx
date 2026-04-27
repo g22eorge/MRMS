@@ -60,6 +60,8 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
   FRONT_DESK: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile"],
+// Legacy alias - normalizeRole() converts INTAKE → FRONT_DESK, but keep for completeness.
+  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
@@ -68,6 +70,8 @@ const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
   TECHNICIAN_INTERNAL: ["work", "documents", "personal"],
   TECHNICIAN_EXTERNAL: ["work", "finance", "personal"],
   FRONT_DESK: ["work", "documents", "personal"],
+  // Legacy alias.
+  INTAKE: ["work", "documents", "personal"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
