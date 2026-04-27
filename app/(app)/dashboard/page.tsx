@@ -700,7 +700,7 @@ export default async function DashboardPage({
       }),
       prisma.job.count({ where: { receivedAt: { gte: todayStart } } }),
       prisma.job.count({ where: { completedAt: { gte: todayStart } } }),
-      prisma.repairRequest.count({ where: { requestStatus: "PENDING_FRONT_DESK" } }).catch(() => 0),
+      prisma.repairRequest.count({ where: { requestStatus: { in: ["PENDING_FRONT_DESK", "PENDING_INTAKE"] } } }).catch(() => 0),
       prisma.job.findMany({
         where: {
           status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },

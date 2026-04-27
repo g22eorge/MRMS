@@ -672,7 +672,13 @@ a:hover .nav-icon-premium {
   body:has(select:focus) .mobile-bottom-nav,
   body:has(input:focus) .mobile-quick-actions,
   body:has(textarea:focus) .mobile-quick-actions,
-  body:has(select:focus) .mobile-quick-actions {
+  body:has(select:focus) .mobile-quick-actions,
+  body:has(input:focus) .jobs-fab,
+  body:has(textarea:focus) .jobs-fab,
+  body:has(select:focus) .jobs-fab,
+  body:has(input:focus) .wa-float,
+  body:has(textarea:focus) .wa-float,
+  body:has(select:focus) .wa-float {
     opacity: 0;
     pointer-events: none;
     transform: translateY(10px);

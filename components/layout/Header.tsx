@@ -23,7 +23,7 @@ function roleDisplay(role: string) {
     case "TECHNICIAN_INTERNAL": return "Internal Tech";
     case "TECHNICIAN_EXTERNAL": return "External Tech";
     case "OPS": return "Operations";
-    case "FRONT_DESK": return "Intake";
+    case "FRONT_DESK": return "Front Desk";
     default: return role;
   }
 }

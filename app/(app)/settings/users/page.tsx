@@ -103,6 +103,14 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_view_job_progress",
     "can_search_jobs",
   ],
+  // Legacy alias.
+  INTAKE: [
+    "can_intake",
+    "can_manage_intake",
+    "can_generate_job_cards",
+    "can_view_job_progress",
+    "can_search_jobs",
+  ],
   TECHNICIAN_INTERNAL: [
     "can_run_internal_repairs",
     "can_search_jobs",
@@ -157,6 +165,16 @@ const roleCapabilities: Record<Role, string[]> = {
     "client_records",
     "download_docs",
   ],
+  // Legacy alias.
+  INTAKE: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "download_docs",
+  ],
   TECHNICIAN_INTERNAL: [
     "dashboard_view",
     "jobs_view",
@@ -194,7 +212,7 @@ const permissionOptions: PermissionOption[] = [
 function roleLabel(role: Role) {
   if (role === "TECHNICIAN_INTERNAL") return "Internal Technician";
   if (role === "TECHNICIAN_EXTERNAL") return "External Technician";
-  if (role === "FRONT_DESK") return "Intake Officer";
+  if (role === "FRONT_DESK" || role === "INTAKE") return "Front Desk";
   if (role === "OPS") return "Operations/Accounts";
   return "Admin";
 }

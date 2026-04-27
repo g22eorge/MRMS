@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function normalizeRole(role: Role): Role {
+  // Keep legacy role values working with new UI language.
+  return role === "INTAKE" ? "FRONT_DESK" : role;
+}
+
 export async function getSession() {
   return auth.api.getSession({
     headers: await headers(),
@@ -26,11 +31,13 @@ export async function requireRole(allowed: Role[]) {
     select: { role: true, isActive: true },
   });
 
-  if (!user?.isActive || !allowed.includes(user.role)) {
+  const role = user ? normalizeRole(user.role) : null;
+
+  if (!user?.isActive || !role || !allowed.includes(role)) {
     redirect("/dashboard");
   }
 
-  return { session, role: user.role };
+  return { session, role };
 }
 
 export async function getCurrentUserRole() {
@@ -64,7 +71,7 @@ export async function getCurrentUserRole() {
     user = row
       ? {
           id: row.id,
-          role: row.role,
+          role: normalizeRole(row.role),
           isActive: row.isActive,
           name: row.name,
           email: row.email,
@@ -113,10 +120,11 @@ export async function getCurrentUserRole() {
 
     user = baseUser
       ? {
-          ...baseUser,
-          phone,
-          permissions,
-        }
+        ...baseUser,
+        role: normalizeRole(baseUser.role),
+        phone,
+        permissions,
+      }
       : null;
   }
 

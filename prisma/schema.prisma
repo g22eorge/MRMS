@@ -110,6 +110,9 @@ enum Role {
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
   FRONT_DESK
+  // Legacy: kept for existing production rows.
+  // The app normalizes this to FRONT_DESK at runtime.
+  INTAKE
 }
 
 enum JobStatus {
@@ -491,6 +494,10 @@ enum OutboundMessageType {
   REPAIR_REQUEST_CONFIRMATION
   FRONT_DESK_APPROVED
   FRONT_DESK_REJECTED
+  // Legacy: kept for existing production rows.
+  // The app treats these as FRONT_DESK_*.
+  INTAKE_APPROVED
+  INTAKE_REJECTED
   JOB_CREATED
   JOB_COMPLETED
   JOB_STATUS_UPDATE
@@ -721,6 +728,8 @@ model RepairRequestSequence {
 }
 
 enum RepairRequestStatus {
+  // Legacy: kept for existing production rows.
+  PENDING_INTAKE
   PENDING_FRONT_DESK
   APPROVED
   REJECTED
