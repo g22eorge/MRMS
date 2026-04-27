@@ -1377,7 +1377,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-shell-bottom)+0.2rem)] z-30 px-3 lg:hidden">
         <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/96 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.14)] backdrop-blur-md">
-          {mobilePrimaryAction ? (
+          {(mobilePrimaryAction && statusActions.length === 0) ? (
             mobilePrimaryAction.type === "link" ? (
               <a
                 href={mobilePrimaryAction.href}
