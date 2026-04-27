@@ -106,12 +106,12 @@ export default async function HomePage() {
           </div>
 
           {/* Value prop */}
-          <p className="fade-in mb-5 max-w-2xl text-balance text-[15px] font-semibold leading-snug text-white/85" style={{ animationDelay: "18ms" }}>
+          <p className="fade-in mb-5 max-w-2xl text-balance text-[15px] font-semibold leading-snug text-white/85">
             Phone, laptop, tablet, and software repair in Kampala with written quotes, status updates, and a 30-day warranty.
           </p>
 
           {/* CTA row */}
-          <div className="fade-in mb-6 flex flex-wrap gap-2.5" style={{ animationDelay: "30ms" }}>
+          <div className="fade-in mb-6 flex flex-wrap gap-2.5">
             <Link
               href="/repair"
               className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-black shadow-[0_4px_18px_rgba(212,175,55,0.3)]"
@@ -133,7 +133,6 @@ export default async function HomePage() {
           <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
             <div
               className="fade-in relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_28px_56px_rgba(0,0,0,0.55)]"
-              style={{ animationDelay: "60ms" }}
             >
               <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
               <p className="relative text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">How it works</p>
@@ -158,7 +157,6 @@ export default async function HomePage() {
               <div
                 className="fade-in relative overflow-hidden rounded-2xl border border-[var(--accent)]/35 p-5 text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/55 hover:shadow-[0_0_32px_rgba(212,175,55,0.12)]"
                 style={{
-                  animationDelay: "120ms",
                   background: "linear-gradient(135deg, #1f1b0e 0%, #141006 40%, #0c0c0c 100%)",
                   boxShadow: "0 0 0 1px rgba(212,175,55,0.15), 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.12)",
                 }}
@@ -181,8 +179,7 @@ export default async function HomePage() {
               </div>
 
               <div
-                className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/14 hover:bg-[#222]"
-                style={{ animationDelay: "180ms" }}
+className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/14 hover:bg-[#222]"
               >
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">What you get</p>
                 <div className="mt-2.5 grid gap-2 text-sm">
@@ -201,7 +198,7 @@ export default async function HomePage() {
           </div>
 
           {/* Brands */}
-          <div className="fade-in my-5 flex-1" style={{ animationDelay: "220ms" }}>
+          <div className="fade-in my-5 flex-1">
             <div className="mb-3 flex items-center gap-3">
               <div className="h-px flex-1 bg-[var(--line)]" />
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">Devices we service</p>
@@ -228,7 +225,7 @@ export default async function HomePage() {
           </div>
 
           {/* Commitments */}
-          <div className="fade-in mt-5" style={{ animationDelay: "240ms" }}>
+          <div className="fade-in mt-5">
             <div className="mb-3 flex items-center gap-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">Our commitment to you</p>
               <div className="h-px flex-1 bg-[var(--line)]" />
