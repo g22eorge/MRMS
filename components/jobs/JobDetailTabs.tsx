@@ -512,49 +512,49 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       </div>
 
       <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
-        <div className="flex w-full flex-wrap gap-2">
-          {showJobCardAction ? (
-            <a
-              href={`/api/jobs/${job.id}/job-card`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Generate Job Card
-            </a>
-          ) : null}
-          {showQuotationAction ? (
-            <a
-              href={`/api/jobs/${job.id}/quotation`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Generate Quotation
-            </a>
-          ) : null}
-          {showInvoiceAction ? (
-            <a
-              href={`/api/jobs/${job.id}/invoice`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Generate Invoice
-            </a>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
+          <div className="flex flex-wrap gap-2">
+            {showJobCardAction ? (
+              <a
+                href={`/api/jobs/${job.id}/job-card`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-premium-secondary inline-flex shrink-0 items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Generate Job Card
+              </a>
+            ) : null}
+            {showQuotationAction ? (
+              <a
+                href={`/api/jobs/${job.id}/quotation`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-premium-secondary inline-flex shrink-0 items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Generate Quotation
+              </a>
+            ) : null}
+            {showInvoiceAction ? (
+              <a
+                href={`/api/jobs/${job.id}/invoice`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-premium-secondary inline-flex shrink-0 items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Generate Invoice
+              </a>
+            ) : null}
+          </div>
+          {documentHints.length > 0 ? (
+            <div className="mt-2 space-y-1">
+              {documentHints.map((hint) => (
+                <p key={hint} className="text-xs text-[var(--ink-muted)]">
+                  {hint}
+                </p>
+              ))}
+            </div>
           ) : null}
         </div>
-        {documentHints.length > 0 ? (
-          <div className="mt-2 space-y-1">
-            {documentHints.map((hint) => (
-              <p key={hint} className="text-xs text-[var(--ink-muted)]">
-                {hint}
-              </p>
-            ))}
-          </div>
-        ) : null}
-      </div>
 
       {active === "overview" ? (
         <div className={panelShellClass}>
