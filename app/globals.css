@@ -745,4 +745,22 @@ a:hover .nav-icon-premium {
     width: 48px;
     height: 48px;
   }
+
+  /* Fix iOS Safari landscape jump - force viewport to stay consistent */
+  html {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent iOS from expanding viewport on input focus */
+  :root {
+    height: 100%;
+  }
 }
