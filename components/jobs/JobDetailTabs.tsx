@@ -511,7 +511,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         ))}
       </div>
 
-      <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
+      <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 xl:block">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
           <div className="flex flex-wrap gap-2">
             {showJobCardAction ? (
