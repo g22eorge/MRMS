@@ -7,6 +7,7 @@ import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/
 import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { Role } from "@prisma/client";
 
 function deviceName(brand?: string | null, model?: string | null) {
   const b = brand && brand !== "Unknown" ? brand : "";
@@ -124,7 +125,15 @@ export default async function TechniciansPage({
   const where =
     user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
       ? { assignedToId: session.user.id }
-      : { repairPath: "EXTERNAL" as const };
+      : {
+          // Operations users need a board view across *all* technicians,
+          // not just externally-referred jobs.
+          assignedTo: {
+            is: {
+              role: { in: [Role.TECHNICIAN_EXTERNAL, Role.TECHNICIAN_INTERNAL] },
+            },
+          },
+        };
 
   const jobs = await prisma.job.findMany({
     where: {

@@ -26,7 +26,7 @@ export default async function EditJobPage({
     notFound();
   }
 
-  if (user.role === "TECHNICIAN_EXTERNAL" || user.role === "INTAKE") {
+  if (user.role === "TECHNICIAN_EXTERNAL" || user.role === "FRONT_DESK") {
     redirect(`/jobs/${id}`);
   }
 

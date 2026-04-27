@@ -106,10 +106,10 @@ model Verification {
 
 enum Role {
   ADMIN
+  OPS
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
-  OPS
-  INTAKE
+  FRONT_DESK
 }
 
 enum JobStatus {
@@ -489,8 +489,8 @@ enum OutboundMessageStatus {
 
 enum OutboundMessageType {
   REPAIR_REQUEST_CONFIRMATION
-  INTAKE_APPROVED
-  INTAKE_REJECTED
+  FRONT_DESK_APPROVED
+  FRONT_DESK_REJECTED
   JOB_CREATED
   JOB_COMPLETED
   JOB_STATUS_UPDATE
@@ -525,7 +525,14 @@ model OutboundMessage {
   type             OutboundMessageType
 
   to               String
+  // EMAIL only. (Legacy rows may store the subject on the first line of `body`.)
+  subject          String?
   body             String
+
+  // Optional template metadata for observability/debugging.
+  templateKey      String?
+  // JSON string of the variables used to render the template at enqueue time.
+  templateVars     String?
 
   provider         String?
   providerMessageId String?
@@ -558,6 +565,7 @@ model OutboundMessage {
   @@index([providerMessageId])
   @@index([repairRequestId])
   @@index([jobId])
+  @@index([templateKey])
 }
 
 model NotificationPreferences {
@@ -588,6 +596,7 @@ model CommunicationTemplate {
   label       String
   subject     String?
   body        String
+  // JSON array of placeholder keys (e.g. ["customerName","jobNumber"]) for UI hints.
   variables   String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -603,11 +612,14 @@ model CommunicationPolicy {
   dashboardEnabled Boolean   @default(true)
   whatsappEnabled  Boolean   @default(false)
   emailEnabled     Boolean   @default(false)
+  // Shared key; can map to channel-specific templates with the same key.
   templateKey      String?
   nudge1Hours      Int?
   nudge2Hours      Int?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@index([templateKey])
 }
 
 model DocumentBrandingSettings {
@@ -640,11 +652,11 @@ model DocumentBrandingSettings {
   updatedAt            DateTime @updatedAt
 }
 
-// REPAIR REQUEST INTAKE MODELS
+// REPAIR REQUEST FRONT_DESK MODELS
 model RepairRequest {
   id            String   @id @default(cuid())
   requestNumber String   @unique
-  requestStatus RepairRequestStatus @default(PENDING_INTAKE)
+  requestStatus RepairRequestStatus @default(PENDING_FRONT_DESK)
   handoverStatus RepairHandoverStatus @default(PENDING)
   
   // Customer info
@@ -709,7 +721,7 @@ model RepairRequestSequence {
 }
 
 enum RepairRequestStatus {
-  PENDING_INTAKE
+  PENDING_FRONT_DESK
   APPROVED
   REJECTED
   CONVERTED_TO_JOB

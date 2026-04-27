@@ -9,10 +9,12 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { useTheme } from "@/components/layout/ThemeProvider";
+import { can } from "@/lib/permissions";
 
 type HeaderProps = {
   userName: string;
   role: string;
+  permissions?: string[];
 };
 
 function roleDisplay(role: string) {
@@ -21,7 +23,7 @@ function roleDisplay(role: string) {
     case "TECHNICIAN_INTERNAL": return "Internal Tech";
     case "TECHNICIAN_EXTERNAL": return "External Tech";
     case "OPS": return "Operations";
-    case "INTAKE": return "Intake";
+    case "FRONT_DESK": return "Intake";
     default: return role;
   }
 }
@@ -33,7 +35,7 @@ function roleAccent(role: string): string {
     case "OPS": return "bg-[var(--accent)]/15 text-[#9A7A00] border border-[var(--accent)]/30";
     case "TECHNICIAN_INTERNAL": return "bg-blue-50 text-blue-700 border border-blue-200";
     case "TECHNICIAN_EXTERNAL": return "bg-purple-50 text-purple-700 border border-purple-200";
-    case "INTAKE": return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+    case "FRONT_DESK": return "bg-emerald-50 text-emerald-700 border border-emerald-200";
     default: return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
   }
 }
@@ -48,7 +50,7 @@ function initials(name: string) {
     .toUpperCase() || "?";
 }
 
-export function Header({ userName, role }: HeaderProps) {
+export function Header({ userName, role, permissions = [] }: HeaderProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -77,7 +79,7 @@ export function Header({ userName, role }: HeaderProps) {
         {/* Right section */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <NotificationBell />
+          {can.viewNotifications({ role: role as never, permissions }) ? <NotificationBell /> : null}
 
           {/* User pill */}
           <div className="hidden sm:flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel-strong)]/60 pl-1.5 pr-3 py-1">
@@ -152,8 +154,10 @@ function ThemeToggle() {
       onClick={toggle}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-pressed={isDark}
       className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition-all hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
     >
+      <span className="sr-only">{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
       {isDark ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/>

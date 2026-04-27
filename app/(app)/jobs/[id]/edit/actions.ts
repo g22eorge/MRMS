@@ -19,7 +19,7 @@ const editSchema = z.object({
 
 export async function updateJobEditAction(formData: FormData) {
   const { session: currentSession, user: currentUser } = await getCurrentUserRole();
-  if (currentUser.role === "TECHNICIAN_EXTERNAL" || currentUser.role === "INTAKE") {
+  if (currentUser.role === "TECHNICIAN_EXTERNAL" || currentUser.role === "FRONT_DESK") {
     return { error: "Forbidden" };
   }
 

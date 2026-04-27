@@ -14,7 +14,7 @@ import {
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  PENDING_INTAKE:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
+  PENDING_FRONT_DESK:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
   APPROVED:         { label: "Approved",       cls: "bg-[var(--accent)] text-white" },
   REJECTED:         { label: "Rejected",       cls: "bg-black text-white" },
   CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-black text-white" },
@@ -162,7 +162,7 @@ function RequestDrawer({
     });
   }
 
-  const isPending   = localStatus === "PENDING_INTAKE";
+  const isPending   = localStatus === "PENDING_FRONT_DESK";
   const isApproved  = localStatus === "APPROVED";
   const isConverted = localStatus === "CONVERTED_TO_JOB";
   const isRejected  = localStatus === "REJECTED";
@@ -423,7 +423,7 @@ function RowActions({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-      {canManageIntake && req.requestStatus === "PENDING_INTAKE" && (
+      {canManageIntake && req.requestStatus === "PENDING_FRONT_DESK" && (
         <>
           <button
             disabled={pending}
@@ -532,7 +532,7 @@ function MobileRequestActions({
     });
   }
 
-  const isPendingReq = req.requestStatus === "PENDING_INTAKE";
+  const isPendingReq = req.requestStatus === "PENDING_FRONT_DESK";
   const isApprovedReq = req.requestStatus === "APPROVED";
   const isConvertedReq = req.requestStatus === "CONVERTED_TO_JOB";
 
@@ -777,13 +777,13 @@ export function IntakeClient({
 
   const tabs = [
     { key: "ALL",              label: "All" },
-    { key: "PENDING_INTAKE",   label: "Pending" },
+    { key: "PENDING_FRONT_DESK",   label: "Pending" },
     { key: "APPROVED",         label: "Approved" },
     { key: "REJECTED",         label: "Rejected" },
     { key: "CONVERTED_TO_JOB", label: "Converted" },
   ];
 
-  const pendingCount = counts["PENDING_INTAKE"] ?? 0;
+  const pendingCount = counts["PENDING_FRONT_DESK"] ?? 0;
   const brief = filter !== "ALL"
     ? `Showing ${STATUS_META[filter]?.label ?? filter} requests. Tap a card or row to open the full detail and take action.`
     : pendingCount > 0

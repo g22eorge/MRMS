@@ -1,3 +1,5 @@
+import { renderCommunicationTemplate } from "@/lib/notifications/templates";
+
 interface WhatsAppConfig {
   businessNumber: string;
   provider: string;
@@ -89,7 +91,17 @@ export async function sendRepairRequestConfirmation(
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  const message = `Hello ${customerName},\n\nThank you for submitting your repair request (${requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
+  const fallback = `Hello ${customerName},\n\nThank you for submitting your repair request (${requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
+
+  const { body: message } = await renderCommunicationTemplate({
+    key: "REPAIR_REQUEST_CONFIRMATION",
+    channel: "WHATSAPP",
+    variables: {
+      customerName,
+      requestNumber,
+    },
+    fallback: { body: fallback },
+  });
 
   return sendCustomWhatsAppMessage(phone, message);
 }
@@ -105,13 +117,22 @@ export async function sendIntakeApprovalNotification(
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  let message = `Hello ${customerName},\n\nYour repair request (${requestNumber}) has been APPROVED.\n\n`;
-  
+  let fallback = `Hello ${customerName},\n\nYour repair request (${requestNumber}) has been APPROVED.\n\n`;
   if (preferredDate) {
-    message += `Your preferred drop-off date is: ${preferredDate}\n\n`;
+    fallback += `Your preferred drop-off date is: ${preferredDate}\n\n`;
   }
-  
-  message += `Please bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
+  fallback += `Please bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
+
+  const { body: message } = await renderCommunicationTemplate({
+    key: "FRONT_DESK_APPROVED",
+    channel: "WHATSAPP",
+    variables: {
+      customerName,
+      requestNumber,
+      preferredDropoffDateLine: preferredDate ? `Your preferred drop-off date is: ${preferredDate}` : "",
+    },
+    fallback: { body: fallback },
+  });
 
   return sendCustomWhatsAppMessage(phone, message);
 }
@@ -126,7 +147,17 @@ export async function sendIntakeRejectionNotification(
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  const message = `Hello ${customerName},\n\nUnfortunately, we are unable to process your repair request (${requestNumber}) at this time.\n\nPlease contact us for more information.\n\nBest regards,\nEagle Info Solutions`;
+  const fallback = `Hello ${customerName},\n\nUnfortunately, we are unable to process your repair request (${requestNumber}) at this time.\n\nPlease contact us for more information.\n\nBest regards,\nEagle Info Solutions`;
+
+  const { body: message } = await renderCommunicationTemplate({
+    key: "FRONT_DESK_REJECTED",
+    channel: "WHATSAPP",
+    variables: {
+      customerName,
+      requestNumber,
+    },
+    fallback: { body: fallback },
+  });
 
   return sendCustomWhatsAppMessage(phone, message);
 }
@@ -141,7 +172,17 @@ export async function sendJobCreatedNotification(
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  const message = `Hello ${customerName},\n\nYour device has been registered as Job #${jobNumber}.\n\nWe will update you as the repair progresses.\n\nBest regards,\nEagle Info Solutions`;
+  const fallback = `Hello ${customerName},\n\nYour device has been registered as Job #${jobNumber}.\n\nWe will update you as the repair progresses.\n\nBest regards,\nEagle Info Solutions`;
+
+  const { body: message } = await renderCommunicationTemplate({
+    key: "JOB_CREATED",
+    channel: "WHATSAPP",
+    variables: {
+      customerName,
+      jobNumber,
+    },
+    fallback: { body: fallback },
+  });
 
   return sendCustomWhatsAppMessage(phone, message);
 }
@@ -156,7 +197,17 @@ export async function sendJobCompletionNotification(
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  const message = `Hello ${customerName},\n\nGreat news! Your device (Job #${jobNumber}) is ready for pickup.\n\nPlease visit our shop to collect your device.\n\nBest regards,\nEagle Info Solutions`;
+  const fallback = `Hello ${customerName},\n\nGreat news! Your device (Job #${jobNumber}) is ready for pickup.\n\nPlease visit our shop to collect your device.\n\nBest regards,\nEagle Info Solutions`;
+
+  const { body: message } = await renderCommunicationTemplate({
+    key: "JOB_COMPLETED",
+    channel: "WHATSAPP",
+    variables: {
+      customerName,
+      jobNumber,
+    },
+    fallback: { body: fallback },
+  });
 
   return sendCustomWhatsAppMessage(phone, message);
 }

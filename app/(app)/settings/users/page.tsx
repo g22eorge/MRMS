@@ -63,7 +63,7 @@ type PermissionOption = {
 
 const roleOptions: Array<{ value: Role; label: string; description: string }> = [
   { value: Role.ADMIN, label: "Admin", description: "Full platform control including user management and financial approvals." },
-  { value: Role.INTAKE, label: "Intake Officer", description: "Handles intake conversion, customer details, and handover documents." },
+  { value: Role.FRONT_DESK, label: "Front Desk", description: "Handles front desk intake, customer details, and handover documents." },
   { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
   { value: Role.TECHNICIAN_EXTERNAL, label: "External Technician", description: "External workflow access without client identity or billing history." },
   { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
@@ -96,7 +96,7 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_view_accounts_summary",
     "can_approve_invoices",
   ],
-  INTAKE: [
+  FRONT_DESK: [
     "can_intake",
     "can_manage_intake",
     "can_generate_job_cards",
@@ -148,7 +148,7 @@ const roleCapabilities: Record<Role, string[]> = {
     "approval_cost",
     "download_docs",
   ],
-  INTAKE: [
+  FRONT_DESK: [
     "dashboard_view",
     "jobs_view",
     "jobs_create",
@@ -194,7 +194,7 @@ const permissionOptions: PermissionOption[] = [
 function roleLabel(role: Role) {
   if (role === "TECHNICIAN_INTERNAL") return "Internal Technician";
   if (role === "TECHNICIAN_EXTERNAL") return "External Technician";
-  if (role === "INTAKE") return "Intake Officer";
+  if (role === "FRONT_DESK") return "Intake Officer";
   if (role === "OPS") return "Operations/Accounts";
   return "Admin";
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { getUserPreferences } from "@/lib/notifications";
 import { getCurrentUserRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 import { NotificationPrefsForm } from "@/components/settings/NotificationPrefsForm";
 
@@ -9,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function NotificationSettingsPage() {
   const { user } = await getCurrentUserRole();
+  if (!can.viewNotifications(user)) {
+    redirect("/dashboard");
+  }
   const prefs = await getUserPreferences(user.id);
 
   return (

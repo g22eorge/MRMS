@@ -1,26 +1,504 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { z } from "zod";
+import { JobStatus, OutboundMessageChannel, OutboundMessageType, Prisma } from "@prisma/client";
 
 import { getCurrentUserRole } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { extractTemplateVariables } from "@/lib/notifications/templates";
+import { revalidatePath } from "next/cache";
 
-export default async function NotificationTemplatesPage() {
+function supportsCommsTemplates() {
+  return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
+}
+
+function safeJsonArray(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
+}
+
+const templateSchema = z.object({
+  id: z.string().optional(),
+  key: z.string().min(2).max(80),
+  channel: z.nativeEnum(OutboundMessageChannel),
+  label: z.string().min(2).max(120),
+  subject: z.string().max(160).optional(),
+  body: z.string().min(8).max(4000),
+  isActive: z.enum(["on"]).optional(),
+});
+
+const policySchema = z.object({
+  status: z.nativeEnum(JobStatus),
+  dashboardEnabled: z.enum(["on"]).optional(),
+  whatsappEnabled: z.enum(["on"]).optional(),
+  emailEnabled: z.enum(["on"]).optional(),
+  templateKey: z.string().max(80).optional(),
+  nudge1Hours: z.string().optional(),
+  nudge2Hours: z.string().optional(),
+});
+
+export default async function NotificationTemplatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
   const { user } = await getCurrentUserRole();
   if (!["ADMIN", "OPS"].includes(user.role)) {
     redirect("/dashboard");
   }
 
+  const params = await searchParams;
+  const saved = params.saved ? String(params.saved) : "";
+  const error = params.error ? String(params.error) : "";
+
+  if (!supportsCommsTemplates()) {
+    return (
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Settings</p>
+        <h1 className="mt-1 text-lg font-semibold text-[var(--ink)]">Communication Templates</h1>
+        <p className="mt-2 text-sm text-[var(--ink-muted)]">
+          Templates are not available in this runtime (older database/client). Deploy the latest schema to enable them.
+        </p>
+      </section>
+    );
+  }
+
+  async function createTemplate(formData: FormData) {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
+
+    const parsed = templateSchema.safeParse({
+      key: String(formData.get("key") ?? "").trim(),
+      channel: String(formData.get("channel") ?? "WHATSAPP"),
+      label: String(formData.get("label") ?? "").trim(),
+      subject: String(formData.get("subject") ?? "").trim(),
+      body: String(formData.get("body") ?? "").trim(),
+      isActive: formData.get("isActive") ? "on" : undefined,
+    });
+
+    if (!parsed.success) {
+      redirect("/settings/notifications/templates?error=Invalid+template+input");
+    }
+
+    const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
+
+    try {
+      await prisma.communicationTemplate.create({
+        data: {
+          key: parsed.data.key,
+          channel: parsed.data.channel,
+          label: parsed.data.label,
+          subject: parsed.data.subject ? parsed.data.subject : null,
+          body: parsed.data.body,
+          variables: vars.length ? JSON.stringify(vars) : null,
+          isActive: Boolean(parsed.data.isActive),
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("Unique constraint") || msg.includes("P2002")) {
+        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+      }
+      redirect("/settings/notifications/templates?error=Failed+to+create+template");
+    }
+
+    revalidatePath("/settings/notifications/templates");
+    redirect("/settings/notifications/templates?saved=template");
+  }
+
+  async function updateTemplate(formData: FormData) {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
+
+    const parsed = templateSchema.safeParse({
+      id: String(formData.get("id") ?? "").trim(),
+      key: String(formData.get("key") ?? "").trim(),
+      channel: String(formData.get("channel") ?? "WHATSAPP"),
+      label: String(formData.get("label") ?? "").trim(),
+      subject: String(formData.get("subject") ?? "").trim(),
+      body: String(formData.get("body") ?? "").trim(),
+      isActive: formData.get("isActive") ? "on" : undefined,
+    });
+
+    if (!parsed.success || !parsed.data.id) {
+      redirect("/settings/notifications/templates?error=Invalid+template+update");
+    }
+
+    const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
+
+    try {
+      await prisma.communicationTemplate.update({
+        where: { id: parsed.data.id },
+        data: {
+          key: parsed.data.key,
+          channel: parsed.data.channel,
+          label: parsed.data.label,
+          subject: parsed.data.subject ? parsed.data.subject : null,
+          body: parsed.data.body,
+          variables: vars.length ? JSON.stringify(vars) : null,
+          isActive: Boolean(parsed.data.isActive),
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("Unique constraint") || msg.includes("P2002")) {
+        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+      }
+      redirect("/settings/notifications/templates?error=Failed+to+update+template");
+    }
+
+    revalidatePath("/settings/notifications/templates");
+    redirect("/settings/notifications/templates?saved=template");
+  }
+
+  async function deleteTemplate(formData: FormData) {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") redirect("/dashboard");
+    const id = String(formData.get("id") ?? "").trim();
+    if (!id) redirect("/settings/notifications/templates?error=Missing+template+id");
+
+    try {
+      await prisma.communicationTemplate.delete({ where: { id } });
+    } catch {
+      redirect("/settings/notifications/templates?error=Failed+to+delete+template");
+    }
+    revalidatePath("/settings/notifications/templates");
+    redirect("/settings/notifications/templates?saved=deleted");
+  }
+
+  async function upsertPolicy(formData: FormData) {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
+
+    const parsed = policySchema.safeParse({
+      status: String(formData.get("status") ?? "").trim(),
+      dashboardEnabled: formData.get("dashboardEnabled") ? "on" : undefined,
+      whatsappEnabled: formData.get("whatsappEnabled") ? "on" : undefined,
+      emailEnabled: formData.get("emailEnabled") ? "on" : undefined,
+      templateKey: String(formData.get("templateKey") ?? "").trim(),
+      nudge1Hours: String(formData.get("nudge1Hours") ?? "").trim(),
+      nudge2Hours: String(formData.get("nudge2Hours") ?? "").trim(),
+    });
+
+    if (!parsed.success) {
+      redirect("/settings/notifications/templates?error=Invalid+policy+input");
+    }
+
+    const toIntOrNull = (value: string) => {
+      const n = Number(value);
+      if (!value) return null;
+      return Number.isFinite(n) ? Math.max(0, Math.min(720, Math.floor(n))) : null;
+    };
+
+    await prisma.communicationPolicy.upsert({
+      where: { status: parsed.data.status },
+      create: {
+        status: parsed.data.status,
+        dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
+        whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
+        emailEnabled: Boolean(parsed.data.emailEnabled),
+        templateKey: parsed.data.templateKey ? parsed.data.templateKey : null,
+        nudge1Hours: toIntOrNull(parsed.data.nudge1Hours ?? ""),
+        nudge2Hours: toIntOrNull(parsed.data.nudge2Hours ?? ""),
+      },
+      update: {
+        dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
+        whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
+        emailEnabled: Boolean(parsed.data.emailEnabled),
+        templateKey: parsed.data.templateKey ? parsed.data.templateKey : null,
+        nudge1Hours: toIntOrNull(parsed.data.nudge1Hours ?? ""),
+        nudge2Hours: toIntOrNull(parsed.data.nudge2Hours ?? ""),
+      },
+    });
+
+    revalidatePath("/settings/notifications/templates");
+    redirect("/settings/notifications/templates?saved=policy");
+  }
+
+  let templates: Array<{
+    id: string;
+    key: string;
+    channel: OutboundMessageChannel;
+    label: string;
+    subject: string | null;
+    body: string;
+    variables: string | null;
+    isActive: boolean;
+    updatedAt: Date;
+  }> = [];
+
+  let policies: Array<{
+    status: JobStatus;
+    dashboardEnabled: boolean;
+    whatsappEnabled: boolean;
+    emailEnabled: boolean;
+    templateKey: string | null;
+    nudge1Hours: number | null;
+    nudge2Hours: number | null;
+  }> = [];
+
+  try {
+    templates = await prisma.communicationTemplate.findMany({
+      orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
+      select: {
+        id: true,
+        key: true,
+        channel: true,
+        label: true,
+        subject: true,
+        body: true,
+        variables: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
+  } catch {
+    templates = [];
+  }
+
+  try {
+    policies = await prisma.communicationPolicy.findMany({
+      select: {
+        status: true,
+        dashboardEnabled: true,
+        whatsappEnabled: true,
+        emailEnabled: true,
+        templateKey: true,
+        nudge1Hours: true,
+        nudge2Hours: true,
+      },
+    });
+  } catch {
+    policies = [];
+  }
+
+  const policyByStatus = new Map<JobStatus, (typeof policies)[number]>(policies.map((p) => [p.status, p]));
+  const knownKeys = [...new Set(Object.values(OutboundMessageType).map(String))].sort();
+  const templateKeys = [...new Set(templates.map((t) => t.key))].sort();
+
   return (
-    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Settings</p>
-      <h1 className="mt-1 text-lg font-semibold text-[var(--ink)]">Communication Templates</h1>
-      <p className="mt-1 text-sm text-[var(--ink-muted)]">
-        Manage reusable WhatsApp and email message templates for client updates.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/settings/notifications" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
-          Open Notification Center
-        </Link>
-      </div>
-    </section>
+    <div className="space-y-4">
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Settings</p>
+        <h1 className="mt-1 text-lg font-semibold text-[var(--ink)]">Comms Templates</h1>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          Manage reusable WhatsApp and email message templates. Use placeholders like <code>{"{customerName}"}</code> or <code>{"{jobNumber}"}</code>.
+        </p>
+        {saved ? <p className="mt-3 text-sm text-[var(--accent)]">Saved: {saved}</p> : null}
+        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/settings/notifications" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
+            Open Notification Center
+          </Link>
+        </div>
+      </section>
+
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create Template</p>
+        <form action={createTemplate} className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+          <div className="xl:col-span-2">
+            <input
+              name="key"
+              required
+              placeholder="Template key (e.g. JOB_CREATED)"
+              list="template-keys"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            />
+            <datalist id="template-keys">
+              {knownKeys.map((k) => <option key={k} value={k} />)}
+            </datalist>
+          </div>
+          <select name="channel" defaultValue="WHATSAPP" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="EMAIL">Email</option>
+          </select>
+          <input
+            name="label"
+            required
+            placeholder="Label"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+          />
+          <input
+            name="subject"
+            placeholder="Email subject (optional)"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+          />
+          <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">
+            <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4 rounded border border-[var(--line)]" />
+            Active
+          </label>
+          <textarea
+            name="body"
+            required
+            placeholder="Message body. Use placeholders like {customerName}"
+            className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+          />
+          <button className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-2">Create</button>
+        </form>
+      </section>
+
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Templates</p>
+        {templates.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--ink-muted)]">No templates yet.</p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {templates.map((t) => {
+              const vars = safeJsonArray(t.variables);
+              return (
+                <details key={t.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3" open={false}>
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${t.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}>
+                        {t.isActive ? "Active" : "Inactive"}
+                      </span>
+                      <span className="font-mono text-[11px] text-[var(--ink)]">{t.key}</span>
+                      <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] text-[var(--ink-muted)]">
+                        {t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}
+                      </span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">{t.label}</span>
+                      <span className="ml-auto text-[11px] text-[var(--ink-muted)]">Updated {t.updatedAt.toLocaleString()}</span>
+                    </div>
+                  </summary>
+
+                  {vars.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {vars.map((v) => (
+                        <span key={v} className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] font-mono text-[var(--ink-muted)]">
+                          {`{${v}}`}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] text-[var(--ink-muted)]">No variables detected.</p>
+                  )}
+
+                  <form action={updateTemplate} className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+                    <input type="hidden" name="id" value={t.id} />
+                    <div className="xl:col-span-2">
+                      <input
+                        name="key"
+                        required
+                        defaultValue={t.key}
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                      />
+                    </div>
+                    <select name="channel" defaultValue={t.channel} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+                      <option value="WHATSAPP">WhatsApp</option>
+                      <option value="EMAIL">Email</option>
+                    </select>
+                    <input
+                      name="label"
+                      required
+                      defaultValue={t.label}
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                    />
+                    <input
+                      name="subject"
+                      defaultValue={t.subject ?? ""}
+                      placeholder="Email subject"
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+                    />
+                    <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink-muted)]">
+                      <input type="checkbox" name="isActive" defaultChecked={t.isActive} className="h-4 w-4 rounded border border-[var(--line)]" />
+                      Active
+                    </label>
+                    <textarea
+                      name="body"
+                      required
+                      defaultValue={t.body}
+                      className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+                    />
+                    <div className="flex flex-wrap gap-2 xl:col-span-6">
+                      <button className="btn-premium rounded-lg px-3 py-2 text-sm text-white">Save</button>
+                    </div>
+                  </form>
+
+                  {user.role === "ADMIN" ? (
+                    <form action={deleteTemplate} className="mt-2">
+                      <input type="hidden" name="id" value={t.id} />
+                      <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Delete Template</button>
+                    </form>
+                  ) : null}
+                </details>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Status Policy</p>
+        <p className="mt-1 text-xs text-[var(--ink-muted)]">
+          Controls which channels are enabled per job status and which template key is used. Nudges are in hours.
+        </p>
+
+        <div className="mt-3 space-y-2">
+          {Object.values(JobStatus).map((status) => {
+            const p = policyByStatus.get(status) ?? {
+              status,
+              dashboardEnabled: true,
+              whatsappEnabled: false,
+              emailEnabled: false,
+              templateKey: null,
+              nudge1Hours: null,
+              nudge2Hours: null,
+            };
+
+            return (
+              <form key={status} action={upsertPolicy} className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-[1fr_auto_auto_auto_1fr_110px_110px_auto]">
+                <input type="hidden" name="status" value={status} />
+                <div>
+                  <p className="text-sm font-semibold text-[var(--ink)]">{status.replaceAll("_", " ")}</p>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Template key applies to both channels.</p>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
+                  <input type="checkbox" name="dashboardEnabled" defaultChecked={p.dashboardEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
+                  Dashboard
+                </label>
+                <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
+                  <input type="checkbox" name="whatsappEnabled" defaultChecked={p.whatsappEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
+                  WhatsApp
+                </label>
+                <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
+                  <input type="checkbox" name="emailEnabled" defaultChecked={p.emailEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
+                  Email
+                </label>
+                <select name="templateKey" defaultValue={p.templateKey ?? ""} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
+                  <option value="">(no template)</option>
+                  {templateKeys.map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+                <input
+                  name="nudge1Hours"
+                  defaultValue={p.nudge1Hours ?? ""}
+                  placeholder="Nudge 1"
+                  inputMode="numeric"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+                />
+                <input
+                  name="nudge2Hours"
+                  defaultValue={p.nudge2Hours ?? ""}
+                  placeholder="Nudge 2"
+                  inputMode="numeric"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+                />
+                <button className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save</button>
+              </form>
+            );
+          })}
+        </div>
+      </section>
+    </div>
   );
 }

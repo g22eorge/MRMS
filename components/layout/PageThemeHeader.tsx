@@ -17,7 +17,7 @@ function pageMeta(pathname: string, role: Role) {
     if (role === "OPS") {
       return { title: "Dashboard", description: "Manage referrals, billing visibility, client approvals, and handoff into active repair." };
     }
-    if (role === "INTAKE") {
+    if (role === "FRONT_DESK") {
       return { title: "Dashboard", description: "Capture new intake jobs and respond to client updates with read-only progress visibility." };
     }
     if (role === "ADMIN") {
@@ -71,7 +71,7 @@ function roleTag(role: Role) {
   if (role === "TECHNICIAN_INTERNAL") return "Internal Tech";
   if (role === "TECHNICIAN_EXTERNAL") return "External Tech";
   if (role === "OPS") return "Operations";
-  if (role === "INTAKE") return "Intake";
+  if (role === "FRONT_DESK") return "Front Desk";
   return "Operations";
 }
 
@@ -81,7 +81,7 @@ function roleTagStyle(role: Role) {
   if (role === "OPS") return "bg-[var(--accent)]/15 text-[#9A7A00] border border-[var(--accent)]/30";
   if (role === "TECHNICIAN_INTERNAL") return "bg-blue-50 text-blue-700 border border-blue-200";
   if (role === "TECHNICIAN_EXTERNAL") return "bg-purple-50 text-purple-700 border border-purple-200";
-  if (role === "INTAKE") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  if (role === "FRONT_DESK") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
 }
 

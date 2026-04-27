@@ -57,6 +57,13 @@ function hoursSince(value: Date | string) {
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60)));
 }
 
+function previewText(value: string | null | undefined, max = 240) {
+  if (!value) return "-";
+  const trimmed = value.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max).trimEnd()}…`;
+}
+
 function statusWatchLabel(status: JobStatus, ageHours: number) {
   if (status === "AWAITING_APPROVAL" && ageHours >= 24) return "Client response delayed";
   if (status === "DIAGNOSING" && ageHours >= 12) return "Diagnosis aging";
@@ -188,26 +195,15 @@ type Props = {
 export function JobDetailTabs({ role, permissions = [], job, technicians, deviceHistory = [] }: Props) {
   const router = useRouter();
   const [active, setActive] = useState<(typeof tabs)[number]>("overview");
-  const [savedSection, setSavedSection] = useState<
-    | "assignment"
-    | "oneTimeExternal"
-    | "context"
-    | "communication"
-    | "diagnosis"
-    | "repair"
-    | "financials"
-    | "status"
-    | null
-  >(null);
-  const [isAssignPending, startAssignTransition] = useTransition();
-  const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
-  const [isContextPending, startContextTransition] = useTransition();
-  const [isCommunicationPending, startCommunicationTransition] = useTransition();
+  const [savedSection, setSavedSection] = useState<string | null>(null);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [showOneTimeForm, setShowOneTimeForm] = useState(false);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
+  const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
   const [isRepairPending, startRepairTransition] = useTransition();
   const [isFinancialPending, startFinancialTransition] = useTransition();
+  const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!savedSection) return;
@@ -228,12 +224,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
   const canAssignJobs = can.assignJobs(permissionUser);
   const canUpdateClientCommunication = can.approveWork(permissionUser);
-  const isIntake = role === "INTAKE";
+  const isIntake = role === "FRONT_DESK";
 
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
     if (tab === "financials") return canViewFinancials;
-    if (tab === "timeline") return ["ADMIN", "OPS", "INTAKE"].includes(role) || can.viewClientInfo(permissionUser);
+    if (tab === "timeline") return ["ADMIN", "OPS", "FRONT_DESK"].includes(role) || can.viewClientInfo(permissionUser);
     if ((tab === "diagnosis" || tab === "repair") && isIntake) return false;
     return true;
   });
@@ -353,9 +349,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const showOneTimeExternalPanel =
     canManageOneTimeExternal &&
     (
-      job.repairPath === "EXTERNAL" ||
-      Boolean(oneTimeExternal) ||
-      (["IN_EXTERNAL_REPAIR"] as JobStatus[]).includes(job.status)
+      showOneTimeForm ||
+      Boolean(oneTimeExternal)
     );
   const oneTimeStatusOptions: Array<{ value: JobStatus; label: string }> = [
     { value: "IN_EXTERNAL_REPAIR", label: "External Repair" },
@@ -370,7 +365,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   }
 
   const rolePriorityBoost = (key: string) => {
-    if (role === "INTAKE") {
+    if (role === "FRONT_DESK") {
       if (key === "clientDecision") return 4;
       if (key === "lastContact") return 3;
       if (key === "nextAction") return 2;
@@ -610,63 +605,54 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           </div>
 
           <div className={softSectionClass}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 1 - Intake</p>
-            <p className="font-medium">Issue</p>
-            <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{job.issueDescription}</p>
-          </div>
-
-          {isSoftwareJob && role !== "TECHNICIAN_EXTERNAL" ? (
-            <div className={`mt-4 ${softSectionClass}`}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Software Service</p>
-              <p className="text-sm text-[var(--ink-muted)]">
-                Type: <span className="font-medium text-[var(--ink)]">{prettyEnum(job.serviceType ?? "SOFTWARE")}</span>
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(
-                  [
-                    job.softwareOsInstall ? "OS install" : null,
-                    job.softwareDriversUpdates ? "Drivers + updates" : null,
-                    job.softwareDataBackupRestore ? "Backup/restore" : null,
-                    job.softwareAccountSetup ? "Account setup" : null,
-                    job.softwarePerformanceTune ? "Performance tune" : null,
-                    job.softwareThirdPartyApps ? "Third-party apps (client-licensed)" : null,
-                  ] as const
-                )
-                  .filter(Boolean)
-                  .map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-xs font-medium text-[var(--ink)]"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                {!job.softwareOsInstall &&
-                !job.softwareDriversUpdates &&
-                !job.softwareDataBackupRestore &&
-                !job.softwareAccountSetup &&
-                !job.softwarePerformanceTune &&
-                !job.softwareThirdPartyApps ? (
-                  <span className="text-xs text-[var(--ink-muted)]">No software scope selected.</span>
-                ) : null}
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Intake</p>
+                <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{previewText(job.issueDescription, 260)}</p>
               </div>
-
-              <p className="mt-2 text-sm text-[var(--ink-muted)]">
-                License attestation: {job.softwareLicenseAttested ? "Confirmed" : "Not recorded"}
-              </p>
-              {job.softwareInstallerSource ? (
-                <p className="text-sm text-[var(--ink-muted)]">
-                  Installer source: {prettyEnum(job.softwareInstallerSource)}
-                  {job.softwareInstallerSourceNote ? ` (${job.softwareInstallerSourceNote})` : ""}
-                </p>
-              ) : null}
-              {job.softwareRequestedNotes ? (
-                <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
-                  {job.softwareRequestedNotes}
-                </p>
+              {role !== "TECHNICIAN_EXTERNAL" ? (
+                <button type="button" onClick={() => router.push(`/jobs/${job.id}/edit`)} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                  Edit Job →
+                </button>
               ) : null}
             </div>
-          ) : null}
+          </div>
+
+          <div className={`mt-4 ${softSectionClass}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Diagnosis Snapshot</p>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                  Assigned: <span className="font-medium text-[var(--ink)]">{job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned"}</span>
+                </p>
+                <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
+              </div>
+              <button type="button" onClick={() => setActive("diagnosis")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                Open Diagnosis →
+              </button>
+            </div>
+            {job.diagnosisNotes ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal: {previewText(job.diagnosisNotes, 180)}</p>
+            ) : null}
+            {job.externalDiagnosis ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">External: {previewText(job.externalDiagnosis, 180)}</p>
+            ) : null}
+            {job.partsNeeded ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Parts: {previewText(job.partsNeeded, 180)}</p>
+            ) : null}
+          </div>
+
+          <div className={`mt-4 ${softSectionClass}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Client Approval & Workflow</p>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">Decision, recommendation, workflow reason, ETA, and notes.</p>
+              </div>
+              <button type="button" onClick={() => setActive("timeline")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                Open Timeline →
+              </button>
+            </div>
+          </div>
 
           {deviceHistory.length > 0 ? (
             <div className={`mt-4 ${softSectionClass}`}>
@@ -695,74 +681,186 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               </div>
             </div>
           ) : null}
+        </div>
+      ) : null}
 
-          <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 2 - Technician Diagnosis</p>
-            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
-              Assigned: {job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned"}
-            </p>
-            <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
-            {job.diagnosisNotes ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
-            ) : null}
-            {job.externalDiagnosis ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">External diagnosis: {job.externalDiagnosis}</p>
-            ) : null}
-            {job.partsNeeded ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Parts needed: {job.partsNeeded}</p>
-            ) : null}
+      {active === "client" && role !== "TECHNICIAN_EXTERNAL" ? (
+        <div className={panelShellClass}>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client Snapshot</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Name</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.fullName ?? "-"}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Phone</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.phone ?? "-"}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.email ?? "-"}</p>
+            </div>
           </div>
+        </div>
+      ) : null}
 
-          {canAssignJobs && technicians.length > 0 && !oneTimeExternal ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startAssignTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Assignment updated");
-                  setSavedSection("assignment");
-                  router.refresh();
-                });
-              }}
-              className={`mt-4 flex flex-wrap items-end gap-2 ${softSectionClass} [&_*]:min-w-0`}
-            >
-              <div className="min-w-0 flex-1 sm:min-w-[220px]">
-                <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-                  Assigned Technician
-                </label>
-                <select
-                  id="assignedToId"
-                  name="assignedToId"
-                  defaultValue={job.assignedTo?.id ?? ""}
-                  className={fieldClass}
-                >
-                  <option value="">Unassigned</option>
-                  {technicians
-                    .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
-                    .map((technician) => (
-                    <option key={technician.id} value={technician.id}>
-                      {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
-                    </option>
-                  ))}
-                </select>
+      {active === "diagnosis" ? (
+        <div className="space-y-4">
+          <form
+            action={(formData) => {
+              formData.set("jobId", job.id);
+              formData.set("expectedUpdatedAt", expectedUpdatedAt);
+              startDiagnosisTransition(async () => {
+                const res = await updateJobAction(formData);
+                if (res.error) {
+                  toast.error(res.error);
+                  return;
+                }
+                toast.success("Diagnosis updated");
+                setSavedSection("diagnosis");
+                router.refresh();
+              });
+            }}
+            className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
+          >
+            {canAssignJobs && technicians.length > 0 ? (
+              <div className={softSectionClass}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Assignment</p>
+                    <p className="mt-1 text-xs text-[var(--ink-muted)]">Choose the technician responsible for this job.</p>
+                  </div>
+                </div>
+                {showOneTimeForm || oneTimeExternal ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="min-w-0 sm:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                          Assignment
+                        </label>
+                        {!oneTimeExternal && (
+                          <button
+                            type="button"
+                            onClick={() => setShowOneTimeForm(false)}
+                            className="text-[10px] text-[var(--accent)] underline"
+                          >
+                            ← Back to list
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        id="assignedToId"
+                        name="assignedToId"
+                        value="__one_time__"
+                        className={fieldClass}
+                        onChange={(e) => {
+                          if (e.target.value === "__one_time__") {
+                            setShowOneTimeForm(true);
+                          } else {
+                            setShowOneTimeForm(false);
+                          }
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {technicians
+                          .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
+                          .map((technician) => (
+                            <option key={technician.id} value={technician.id}>
+                              {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
+                            </option>
+                          ))}
+                        <option value="__one_time__">One-Time External...</option>
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                        <span className="font-medium">{derivedRepairPath}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                        Assigned Technician
+                      </label>
+                      <select
+                        id="assignedToId"
+                        name="assignedToId"
+                        defaultValue={job.assignedTo?.id ?? ""}
+                        className={fieldClass}
+                        onChange={(e) => {
+                          if (e.target.value === "__one_time__") {
+                            setShowOneTimeForm(true);
+                          }
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {technicians
+                          .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
+                          .map((technician) => (
+                            <option key={technician.id} value={technician.id}>
+                              {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
+                            </option>
+                          ))}
+                        <option value="__one_time__">One-Time External...</option>
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                        <span className="font-medium">{derivedRepairPath}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-                <button
-                  type="submit"
-                  disabled={isAssignPending}
-                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-                >
-                  Save Assignment
-                </button>
-                {savedSection === "assignment" ? (
-                  <p className="text-xs text-[var(--accent)]">Saved</p>
-                ) : null}
-            </form>
-          ) : null}
+            ) : null}
+
+            {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
+              <textarea
+                name="diagnosisNotes"
+                defaultValue={job.diagnosisNotes ?? ""}
+                placeholder="Internal diagnosis notes"
+                className={areaClass}
+              />
+            ) : null}
+            {diagnosisMode !== "internal" ? (
+              <textarea
+                name="externalDiagnosis"
+                defaultValue={job.externalDiagnosis ?? ""}
+                placeholder="External diagnosis"
+                className={areaClass}
+              />
+            ) : null}
+            {diagnosisMode === "internal" ? (
+              <p className="text-xs text-[var(--ink-muted)]">External diagnosis is hidden for internal technician flow.</p>
+            ) : null}
+            <textarea
+              name="partsNeeded"
+              defaultValue={job.partsNeeded ?? ""}
+              placeholder="Parts needed"
+              readOnly={isTerminal}
+              className={areaClass}
+            />
+
+            <button
+              disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending}
+              className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              disabled={isDiagnosisPending}
+              className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Cancel
+            </button>
+            {savedSection === "diagnosis" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+          </form>
 
           {showOneTimeExternalPanel ? (
             <form
@@ -780,7 +878,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   router.refresh();
                 });
               }}
-              className={`mt-4 space-y-3 ${softSectionClass} [&_*]:min-w-0`}
+              className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -807,48 +905,24 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Technician name</label>
-                  <input
-                    name="technicianName"
-                    required
-                    defaultValue={oneTimeExternal?.technicianName ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="technicianName" required defaultValue={oneTimeExternal?.technicianName ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Phone</label>
-                  <input
-                    name="phone"
-                    required
-                    defaultValue={oneTimeExternal?.phone ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="phone" required defaultValue={oneTimeExternal?.phone ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Specialization</label>
-                  <input
-                    name="specialization"
-                    defaultValue={oneTimeExternal?.specialization ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="specialization" defaultValue={oneTimeExternal?.specialization ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Agreed repair cost</label>
-                  <input
-                    name="agreedRepairCost"
-                    inputMode="decimal"
-                    defaultValue={oneTimeExternal?.agreedRepairCost ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="agreedRepairCost" inputMode="decimal" defaultValue={oneTimeExternal?.agreedRepairCost ?? ""} className={fieldClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Parts involved / expected parts cost</label>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <input
-                      name="partsNotes"
-                      placeholder="Parts notes"
-                      defaultValue={oneTimeExternal?.partsNotes ?? ""}
-                      className={fieldClass}
-                    />
+                    <input name="partsNotes" placeholder="Parts notes" defaultValue={oneTimeExternal?.partsNotes ?? ""} className={fieldClass} />
                     <input
                       name="expectedPartsCost"
                       inputMode="decimal"
@@ -860,55 +934,27 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Date assigned</label>
-                  <input
-                    type="date"
-                    name="assignedDate"
-                    required
-                    defaultValue={dateInputValue(oneTimeExternal?.assignedAt ?? new Date())}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="assignedDate" required defaultValue={dateInputValue(oneTimeExternal?.assignedAt ?? new Date())} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Expected return date</label>
-                  <input
-                    type="date"
-                    name="expectedReturnDate"
-                    defaultValue={dateInputValue(oneTimeExternal?.expectedReturnAt)}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="expectedReturnDate" defaultValue={dateInputValue(oneTimeExternal?.expectedReturnAt)} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Returned / handover date</label>
-                  <input
-                    type="date"
-                    name="returnedDate"
-                    defaultValue={dateInputValue(oneTimeExternal?.returnedAt)}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="returnedDate" defaultValue={dateInputValue(oneTimeExternal?.returnedAt)} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Progress notes</label>
-                  <input
-                    name="progressNotes"
-                    defaultValue={oneTimeExternal?.progressNotes ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="progressNotes" defaultValue={oneTimeExternal?.progressNotes ?? ""} className={fieldClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Notes / diagnosis / work instructions</label>
-                  <textarea
-                    name="instructions"
-                    defaultValue={oneTimeExternal?.instructions ?? ""}
-                    className={areaClass}
-                  />
+                  <textarea name="instructions" defaultValue={oneTimeExternal?.instructions ?? ""} className={areaClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Final outcome</label>
-                  <textarea
-                    name="finalOutcome"
-                    defaultValue={oneTimeExternal?.finalOutcome ?? ""}
-                    className={areaClass}
-                  />
+                  <textarea name="finalOutcome" defaultValue={oneTimeExternal?.finalOutcome ?? ""} className={areaClass} />
                 </div>
               </div>
 
@@ -918,234 +964,23 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   disabled={isOneTimeExternalPending}
                   className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
-                  {oneTimeExternal ? "Update External Assignment" : "Assign One-Time External Tech"}
+                  {oneTimeExternal ? "Update" : "Assign"}
                 </button>
-                {savedSection === "oneTimeExternal" ? (
-                  <p className="text-xs text-[var(--accent)]">Saved</p>
-                ) : null}
+                {oneTimeExternal && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOneTimeForm(false)}
+                    disabled={isOneTimeExternalPending}
+                    className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  >
+                    Cancel
+                  </button>
+                )}
+                {savedSection === "oneTimeExternal" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
               </div>
             </form>
           ) : null}
-
-          {canUpdateClientCommunication ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startCommunicationTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Client communication updated");
-                  setSavedSection("communication");
-                  router.refresh();
-                });
-              }}
-               className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
-             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                Step 3 - Client Approval & Recommendation
-              </p>
-              <select
-                name="communicationStatus"
-                defaultValue={job.communicationStatus ?? "NONE"}
-                className={fieldClass}
-              >
-                <option value="NONE">No update yet</option>
-                <option value="AWAITING_RESPONSE">Awaiting response</option>
-                <option value="APPROVED">Approved</option>
-                <option value="DECLINED">Declined</option>
-              </select>
-              <p className="text-xs text-[var(--ink-muted)]">
-                Use Awaiting response after sharing estimate/details; set Approved or Declined when client confirms.
-              </p>
-              <select
-                name="recommendationOption"
-                defaultValue={job.recommendationOption ?? ""}
-                className={fieldClass}
-              >
-                <option value="">Recommendation</option>
-                <option value="PROCEED_REPAIR">Proceed with repair</option>
-                <option value="REPLACE_DEVICE">Replace device</option>
-                <option value="RETURN_UNREPAIRED">Return unrepaired</option>
-              </select>
-              <textarea
-                name="clientConversationNote"
-                defaultValue={job.clientConversationNote ?? ""}
-                placeholder="Client communication note"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
-              />
-              {job.lastClientContactAt ? (
-                <p className="text-xs text-[var(--ink-muted)]">
-                  Last client contact: {formatUtcDateTime(job.lastClientContactAt)}
-                </p>
-              ) : null}
-              <button
-                type="submit"
-                disabled={isCommunicationPending}
-                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-              >
-                Save Communication
-              </button>
-              {savedSection === "communication" ? (
-                <p className="text-xs text-[var(--accent)]">Saved</p>
-              ) : null}
-            </form>
-          ) : null}
-
-           <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 4 - Repair & Closure Context</p>
-            {job.repairTimeline ? (
-              <p className="text-sm text-[var(--ink)]">
-                ETA: <span className="font-medium">{job.repairTimeline}</span>
-                {job.timelineConfidence ? ` (${job.timelineConfidence.replaceAll("_", " ")})` : ""}
-              </p>
-            ) : (
-              <p className="text-sm text-[var(--ink-muted)]">ETA not set yet.</p>
-            )}
-            {job.timelineNote ? <p className="text-sm text-[var(--ink-muted)]">ETA note: {job.timelineNote}</p> : null}
-            {job.workflowReason && job.workflowReason !== "NONE" ? (
-              <p className="text-sm text-[var(--ink-muted)]">Workflow reason: {job.workflowReason.replaceAll("_", " ")}</p>
-            ) : null}
-            {job.statusNote ? <p className="text-sm text-[var(--ink-muted)]">Workflow note: {job.statusNote}</p> : null}
-            {isIntake ? (
-              <p className="text-sm text-[var(--ink)]">
-                Client-facing cost: {typeof job.clientBill === "number" ? formatBillAmount(job.clientBill) : "Pending final approval"}
-              </p>
-            ) : null}
-          </div>
-
-          {canUpdateClientCommunication ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startContextTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Workflow context updated");
-                  setSavedSection("context");
-                  router.refresh();
-                });
-              }}
-               className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
-             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Update Repair / Closure Context</p>
-              <select
-                name="workflowReason"
-                defaultValue={job.workflowReason ?? "NONE"}
-                className={fieldClass}
-              >
-                <option value="NONE">No specific reason</option>
-                <option value="PARTS_PENDING">Parts pending</option>
-                <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
-                <option value="CLIENT_DECLINED">Client declined</option>
-                <option value="UNREPAIRABLE">Unrepairable</option>
-                <option value="CUSTOMER_CANCELLED">Customer cancelled</option>
-                <option value="OTHER">Other</option>
-              </select>
-              <textarea
-                name="statusNote"
-                defaultValue={job.statusNote ?? ""}
-                placeholder="Context note (optional)"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
-              />
-              <button
-                type="submit"
-                disabled={isContextPending}
-                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-              >
-                Save Context
-              </button>
-              {savedSection === "context" ? (
-                <p className="text-xs text-[var(--accent)]">Saved</p>
-              ) : null}
-            </form>
-          ) : null}
         </div>
-      ) : null}
-
-      {active === "client" && role !== "TECHNICIAN_EXTERNAL" ? (
-        <div className={panelShellClass}>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client Snapshot</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Name</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.fullName ?? "-"}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Phone</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.phone ?? "-"}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.email ?? "-"}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {active === "diagnosis" ? (
-        <form
-          action={(formData) => {
-            formData.set("jobId", job.id);
-            formData.set("expectedUpdatedAt", expectedUpdatedAt);
-            startDiagnosisTransition(async () => {
-              const res = await updateJobAction(formData);
-              if (res.error) {
-                toast.error(res.error);
-                return;
-              }
-              toast.success("Diagnosis updated");
-              setSavedSection("diagnosis");
-              router.refresh();
-            });
-          }}
-          className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
-        >
-          {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
-            <textarea
-              name="diagnosisNotes"
-              defaultValue={job.diagnosisNotes ?? ""}
-              placeholder="Internal diagnosis notes"
-              className={areaClass}
-            />
-          ) : null}
-          {diagnosisMode !== "internal" ? (
-            <textarea
-              name="externalDiagnosis"
-              defaultValue={job.externalDiagnosis ?? ""}
-              placeholder="External diagnosis"
-              className={areaClass}
-            />
-          ) : null}
-          {diagnosisMode === "internal" ? (
-            <p className="text-xs text-[var(--ink-muted)]">
-              External diagnosis is hidden for internal technician flow.
-            </p>
-          ) : null}
-          <textarea
-            name="partsNeeded"
-            defaultValue={job.partsNeeded ?? ""}
-            placeholder="Parts needed"
-            readOnly={isTerminal}
-            className={areaClass}
-          />
-          {role !== "TECHNICIAN_EXTERNAL" ? (
-            <div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
-              Repair path: <span className="font-medium">{derivedRepairPath}</span>
-            </div>
-          ) : null}
-            <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
-              Save
-            </button>
-          {savedSection === "diagnosis" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
-        </form>
       ) : null}
 
       {active === "repair" ? (
@@ -1168,8 +1003,11 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         >
           <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Work done" className={areaClass} />
           <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="Parts replaced" className={areaClass} />
-          <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
-          {savedSection === "repair" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
+            <button type="button" onClick={() => setActive("overview")} disabled={isRepairPending} className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Cancel</button>
+            {savedSection === "repair" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+          </div>
         </form>
       ) : null}
 
@@ -1284,6 +1122,14 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   Save Billing
                 </button>
                 <button
+                  type="button"
+                  onClick={() => setActive("overview")}
+                  disabled={isFinancialPending}
+                  className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Cancel
+                </button>
+                <button
                   type="submit"
                   name="externalPaid"
                   value="true"
@@ -1321,20 +1167,131 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </div>
           ) : null}
           {!hasPayoutControls ? (
-            <button
-              disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-              className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Save Billing
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Save Billing
+              </button>
+              <button
+                type="button"
+                onClick={() => setActive("overview")}
+                disabled={isFinancialPending}
+                className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           ) : null}
           {savedSection === "financials" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
 
-      {active === "timeline" && ["ADMIN", "OPS", "INTAKE"].includes(role) ? (
+      {active === "timeline" && ["ADMIN", "OPS", "FRONT_DESK"].includes(role) ? (
         <div className={panelShellClass}>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Timeline Activity</p>
+
+          {canUpdateClientCommunication ? (
+            <form
+              action={(formData) => {
+                formData.set("jobId", job.id);
+                formData.set("expectedUpdatedAt", expectedUpdatedAt);
+                startCommunicationTransition(async () => {
+                  const res = await updateJobAction(formData);
+                  if (res.error) {
+                    toast.error(res.error);
+                    return;
+                  }
+                  toast.success("Workflow updated");
+                  setSavedSection("workflow");
+                  router.refresh();
+                });
+              }}
+              className={`mb-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Client Approval & Workflow</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Client decision</label>
+                  <select name="communicationStatus" defaultValue={job.communicationStatus ?? "NONE"} className={fieldClass}>
+                    <option value="NONE">No update yet</option>
+                    <option value="AWAITING_RESPONSE">Awaiting response</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="DECLINED">Declined</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Recommendation</label>
+                  <select name="recommendationOption" defaultValue={job.recommendationOption ?? ""} className={fieldClass}>
+                    <option value="">Not set</option>
+                    <option value="PROCEED_REPAIR">Proceed with repair</option>
+                    <option value="REPLACE_DEVICE">Replace device</option>
+                    <option value="RETURN_UNREPAIRED">Return unrepaired</option>
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                name="clientConversationNote"
+                defaultValue={job.clientConversationNote ?? ""}
+                placeholder="Client communication note"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+
+              {job.lastClientContactAt ? (
+                <p className="text-xs text-[var(--ink-muted)]">Last client contact: {formatUtcDateTime(job.lastClientContactAt)}</p>
+              ) : (
+                <p className="text-xs text-[var(--ink-muted)]">Last client contact: Not recorded</p>
+              )}
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Workflow reason</label>
+                  <select name="workflowReason" defaultValue={job.workflowReason ?? "NONE"} className={fieldClass}>
+                    <option value="NONE">No specific reason</option>
+                    <option value="PARTS_PENDING">Parts pending</option>
+                    <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
+                    <option value="CLIENT_DECLINED">Client declined</option>
+                    <option value="UNREPAIRABLE">Unrepairable</option>
+                    <option value="CUSTOMER_CANCELLED">Customer cancelled</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">ETA</label>
+                  <input name="repairTimeline" defaultValue={job.repairTimeline ?? ""} placeholder="e.g. 2-3 days" className={fieldClass} />
+                </div>
+              </div>
+
+              <textarea
+                name="statusNote"
+                defaultValue={job.statusNote ?? ""}
+                placeholder="Workflow note (optional)"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isCommunicationPending}
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Save Workflow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive("overview")}
+                  disabled={isCommunicationPending}
+                  className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Cancel
+                </button>
+                {savedSection === "workflow" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+              </div>
+            </form>
+          ) : null}
+
           <AuditTimeline items={job.auditLogs} />
         </div>
       ) : null}

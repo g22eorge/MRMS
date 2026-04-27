@@ -144,7 +144,7 @@ function getMoreGroups(role: Role, permissions: string[]): NavGroup[] {
     if (href === ITEMS.inventory.href) return ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role);
     if (href === ITEMS.board.href) return role !== "TECHNICIAN_EXTERNAL";
     if (href === ITEMS.commsTemplates.href) return ["ADMIN", "OPS"].includes(role);
-    if (href === ITEMS.notifications.href) return true;
+    if (href === ITEMS.notifications.href) return can.viewNotifications(permUser);
     return true;
   };
 
