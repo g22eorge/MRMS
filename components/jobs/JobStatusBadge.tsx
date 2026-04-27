@@ -10,9 +10,9 @@ type StatusConfig = {
 
 const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> = {
   RECEIVED: {
-    dot: "bg-slate-400",
-    badge: "border-slate-200 bg-slate-50 text-slate-600",
-    strip: "bg-slate-300",
+    dot: "bg-[var(--ink)]/35",
+    badge: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+    strip: "bg-[var(--line)]",
     label: "Received",
     help: "Job received, waiting to be worked on.",
   },
@@ -46,15 +46,15 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
   },
   READY_FOR_PICKUP: {
     dot: "bg-white",
-    badge: "border-[#D4AF37] bg-[#D4AF37] text-white",
-    strip: "bg-[#D4AF37]",
+    badge: "border-[var(--accent)] bg-[var(--accent)] text-white",
+    strip: "bg-[var(--accent)]",
     label: "Ready ✓",
     help: "Repair complete — ready for client pickup.",
   },
   COMPLETED: {
-    dot: "bg-green-500",
-    badge: "border-green-200 bg-green-50 text-green-700",
-    strip: "bg-green-400",
+    dot: "bg-white",
+    badge: "border-emerald-700 bg-emerald-600 text-white",
+    strip: "bg-emerald-500",
     label: "Completed",
     help: "Repair finished and device returned.",
   },

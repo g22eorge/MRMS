@@ -36,11 +36,8 @@ function getResend() {
 export function emailIsConfigured() {
   const fromCandidate = process.env.RESEND_ALERTS_FROM || process.env.RESEND_FROM;
   const from = fromCandidate ? normalizeFrom(fromCandidate) : null;
-  return Boolean(
-    process.env.RESEND_API_KEY &&
-      process.env.REPAIR_REQUEST_ALERT_EMAIL &&
-      from,
-  );
+  // Sending capability should not depend on a specific alert recipient.
+  return Boolean(process.env.RESEND_API_KEY && from);
 }
 
 export async function sendEmail(input: {

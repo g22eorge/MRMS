@@ -15,7 +15,7 @@ export default async function IntakePage() {
     take: 200,
   });
 
-  const pending = requests.filter((r) => r.requestStatus === "PENDING_INTAKE").length;
+  const pending = requests.filter((r) => r.requestStatus === "PENDING_FRONT_DESK").length;
 
   return (
     <div className="space-y-0">

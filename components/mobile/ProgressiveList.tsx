@@ -25,7 +25,7 @@ export function ProgressiveList({
         <button
           type="button"
           onClick={() => setVisibleCount((count) => Math.min(count + step, items.length))}
-          className="btn-premium-secondary mt-2 w-full rounded-md px-3 py-2 text-sm"
+          className="btn-premium-secondary mt-2 w-full rounded-lg px-3 py-1.5 text-sm"
         >
           Show more
         </button>
@@ -34,7 +34,7 @@ export function ProgressiveList({
         <button
           type="button"
           onClick={() => setVisibleCount(initialCount)}
-          className="btn-premium-secondary mt-2 w-full rounded-md px-3 py-2 text-sm"
+          className="btn-premium-secondary mt-2 w-full rounded-lg px-3 py-1.5 text-sm"
         >
           Show less
         </button>

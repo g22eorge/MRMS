@@ -113,6 +113,32 @@ export async function POST() {
 
   // Job columns
   const cols = await jobColumns();
+  const addJobColumn = async (name: string, type: string, dflt?: string) => {
+    if (cols.has(name)) return;
+    const defaultClause = dflt ? ` DEFAULT ${dflt}` : "";
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Job" ADD COLUMN "${name}" ${type}${defaultClause}`);
+    changes.push({ kind: "alter_table", detail: `Added Job.${name}` });
+  };
+
+  // Legacy schema compatibility: some older SQLite/Turso snapshots are missing
+  // these fields that are now required by Prisma queries.
+  await addJobColumn("deviceType", "TEXT", "'OTHER'");
+  await addJobColumn("brand", "TEXT", "'Unknown'");
+  await addJobColumn("model", "TEXT", "'Unknown'");
+  await addJobColumn("serialOrImei", "TEXT");
+  await addJobColumn("accessories", "TEXT");
+  await addJobColumn("physicalNotes", "TEXT");
+  await addJobColumn("clientApproved", "INTEGER");
+  await addJobColumn("approvalDate", "DATETIME");
+  await addJobColumn("quotedAt", "DATETIME");
+  await addJobColumn("repairTimeline", "TEXT");
+  await addJobColumn("clientPaid", "INTEGER", "0");
+  await addJobColumn("clientPaidAt", "DATETIME");
+  await addJobColumn("clientPaidById", "TEXT");
+  await addJobColumn("clientPaymentRef", "TEXT");
+  await addJobColumn("invoiceNumber", "TEXT");
+  await addJobColumn("invoiceIssuedAt", "DATETIME");
+
   if (!cols.has("deviceId")) {
     await prisma.$executeRawUnsafe('ALTER TABLE "Job" ADD COLUMN "deviceId" TEXT');
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Job_deviceId_idx" ON "Job"("deviceId")');
@@ -134,13 +160,6 @@ export async function POST() {
   }
 
   // Software services (hardware vs software job types)
-  const addJobColumn = async (name: string, type: string, dflt?: string) => {
-    if (cols.has(name)) return;
-    const defaultClause = dflt ? ` DEFAULT ${dflt}` : "";
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Job" ADD COLUMN "${name}" ${type}${defaultClause}`);
-    changes.push({ kind: "alter_table", detail: `Added Job.${name}` });
-  };
-
   await addJobColumn("serviceType", "TEXT", "'HARDWARE'");
   await addJobColumn("softwareOsInstall", "INTEGER", "0");
   await addJobColumn("softwareDriversUpdates", "INTEGER", "0");

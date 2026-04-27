@@ -1,37 +1,39 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 
 import { can } from "@/lib/permissions";
 
-type NavGroup = "work" | "finance" | "admin" | "personal";
+type NavGroup = "work" | "documents" | "finance" | "admin" | "personal";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", group: "work", roles: "all" },
   { href: "/jobs", label: "Jobs", group: "work", roles: "all" },
-  { href: "/intake", label: "Requests", group: "work", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
+  { href: "/intake", label: "Requests", group: "work", roles: ["ADMIN", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"] },
   { href: "/technicians", label: "Technicians", group: "work", roles: "all" },
   { href: "/inventory", label: "Inventory", group: "work", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
-  { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "INTAKE"] },
+  { href: "/clients", label: "Clients", group: "work", roles: ["ADMIN", "OPS", "FRONT_DESK"] },
+  { href: "/documents/job-cards", label: "Job Cards", group: "documents", roles: ["ADMIN", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/quotations", label: "Quotations", group: "documents", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
+  { href: "/documents/invoices", label: "Invoices", group: "documents", roles: ["ADMIN", "OPS"] },
   { href: "/reports", label: "Reports", group: "finance", roles: ["ADMIN", "OPS"] },
-  { href: "/documents/job-cards", label: "Intake Invoices", group: "finance", roles: ["ADMIN", "OPS", "INTAKE", "TECHNICIAN_INTERNAL"] },
-  { href: "/documents/quotations", label: "Quotations", group: "finance", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"] },
-  { href: "/documents/invoices", label: "Invoices", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/payout-followups", label: "Payment Follow-up", group: "finance", roles: ["ADMIN", "OPS"] },
   { href: "/technicians/payouts", label: "Payouts", group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/notifications/templates", label: "Comms Templates", group: "admin", roles: ["ADMIN", "OPS"] },
   { href: "/settings/profile", label: "Profile", group: "personal", roles: "all" },
-  { href: "/settings/notifications", label: "Notifications", group: "personal", roles: "all" },
+  { href: "/settings/notifications", label: "Notifications", group: "personal", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] },
 ] as const;
 
 const groupLabel: Record<NavGroup, string> = {
-  work: "Main",
+  work: "Operations",
+  documents: "Documents",
   finance: "Finance",
-  admin: "Admin",
+  admin: "Administration",
   personal: "Account",
 };
 
@@ -43,10 +45,10 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/clients",
     "/technicians",
     "/inventory",
-    "/reports",
     "/documents/job-cards",
     "/documents/quotations",
     "/documents/invoices",
+    "/reports",
     "/payout-followups",
     "/settings/users",
     "/settings/branding",
@@ -54,18 +56,18 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/profile",
     "/settings/notifications",
   ],
-  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"],
+  OPS: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/reports", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_INTERNAL: ["/dashboard", "/jobs", "/intake", "/technicians", "/inventory", "/documents/job-cards", "/documents/quotations", "/settings/profile", "/settings/notifications"],
   TECHNICIAN_EXTERNAL: ["/dashboard", "/jobs", "/technicians/payouts", "/technicians", "/settings/profile", "/settings/notifications"],
-  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile", "/settings/notifications"],
+  FRONT_DESK: ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/documents/job-cards", "/settings/profile"],
 };
 
 const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
-  ADMIN: ["work", "finance", "admin", "personal"],
-  OPS: ["work", "finance", "personal"],
-  TECHNICIAN_INTERNAL: ["work", "personal"],
+  ADMIN: ["work", "documents", "finance", "admin", "personal"],
+  OPS: ["work", "documents", "finance", "personal"],
+  TECHNICIAN_INTERNAL: ["work", "documents", "personal"],
   TECHNICIAN_EXTERNAL: ["work", "finance", "personal"],
-  INTAKE: ["work", "personal"],
+  FRONT_DESK: ["work", "documents", "personal"],
 };
 
 function isVisible(role: Role, rule: "all" | readonly string[]) {
@@ -179,13 +181,6 @@ function navIcon(href: string) {
 }
 
 function orderedNavForRole(role: Role, permissions: string[]) {
-  if (role === "OPS") {
-    const opsLinks = nav.filter((item) =>
-      ["/dashboard", "/jobs", "/intake", "/clients", "/technicians", "/inventory", "/reports", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/payout-followups", "/settings/notifications/templates", "/settings/profile", "/settings/notifications"].includes(item.href)
-    );
-    return opsLinks;
-  }
-
   const visible = nav.filter((item) => isVisible(role, item.roles));
   const permissionUser = { role, permissions };
   if (can.viewClientInfo(permissionUser) && !visible.some((item) => item.href === "/intake")) {
@@ -216,7 +211,7 @@ function orderedNavForRole(role: Role, permissions: string[]) {
 
 function groupedNavForRole(role: Role, permissions: string[]) {
   const ordered = orderedNavForRole(role, permissions);
-  const canonicalOrder: NavGroup[] = ["work", "finance", "admin", "personal"];
+  const canonicalOrder: NavGroup[] = ["work", "documents", "finance", "admin", "personal"];
   const baseGroups = roleGroupOrder[role] ?? ["work", "personal"];
   const missingGroups = canonicalOrder.filter(
     (group) => ordered.some((item) => item.group === group) && !baseGroups.includes(group),
@@ -249,19 +244,22 @@ export function AppSidebar({
   return (
     <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
       {/* ── Brand ── */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)]">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ink)] shadow-sm">
-          {/* Eagle mark */}
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-            <path d="M12 3L4 7.5V12.5C4 16.09 7.58 19.43 12 21C16.42 19.43 20 16.09 20 12.5V7.5L12 3Z" fill="#D4AF37" opacity="0.9" />
-            <path d="M9 12L11 14L15 10" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+      <Link href="/" className="flex items-center gap-3 px-5 py-5 border-b border-[var(--line)] hover:bg-[var(--panel)] transition-colors">
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-sm">
+          <Image
+            src="/eagle-info-logo.png"
+            alt="Eagle Info logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 object-cover"
+            priority
+          />
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-bold tracking-tight text-[var(--ink)] leading-none">Eagle Info</p>
           <p className="text-[10px] font-semibold text-[var(--accent)] tracking-wide mt-0.5">Repair Manager</p>
         </div>
-      </div>
+      </Link>
 
       {/* ── Navigation ── */}
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">

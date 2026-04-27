@@ -1,6 +1,7 @@
 "use client";
 
 import { Role } from "@prisma/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { formatEATDateTime } from "@/lib/date-eat";
+import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 
@@ -55,6 +57,13 @@ function hoursSince(value: Date | string) {
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60)));
 }
 
+function previewText(value: string | null | undefined, max = 240) {
+  if (!value) return "-";
+  const trimmed = value.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max).trimEnd()}…`;
+}
+
 function statusWatchLabel(status: JobStatus, ageHours: number) {
   if (status === "AWAITING_APPROVAL" && ageHours >= 24) return "Client response delayed";
   if (status === "DIAGNOSING" && ageHours >= 12) return "Diagnosis aging";
@@ -69,9 +78,9 @@ const panelShellClass =
 const softSectionClass =
   "space-y-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/70 p-3";
 const fieldClass =
-  "w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+  "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 const areaClass =
-  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20";
+  "min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
 type Props = {
   role: Role;
@@ -186,24 +195,14 @@ type Props = {
 export function JobDetailTabs({ role, permissions = [], job, technicians, deviceHistory = [] }: Props) {
   const router = useRouter();
   const [active, setActive] = useState<(typeof tabs)[number]>("overview");
-  const [savedSection, setSavedSection] = useState<
-    | "assignment"
-    | "oneTimeExternal"
-    | "context"
-    | "communication"
-    | "diagnosis"
-    | "repair"
-    | "financials"
-    | "status"
-    | null
-  >(null);
-  const [isAssignPending, startAssignTransition] = useTransition();
-  const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
-  const [isContextPending, startContextTransition] = useTransition();
-  const [isCommunicationPending, startCommunicationTransition] = useTransition();
+  const [savedSection, setSavedSection] = useState<string | null>(null);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [showOneTimeForm, setShowOneTimeForm] = useState(false);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
+  const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
   const [isRepairPending, startRepairTransition] = useTransition();
   const [isFinancialPending, startFinancialTransition] = useTransition();
+  const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
 
   useEffect(() => {
@@ -214,17 +213,23 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+  const canGenerateJobCard = can.generateJobCards(permissionUser);
+  const canGenerateQuotation =
+    ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role) ||
+    canViewFinancials ||
+    can.viewApprovedCost(permissionUser);
+  const canGenerateInvoice = ["ADMIN", "OPS"].includes(role) || canManageFinancials;
 
   const isSoftwareJob = (job.serviceType ?? "HARDWARE") !== "HARDWARE";
   const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
   const canAssignJobs = can.assignJobs(permissionUser);
   const canUpdateClientCommunication = can.approveWork(permissionUser);
-  const isIntake = role === "INTAKE";
+  const isIntake = role === "FRONT_DESK";
 
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
     if (tab === "financials") return canViewFinancials;
-    if (tab === "timeline") return ["ADMIN", "OPS", "INTAKE"].includes(role) || can.viewClientInfo(permissionUser);
+    if (tab === "timeline") return ["ADMIN", "OPS", "FRONT_DESK"].includes(role) || can.viewClientInfo(permissionUser);
     if ((tab === "diagnosis" || tab === "repair") && isIntake) return false;
     return true;
   });
@@ -252,6 +257,33 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const repairCostBeforeVat = vatApplicable ? clientBillValue / 1.18 : clientBillValue;
   const vatAmount = vatApplicable ? Math.max(clientBillValue - repairCostBeforeVat, 0) : 0;
   const hasPayoutControls = canManagePayouts && job.repairPath === "EXTERNAL";
+  const quotationEligibleByStatus = canGenerateQuotationForStatus(job.status);
+  const invoiceEligibleByStatus = canGenerateInvoiceForStatus(job.status);
+  const showJobCardAction = canGenerateJobCard;
+  const showQuotationAction = canGenerateQuotation && quotationEligibleByStatus;
+  const showInvoiceAction = canGenerateInvoice && invoiceEligibleByStatus;
+  const documentHints: string[] = [];
+
+  if (!showJobCardAction && !showQuotationAction && !showInvoiceAction) {
+    documentHints.push("No document action is currently available for your role on this job.");
+  }
+  if (canGenerateQuotation && !quotationEligibleByStatus) {
+    documentHints.push("Quotation unlocks after diagnosis starts.");
+  }
+  if (canGenerateInvoice && !invoiceEligibleByStatus) {
+    documentHints.push("Invoice unlocks at Ready for Pickup, Completed, or Closed.");
+  }
+
+  const mobilePrimaryAction =
+    job.status === "COMPLETED"
+      ? { type: "tab" as const, label: "Mark Paid / Close", tab: "financials" as const }
+      : showInvoiceAction
+        ? { type: "link" as const, label: "Generate Invoice", href: `/api/jobs/${job.id}/invoice` }
+        : showQuotationAction
+          ? { type: "link" as const, label: "Generate Quote", href: `/api/jobs/${job.id}/quotation` }
+          : showJobCardAction
+            ? { type: "link" as const, label: "Generate Job Card", href: `/api/jobs/${job.id}/job-card` }
+            : null;
 
   const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
   const assignedRole = job.assignedTo?.role;
@@ -317,9 +349,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const showOneTimeExternalPanel =
     canManageOneTimeExternal &&
     (
-      job.repairPath === "EXTERNAL" ||
-      Boolean(oneTimeExternal) ||
-      (["IN_EXTERNAL_REPAIR"] as JobStatus[]).includes(job.status)
+      showOneTimeForm ||
+      Boolean(oneTimeExternal)
     );
   const oneTimeStatusOptions: Array<{ value: JobStatus; label: string }> = [
     { value: "IN_EXTERNAL_REPAIR", label: "External Repair" },
@@ -334,7 +365,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   }
 
   const rolePriorityBoost = (key: string) => {
-    if (role === "INTAKE") {
+    if (role === "FRONT_DESK") {
       if (key === "clientDecision") return 4;
       if (key === "lastContact") return 3;
       if (key === "nextAction") return 2;
@@ -357,16 +388,16 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       key: "status",
       label: "Current Status",
       value: prettyEnum(job.status),
-      tone: "text-[#D4AF37]",
-      accent: "bg-[#D4AF37]/10 border-[#D4AF37]/30",
+      tone: "text-[var(--accent)]",
+      accent: "bg-[var(--accent)]/10 border-[var(--accent)]/30",
       priority: 90,
     },
     {
       key: "watch",
       label: "Watch",
       value: watchLabel ? `${watchLabel} (${statusAgeHours}h)` : `Healthy (${statusAgeHours}h in state)`,
-      tone: watchLabel ? "text-black" : "text-[#D4AF37]",
-      accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[#D4AF37]/10 border-[#D4AF37]/30",
+      tone: watchLabel ? "text-black" : "text-[var(--accent)]",
+      accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[var(--accent)]/10 border-[var(--accent)]/30",
       priority: watchLabel ? 88 : 40,
     },
     {
@@ -445,12 +476,18 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
 
   return (
     <div className="min-w-0 space-y-4">
+      <div>
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All jobs
+        </Link>
+      </div>
       <div className={panelShellClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold">{job.jobNumber}</h1>
             <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
-              {job.deviceType} / {job.brand} {job.model}
+              {job.deviceType}{[job.brand, job.model].filter(v => v && v !== "Unknown").length > 0 ? " / " + [job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") : ""}
             </p>
           </div>
           <JobStatusBadge status={job.status} />
@@ -463,15 +500,60 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             type="button"
             key={tab}
             onClick={() => setActive(tab)}
-            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition ${
+            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm capitalize transition active:opacity-80 ${
               active === tab
-                ? "border-[#D4AF37] bg-[#D4AF37] text-white"
-                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[#D4AF37]/50"
+                ? "border-[var(--accent)] bg-[var(--accent)] font-semibold text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/50"
             }`}
           >
             {tab}
           </button>
         ))}
+      </div>
+
+      <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:block">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Documents</p>
+        <div className="flex w-full flex-wrap gap-2">
+          {showJobCardAction ? (
+            <a
+              href={`/api/jobs/${job.id}/job-card`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Job Card
+            </a>
+          ) : null}
+          {showQuotationAction ? (
+            <a
+              href={`/api/jobs/${job.id}/quotation`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Quotation
+            </a>
+          ) : null}
+          {showInvoiceAction ? (
+            <a
+              href={`/api/jobs/${job.id}/invoice`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Generate Invoice
+            </a>
+          ) : null}
+        </div>
+        {documentHints.length > 0 ? (
+          <div className="mt-2 space-y-1">
+            {documentHints.map((hint) => (
+              <p key={hint} className="text-xs text-[var(--ink-muted)]">
+                {hint}
+              </p>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {active === "overview" ? (
@@ -487,9 +569,9 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     key={label}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
                       isCurrent
-                        ? "border-[#D4AF37] bg-[#D4AF37] text-white"
+                        ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                         : isDone
-                          ? "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]"
+                          ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]"
                           : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"
                     }`}
                   >
@@ -505,8 +587,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </div>
           </div>
 
-          <div className="mb-4 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#D4AF37]">Executive Brief</p>
+          <div className="mb-4 rounded-md border border-[var(--accent)]/30 bg-[var(--accent)]/10 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--accent)]">Executive Brief</p>
             <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{narrativeBits.join(" ")}</p>
           </div>
 
@@ -523,63 +605,54 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           </div>
 
           <div className={softSectionClass}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 1 - Intake</p>
-            <p className="font-medium">Issue</p>
-            <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{job.issueDescription}</p>
-          </div>
-
-          {isSoftwareJob && role !== "TECHNICIAN_EXTERNAL" ? (
-            <div className={`mt-4 ${softSectionClass}`}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Software Service</p>
-              <p className="text-sm text-[var(--ink-muted)]">
-                Type: <span className="font-medium text-[var(--ink)]">{prettyEnum(job.serviceType ?? "SOFTWARE")}</span>
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(
-                  [
-                    job.softwareOsInstall ? "OS install" : null,
-                    job.softwareDriversUpdates ? "Drivers + updates" : null,
-                    job.softwareDataBackupRestore ? "Backup/restore" : null,
-                    job.softwareAccountSetup ? "Account setup" : null,
-                    job.softwarePerformanceTune ? "Performance tune" : null,
-                    job.softwareThirdPartyApps ? "Third-party apps (client-licensed)" : null,
-                  ] as const
-                )
-                  .filter(Boolean)
-                  .map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-xs font-medium text-[var(--ink)]"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                {!job.softwareOsInstall &&
-                !job.softwareDriversUpdates &&
-                !job.softwareDataBackupRestore &&
-                !job.softwareAccountSetup &&
-                !job.softwarePerformanceTune &&
-                !job.softwareThirdPartyApps ? (
-                  <span className="text-xs text-[var(--ink-muted)]">No software scope selected.</span>
-                ) : null}
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Intake</p>
+                <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{previewText(job.issueDescription, 260)}</p>
               </div>
-
-              <p className="mt-2 text-sm text-[var(--ink-muted)]">
-                License attestation: {job.softwareLicenseAttested ? "Confirmed" : "Not recorded"}
-              </p>
-              {job.softwareInstallerSource ? (
-                <p className="text-sm text-[var(--ink-muted)]">
-                  Installer source: {prettyEnum(job.softwareInstallerSource)}
-                  {job.softwareInstallerSourceNote ? ` (${job.softwareInstallerSourceNote})` : ""}
-                </p>
-              ) : null}
-              {job.softwareRequestedNotes ? (
-                <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)] [overflow-wrap:anywhere]">
-                  {job.softwareRequestedNotes}
-                </p>
+              {role !== "TECHNICIAN_EXTERNAL" ? (
+                <button type="button" onClick={() => router.push(`/jobs/${job.id}/edit`)} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                  Edit Job →
+                </button>
               ) : null}
             </div>
-          ) : null}
+          </div>
+
+          <div className={`mt-4 ${softSectionClass}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Diagnosis Snapshot</p>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                  Assigned: <span className="font-medium text-[var(--ink)]">{job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned"}</span>
+                </p>
+                <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
+              </div>
+              <button type="button" onClick={() => setActive("diagnosis")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                Open Diagnosis →
+              </button>
+            </div>
+            {job.diagnosisNotes ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal: {previewText(job.diagnosisNotes, 180)}</p>
+            ) : null}
+            {job.externalDiagnosis ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">External: {previewText(job.externalDiagnosis, 180)}</p>
+            ) : null}
+            {job.partsNeeded ? (
+              <p className="mt-2 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Parts: {previewText(job.partsNeeded, 180)}</p>
+            ) : null}
+          </div>
+
+          <div className={`mt-4 ${softSectionClass}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Client Approval & Workflow</p>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">Decision, recommendation, workflow reason, ETA, and notes.</p>
+              </div>
+              <button type="button" onClick={() => setActive("timeline")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                Open Timeline →
+              </button>
+            </div>
+          </div>
 
           {deviceHistory.length > 0 ? (
             <div className={`mt-4 ${softSectionClass}`}>
@@ -591,7 +664,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     key={h.id}
                     type="button"
                     onClick={() => router.push(`/jobs/${h.id}`)}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[#D4AF37]/40"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[var(--accent)]/40"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[var(--ink)]">{h.jobNumber}</p>
@@ -608,74 +681,186 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               </div>
             </div>
           ) : null}
+        </div>
+      ) : null}
 
-          <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 2 - Technician Diagnosis</p>
-            <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">
-              Assigned: {job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned"}
-            </p>
-            <p className="text-sm text-[var(--ink-muted)]">Repair path: {derivedRepairPath}</p>
-            {job.diagnosisNotes ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Internal diagnosis: {job.diagnosisNotes}</p>
-            ) : null}
-            {job.externalDiagnosis ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">External diagnosis: {job.externalDiagnosis}</p>
-            ) : null}
-            {job.partsNeeded ? (
-              <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">Parts needed: {job.partsNeeded}</p>
-            ) : null}
+      {active === "client" && role !== "TECHNICIAN_EXTERNAL" ? (
+        <div className={panelShellClass}>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client Snapshot</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Name</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.fullName ?? "-"}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Phone</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.phone ?? "-"}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.email ?? "-"}</p>
+            </div>
           </div>
+        </div>
+      ) : null}
 
-          {canAssignJobs && technicians.length > 0 && !oneTimeExternal ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startAssignTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Assignment updated");
-                  setSavedSection("assignment");
-                  router.refresh();
-                });
-              }}
-              className={`mt-4 flex flex-wrap items-end gap-2 ${softSectionClass} [&_*]:min-w-0`}
-            >
-              <div className="min-w-0 flex-1 sm:min-w-[220px]">
-                <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-                  Assigned Technician
-                </label>
-                <select
-                  id="assignedToId"
-                  name="assignedToId"
-                  defaultValue={job.assignedTo?.id ?? ""}
-                  className={fieldClass}
-                >
-                  <option value="">Unassigned</option>
-                  {technicians
-                    .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
-                    .map((technician) => (
-                    <option key={technician.id} value={technician.id}>
-                      {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
-                    </option>
-                  ))}
-                </select>
+      {active === "diagnosis" ? (
+        <div className="space-y-4">
+          <form
+            action={(formData) => {
+              formData.set("jobId", job.id);
+              formData.set("expectedUpdatedAt", expectedUpdatedAt);
+              startDiagnosisTransition(async () => {
+                const res = await updateJobAction(formData);
+                if (res.error) {
+                  toast.error(res.error);
+                  return;
+                }
+                toast.success("Diagnosis updated");
+                setSavedSection("diagnosis");
+                router.refresh();
+              });
+            }}
+            className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
+          >
+            {canAssignJobs && technicians.length > 0 ? (
+              <div className={softSectionClass}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Assignment</p>
+                    <p className="mt-1 text-xs text-[var(--ink-muted)]">Choose the technician responsible for this job.</p>
+                  </div>
+                </div>
+                {showOneTimeForm || oneTimeExternal ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="min-w-0 sm:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                          Assignment
+                        </label>
+                        {!oneTimeExternal && (
+                          <button
+                            type="button"
+                            onClick={() => setShowOneTimeForm(false)}
+                            className="text-[10px] text-[var(--accent)] underline"
+                          >
+                            ← Back to list
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        id="assignedToId"
+                        name="assignedToId"
+                        value="__one_time__"
+                        className={fieldClass}
+                        onChange={(e) => {
+                          if (e.target.value === "__one_time__") {
+                            setShowOneTimeForm(true);
+                          } else {
+                            setShowOneTimeForm(false);
+                          }
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {technicians
+                          .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
+                          .map((technician) => (
+                            <option key={technician.id} value={technician.id}>
+                              {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
+                            </option>
+                          ))}
+                        <option value="__one_time__">One-Time External...</option>
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                        <span className="font-medium">{derivedRepairPath}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                        Assigned Technician
+                      </label>
+                      <select
+                        id="assignedToId"
+                        name="assignedToId"
+                        defaultValue={job.assignedTo?.id ?? ""}
+                        className={fieldClass}
+                        onChange={(e) => {
+                          if (e.target.value === "__one_time__") {
+                            setShowOneTimeForm(true);
+                          }
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {technicians
+                          .filter((technician) => !isSoftwareJob || technician.role !== "TECHNICIAN_EXTERNAL")
+                          .map((technician) => (
+                            <option key={technician.id} value={technician.id}>
+                              {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
+                            </option>
+                          ))}
+                        <option value="__one_time__">One-Time External...</option>
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                        <span className="font-medium">{derivedRepairPath}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-                <button
-                  type="submit"
-                  disabled={isAssignPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-                >
-                  Save Assignment
-                </button>
-                {savedSection === "assignment" ? (
-                  <p className="text-xs text-[#D4AF37]">Saved</p>
-                ) : null}
-            </form>
-          ) : null}
+            ) : null}
+
+            {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
+              <textarea
+                name="diagnosisNotes"
+                defaultValue={job.diagnosisNotes ?? ""}
+                placeholder="Internal diagnosis notes"
+                className={areaClass}
+              />
+            ) : null}
+            {diagnosisMode !== "internal" ? (
+              <textarea
+                name="externalDiagnosis"
+                defaultValue={job.externalDiagnosis ?? ""}
+                placeholder="External diagnosis"
+                className={areaClass}
+              />
+            ) : null}
+            {diagnosisMode === "internal" ? (
+              <p className="text-xs text-[var(--ink-muted)]">External diagnosis is hidden for internal technician flow.</p>
+            ) : null}
+            <textarea
+              name="partsNeeded"
+              defaultValue={job.partsNeeded ?? ""}
+              placeholder="Parts needed"
+              readOnly={isTerminal}
+              className={areaClass}
+            />
+
+            <button
+              disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending}
+              className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              disabled={isDiagnosisPending}
+              className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+            >
+              Cancel
+            </button>
+            {savedSection === "diagnosis" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+          </form>
 
           {showOneTimeExternalPanel ? (
             <form
@@ -693,7 +878,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   router.refresh();
                 });
               }}
-              className={`mt-4 space-y-3 ${softSectionClass} [&_*]:min-w-0`}
+              className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -720,48 +905,24 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Technician name</label>
-                  <input
-                    name="technicianName"
-                    required
-                    defaultValue={oneTimeExternal?.technicianName ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="technicianName" required defaultValue={oneTimeExternal?.technicianName ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Phone</label>
-                  <input
-                    name="phone"
-                    required
-                    defaultValue={oneTimeExternal?.phone ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="phone" required defaultValue={oneTimeExternal?.phone ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Specialization</label>
-                  <input
-                    name="specialization"
-                    defaultValue={oneTimeExternal?.specialization ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="specialization" defaultValue={oneTimeExternal?.specialization ?? ""} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Agreed repair cost</label>
-                  <input
-                    name="agreedRepairCost"
-                    inputMode="decimal"
-                    defaultValue={oneTimeExternal?.agreedRepairCost ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="agreedRepairCost" inputMode="decimal" defaultValue={oneTimeExternal?.agreedRepairCost ?? ""} className={fieldClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Parts involved / expected parts cost</label>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <input
-                      name="partsNotes"
-                      placeholder="Parts notes"
-                      defaultValue={oneTimeExternal?.partsNotes ?? ""}
-                      className={fieldClass}
-                    />
+                    <input name="partsNotes" placeholder="Parts notes" defaultValue={oneTimeExternal?.partsNotes ?? ""} className={fieldClass} />
                     <input
                       name="expectedPartsCost"
                       inputMode="decimal"
@@ -773,55 +934,27 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Date assigned</label>
-                  <input
-                    type="date"
-                    name="assignedDate"
-                    required
-                    defaultValue={dateInputValue(oneTimeExternal?.assignedAt ?? new Date())}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="assignedDate" required defaultValue={dateInputValue(oneTimeExternal?.assignedAt ?? new Date())} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Expected return date</label>
-                  <input
-                    type="date"
-                    name="expectedReturnDate"
-                    defaultValue={dateInputValue(oneTimeExternal?.expectedReturnAt)}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="expectedReturnDate" defaultValue={dateInputValue(oneTimeExternal?.expectedReturnAt)} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Returned / handover date</label>
-                  <input
-                    type="date"
-                    name="returnedDate"
-                    defaultValue={dateInputValue(oneTimeExternal?.returnedAt)}
-                    className={fieldClass}
-                  />
+                  <input type="date" name="returnedDate" defaultValue={dateInputValue(oneTimeExternal?.returnedAt)} className={fieldClass} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Progress notes</label>
-                  <input
-                    name="progressNotes"
-                    defaultValue={oneTimeExternal?.progressNotes ?? ""}
-                    className={fieldClass}
-                  />
+                  <input name="progressNotes" defaultValue={oneTimeExternal?.progressNotes ?? ""} className={fieldClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Notes / diagnosis / work instructions</label>
-                  <textarea
-                    name="instructions"
-                    defaultValue={oneTimeExternal?.instructions ?? ""}
-                    className={areaClass}
-                  />
+                  <textarea name="instructions" defaultValue={oneTimeExternal?.instructions ?? ""} className={areaClass} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Final outcome</label>
-                  <textarea
-                    name="finalOutcome"
-                    defaultValue={oneTimeExternal?.finalOutcome ?? ""}
-                    className={areaClass}
-                  />
+                  <textarea name="finalOutcome" defaultValue={oneTimeExternal?.finalOutcome ?? ""} className={areaClass} />
                 </div>
               </div>
 
@@ -829,236 +962,25 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 <button
                   type="submit"
                   disabled={isOneTimeExternalPending}
-                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
-                  {oneTimeExternal ? "Update External Assignment" : "Assign One-Time External Tech"}
+                  {oneTimeExternal ? "Update" : "Assign"}
                 </button>
-                {savedSection === "oneTimeExternal" ? (
-                  <p className="text-xs text-[#D4AF37]">Saved</p>
-                ) : null}
+                {oneTimeExternal && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOneTimeForm(false)}
+                    disabled={isOneTimeExternalPending}
+                    className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  >
+                    Cancel
+                  </button>
+                )}
+                {savedSection === "oneTimeExternal" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
               </div>
             </form>
           ) : null}
-
-          {canUpdateClientCommunication ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startCommunicationTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Client communication updated");
-                  setSavedSection("communication");
-                  router.refresh();
-                });
-              }}
-               className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
-             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                Step 3 - Client Approval & Recommendation
-              </p>
-              <select
-                name="communicationStatus"
-                defaultValue={job.communicationStatus ?? "NONE"}
-                className={fieldClass}
-              >
-                <option value="NONE">No update yet</option>
-                <option value="AWAITING_RESPONSE">Awaiting response</option>
-                <option value="APPROVED">Approved</option>
-                <option value="DECLINED">Declined</option>
-              </select>
-              <p className="text-xs text-[var(--ink-muted)]">
-                Use Awaiting response after sharing estimate/details; set Approved or Declined when client confirms.
-              </p>
-              <select
-                name="recommendationOption"
-                defaultValue={job.recommendationOption ?? ""}
-                className={fieldClass}
-              >
-                <option value="">Recommendation</option>
-                <option value="PROCEED_REPAIR">Proceed with repair</option>
-                <option value="REPLACE_DEVICE">Replace device</option>
-                <option value="RETURN_UNREPAIRED">Return unrepaired</option>
-              </select>
-              <textarea
-                name="clientConversationNote"
-                defaultValue={job.clientConversationNote ?? ""}
-                placeholder="Client communication note"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
-              />
-              {job.lastClientContactAt ? (
-                <p className="text-xs text-[var(--ink-muted)]">
-                  Last client contact: {formatUtcDateTime(job.lastClientContactAt)}
-                </p>
-              ) : null}
-              <button
-                type="submit"
-                disabled={isCommunicationPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-              >
-                Save Communication
-              </button>
-              {savedSection === "communication" ? (
-                <p className="text-xs text-[#D4AF37]">Saved</p>
-              ) : null}
-            </form>
-          ) : null}
-
-           <div className={`mt-4 ${softSectionClass}`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Step 4 - Repair & Closure Context</p>
-            {job.repairTimeline ? (
-              <p className="text-sm text-[var(--ink)]">
-                ETA: <span className="font-medium">{job.repairTimeline}</span>
-                {job.timelineConfidence ? ` (${job.timelineConfidence.replaceAll("_", " ")})` : ""}
-              </p>
-            ) : (
-              <p className="text-sm text-[var(--ink-muted)]">ETA not set yet.</p>
-            )}
-            {job.timelineNote ? <p className="text-sm text-[var(--ink-muted)]">ETA note: {job.timelineNote}</p> : null}
-            {job.workflowReason && job.workflowReason !== "NONE" ? (
-              <p className="text-sm text-[var(--ink-muted)]">Workflow reason: {job.workflowReason.replaceAll("_", " ")}</p>
-            ) : null}
-            {job.statusNote ? <p className="text-sm text-[var(--ink-muted)]">Workflow note: {job.statusNote}</p> : null}
-            {isIntake ? (
-              <p className="text-sm text-[var(--ink)]">
-                Client-facing cost: {typeof job.clientBill === "number" ? formatBillAmount(job.clientBill) : "Pending final approval"}
-              </p>
-            ) : null}
-          </div>
-
-          {canUpdateClientCommunication ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startContextTransition(async () => {
-                  const res = await updateJobAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("Workflow context updated");
-                  setSavedSection("context");
-                  router.refresh();
-                });
-              }}
-               className={`mt-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
-             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Update Repair / Closure Context</p>
-              <select
-                name="workflowReason"
-                defaultValue={job.workflowReason ?? "NONE"}
-                className={fieldClass}
-              >
-                <option value="NONE">No specific reason</option>
-                <option value="PARTS_PENDING">Parts pending</option>
-                <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
-                <option value="CLIENT_DECLINED">Client declined</option>
-                <option value="UNREPAIRABLE">Unrepairable</option>
-                <option value="CUSTOMER_CANCELLED">Customer cancelled</option>
-                <option value="OTHER">Other</option>
-              </select>
-              <textarea
-                name="statusNote"
-                defaultValue={job.statusNote ?? ""}
-                placeholder="Context note (optional)"
-                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
-              />
-              <button
-                type="submit"
-                disabled={isContextPending}
-                className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-              >
-                Save Context
-              </button>
-              {savedSection === "context" ? (
-                <p className="text-xs text-[#D4AF37]">Saved</p>
-              ) : null}
-            </form>
-          ) : null}
         </div>
-      ) : null}
-
-      {active === "client" && role !== "TECHNICIAN_EXTERNAL" ? (
-        <div className={panelShellClass}>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client Snapshot</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Name</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.fullName ?? "-"}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Phone</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.phone ?? "-"}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
-              <p className="mt-1 text-sm font-medium text-[var(--ink)]">{job.client?.email ?? "-"}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {active === "diagnosis" ? (
-        <form
-          action={(formData) => {
-            formData.set("jobId", job.id);
-            formData.set("expectedUpdatedAt", expectedUpdatedAt);
-            startDiagnosisTransition(async () => {
-              const res = await updateJobAction(formData);
-              if (res.error) {
-                toast.error(res.error);
-                return;
-              }
-              toast.success("Diagnosis updated");
-              setSavedSection("diagnosis");
-              router.refresh();
-            });
-          }}
-          className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
-        >
-          {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
-            <textarea
-              name="diagnosisNotes"
-              defaultValue={job.diagnosisNotes ?? ""}
-              placeholder="Internal diagnosis notes"
-              className={areaClass}
-            />
-          ) : null}
-          {diagnosisMode !== "internal" ? (
-            <textarea
-              name="externalDiagnosis"
-              defaultValue={job.externalDiagnosis ?? ""}
-              placeholder="External diagnosis"
-              className={areaClass}
-            />
-          ) : null}
-          {diagnosisMode === "internal" ? (
-            <p className="text-xs text-[var(--ink-muted)]">
-              External diagnosis is hidden for internal technician flow.
-            </p>
-          ) : null}
-          <textarea
-            name="partsNeeded"
-            defaultValue={job.partsNeeded ?? ""}
-            placeholder="Parts needed"
-            readOnly={isTerminal}
-            className={areaClass}
-          />
-          {role !== "TECHNICIAN_EXTERNAL" ? (
-            <div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
-              Repair path: <span className="font-medium">{derivedRepairPath}</span>
-            </div>
-          ) : null}
-            <button disabled={isTerminal || !can.editDiagnosis(permissionUser) || isDiagnosisPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
-              Save
-            </button>
-          {savedSection === "diagnosis" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
-        </form>
       ) : null}
 
       {active === "repair" ? (
@@ -1081,8 +1003,11 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         >
           <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Work done" className={areaClass} />
           <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="Parts replaced" className={areaClass} />
-          <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
-          {savedSection === "repair" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button disabled={isTerminal || isRepairPending} className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Save</button>
+            <button type="button" onClick={() => setActive("overview")} disabled={isRepairPending} className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm">Cancel</button>
+            {savedSection === "repair" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+          </div>
         </form>
       ) : null}
 
@@ -1146,17 +1071,17 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </p>
           ) : null}
           {canManageFinancials ? (
-              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-[#D4AF37]" : "text-black"}`}>
+              <p className={`text-xs [overflow-wrap:anywhere] ${existingMargin !== null && existingMargin >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
                 Repair margin: {existingMargin === null ? "Set external tech bill and client bill" : `${existingMargin >= 0 ? "+" : ""}${formatBillAmount(existingMargin)}`}
               </p>
           ) : null}
           {hasPayoutControls ? (
             <div className={softSectionClass}>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">External Technician Payout</p>
-              <div className="rounded-lg border border-[var(--line)] bg-white p-2">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-[var(--ink-muted)]">Payout status</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[#D4AF37] text-white" : "bg-[#D4AF37]/20 text-[#D4AF37]"}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${job.externalPaid ? "bg-[var(--accent)] text-white" : "bg-[var(--accent)]/20 text-[var(--accent)]"}`}>
                     {job.externalPaid ? "Paid" : "Not paid"}
                   </span>
                 </div>
@@ -1183,7 +1108,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 placeholder="Payment reference (optional)"
                 className={fieldClass}
               />
-              <p className={`text-xs ${job.externalPaid ? "text-[#D4AF37]" : "text-[#D4AF37]"}`}>
+              <p className={`text-xs ${job.externalPaid ? "text-[var(--accent)]" : "text-[var(--accent)]"}`}>
                 {job.externalPaidAt
                   ? `Paid on ${formatUtcDateTime(job.externalPaidAt)}`
                   : "Not yet marked as paid"}
@@ -1192,16 +1117,24 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                 <button
                   type="submit"
                   disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-                  className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Save Billing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive("overview")}
+                  disabled={isFinancialPending}
+                  className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   name="externalPaid"
                   value="true"
                   disabled={isFinancialPending || job.externalPaid === true}
-                  className="btn-premium-success w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium-success w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Paid
                 </button>
@@ -1210,7 +1143,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   name="externalPaid"
                   value="false"
                   disabled={isFinancialPending || job.externalPaid === false}
-                  className="btn-premium-warning w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                  className="btn-premium-warning w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
                 >
                   Mark Unpaid
                 </button>
@@ -1234,20 +1167,131 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             </div>
           ) : null}
           {!hasPayoutControls ? (
-            <button
-              disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-              className="btn-premium w-full rounded-md px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-            >
-              Save Billing
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+                className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Save Billing
+              </button>
+              <button
+                type="button"
+                onClick={() => setActive("overview")}
+                disabled={isFinancialPending}
+                className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           ) : null}
-          {savedSection === "financials" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          {savedSection === "financials" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
 
-      {active === "timeline" && ["ADMIN", "OPS", "INTAKE"].includes(role) ? (
+      {active === "timeline" && ["ADMIN", "OPS", "FRONT_DESK"].includes(role) ? (
         <div className={panelShellClass}>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Timeline Activity</p>
+
+          {canUpdateClientCommunication ? (
+            <form
+              action={(formData) => {
+                formData.set("jobId", job.id);
+                formData.set("expectedUpdatedAt", expectedUpdatedAt);
+                startCommunicationTransition(async () => {
+                  const res = await updateJobAction(formData);
+                  if (res.error) {
+                    toast.error(res.error);
+                    return;
+                  }
+                  toast.success("Workflow updated");
+                  setSavedSection("workflow");
+                  router.refresh();
+                });
+              }}
+              className={`mb-4 space-y-2 ${softSectionClass} [&_*]:min-w-0`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Client Approval & Workflow</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Client decision</label>
+                  <select name="communicationStatus" defaultValue={job.communicationStatus ?? "NONE"} className={fieldClass}>
+                    <option value="NONE">No update yet</option>
+                    <option value="AWAITING_RESPONSE">Awaiting response</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="DECLINED">Declined</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Recommendation</label>
+                  <select name="recommendationOption" defaultValue={job.recommendationOption ?? ""} className={fieldClass}>
+                    <option value="">Not set</option>
+                    <option value="PROCEED_REPAIR">Proceed with repair</option>
+                    <option value="REPLACE_DEVICE">Replace device</option>
+                    <option value="RETURN_UNREPAIRED">Return unrepaired</option>
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                name="clientConversationNote"
+                defaultValue={job.clientConversationNote ?? ""}
+                placeholder="Client communication note"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+
+              {job.lastClientContactAt ? (
+                <p className="text-xs text-[var(--ink-muted)]">Last client contact: {formatUtcDateTime(job.lastClientContactAt)}</p>
+              ) : (
+                <p className="text-xs text-[var(--ink-muted)]">Last client contact: Not recorded</p>
+              )}
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Workflow reason</label>
+                  <select name="workflowReason" defaultValue={job.workflowReason ?? "NONE"} className={fieldClass}>
+                    <option value="NONE">No specific reason</option>
+                    <option value="PARTS_PENDING">Parts pending</option>
+                    <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
+                    <option value="CLIENT_DECLINED">Client declined</option>
+                    <option value="UNREPAIRABLE">Unrepairable</option>
+                    <option value="CUSTOMER_CANCELLED">Customer cancelled</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">ETA</label>
+                  <input name="repairTimeline" defaultValue={job.repairTimeline ?? ""} placeholder="e.g. 2-3 days" className={fieldClass} />
+                </div>
+              </div>
+
+              <textarea
+                name="statusNote"
+                defaultValue={job.statusNote ?? ""}
+                placeholder="Workflow note (optional)"
+                className="min-h-20 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isCommunicationPending}
+                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Save Workflow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive("overview")}
+                  disabled={isCommunicationPending}
+                  className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+                >
+                  Cancel
+                </button>
+                {savedSection === "workflow" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
+              </div>
+            </form>
+          ) : null}
+
           <AuditTimeline items={job.auditLogs} />
         </div>
       ) : null}
@@ -1257,17 +1301,6 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Photo Evidence</p>
           <PhotoUploader jobId={job.id} photos={job.photos} canDelete={role === "ADMIN"} />
         </div>
-      ) : null}
-
-      {isTerminal ? (
-        <a
-          href={`/api/jobs/${job.id}/invoice`}
-          target="_blank"
-          rel="noreferrer"
-          className="btn-premium-secondary inline-flex w-full items-center justify-center rounded-md px-3 py-1.5 text-[13px] sm:inline-block sm:w-auto sm:py-2 sm:text-sm"
-        >
-          Generate Invoice
-        </a>
       ) : null}
 
       {statusActions.length > 0 && !isTerminal && !isIntake ? (
@@ -1310,7 +1343,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                     event.preventDefault();
                   }
                 }}
-                className="btn-premium-dark rounded-md px-3 py-1.5 text-[13px]"
+                className="btn-premium-dark rounded-lg px-3 py-1.5 text-[13px]"
               >
                 Set {prettyEnum(status)}
               </button>
@@ -1333,14 +1366,106 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
                   type="text"
                   name="deliveredTo"
                   placeholder="Received by (name)"
-                  className="rounded-md border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
+                  className="rounded-lg border border-[var(--line)] px-2 py-1.5 text-sm bg-[var(--panel)] flex-1 min-w-[120px]"
                 />
               </div>
             </div>
           ) : null}
-          {savedSection === "status" ? <p className="text-xs text-[#D4AF37]">Saved</p> : null}
+          {savedSection === "status" ? <p className="text-xs text-[var(--accent)]">Saved</p> : null}
         </form>
       ) : null}
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-shell-bottom)+0.2rem)] z-30 px-3 lg:hidden">
+        <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/96 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.14)] backdrop-blur-md">
+          {mobilePrimaryAction ? (
+            mobilePrimaryAction.type === "link" ? (
+              <a
+                href={mobilePrimaryAction.href}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-premium flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-bold"
+              >
+                {mobilePrimaryAction.label}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActive(mobilePrimaryAction.tab)}
+                className="btn-premium flex-1 rounded-xl px-4 py-2.5 text-sm font-bold"
+              >
+                {mobilePrimaryAction.label}
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={() => setActive("overview")}
+              className="btn-premium-secondary flex-1 rounded-xl px-4 py-2.5 text-sm"
+            >
+              Open Details
+            </button>
+          )}
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMobileMoreOpen((v) => !v)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/30 hover:text-[var(--ink)]"
+              aria-label="More actions"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
+            {mobileMoreOpen ? (
+              <div className="absolute bottom-14 right-0 w-52 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
+                {role !== "TECHNICIAN_EXTERNAL" ? (
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); router.push(`/jobs/${job.id}/edit`); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit Job
+                  </button>
+                ) : null}
+                <div className="mx-3 my-1 border-t border-[var(--line)]" />
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("diagnosis"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Diagnosis
+                </button>
+                <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("repair"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                  Repair Log
+                </button>
+                {canViewFinancials ? (
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("financials"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Financials
+                  </button>
+                ) : null}
+                {showJobCardAction || showQuotationAction || showInvoiceAction ? (
+                  <div className="mx-3 my-1 border-t border-[var(--line)]" />
+                ) : null}
+                {showJobCardAction ? (
+                  <a href={`/api/jobs/${job.id}/job-card`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Print Job Card
+                  </a>
+                ) : null}
+                {showQuotationAction ? (
+                  <a href={`/api/jobs/${job.id}/quotation`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Download Quote
+                  </a>
+                ) : null}
+                {showInvoiceAction ? (
+                  <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Download Invoice
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -245,35 +245,35 @@ export default async function BrandingPage({
         <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3" open>
           <summary className="text-sm font-semibold text-[var(--ink)]">Company & Numbering</summary>
           <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyAddressLine1" defaultValue={settings.companyAddressLine1} placeholder="Address line 1" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyAddressLine2" defaultValue={settings.companyAddressLine2} placeholder="Address line 2" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyContacts" defaultValue={settings.companyContacts} placeholder="Contacts" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyEmail" defaultValue={settings.companyEmail ?? ""} placeholder="Company email" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="companyWebsite" defaultValue={settings.companyWebsite ?? ""} placeholder="Company website" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyAddressLine1" defaultValue={settings.companyAddressLine1} placeholder="Address line 1" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyAddressLine2" defaultValue={settings.companyAddressLine2} placeholder="Address line 2" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyContacts" defaultValue={settings.companyContacts} placeholder="Contacts" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyEmail" defaultValue={settings.companyEmail ?? ""} placeholder="Company email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="companyWebsite" defaultValue={settings.companyWebsite ?? ""} placeholder="Company website" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <p className="text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
             Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
           </p>
-          <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
           </div>
         </details>
 
         <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
           <summary className="text-sm font-semibold text-[var(--ink)]">VAT & Sign-off</summary>
           <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+          <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             <option value="true">VAT default: applicable</option>
             <option value="false">VAT default: not applicable</option>
           </select>
-          <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-            <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-            <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+          <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
           </div>
         </details>
 
@@ -310,12 +310,12 @@ export default async function BrandingPage({
         <details className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
           <summary className="text-sm font-semibold text-[var(--ink)]">Terms & Footer</summary>
           <div className="mt-3 grid gap-2">
-            <textarea name="termsText" defaultValue={settings.termsText} className="min-h-28 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-            <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
+            <textarea name="termsText" defaultValue={settings.termsText} className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
           </div>
         </details>
 
-        <button className="btn-premium w-full rounded-md px-3 py-2 text-sm lg:w-auto">Save Document Settings</button>
+        <button className="btn-premium w-full rounded-lg px-3 py-1.5 text-sm lg:w-auto">Save Document Settings</button>
       </form>
 
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -327,10 +327,10 @@ export default async function BrandingPage({
             type="file"
             name="logo"
             accept="image/png,image/jpeg,image/webp"
-            className="w-full min-w-0 rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-xs sm:text-sm"
+            className="w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-xs sm:text-sm outline-none"
             required
           />
-          <button className="btn-premium rounded-md px-3 py-2 text-sm lg:px-3 lg:py-1.5">Upload Logo</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm">Upload Logo</button>
         </form>
 
         <div className="mt-3">

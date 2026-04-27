@@ -116,7 +116,7 @@ export async function createRepairRequest(
         request = await prisma.repairRequest.create({
           data: {
             requestNumber,
-            requestStatus: "PENDING_INTAKE",
+            requestStatus: "PENDING_FRONT_DESK",
             handoverStatus: "PENDING",
             customerName: input.customerName,
             phone: input.phone,

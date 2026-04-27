@@ -213,17 +213,27 @@ export default async function JobsPage({
       take: pageSize,
     });
 
+    const clientIds = Array.from(
+      new Set(bareJobs.map((job) => job.clientId).filter((id): id is string => Boolean(id))),
+    );
+    const assigneeIds = Array.from(
+      new Set(bareJobs.map((job) => job.assignedToId).filter((id): id is string => Boolean(id))),
+    );
+    const deviceIds = Array.from(
+      new Set(bareJobs.map((job) => job.deviceId).filter((id): id is string => Boolean(id))),
+    );
+
     const [clientRows, assigneeRows, deviceRows] = await Promise.all([
       prisma.client.findMany({
-        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.clientId).filter(Boolean))) } },
+        where: { id: { in: clientIds } },
         select: { id: true, fullName: true },
       }),
       prisma.user.findMany({
-        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.assignedToId).filter((id): id is string => Boolean(id)))) } },
+        where: { id: { in: assigneeIds } },
         select: { id: true, name: true },
       }),
       prisma.device.findMany({
-        where: { id: { in: Array.from(new Set(bareJobs.map((job) => job.deviceId).filter(Boolean))) } },
+        where: { id: { in: deviceIds } },
         select: { id: true, deviceType: true, brand: true, model: true },
       }),
     ]);
@@ -236,7 +246,7 @@ export default async function JobsPage({
       ...job,
       client: clientMap.get(job.clientId),
       assignedTo: job.assignedToId ? assigneeMap.get(job.assignedToId) : null,
-      device: deviceMap.get(job.deviceId),
+      device: job.deviceId ? deviceMap.get(job.deviceId) : undefined,
       oneTimeExternalAssignment: null,
     })) as Array<JobWithClient | JobWithoutClient>;
 
@@ -269,13 +279,18 @@ export default async function JobsPage({
 
   const rows: JobRow[] = jobs.map((job) => {
     const withWorkflow = job as typeof job & { workflowReason?: JobRow["workflowReason"] };
+    const fallbackFields = job as typeof job & {
+      deviceType?: string;
+      brand?: string | null;
+      model?: string | null;
+    };
     return {
       id: job.id,
       jobNumber: job.jobNumber,
       status: job.status,
-      deviceType: job.device?.deviceType ?? "OTHER",
-      brand: job.device?.brand ?? "Unknown",
-      model: job.device?.model ?? "Unknown",
+      deviceType: job.device?.deviceType ?? fallbackFields.deviceType ?? "OTHER",
+      brand: job.device?.brand ?? fallbackFields.brand ?? "",
+      model: job.device?.model ?? fallbackFields.model ?? "",
       clientName: "client" in job ? job.client?.fullName : undefined,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
@@ -318,21 +333,22 @@ export default async function JobsPage({
   const hasAdvancedFilters = Boolean(filters.deviceType || filters.repairPath || filters.pricing || filters.from || filters.to || sort === "job_number_desc");
   const hasAnyFilter = Boolean(filters.q || filters.status || hasAdvancedFilters);
 
-  const ctrlClass = "rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14";
+  const ctrlClass = "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
 
       {/* ── Stats + CTA bar ── */}
       {/* Mobile: single row — chips scroll horizontally, New Job button fixed right */}
       {/* Desktop: chips wrap, New Job stays right */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Scrollable chip rail */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
+        <div className="relative min-w-0 flex-1 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-r after:from-transparent after:to-[var(--page-bg)] after:content-[''] sm:after:hidden">
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
           {/* Active */}
           <Link
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-xs transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
           >
             <span className="font-bold tabular-nums text-[var(--accent)]">{openNow}</span>
             <span className="text-[var(--ink-muted)]">Active</span>
@@ -354,8 +370,8 @@ export default async function JobsPage({
             href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
               staleOpenCount > 0
-                ? "border-[var(--ink)] bg-[var(--ink)] text-white hover:opacity-80"
-                : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--ink)]/20 text-[var(--ink-muted)]"
+                ? "border-black bg-black text-white hover:opacity-80"
+                : "border-[var(--line)] bg-[var(--panel)] hover:border-black/30 text-[var(--ink-muted)]"
             }`}
           >
             <span className={`font-bold tabular-nums ${staleOpenCount > 0 ? "text-white" : "text-[var(--ink)]"}`}>{staleOpenCount}</span>
@@ -376,20 +392,34 @@ export default async function JobsPage({
           {/* Done */}
           <Link
             href={pulseHref("COMPLETED")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-xs transition hover:border-[var(--accent)]/30"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/30"
           >
             <span className="font-bold tabular-nums text-[var(--ink)]">{completedCount}</span>
             <span className="text-[var(--ink-muted)]">Done</span>
           </Link>
         </div>
+        </div>
 
-        {/* New Job CTA — always visible, never scrolls away */}
+        {/* New Job CTA — visible in chip rail on sm+, hidden on mobile (replaced by FAB) */}
         {can.createJob(user) ? (
-          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold sm:px-4 sm:py-2 sm:text-sm">
+          <Link href="/jobs/new" className="btn-premium hidden shrink-0 rounded-lg px-4 py-2 text-sm font-semibold sm:inline-flex">
             + New Job
           </Link>
         ) : null}
       </div>
+
+      {/* ── FAB: New Job — mobile only, floats above bottom nav ── */}
+      {can.createJob(user) ? (
+        <Link
+          href="/jobs/new"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_4px_20px_rgba(212,175,55,0.45)] transition-transform sm:hidden"
+          aria-label="New Job"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </Link>
+      ) : null}
 
       {/* ── External tech notice ── */}
       {isExternalTech ? (
@@ -428,12 +458,12 @@ export default async function JobsPage({
               ))}
             </select>
             {/* Apply */}
-            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-sm font-medium">
+            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium">
               Apply
             </button>
             {/* Reset */}
             {hasAnyFilter ? (
-              <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-4 py-2 text-center text-sm font-medium">
+              <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-center text-sm font-medium">
                 Reset
               </Link>
             ) : null}
@@ -443,7 +473,7 @@ export default async function JobsPage({
         {/* Pricing quick pills (for approvers) — hidden on mobile, use Advanced Filters instead */}
         {!isExternalTech && can.approveInvoices(user) ? (
           <div className="hidden items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/50 px-3 py-2 sm:flex">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Pricing</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Pricing</span>
             <Link
               href="/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP"
               className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
@@ -473,7 +503,7 @@ export default async function JobsPage({
         {/* Advanced filters */}
         <details open={hasAdvancedFilters} className="group">
           <summary className="flex cursor-pointer select-none list-none items-center justify-between border-t border-[var(--line)] px-3 py-1.5 hover:bg-[var(--panel-strong)]/40 transition-colors">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Advanced filters</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Advanced filters</span>
             <span className="text-[11px] text-[var(--accent)]">Device · Path · Date</span>
           </summary>
           <div className={`border-t border-[var(--line)] bg-[var(--panel-strong)]/40 p-3 ${

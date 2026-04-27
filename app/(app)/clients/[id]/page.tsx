@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
@@ -103,7 +103,7 @@ export default async function ClientDetailPage({
   }
 
   if (!clientData) {
-    redirect("/clients");
+    notFound();
   }
 
   type ClientDetail = Prisma.ClientGetPayload<{
@@ -180,13 +180,19 @@ export default async function ClientDetailPage({
     ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
     : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
   const controlClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-70";
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70";
 
   return (
     <div className="space-y-5">
+      <div>
+        <Link href="/clients" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All clients
+        </Link>
+      </div>
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4AF37]">Client Brief</p>
+        <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Client Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
         </div>
       </div>
@@ -200,24 +206,24 @@ export default async function ClientDetailPage({
               {client.phone} {client.email ? `• ${client.email}` : ""}
             </p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
             Last activity: {formatEATDateTime(latestActivity)}
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Total jobs</p>
             <p className="text-xl font-semibold">{totalJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Open jobs</p>
             <p className="text-xl font-semibold text-[var(--accent)]">{openJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completed</p>
-            <p className="text-xl font-semibold text-[#D4AF37]">{completedJobs}</p>
+            <p className="text-xl font-semibold text-[var(--accent)]">{completedJobs}</p>
           </div>
-          <div className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Completion rate</p>
             <p className="text-xl font-semibold">{completionRate.toFixed(0)}%</p>
           </div>
@@ -267,7 +273,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="notes"
               defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-70"
+              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
             />
           </label>
         </div>
@@ -279,8 +285,8 @@ export default async function ClientDetailPage({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Job History</h2>
           <form className="flex flex-wrap gap-2">
-            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
-            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20">
+            <input name="q" defaultValue={filters.q} placeholder="Search job # / brand / model" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <select name="status" defaultValue={filters.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
               <option value="">All statuses</option>
               {UI_JOB_STATUSES.map((status) => (
                 <option key={status} value={status}>{statusOptionLabel[status]}</option>
@@ -301,11 +307,11 @@ export default async function ClientDetailPage({
                   <summary className="list-none">
                     <div className="flex items-center justify-between gap-2">
                       <p className="mono min-w-0 truncate text-sm font-semibold">{job.jobNumber}</p>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[var(--ink-muted)]">
+                      <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
                         {statusOptionLabel[job.status as keyof typeof statusOptionLabel] ?? job.status}
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-sm font-medium">{job.brand} {job.model}</p>
+                    <p className="mt-1 truncate text-sm font-medium">{[job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") || "—"}</p>
                     <p className="text-xs text-[var(--ink-muted)]">Received {formatEATDate(job.receivedAt)}</p>
                   </summary>
                   <Link href={`/jobs/${job.id}`} className="btn-premium mt-2 inline-block rounded-lg px-3 py-2 text-sm font-medium text-white max-[360px]:w-full max-[360px]:text-center">
@@ -322,7 +328,7 @@ export default async function ClientDetailPage({
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <h2 className="font-semibold">Client Notes</h2>
         <form action={addClientNote} className="mt-3 flex flex-col gap-2">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20" />
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
           <button disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 
@@ -335,7 +341,7 @@ export default async function ClientDetailPage({
             <p className="text-sm text-[var(--ink-muted)]">No timeline notes yet.</p>
           ) : (
             client.notesEntries.map((note: ClientDetail["notesEntries"][number]) => (
-              <div key={note.id} className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] p-3">
+              <div key={note.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-sm">{note.body}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">
                   {note.author.name} • {formatEATDateTime(note.createdAt)}

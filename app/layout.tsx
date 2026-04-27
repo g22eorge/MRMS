@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Sora } from "next/font/google";
+import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -74,16 +76,26 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get("theme")?.value as string | undefined;
+  let initialTheme: "system" | "dark" | "light" = "system";
+  if (stored === "dark") initialTheme = "dark";
+  else if (stored === "light") initialTheme = "light";
+
+  const themeClass = stored === "dark" ? "theme-blackgold" : stored === "light" ? "light" : "";
+
   return (
-    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased`}>
+    <html lang="en" className={`${manrope.variable} ${sora.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
-        {children}
-        <Toaster richColors />
+        <ThemeProvider initialTheme={initialTheme}>
+          {children}
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

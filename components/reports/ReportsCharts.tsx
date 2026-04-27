@@ -48,10 +48,11 @@ export function ReportsCharts({
   }, [from, to]);
 
   const tooltipStyle = {
-    background: "#FFFFFF",
-    border: "1px solid #E5E5E5",
+    backgroundColor: "var(--panel)",
+    border: "1px solid var(--line)",
     borderRadius: 10,
     fontSize: 12,
+    color: "var(--ink)",
   } as const;
 
   if (!shouldRender) {
@@ -67,20 +68,22 @@ export function ReportsCharts({
             data={statusData}
             margin={{ top: 8, right: 12, left: 0, bottom: 44 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
             <XAxis
               dataKey="name"
               interval={0}
               angle={-25}
               height={54}
               textAnchor="end"
-              tick={{ fontSize: 11, fill: "#111111" }}
+              tick={{ fontSize: 11, fill: "var(--ink-muted)" }}
+              axisLine={{ stroke: "var(--line)" }}
+              tickLine={{ stroke: "var(--line)" }}
             />
-            <YAxis tick={{ fontSize: 11, fill: "#111111" }} />
+            <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
             <Tooltip contentStyle={tooltipStyle} />
             <Bar
               dataKey="value"
-              fill="#D4AF37"
+              fill="var(--accent)"
               radius={[6, 6, 0, 0]}
               cursor="pointer"
               onClick={(_, index) => {
@@ -97,14 +100,14 @@ export function ReportsCharts({
         <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Repairs by Device Type</p>
         <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={220}>
           <PieChart>
-            <Pie data={deviceData} dataKey="value" nameKey="name" outerRadius={90}>
-              {deviceData.map((entry, index) => (
-                <Cell
-                  key={entry.name}
-                  fill={["#000000", "#D4AF37", "#666666", "#000000", "#D4AF37", "#666666"][index % 6]}
-                />
-              ))}
-            </Pie>
+             <Pie data={deviceData} dataKey="value" nameKey="name" outerRadius={90}>
+               {deviceData.map((entry, index) => (
+                 <Cell
+                   key={entry.name}
+                   fill={["var(--ink)", "var(--accent)", "var(--ink-muted)", "var(--ink)", "var(--accent)", "var(--ink-muted)"][index % 6]}
+                 />
+               ))}
+             </Pie>
             <Tooltip contentStyle={tooltipStyle} />
           </PieChart>
         </ResponsiveContainer>
@@ -129,10 +132,11 @@ export function RevenueLineChart({
   }, []);
 
   const tooltipStyle = {
-    background: "#FFFFFF",
-    border: "1px solid #E5E5E5",
+    backgroundColor: "var(--panel)",
+    border: "1px solid var(--line)",
     borderRadius: 10,
     fontSize: 12,
+    color: "var(--ink)",
   } as const;
 
   if (!shouldRender || data.length === 0) {
@@ -147,25 +151,26 @@ export function RevenueLineChart({
     <div className="panel-shadow h-64 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
       <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={180}>
         <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-          <XAxis dataKey="key" tick={{ fontSize: 11, fill: "#6B6B6B" }} />
-          <YAxis tick={{ fontSize: 11, fill: "#6B6B6B" }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+          <XAxis dataKey="key" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
+          <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
           <Tooltip contentStyle={tooltipStyle} />
           <Line
             type="monotone"
             dataKey="revenue"
-            stroke="#D4AF37"
+            stroke="var(--accent)"
             strokeWidth={2.5}
-            dot={{ fill: "#D4AF37", strokeWidth: 0, r: 4 }}
+            dot={{ fill: "var(--accent)", strokeWidth: 0, r: 4 }}
             name="Revenue"
           />
           <Line
             type="monotone"
             dataKey="margin"
-            stroke="#111111"
+            stroke="var(--ink)"
+            strokeOpacity={0.7}
             strokeWidth={2}
             strokeDasharray="4 2"
-            dot={{ fill: "#111111", strokeWidth: 0, r: 3 }}
+            dot={{ fill: "var(--ink)", strokeWidth: 0, r: 3 }}
             name="Margin"
           />
         </LineChart>
@@ -190,10 +195,11 @@ export function TechnicianBarChart({
   }, []);
 
   const tooltipStyle = {
-    background: "#FFFFFF",
-    border: "1px solid #E5E5E5",
+    backgroundColor: "var(--panel)",
+    border: "1px solid var(--line)",
     borderRadius: 10,
     fontSize: 12,
+    color: "var(--ink)",
   } as const;
 
   if (!shouldRender || data.length === 0) return null;
@@ -203,19 +209,21 @@ export function TechnicianBarChart({
       <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Completed vs Assigned</p>
       <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={160}>
         <BarChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 32 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis
             dataKey="name"
             interval={0}
             angle={-20}
             height={44}
             textAnchor="end"
-            tick={{ fontSize: 10, fill: "#111111" }}
-          />
-          <YAxis tick={{ fontSize: 10, fill: "#111111" }} />
+              tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+              axisLine={{ stroke: "var(--line)" }}
+              tickLine={{ stroke: "var(--line)" }}
+            />
+          <YAxis tick={{ fontSize: 10, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Bar dataKey="total" fill="#E5E5E5" radius={[4, 4, 0, 0]} name="Assigned" />
-          <Bar dataKey="completed" fill="#D4AF37" radius={[4, 4, 0, 0]} name="Completed" />
+          <Bar dataKey="total" fill="var(--panel-strong)" radius={[4, 4, 0, 0]} name="Assigned" />
+          <Bar dataKey="completed" fill="var(--accent)" radius={[4, 4, 0, 0]} name="Completed" />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { getUserPreferences } from "@/lib/notifications";
 import { getCurrentUserRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 import { NotificationPrefsForm } from "@/components/settings/NotificationPrefsForm";
 
@@ -9,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function NotificationSettingsPage() {
   const { user } = await getCurrentUserRole();
+  if (!can.viewNotifications(user)) {
+    redirect("/dashboard");
+  }
   const prefs = await getUserPreferences(user.id);
 
   return (
@@ -21,7 +26,7 @@ export default async function NotificationSettingsPage() {
           </div>
           <Link
             href="/settings/notifications/outbox"
-            className="btn-premium-secondary shrink-0 rounded-md px-3 py-1.5 text-xs"
+            className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm"
           >
             View Outbox →
           </Link>

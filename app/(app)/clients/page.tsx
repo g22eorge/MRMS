@@ -22,6 +22,7 @@ type SearchParams = {
   q?: string;
   segment?: string;
   page?: string;
+  createError?: string;
 };
 
 export default async function ClientsPage({
@@ -99,7 +100,14 @@ export default async function ClientsPage({
       organization: String(formData.get("organization") ?? ""),
     });
 
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      const field = String(firstIssue?.path[0] ?? "input");
+      const msg = field === "fullName" ? "Full name must be at least 2 characters"
+        : field === "phone" ? "Phone number must be at least 3 characters"
+        : "Invalid input";
+      redirect(`/clients?createError=${encodeURIComponent(msg)}`);
+    }
 
     const normalizedPhone = sanitizeText(parsed.data.phone);
     const existingByPhone = await prisma.client.findFirst({
@@ -107,7 +115,9 @@ export default async function ClientsPage({
       select: { id: true },
     });
 
-    if (existingByPhone) return;
+    if (existingByPhone) {
+      redirect(`/clients?createError=${encodeURIComponent("A client with this phone number already exists")}`);
+    }
 
     await prisma.client.create({
       data: {
@@ -150,7 +160,7 @@ export default async function ClientsPage({
       <Link
         href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
         aria-disabled={isPrevDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
+        className={`rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium transition-colors ${
           isPrevDisabled
             ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
             : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
@@ -162,7 +172,7 @@ export default async function ClientsPage({
       <Link
         href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
         aria-disabled={isNextDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
+        className={`rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium transition-colors ${
           isNextDisabled
             ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
             : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
@@ -195,7 +205,7 @@ export default async function ClientsPage({
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <Link
             href="/clients?create=1"
-            className="shrink-0 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
+            className="shrink-0 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90"
           >
             + New Client
           </Link>
@@ -204,15 +214,33 @@ export default async function ClientsPage({
 
       {/* ── Filter panel ── */}
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <form className="flex flex-wrap items-center gap-2 p-3">
-          <input
-            name="q"
-            defaultValue={filters.q}
-            aria-label="Search clients"
-            placeholder="Search by name, phone, email…"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
-          />
-          <div className="flex flex-wrap gap-1.5">
+        <form className="space-y-2.5 p-3">
+          {/* Row 1: search + action buttons */}
+          <div className="flex items-center gap-2">
+            <input
+              name="q"
+              defaultValue={filters.q}
+              aria-label="Search clients"
+              placeholder="Search by name, phone, email…"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+            />
+            <button
+              type="submit"
+              className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-medium"
+            >
+              Search
+            </button>
+            {hasClientFilters ? (
+              <Link
+                href="/clients"
+                className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+              >
+                Reset
+              </Link>
+            ) : null}
+          </div>
+          {/* Row 2: segment chips — horizontal scroll on mobile */}
+          <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 pb-0.5 [scrollbar-width:none]">
             {(["all", "active", "new", "high"] as const).map((seg) => {
               const labels = { all: "All", active: "Active", new: "No Job", high: "High Activity" };
               const href = `/clients?segment=${seg}${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`;
@@ -220,10 +248,10 @@ export default async function ClientsPage({
                 <Link
                   key={seg}
                   href={href}
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
                     segment === seg
-                      ? "border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
-                      : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
                   }`}
                 >
                   {labels[seg]}
@@ -231,42 +259,33 @@ export default async function ClientsPage({
               );
             })}
           </div>
-          <button
-            type="submit"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[12px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
-          >
-            Search
-          </button>
-          {hasClientFilters ? (
-            <Link
-              href="/clients"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
-            >
-              Reset
-            </Link>
-          ) : null}
         </form>
 
         {/* Inline create form for OPS/ADMIN — shown when ?create=1 or always on large screens */}
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <form action={createClientAction} className="border-t border-[var(--line)] px-3 pb-3 pt-2.5">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick create client</p>
-            <div className="flex flex-wrap gap-2">
-              <input required name="fullName" placeholder="Full name *" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input required name="phone" placeholder="Phone *" className="min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="email" placeholder="Email" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="organization" placeholder="Organization" className="min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <button className="shrink-0 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90">
-                Create
-              </button>
+            {filters.createError ? (
+              <p className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                {filters.createError}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <input required name="fullName" placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input required name="phone" placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="organization" placeholder="Organization" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
             </div>
+            <button className="mt-2 w-full rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90 sm:w-auto">
+              Create
+            </button>
           </form>
         ) : null}
       </div>
 
       {/* ── Clients table / cards ── */}
       {clients.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <circle cx="20" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
             <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -277,7 +296,7 @@ export default async function ClientsPage({
           ) : null}
         </div>
       ) : (
-        <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
 
           {/* Table header bar with count + pagination */}
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
@@ -291,7 +310,7 @@ export default async function ClientsPage({
           </div>
 
           {/* ── Mobile cards ── */}
-          <div className="xl:hidden">
+          <div className="lg:hidden">
             <ProgressiveList initialCount={5} step={5}>
               {(clients as ClientRow[]).map((client) => (
                 <div
@@ -331,7 +350,7 @@ export default async function ClientsPage({
                     <div className="flex shrink-0 gap-1.5 pt-0.5">
                       <Link
                         href={`/clients/${client.id}`}
-                        className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6 hover:text-[var(--accent)]"
+                        className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6 hover:text-[var(--accent)]"
                       >
                         Open
                       </Link>
@@ -340,7 +359,7 @@ export default async function ClientsPage({
                           <input type="hidden" name="id" value={client.id} />
                           <button
                             disabled={client._count.jobs > 0}
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Del
                           </button>
@@ -363,18 +382,18 @@ export default async function ClientsPage({
           </div>
 
           {/* ── Desktop table ── */}
-          <div className="hidden overflow-x-auto xl:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[860px] border-collapse text-[13px]">
-              <thead>
-                <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
+              <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
+                <tr className="border-b border-[var(--line)]">
                   <th className="w-[3px] p-0" aria-hidden="true" />
-                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Client</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Phone</th>
-                  <th className="hidden px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">Email</th>
-                  <th className="hidden px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">Organization</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Jobs</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Updated</th>
-                  <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Actions</th>
+                  <th className="px-4 py-2.5">Client</th>
+                  <th className="px-4 py-2.5">Phone</th>
+                  <th className="hidden px-4 py-2.5 2xl:table-cell">Email</th>
+                  <th className="hidden px-4 py-2.5 2xl:table-cell">Organization</th>
+                  <th className="px-4 py-2.5">Jobs</th>
+                  <th className="px-4 py-2.5">Updated</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
@@ -419,7 +438,7 @@ export default async function ClientsPage({
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/clients/${client.id}`}
-                          className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                          className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
                         >
                           Open
                         </Link>
@@ -428,7 +447,7 @@ export default async function ClientsPage({
                             <input type="hidden" name="id" value={client.id} />
                             <button
                               disabled={client._count.jobs > 0}
-                              className="whitespace-nowrap rounded-md border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                              className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               Delete
                             </button>

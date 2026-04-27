@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 
+function deviceName(brand?: string | null, model?: string | null) {
+  const b = brand && brand !== "Unknown" ? brand : "";
+  const m = model && model !== "Unknown" ? model : "";
+  return [b, m].filter(Boolean).join(" ") || null;
+}
+
 import { ProgressiveList } from "@/components/mobile/ProgressiveList";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { formatMoney } from "@/lib/currency";
@@ -132,29 +138,31 @@ export function JobTable({
 
   const paginationBar = hasPagination && (totalPages ?? 0) > 1 ? (
     <div className="flex items-center gap-1.5">
-      <Link
-        href={prevPageHref ?? "#"}
-        aria-disabled={isPrevDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
-          isPrevDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        ← Prev
-      </Link>
+      {isPrevDisabled || !prevPageHref ? (
+        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+          ← Prev
+        </span>
+      ) : (
+        <Link
+          href={prevPageHref}
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        >
+          ← Prev
+        </Link>
+      )}
       <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
-      <Link
-        href={nextPageHref ?? "#"}
-        aria-disabled={isNextDisabled}
-        className={`rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-medium transition-colors ${
-          isNextDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        Next →
-      </Link>
+      {isNextDisabled || !nextPageHref ? (
+        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium opacity-30 text-[var(--ink-muted)]">
+          Next →
+        </span>
+      ) : (
+        <Link
+          href={nextPageHref}
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
+        >
+          Next →
+        </Link>
+      )}
     </div>
   ) : null;
 
@@ -179,7 +187,7 @@ export function JobTable({
       </div>
 
       {/* ── Mobile list ── */}
-      <div className="xl:hidden">
+      <div className="lg:hidden">
         <ProgressiveList initialCount={5} step={6}>
           {jobs.map((job) => {
             const strip = statusStripClass(job.status);
@@ -205,8 +213,6 @@ export function JobTable({
                   ? <span key="needs" className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-600">Needs pricing</span>
                   : null
               : null;
-
-            const hasBadgeRow = flagCfg || pricingBadge;
 
             return (
               <div
@@ -260,7 +266,7 @@ export function JobTable({
 
                   {/* Row 2: Device — the HERO element */}
                   <p className="mb-1.5 truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">
-                    {job.brand} {job.model}
+                    {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
                   </p>
 
                   {/* Row 3: Status + device type chip + flag */}
@@ -322,7 +328,7 @@ export function JobTable({
       </div>
 
       {/* ── Desktop table ── */}
-      <div className="hidden overflow-x-auto xl:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[900px] border-collapse text-[13px]">
           <thead>
             <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
@@ -366,7 +372,9 @@ export function JobTable({
 
                   {/* Device */}
                   <td className="px-4 py-3 align-middle">
-                    <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">{job.brand} {job.model}</p>
+                    <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">
+                      {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
+                    </p>
                     <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
                       <DeviceIcon type={job.deviceType} />
                       {deviceLabel[job.deviceType] ?? job.deviceType}
@@ -444,14 +452,14 @@ export function JobTable({
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                        className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
                       >
                         Open
                       </Link>
                       {canEditPage ? (
                         <Link
                           href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
-                          className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
+                          className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/20 hover:text-[var(--ink)]"
                         >
                           Edit
                         </Link>
@@ -459,7 +467,7 @@ export function JobTable({
                       {canDelete && deleteAction ? (
                         <form action={deleteAction} className="inline">
                           <input type="hidden" name="id" value={job.id} />
-                          <button className="whitespace-nowrap rounded-md border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600">
+                          <button className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1 text-[11px] font-medium text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600">
                             Delete
                           </button>
                         </form>

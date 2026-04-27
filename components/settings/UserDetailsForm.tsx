@@ -31,7 +31,7 @@ export function UserDetailsForm({ id, name, email, phone, action }: UserDetailsF
         name="name"
         defaultValue={name}
         placeholder="Full name"
-        className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <input
         required
@@ -39,21 +39,21 @@ export function UserDetailsForm({ id, name, email, phone, action }: UserDetailsF
         name="email"
         defaultValue={email}
         placeholder="Email"
-        className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <input
         name="phone"
         defaultValue={phone ?? ""}
         placeholder="Phone"
-        className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <SubmitActionButton
         idleLabel="Save Profile"
         pendingLabel="Saving..."
-        className="btn-premium h-10 rounded-md px-3 py-2 text-sm text-white md:w-fit"
+        className="btn-premium h-10 rounded-lg px-3 py-1.5 text-sm text-white md:w-fit"
       />
       {state.error ? <p className="text-sm text-black md:col-span-2 xl:col-span-4">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-[#D4AF37] md:col-span-2 xl:col-span-4">{state.success}</p> : null}
+      {state.success ? <p className="text-sm text-[var(--accent)] md:col-span-2 xl:col-span-4">{state.success}</p> : null}
     </form>
   );
 }

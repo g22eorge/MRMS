@@ -37,8 +37,8 @@ export function RoleActionButton({ role, currentRole, label }: RoleActionButtonP
       className={clsx(
         "w-full rounded-lg border px-3 py-2 text-center text-xs font-medium transition",
         currentRole === role
-          ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
-          : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--accent)]/50",
+          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+          : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--panel-strong)]",
       )}
     >
       {pending ? "Updating..." : label}

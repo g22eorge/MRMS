@@ -40,9 +40,17 @@ export async function enqueueWhatsAppMessage(input: {
   repairRequestId?: string;
   jobId?: string;
   provider?: string;
+  nextAttemptAt?: Date;
+  templateKey?: string;
+  templateVars?: string;
 }) {
   if (!supportsOutbox()) {
     // Old Prisma client in this runtime: fall back to best-effort direct send.
+    // If this was meant to be scheduled for the future, skip instead of sending early.
+    if (input.nextAttemptAt && input.nextAttemptAt.getTime() > Date.now()) {
+      return { queued: false, sent: false, deferred: true, error: "Outbox not supported for scheduled messages" };
+    }
+
     const direct = await sendCustomWhatsAppMessage(input.to, input.body);
     return {
       queued: false,
@@ -60,11 +68,14 @@ export async function enqueueWhatsAppMessage(input: {
         status: "PENDING",
         type: input.type,
         to: input.to,
+        subject: null,
         body: input.body,
+        templateKey: input.templateKey,
+        templateVars: input.templateVars,
         provider: input.provider,
         repairRequestId: input.repairRequestId,
         jobId: input.jobId,
-        nextAttemptAt: new Date(),
+        nextAttemptAt: input.nextAttemptAt ?? new Date(),
       },
       select: { id: true },
     })
@@ -99,8 +110,14 @@ export async function enqueueEmailMessage(input: {
   type: OutboundMessageType;
   repairRequestId?: string;
   jobId?: string;
+  nextAttemptAt?: Date;
+  templateKey?: string;
+  templateVars?: string;
 }) {
   if (!supportsOutbox()) {
+    if (input.nextAttemptAt && input.nextAttemptAt.getTime() > Date.now()) {
+      return { queued: false, sent: false, deferred: true, error: "Outbox not supported for scheduled messages" };
+    }
     const direct = await sendEmail({ to: input.to, subject: input.subject, text: input.body });
     return {
       queued: false,
@@ -117,8 +134,11 @@ export async function enqueueEmailMessage(input: {
       status: "PENDING",
       type: input.type,
       to: toValue,
-      body: `${input.subject}\n\n${input.body}`,
-      nextAttemptAt: new Date(),
+      subject: input.subject,
+      body: input.body,
+      templateKey: input.templateKey,
+      templateVars: input.templateVars,
+      nextAttemptAt: input.nextAttemptAt ?? new Date(),
       repairRequestId: input.repairRequestId,
       jobId: input.jobId,
       provider: "resend",
@@ -245,7 +265,14 @@ export async function deliverOutboundMessage(id: string) {
   return { ok: false, error: result.error ?? "Send failed" } satisfies DeliveryResult;
 }
 
-async function deliverEmail(row: { id: string; to: string; body: string; type: OutboundMessageType; repairRequestId: string | null }) {
+async function deliverEmail(row: {
+  id: string;
+  to: string;
+  subject: string | null;
+  body: string;
+  type: OutboundMessageType;
+  repairRequestId: string | null;
+}) {
   const to = row.to.split(",").map((t) => t.trim()).filter(Boolean);
 
   // Use a dedicated alerts sender domain (Resend verifies sender domains).
@@ -310,9 +337,13 @@ async function deliverEmail(row: { id: string; to: string; body: string; type: O
     }
   }
 
-  // Fallback: old format stored as "Subject\n\nBody".
-  const subject = row.body.split("\n")[0] ?? "MRMS Notification";
-  return sendEmail({ to, subject, text: row.body, from });
+  // New format stores subject separately; legacy stores "Subject\n\nBody" inside body.
+  if (row.subject) {
+    return sendEmail({ to, subject: row.subject, text: row.body, from });
+  }
+
+  const legacySubject = row.body.split("\n")[0] ?? "MRMS Notification";
+  return sendEmail({ to, subject: legacySubject, text: row.body, from });
 }
 
 export async function retryDueWhatsApp(limit = 25) {

@@ -46,7 +46,7 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
             router.refresh();
           });
         }}
-        className="grid gap-3 rounded-lg border border-[var(--line)] bg-white p-4 md:grid-cols-2"
+        className="grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 panel-shadow md:grid-cols-2"
       >
         <input type="hidden" name="id" value={job.id} />
         <input type="hidden" name="returnTo" value={returnTo} />
@@ -82,7 +82,7 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
         <div className="md:col-span-2 flex gap-2">
           <button
             disabled={isPending}
-            className="rounded-md bg-[#D4AF37] px-3 py-2 text-white disabled:opacity-60"
+            className="rounded-md bg-[var(--accent)] px-3 py-2 text-white disabled:opacity-60"
           >
             {isPending ? "Saving..." : "Save"}
           </button>

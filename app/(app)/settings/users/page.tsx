@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { UserAccessControlPanel } from "@/components/settings/UserAccessControlPanel";
+import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
+import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -15,12 +17,38 @@ type SearchParams = {
   userId?: string;
 };
 
+type UserDetailsState = {
+  error?: string;
+  success?: string;
+};
+
+type UserPasswordResetState = {
+  error?: string;
+  success?: string;
+};
+
 const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   phone: z.string().optional(),
   password: z.string().min(8),
   role: z.nativeEnum(Role),
+});
+
+const updateUserDetailsSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(2).max(80),
+  email: z.string().email(),
+  phone: z.string().optional(),
+});
+
+const resetPasswordSchema = z.object({
+  userId: z.string().min(1),
+  password: z.string().min(8),
+  confirm: z.string().min(8),
+}).refine((data) => data.password === data.confirm, {
+  message: "Passwords do not match",
+  path: ["confirm"],
 });
 
 type PermissionOption = {
@@ -35,7 +63,7 @@ type PermissionOption = {
 
 const roleOptions: Array<{ value: Role; label: string; description: string }> = [
   { value: Role.ADMIN, label: "Admin", description: "Full platform control including user management and financial approvals." },
-  { value: Role.INTAKE, label: "Intake Officer", description: "Handles intake conversion, customer details, and handover documents." },
+  { value: Role.FRONT_DESK, label: "Front Desk", description: "Handles front desk intake, customer details, and handover documents." },
   { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
   { value: Role.TECHNICIAN_EXTERNAL, label: "External Technician", description: "External workflow access without client identity or billing history." },
   { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
@@ -68,7 +96,7 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_view_accounts_summary",
     "can_approve_invoices",
   ],
-  INTAKE: [
+  FRONT_DESK: [
     "can_intake",
     "can_manage_intake",
     "can_generate_job_cards",
@@ -120,7 +148,7 @@ const roleCapabilities: Record<Role, string[]> = {
     "approval_cost",
     "download_docs",
   ],
-  INTAKE: [
+  FRONT_DESK: [
     "dashboard_view",
     "jobs_view",
     "jobs_create",
@@ -166,7 +194,7 @@ const permissionOptions: PermissionOption[] = [
 function roleLabel(role: Role) {
   if (role === "TECHNICIAN_INTERNAL") return "Internal Technician";
   if (role === "TECHNICIAN_EXTERNAL") return "External Technician";
-  if (role === "INTAKE") return "Intake Officer";
+  if (role === "FRONT_DESK") return "Intake Officer";
   if (role === "OPS") return "Operations/Accounts";
   return "Admin";
 }
@@ -201,6 +229,130 @@ export default async function UsersPage({
   const { user } = await getCurrentUserRole();
   if (user.role !== "ADMIN") {
     redirect("/dashboard");
+  }
+
+  async function updateUserDetails(state: UserDetailsState, formData: FormData): Promise<UserDetailsState> {
+    "use server";
+
+    const { session, user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return { error: "Not authorized" };
+
+    const parsed = updateUserDetailsSchema.safeParse({
+      id: String(formData.get("id") ?? "").trim(),
+      name: String(formData.get("name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim().toLowerCase(),
+      phone: String(formData.get("phone") ?? "").trim(),
+    });
+
+    if (!parsed.success) return { error: "Invalid user details" };
+
+    const existing = await prisma.user.findUnique({
+      where: { id: parsed.data.id },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    if (!existing) return { error: "User not found" };
+
+    const emailConflict = await prisma.user.findFirst({
+      where: { email: parsed.data.email, NOT: { id: parsed.data.id } },
+      select: { id: true },
+    });
+    if (emailConflict) return { error: "Email is already in use by another user" };
+
+    const nextPhone = parsed.data.phone ? parsed.data.phone : null;
+    const changed = {
+      name: existing.name !== parsed.data.name,
+      email: existing.email !== parsed.data.email,
+      phone: (existing.phone ?? null) !== nextPhone,
+    };
+
+    if (!changed.name && !changed.email && !changed.phone) {
+      return { success: "No changes to save" };
+    }
+
+    await prisma.user.update({
+      where: { id: parsed.data.id },
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: nextPhone,
+      },
+    });
+
+    try {
+      await prisma.userAccessAudit.create({
+        data: {
+          actorUserId: session.user.id,
+          targetUserId: parsed.data.id,
+          action: "USER_DETAILS_UPDATED",
+          detail: JSON.stringify({
+            from: { name: existing.name, email: existing.email, phone: existing.phone ?? null },
+            to: { name: parsed.data.name, email: parsed.data.email, phone: nextPhone },
+          }),
+        },
+      });
+    } catch {
+      // ignore if audit table isn't migrated yet
+    }
+
+    revalidatePath("/settings/users");
+    return { success: "User details saved" };
+  }
+
+  async function resetUserPassword(state: UserPasswordResetState, formData: FormData): Promise<UserPasswordResetState> {
+    "use server";
+
+    const { session, user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return { error: "Not authorized" };
+
+    const parsed = resetPasswordSchema.safeParse({
+      userId: String(formData.get("userId") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+      confirm: String(formData.get("confirm") ?? ""),
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid password" };
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: parsed.data.userId }, select: { id: true } });
+    if (!target) return { error: "User not found" };
+
+    const hashed = await hashPassword(parsed.data.password);
+
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.account.updateMany({
+        where: { userId: parsed.data.userId, providerId: "credential" },
+        data: { password: hashed },
+      });
+      if (updated.count === 0) {
+        await tx.account.create({
+          data: {
+            accountId: parsed.data.userId,
+            providerId: "credential",
+            userId: parsed.data.userId,
+            password: hashed,
+          },
+        });
+      }
+
+      // Force re-login everywhere after reset.
+      await tx.session.deleteMany({ where: { userId: parsed.data.userId } });
+    });
+
+    try {
+      await prisma.userAccessAudit.create({
+        data: {
+          actorUserId: session.user.id,
+          targetUserId: parsed.data.userId,
+          action: "PASSWORD_RESET",
+          detail: JSON.stringify({ method: "ADMIN_RESET", signedOutAllSessions: true }),
+        },
+      });
+    } catch {
+      // ignore
+    }
+
+    revalidatePath("/settings/users");
+    return { success: "Password reset. User has been signed out." };
   }
 
   async function saveAccessChanges(formData: FormData) {
@@ -440,16 +592,16 @@ export default async function UsersPage({
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create User</p>
         <form action={createUser} className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-          <input required name="name" placeholder="Name" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input required type="email" name="email" placeholder="Email" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input name="phone" placeholder="Phone" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <input required minLength={8} type="password" name="password" placeholder="Password" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm" />
-          <select name="role" defaultValue="OPS" className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
+          <input required name="name" placeholder="Name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input required type="email" name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input name="phone" placeholder="Phone" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <input required minLength={8} type="password" name="password" placeholder="Password" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+          <select name="role" defaultValue="OPS" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             {roleOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <button className="btn-premium rounded-md px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create User</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm text-white md:col-span-2 xl:col-span-1">Create User</button>
         </form>
       </section>
 
@@ -460,11 +612,11 @@ export default async function UsersPage({
             name="q"
             defaultValue={q}
             placeholder="Search by name, phone, email, or role"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <div className="flex gap-2">
-            <button className="btn-premium-secondary rounded-md px-3 py-2 text-sm">Search</button>
-            <Link href="/settings/users" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Search</button>
+            <Link href="/settings/users" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Reset
             </Link>
           </div>
@@ -475,7 +627,7 @@ export default async function UsersPage({
             <Link
               key={item.id}
               href={`/settings/users?${new URLSearchParams({ q, userId: item.id }).toString()}`}
-              className={`rounded-lg border px-3 py-2 transition ${selectedUser?.id === item.id ? "border-[#D4AF37] bg-[#D4AF37]/10" : "border-[var(--line)] bg-white hover:border-[#D4AF37]/45"}`}
+              className={`rounded-lg border px-3 py-2 transition ${selectedUser?.id === item.id ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/45"}`}
             >
               <p className="font-medium text-[var(--ink)]">{item.name}</p>
               <p className="text-xs text-[var(--ink-muted)]">{item.email}</p>
@@ -490,24 +642,24 @@ export default async function UsersPage({
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Profile Summary</p>
             <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Name</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.name}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Contact</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">{selectedUser.email}</p>
                 <p className="text-xs text-[var(--ink-muted)]">{selectedUser.phone ?? "No phone on file"}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Current Role</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{roleLabel(selectedUser.role)}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Status</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{selectedUser.isActive ? "Active" : "Inactive"}</p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Last Activity</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">
                   {formatDateTime(
@@ -517,10 +669,32 @@ export default async function UsersPage({
                   )}
                 </p>
               </div>
-              <div className="rounded-md border border-[var(--line)] bg-white p-3">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Branch / Location</p>
                 <p className="mt-1 text-sm text-[var(--ink)]">Not assigned</p>
               </div>
+            </div>
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Edit User Details</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Update name, email, and phone. Email changes take effect immediately.</p>
+            <div className="mt-3">
+              <UserDetailsForm
+                id={selectedUser.id}
+                name={selectedUser.name}
+                email={selectedUser.email}
+                phone={selectedUser.phone}
+                action={updateUserDetails}
+              />
+            </div>
+          </section>
+
+          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Reset Password</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Use this when a user forgets their password. A reset signs them out everywhere.</p>
+            <div className="mt-3">
+              <UserPasswordResetForm userId={selectedUser.id} action={resetUserPassword} />
             </div>
           </section>
 
@@ -555,7 +729,7 @@ export default async function UsersPage({
                     detail = entry.detail ?? "No detail";
                   }
                   return (
-                    <div key={entry.id} className="rounded-md border border-[var(--line)] bg-white p-3 text-xs text-[var(--ink-muted)]">
+                    <div key={entry.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-xs text-[var(--ink-muted)]">
                       <p className="font-semibold text-[var(--ink)]">{entry.action}</p>
                       <p className="mt-1">Changed by {entry.actorUser.name} • {entry.createdAt.toLocaleString()}</p>
                       <p className="mt-1">{detail}</p>

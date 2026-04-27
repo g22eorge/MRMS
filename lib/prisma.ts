@@ -1,68 +1,49 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-const DEFAULT_LOCAL_DATABASE_URL = "file:./prisma/dev.db";
+const DEFAULT_LOCAL_DATABASE_URL = (() => {
+  const cwd = process.cwd();
+  // Support running from `.next/standalone` where relative paths break.
+  if (cwd.includes(".next/standalone")) {
+    return `file:${cwd}/../../prisma/dev.db`;
+  }
+  return `file:${cwd}/prisma/dev.db`;
+})();
 
 function toSqliteAbsoluteUrl(url: string) {
   if (!url.startsWith("file:")) return url;
   const rawPath = url.slice("file:".length);
   if (!rawPath || rawPath.startsWith("/") || rawPath.startsWith("..")) return url;
 
-  // Standardize local sqlite location under ./prisma/dev.db.
-  // Prisma CLI (schema.prisma) and other tooling often assume this layout.
-  if (rawPath === "dev.db" || rawPath === "./dev.db") {
-    const preferred = path.resolve(process.cwd(), "prisma", "dev.db");
-    if (fs.existsSync(preferred)) return `file:${preferred}`;
+  // Avoid path/process.cwd() here to prevent Turbopack over-tracing.
+  // Dev scripts already run prisma db push/generate before dev/build.
+  if (rawPath === "dev.db" || rawPath === "./dev.db" || rawPath === "prisma/dev.db" || rawPath === "./prisma/dev.db") {
+    return DEFAULT_LOCAL_DATABASE_URL;
   }
 
-  const fromCwd = path.resolve(process.cwd(), rawPath);
-  if (fs.existsSync(fromCwd)) {
-    return `file:${fromCwd}`;
-  }
-
-  const fromStandalone = path.resolve(process.cwd(), "../../", rawPath);
-  if (process.cwd().includes(`${path.sep}.next${path.sep}standalone`) && fs.existsSync(fromStandalone)) {
-    return `file:${fromStandalone}`;
-  }
-
-  return `file:${fromCwd}`;
-}
-
-function sqlitePathFromUrl(url: string) {
-  if (!url.startsWith("file:")) return null;
-  return url.slice("file:".length);
-}
-
-function ensureLocalSqliteSchema(url: string) {
-  if (process.env.TURSO_DATABASE_URL) return;
-  if (process.env.NODE_ENV === "production") return;
-
-  const sqlitePath = sqlitePathFromUrl(url);
-  if (!sqlitePath) return;
-
-  const stats = fs.existsSync(sqlitePath) ? fs.statSync(sqlitePath) : null;
-  const likelyUninitialized = !stats || stats.size < 16 * 1024;
-
-  if (!likelyUninitialized) return;
-
-  const bunx = process.platform === "win32" ? "bunx.cmd" : "bunx";
-  const result = spawnSync(bunx, ["prisma", "migrate", "deploy"], {
-    env: { ...process.env, DATABASE_URL: `file:${sqlitePath}` },
-    stdio: "ignore",
-  });
-
-  if (result.status !== 0) {
-    throw new Error(`Failed to auto-run local Prisma migrations for ${sqlitePath}`);
-  }
+  return url;
 }
 
 function createPrismaClient() {
   // Use TURSO_DATABASE_URL to detect production mode
   const isProduction = !!process.env.TURSO_DATABASE_URL;
+
+  // GitHub Actions/CI runs Next in production mode but uses local sqlite.
+  const isCi = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+
+  // When Next runs `next build`, NODE_ENV is production; allow local sqlite during build.
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+  if (
+    process.env.NODE_ENV === "production" &&
+    !isProduction &&
+    !isBuildPhase &&
+    !isCi &&
+    process.env.ALLOW_SQLITE_PRODUCTION !== "1"
+  ) {
+    // Prefer a clear error over a noisy sqlite "unable to open" failure on serverless.
+    throw new Error("Missing TURSO_DATABASE_URL (set Turso env vars for production runtime)");
+  }
 
   if (!isProduction) {
     const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -72,8 +53,6 @@ function createPrismaClient() {
     } else {
       process.env.DATABASE_URL = toSqliteAbsoluteUrl(databaseUrl);
     }
-
-    ensureLocalSqliteSchema(process.env.DATABASE_URL);
 
     return new PrismaClient({
       log: ["error", "warn"],
@@ -128,4 +107,7 @@ async function ensureRestPricingPermission() {
   }
 }
 
-ensureRestPricingPermission();
+// Avoid DB mutations during `next build`.
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  void ensureRestPricingPermission();
+}

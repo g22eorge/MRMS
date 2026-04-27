@@ -7,6 +7,7 @@ import path from "node:path";
 import { getClientBill } from "@/lib/billing";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { canGenerateInvoiceForStatus, formatQuotationNumber } from "@/lib/documents";
 import { can } from "@/lib/permissions";
 import { InvoiceDocument } from "@/lib/pdf/InvoiceDocument";
 import { prisma } from "@/lib/prisma";
@@ -45,29 +46,6 @@ function compactListText(value: string | null | undefined, max = 220) {
     .join("\n");
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 1)}...`;
-}
-
-function formatQuotationNumber(
-  jobNumber: string,
-  issuedAt: Date,
-  prefix: string,
-  template: string,
-  padLength: number,
-) {
-  const month = issuedAt.getMonth() + 1;
-  const eisMatch = jobNumber.match(/^EIS-(\d{1,2})\/(\d{4})\/(\d+)$/i);
-  const eiMatch = jobNumber.match(/^EI-(\d{4})-(\d+)$/i);
-
-  const year = eisMatch?.[2] ?? eiMatch?.[1] ?? String(issuedAt.getFullYear());
-  const sequence = eisMatch?.[3] ?? eiMatch?.[2] ?? jobNumber.match(/(\d+)$/)?.[1] ?? "1";
-  const serial = String(Number(sequence)).padStart(padLength, "0");
-
-  return template
-    .replaceAll("{PREFIX}", prefix)
-    .replaceAll("{M}", String(month))
-    .replaceAll("{MM}", String(month).padStart(2, "0"))
-    .replaceAll("{YYYY}", year)
-    .replaceAll("{SEQ}", serial);
 }
 
 async function toDataUriFromRemote(url: string) {
@@ -135,7 +113,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const { user } = await getCurrentUserRole();
+  const { session, user } = await getCurrentUserRole();
 
   if (!( ["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user) )) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -197,6 +175,13 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (!canGenerateInvoiceForStatus(job.status)) {
+    return NextResponse.json(
+      { error: "Invoice can be generated only after repair reaches pickup/completion stage." },
+      { status: 409 },
+    );
+  }
+
   const currency = getAppCurrency();
   const branding = await getDocumentBrandingSettings();
   const clientBill = getClientBill(job) ?? 0;
@@ -221,6 +206,24 @@ export async function GET(
     branding.quoteFormat,
     branding.sequencePadLength,
   );
+  const invoiceNumber = `INV-${quotationNumber.replace(/\s+/g, "-")}`;
+
+  await prisma.job.update({
+    where: { id: job.id },
+    data: {
+      invoiceIssuedAt: issuedAtDate,
+      invoiceNumber,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      jobId: job.id,
+      userId: session.user.id,
+      action: "INVOICE_GENERATED",
+      detail: JSON.stringify({ invoiceNumber }),
+    },
+  });
 
   const invoiceElement = createElement(InvoiceDocument, {
     companyName: branding.companyName,

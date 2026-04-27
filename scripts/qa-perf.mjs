@@ -17,7 +17,7 @@ async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForServer(baseUrl, timeoutMs = 30000) {
+async function waitForServer(baseUrl, timeoutMs = 60000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     try {
@@ -55,6 +55,7 @@ async function run() {
 
   let serverProcess = null;
   let spawnedServer = false;
+  let serverLog = "";
 
   try {
     if (!process.env.PERF_BASE_URL) {
@@ -62,8 +63,21 @@ async function run() {
       const port = url.port || "4020";
       serverProcess = spawn("bun", ["run", "start"], {
         env: { ...process.env, PORT: port },
-        stdio: "ignore",
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
       });
+
+      serverProcess.stdout?.on("data", (chunk) => {
+        serverLog += String(chunk);
+        if (serverLog.length > 50_000) serverLog = serverLog.slice(-50_000);
+        globalThis.__perfServerLogTail = serverLog;
+      });
+      serverProcess.stderr?.on("data", (chunk) => {
+        serverLog += String(chunk);
+        if (serverLog.length > 50_000) serverLog = serverLog.slice(-50_000);
+        globalThis.__perfServerLogTail = serverLog;
+      });
+
       spawnedServer = true;
       await waitForServer(baseUrl);
     }
@@ -114,12 +128,39 @@ async function run() {
     console.log("OK: performance smoke checks passed.");
   } finally {
     if (spawnedServer && serverProcess?.pid) {
-      serverProcess.kill("SIGTERM");
+      const pid = serverProcess.pid;
+
+      // Prefer killing the whole process group (bun -> shell -> next start).
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch {
+        serverProcess.kill("SIGTERM");
+      }
+
+      const exited = await Promise.race([
+        new Promise((resolve) => {
+          serverProcess.once("exit", () => resolve(true));
+        }),
+        sleep(4000).then(() => false),
+      ]);
+
+      if (!exited) {
+        try {
+          process.kill(-pid, "SIGKILL");
+        } catch {
+          serverProcess.kill("SIGKILL");
+        }
+      }
     }
   }
 }
 
 run().catch((error) => {
   console.error("FAIL:", error.message);
+  if (error.message?.includes("did not become ready") && process.env.PERF_BASE_URL == null) {
+    // If we spawned the server and it never became ready, show recent logs.
+    // (The buffer is small; enough for common startup/config errors.)
+    console.error("\n--- server log (tail) ---\n" + (globalThis.__perfServerLogTail ?? ""));
+  }
   process.exit(1);
 });

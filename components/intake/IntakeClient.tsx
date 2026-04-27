@@ -14,10 +14,10 @@ import {
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  PENDING_INTAKE:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
-  APPROVED:         { label: "Approved",       cls: "bg-[#D4AF37] text-white" },
+  PENDING_FRONT_DESK:   { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
+  APPROVED:         { label: "Approved",       cls: "bg-[var(--accent)] text-white" },
   REJECTED:         { label: "Rejected",       cls: "bg-black text-white" },
-  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-[var(--ink)] text-white" },
+  CONVERTED_TO_JOB: { label: "Converted",     cls: "bg-black text-white" },
 };
 
 const HANDOVER_LABEL: Record<string, string> = {
@@ -162,7 +162,7 @@ function RequestDrawer({
     });
   }
 
-  const isPending   = localStatus === "PENDING_INTAKE";
+  const isPending   = localStatus === "PENDING_FRONT_DESK";
   const isApproved  = localStatus === "APPROVED";
   const isConverted = localStatus === "CONVERTED_TO_JOB";
   const isRejected  = localStatus === "REJECTED";
@@ -173,7 +173,7 @@ function RequestDrawer({
       <div className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" onClick={onClose} />
 
       {/* drawer */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-[var(--panel)] shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)] bg-[var(--panel)]">
           <div>
@@ -186,7 +186,7 @@ function RequestDrawer({
               <button
                 type="button"
                 onClick={() => setEditMode((v) => !v)}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-[var(--line)] bg-white text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] transition-colors"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 transition-colors"
               >
                 {editMode ? "Done" : "Edit"}
               </button>
@@ -195,7 +195,7 @@ function RequestDrawer({
               <button
                 type="button"
                 onClick={remove}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-black bg-black text-white hover:bg-black/80 transition-colors"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
               >
                 Delete
               </button>
@@ -215,7 +215,7 @@ function RequestDrawer({
             <p className="text-xs text-[var(--ink)] font-medium">This request was converted to a job.</p>
             <a
               href={`/jobs/${req.linkedJobId}`}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open Job
@@ -225,13 +225,13 @@ function RequestDrawer({
 
         {/* actions bar */}
         {canManageIntake && !isConverted && !isRejected && (
-          <div className="px-6 py-3 border-b border-[var(--line)] bg-white flex items-center gap-2 flex-wrap">
+          <div className="px-6 py-3 border-b border-[var(--line)] bg-[var(--panel)] flex items-center gap-2 flex-wrap">
             {isPending && (
               <>
                 <ActionBtn
                   label="Approve"
                   disabled={pending}
-                  className="bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90"
+                  className="bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90"
                   onClick={() => act("APPROVED")}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
                 />
@@ -248,7 +248,7 @@ function RequestDrawer({
               <ActionBtn
                 label="Convert to Job"
                 disabled={pending}
-                className="bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90"
+                className="bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90"
                 onClick={() => act("CONVERTED_TO_JOB")}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
               />
@@ -262,7 +262,7 @@ function RequestDrawer({
         {/* body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {editMode && canManageIntake ? (
-            <form action={saveEdits} className="mb-6 rounded-xl border border-[var(--line)] bg-white p-4">
+            <form action={saveEdits} className="mb-6 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 panel-shadow">
               <p className="text-[10px] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-3">Edit Request</p>
               <div className="grid grid-cols-1 gap-3">
                 <input
@@ -313,7 +313,7 @@ function RequestDrawer({
                 <button
                   type="submit"
                   disabled={pending}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[#D4AF37] text-white hover:bg-[#D4AF37]/90 disabled:opacity-40"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40"
                 >
                   Save
                 </button>
@@ -388,7 +388,6 @@ function RequestDrawer({
 function RowActions({
   req,
   onStatusChange,
-  onView,
   onEdit,
   onDelete,
   canManageIntake,
@@ -396,7 +395,6 @@ function RowActions({
 }: {
   req: RepairRequest;
   onStatusChange: (id: string, status: string) => void;
-  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   canManageIntake: boolean;
@@ -425,13 +423,13 @@ function RowActions({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-      {canManageIntake && req.requestStatus === "PENDING_INTAKE" && (
+      {canManageIntake && req.requestStatus === "PENDING_FRONT_DESK" && (
         <>
           <button
             disabled={pending}
             onClick={(e) => act("APPROVED", e)}
             title="Approve"
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 hover:bg-[#D4AF37]/30 disabled:opacity-40 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 disabled:opacity-40 transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             Approve
@@ -488,19 +486,151 @@ function RowActions({
             onDelete();
           }}
           title="Delete"
-          className="inline-flex items-center rounded-md p-1.5 text-white bg-black hover:bg-black/80 transition-colors"
+          className="inline-flex items-center rounded-md p-1.5 text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         </button>
       ) : null}
-      {/* view icon — table only, omit from mobile cards */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onView(); }}
-        title="View details"
-        className="inline-flex items-center rounded-md p-1.5 text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] transition-colors"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
+    </div>
+  );
+}
+
+function MobileRequestActions({
+  req,
+  onStatusChange,
+  onSelect,
+  onEdit,
+  onDelete,
+  canManageIntake,
+  isAdmin,
+}: {
+  req: RepairRequest;
+  onStatusChange: (id: string, status: string) => void;
+  onSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  canManageIntake: boolean;
+  isAdmin: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function act(status: RepairRequestStatus) {
+    startTransition(async () => {
+      const res = await setRepairRequestStatusAction({ id: req.id, status });
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      if (res && "jobId" in res && res.jobId) {
+        router.push(`/jobs/${res.jobId}`);
+        return;
+      }
+      if (res && "requestStatus" in res && res.requestStatus) {
+        onStatusChange(req.id, res.requestStatus);
+      }
+    });
+  }
+
+  const isPendingReq = req.requestStatus === "PENDING_FRONT_DESK";
+  const isApprovedReq = req.requestStatus === "APPROVED";
+  const isConvertedReq = req.requestStatus === "CONVERTED_TO_JOB";
+
+  return (
+    <div className="flex w-full items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      {canManageIntake && isPendingReq ? (
+        <>
+          <button
+            disabled={pending}
+            onClick={() => act("APPROVED")}
+            className="btn-premium flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {pending ? "Saving..." : "Approve"}
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => act("REJECTED")}
+            className="btn-premium-secondary flex-1 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          >
+            Reject
+          </button>
+        </>
+      ) : null}
+
+      {canManageIntake && isApprovedReq ? (
+        <button
+          disabled={pending}
+          onClick={() => act("CONVERTED_TO_JOB")}
+          className="btn-premium w-full rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+        >
+          {pending ? "Saving..." : "Convert to Job"}
+        </button>
+      ) : null}
+
+      {isConvertedReq && req.linkedJobId ? (
+        <a
+          href={`/jobs/${req.linkedJobId}`}
+          className="inline-flex min-w-[92px] items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)]"
+        >
+          View Job
+        </a>
+      ) : null}
+
+      <details className="relative ml-auto">
+        <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
+          </svg>
+        </summary>
+        <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-xl">
+          <button
+            type="button"
+            onClick={onSelect}
+            className="flex w-full items-center px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel)]"
+          >
+            View Details
+          </button>
+          {canManageIntake ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex w-full items-center px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel)]"
+            >
+              Edit Request
+            </button>
+          ) : null}
+          {canManageIntake && isApprovedReq ? (
+            <button
+              type="button"
+              onClick={() => act("REJECTED")}
+              className="flex w-full items-center px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel)]"
+            >
+              Reject / Close
+            </button>
+          ) : null}
+          {isConvertedReq && req.linkedJobId ? (
+            <a
+              href={`/api/jobs/${req.linkedJobId}/job-card`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center px-3 py-2 text-left text-xs text-[var(--ink)] hover:bg-[var(--panel)]"
+            >
+              Print / Download
+            </a>
+          ) : null}
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex w-full items-center px-3 py-2 text-left text-xs text-red-700 hover:bg-red-50"
+            >
+              Delete Request
+            </button>
+          ) : null}
+        </div>
+      </details>
     </div>
   );
 }
@@ -526,7 +656,7 @@ function MobileCard({
   return (
     <div
       onClick={onSelect}
-      className="rounded-xl border border-[var(--line)] bg-white shadow-sm cursor-pointer transition-colors hover:border-[var(--line)] active:bg-[var(--panel)] overflow-hidden"
+      className="rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-sm cursor-pointer transition-colors hover:border-[var(--line)] hover:bg-[var(--panel-strong)]/40 active:bg-[var(--panel-strong)]/55 overflow-visible"
     >
       {/* header: req # + status */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -551,13 +681,13 @@ function MobileCard({
 
       {/* footer: action buttons */}
       <div
-        className="border-t border-[var(--line)] bg-[var(--panel)]/60 px-4 py-2.5 flex items-center gap-2 flex-wrap"
+        className="border-t border-[var(--line)] bg-[var(--panel)]/60 px-4 py-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <RowActions
+        <MobileRequestActions
           req={req}
           onStatusChange={onStatusChange}
-          onView={onSelect}
+          onSelect={onSelect}
           onEdit={onEdit}
           onDelete={onDelete}
           canManageIntake={canManageIntake}
@@ -647,13 +777,13 @@ export function IntakeClient({
 
   const tabs = [
     { key: "ALL",              label: "All" },
-    { key: "PENDING_INTAKE",   label: "Pending" },
+    { key: "PENDING_FRONT_DESK",   label: "Pending" },
     { key: "APPROVED",         label: "Approved" },
     { key: "REJECTED",         label: "Rejected" },
     { key: "CONVERTED_TO_JOB", label: "Converted" },
   ];
 
-  const pendingCount = counts["PENDING_INTAKE"] ?? 0;
+  const pendingCount = counts["PENDING_FRONT_DESK"] ?? 0;
   const brief = filter !== "ALL"
     ? `Showing ${STATUS_META[filter]?.label ?? filter} requests. Tap a card or row to open the full detail and take action.`
     : pendingCount > 0
@@ -674,8 +804,9 @@ export function IntakeClient({
       </details>
 
       {/* filter tabs */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div className="flex gap-1.5 flex-wrap">
+      <div className="mb-4 flex items-center gap-2">
+        <div className="-mx-1 min-w-0 flex-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+          <div className="flex w-max items-center gap-1.5">
         {tabs.map((tab) => {
           const count = tab.key === "ALL" ? requests.length : (counts[tab.key] ?? 0);
           const active = filter === tab.key;
@@ -686,26 +817,31 @@ export function IntakeClient({
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors
                 ${active
                   ? "bg-black text-white"
-                  : "bg-white border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel)]"
+                  : "bg-[var(--panel)] border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
                 }`}
             >
               {tab.label}
               {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${active ? "bg-white/20" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {count}
                 </span>
               )}
             </button>
           );
         })}
+          </div>
         </div>
         <button
           type="button"
           onClick={refresh}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel)] disabled:opacity-40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:bg-[var(--panel)] disabled:opacity-40"
+          aria-label="Refresh requests"
         >
-          Refresh
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <polyline points="21 3 21 9 15 9" />
+          </svg>
         </button>
       </div>
 
@@ -716,7 +852,7 @@ export function IntakeClient({
       ) : (
         <>
           {/* ── MOBILE CARD VIEW ── */}
-          <div className="space-y-3 xl:hidden">
+          <div className="space-y-3 lg:hidden">
             {filtered.map((req) => (
               <MobileCard
                 key={req.id}
@@ -738,17 +874,17 @@ export function IntakeClient({
           </div>
 
           {/* ── DESKTOP TABLE VIEW ── */}
-          <div className="hidden xl:block rounded-xl border border-[var(--line)] bg-white overflow-hidden shadow-sm">
-            <table className="min-w-full divide-y divide-[var(--line)]">
-              <thead className="bg-[var(--panel)]">
+          <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden panel-shadow lg:block">
+            <table className="min-w-full text-[13px]">
+              <thead className="bg-[var(--panel-strong)]/50 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Request #</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Customer</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Device</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Handover</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Date</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-[var(--ink-muted)] uppercase tracking-wide">Actions</th>
+                  <th className="px-4 py-2.5">Request #</th>
+                  <th className="px-4 py-2.5">Customer</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">Device</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">Handover</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">Date</th>
+                  <th className="hidden px-4 py-2.5 text-right lg:table-cell">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
@@ -756,36 +892,32 @@ export function IntakeClient({
                   <tr
                     key={req.id}
                     onClick={() => setSelected(req)}
-                    className="hover:bg-[var(--panel)] cursor-pointer transition-colors group"
+                    className="cursor-pointer transition-colors hover:bg-[var(--panel-strong)]/40 group"
                   >
                     <td className="px-4 py-3 text-sm font-mono font-semibold text-[var(--ink)] whitespace-nowrap">
                       {req.requestNumber}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-[var(--ink)]">{req.customerName}</div>
-                      <div className="text-xs text-[var(--ink-muted)]">{req.phone}</div>
+                      <div className="text-xs text-[var(--ink-muted)] md:hidden">{req.phone}</div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
                       <div className="text-sm text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
                       <div className="text-xs text-[var(--ink-muted)]">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">
                       <span className="text-xs text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge status={req.requestStatus} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)]">
+                    <td className="hidden px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)] lg:table-cell">
                       {fmt(req.createdAt)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <td className="hidden px-4 py-3 whitespace-nowrap text-right lg:table-cell">
                       <RowActions
                         req={req}
                         onStatusChange={handleStatusChange}
-                        onView={() => {
-                          setDrawerMode("view");
-                          setSelected(req);
-                        }}
                         onEdit={() => {
                           setDrawerMode("edit");
                           setSelected(req);

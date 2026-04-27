@@ -24,7 +24,7 @@ function SaveButton() {
   return (
     <button
       type="submit"
-      className="btn-premium rounded-md px-4 py-2 text-sm text-white"
+      className="btn-premium rounded-lg px-4 py-2 text-sm text-white"
       disabled={pending}
     >
       {pending ? "Saving..." : "Save Changes"}
@@ -139,8 +139,8 @@ export function UserAccessControlPanel({
                 }}
                 className={`rounded-lg border px-3 py-2 text-left transition ${
                   active
-                    ? "border-[#D4AF37] bg-[#D4AF37]/10"
-                    : "border-[var(--line)] bg-white hover:border-[#D4AF37]/50"
+                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/50"
                 }`}
               >
                 <p className="text-sm font-semibold text-[var(--ink)]">{option.label}</p>
@@ -168,7 +168,7 @@ export function UserAccessControlPanel({
                   const disabled = inherited || !item.mutable || !item.permission;
 
                   return (
-                    <label key={item.key} className="flex items-start gap-2 rounded-md border border-[var(--line)] bg-white p-2.5">
+                    <label key={item.key} className="flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2.5">
                       <input
                         type="checkbox"
                         checked={checked}

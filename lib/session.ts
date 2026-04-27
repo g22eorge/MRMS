@@ -35,48 +35,90 @@ export async function requireRole(allowed: Role[]) {
 
 export async function getCurrentUserRole() {
   const session = await requireSession();
-  const baseUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      role: true,
-      isActive: true,
-      name: true,
-      email: true,
-    },
-  });
-
-  let phone: string | null = null;
-  let permissions: string[] = [];
-  if (baseUser) {
-    try {
-      const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
-        SELECT phone FROM "User" WHERE id = ${session.user.id} LIMIT 1
-      `;
-      phone = phoneRows[0]?.phone ?? null;
-    } catch {
-      phone = null;
-    }
-
-    try {
-      const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
-        SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
-      `;
-      permissions = permissionRows
-        .map((row) => row.permission)
-        .filter((permission): permission is string => typeof permission === "string" && permission.length > 0);
-    } catch {
-      permissions = [];
-    }
-  }
-
-  const user = baseUser
-    ? {
-        ...baseUser,
-        phone,
-        permissions,
+  let user:
+    | {
+        id: string;
+        role: Role;
+        isActive: boolean;
+        name: string;
+        email: string;
+        phone: string | null;
+        permissions: string[];
       }
-    : null;
+    | null = null;
+
+  try {
+    const row = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        name: true,
+        email: true,
+        phone: true,
+        permissionGrants: { select: { permission: true } },
+      },
+    });
+
+    user = row
+      ? {
+          id: row.id,
+          role: row.role,
+          isActive: row.isActive,
+          name: row.name,
+          email: row.email,
+          phone: row.phone ?? null,
+          permissions: row.permissionGrants
+            .map((p) => p.permission)
+            .filter((permission): permission is string => typeof permission === "string" && permission.length > 0),
+        }
+      : null;
+  } catch {
+    // Fallback for partially migrated DBs (older deployments).
+    const baseUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    let phone: string | null = null;
+    let permissions: string[] = [];
+    if (baseUser) {
+      try {
+        const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
+          SELECT phone FROM "User" WHERE id = ${session.user.id} LIMIT 1
+        `;
+        phone = phoneRows[0]?.phone ?? null;
+      } catch {
+        phone = null;
+      }
+
+      try {
+        const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
+          SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
+        `;
+        permissions = permissionRows
+          .map((row) => row.permission)
+          .filter((permission): permission is string => typeof permission === "string" && permission.length > 0);
+      } catch {
+        permissions = [];
+      }
+    }
+
+    user = baseUser
+      ? {
+          ...baseUser,
+          phone,
+          permissions,
+        }
+      : null;
+  }
 
   if (!user?.isActive) {
     redirect("/login");

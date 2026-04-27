@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { NotificationType, NotificationChannel, JobStatus } from "@prisma/client";
+import { JobStatus, NotificationChannel, NotificationType, OutboundMessageType, Prisma } from "@prisma/client";
+
+import { renderCommunicationTemplate } from "@/lib/notifications/templates";
+import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { sendCustomWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 interface CreateNotificationParams {
@@ -188,12 +191,20 @@ export async function notifyStatusChange(
   jobNumber: string,
   clientName: string
 ) {
+  // Best-effort: cancel READY_FOR_PICKUP nudges when the status changes away.
+  if (oldStatus === JobStatus.READY_FOR_PICKUP && newStatus !== JobStatus.READY_FOR_PICKUP) {
+    await cancelReadyForPickupNudges(jobId, "BOTH");
+  }
+
   const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
   const targetRoles = prefs.filter((p) => p.notifyStatusChange).map((p) => p.userId);
   const title = "Status Changed";
-  const message = `Job ${jobNumber} (${clientName}) status changed from ${oldStatus.replace("_", " ")} to ${newStatus.replace("_", " ")}`;
+  const message = `Job ${jobNumber} (${clientName}) status changed from ${oldStatus.replaceAll("_", " ")} to ${newStatus.replaceAll("_", " ")}`;
 
-  if (targetRoles.length > 0) {
+  const policy = await getCommunicationPolicyForStatus(newStatus);
+  const dashboardEnabled = policy?.dashboardEnabled ?? true;
+
+  if (dashboardEnabled && targetRoles.length > 0) {
     await prisma.notification.createMany({
       data: targetRoles.map((userId) => ({
         type: NotificationType.STATUS_CHANGE,
@@ -206,7 +217,20 @@ export async function notifyStatusChange(
     });
   }
 
-  if (newStatus === JobStatus.READY_FOR_PICKUP) {
+  // If policies are enabled and WhatsApp is configured for this status, send via template/outbox.
+  // Otherwise, preserve legacy behavior (READY_FOR_PICKUP only, preference-gated).
+  if (policy?.whatsappEnabled) {
+    await sendClientWhatsAppForStatusChange({ jobId, jobNumber, oldStatus, newStatus, templateKey: policy.templateKey ?? null });
+    if (newStatus === JobStatus.READY_FOR_PICKUP) {
+      await scheduleReadyForPickupNudges({
+        jobId,
+        jobNumber,
+        nudge1Hours: policy.nudge1Hours,
+        nudge2Hours: policy.nudge2Hours,
+        templateKey: policy.templateKey ?? null,
+      });
+    }
+  } else if (newStatus === JobStatus.READY_FOR_PICKUP) {
     const client = await prisma.client.findFirst({
       where: { jobs: { some: { id: jobId } } },
       select: { phone: true, fullName: true },
@@ -218,6 +242,316 @@ export async function notifyStatusChange(
         `Hi ${client.fullName}, your device for job ${jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`,
       );
     }
+  }
+
+  // Email: status-change messages and optional nudges.
+  if (policy?.emailEnabled) {
+    await sendClientEmailForStatusChange({ jobId, jobNumber, oldStatus, newStatus, templateKey: policy.templateKey ?? null });
+    if (newStatus === JobStatus.READY_FOR_PICKUP) {
+      await scheduleReadyForPickupEmailNudges({
+        jobId,
+        jobNumber,
+        nudge1Hours: policy.nudge1Hours,
+        nudge2Hours: policy.nudge2Hours,
+        templateKey: policy.templateKey ?? null,
+      });
+    }
+  }
+}
+
+function supportsCommunicationPolicy() {
+  return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationPolicy"));
+}
+
+async function getCommunicationPolicyForStatus(status: JobStatus) {
+  if (!supportsCommunicationPolicy()) return null;
+  try {
+    return await prisma.communicationPolicy.findUnique({ where: { status } });
+  } catch {
+    // If the table isn't migrated yet, silently fall back.
+    return null;
+  }
+}
+
+function isOutboundMessageType(value: string): value is OutboundMessageType {
+  return (Object.values(OutboundMessageType) as string[]).includes(value);
+}
+
+function defaultTemplateKeyForStatus(status: JobStatus): OutboundMessageType {
+  if (status === JobStatus.READY_FOR_PICKUP) return OutboundMessageType.READY_FOR_PICKUP_NUDGE_1;
+  if (status === JobStatus.COMPLETED) return OutboundMessageType.JOB_COMPLETED;
+  return OutboundMessageType.JOB_STATUS_UPDATE;
+}
+
+function nudge2KeyFrom(nudge1Key: string): string {
+  if (nudge1Key.endsWith("_NUDGE_1")) return nudge1Key.replace(/_NUDGE_1$/, "_NUDGE_2");
+  return nudge1Key;
+}
+
+async function sendClientWhatsAppForStatusChange(input: {
+  jobId: string;
+  jobNumber: string;
+  oldStatus: JobStatus;
+  newStatus: JobStatus;
+  templateKey: string | null;
+}) {
+  const client = await prisma.client
+    .findFirst({
+      where: { jobs: { some: { id: input.jobId } } },
+      select: { phone: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.phone) return;
+
+  const templateKey = input.templateKey ?? defaultTemplateKeyForStatus(input.newStatus);
+  const type: OutboundMessageType = isOutboundMessageType(templateKey)
+    ? (templateKey as OutboundMessageType)
+    : OutboundMessageType.JOB_STATUS_UPDATE;
+
+  const fallback = `Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}. - Eagle Info Solutions`;
+
+  const templateVars = {
+    customerName: client.fullName,
+    jobNumber: input.jobNumber,
+    oldStatus: input.oldStatus,
+    newStatus: input.newStatus,
+    oldStatusLabel: input.oldStatus.replaceAll("_", " "),
+    newStatusLabel: input.newStatus.replaceAll("_", " "),
+  };
+
+  const { body } = await renderCommunicationTemplate({
+    key: templateKey,
+    channel: "WHATSAPP",
+    variables: templateVars,
+    fallback: { body: fallback },
+  });
+
+  const enqueueResult = await enqueueWhatsAppMessage({
+    to: client.phone,
+    body,
+    type,
+    jobId: input.jobId,
+    provider: "meta",
+    templateKey,
+    templateVars: JSON.stringify(templateVars),
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+  }
+}
+
+async function cancelReadyForPickupNudges(jobId: string, scope: "WHATSAPP" | "EMAIL" | "BOTH") {
+  try {
+    await prisma.outboundMessage.updateMany({
+      where: {
+        jobId,
+        channel: scope === "BOTH" ? { in: ["WHATSAPP", "EMAIL"] } : scope,
+        status: { in: ["PENDING", "FAILED"] },
+        type: { in: [OutboundMessageType.READY_FOR_PICKUP_NUDGE_1, OutboundMessageType.READY_FOR_PICKUP_NUDGE_2] },
+      },
+      data: {
+        status: "DEAD",
+        nextAttemptAt: new Date(0),
+        lockedAt: null,
+      },
+    });
+  } catch {
+    // Ignore: table may not exist yet.
+  }
+}
+
+async function scheduleReadyForPickupNudges(input: {
+  jobId: string;
+  jobNumber: string;
+  nudge1Hours: number | null;
+  nudge2Hours: number | null;
+  templateKey: string | null;
+}) {
+  const n1 = typeof input.nudge1Hours === "number" && input.nudge1Hours > 0 ? input.nudge1Hours : null;
+  const n2 = typeof input.nudge2Hours === "number" && input.nudge2Hours > 0 ? input.nudge2Hours : null;
+  if (!n1 && !n2) return;
+
+  const client = await prisma.client
+    .findFirst({
+      where: { jobs: { some: { id: input.jobId } } },
+      select: { phone: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.phone) return;
+
+  // De-dupe: remove any existing pending/failed nudges for this job.
+  await cancelReadyForPickupNudges(input.jobId, "WHATSAPP");
+
+  const baseKey = input.templateKey ?? OutboundMessageType.READY_FOR_PICKUP_NUDGE_1;
+  const key1 = baseKey;
+  const key2 = input.templateKey ? nudge2KeyFrom(baseKey) : OutboundMessageType.READY_FOR_PICKUP_NUDGE_2;
+
+  const makeBody = async (key: string) => {
+    const fallback = `Hi ${client.fullName}, your device for job ${input.jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`;
+    const { body } = await renderCommunicationTemplate({
+      key,
+      channel: "WHATSAPP",
+      variables: {
+        customerName: client.fullName,
+        jobNumber: input.jobNumber,
+      },
+      fallback: { body: fallback },
+    });
+    return body;
+  };
+
+  if (n1) {
+    const body = await makeBody(key1);
+    await enqueueWhatsAppMessage({
+      to: client.phone,
+      body,
+      type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_1,
+      jobId: input.jobId,
+      provider: "meta",
+      nextAttemptAt: new Date(Date.now() + n1 * 60 * 60 * 1000),
+      templateKey: key1,
+      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+    }).catch(() => null);
+  }
+
+  if (n2) {
+    const body = await makeBody(key2);
+    await enqueueWhatsAppMessage({
+      to: client.phone,
+      body,
+      type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_2,
+      jobId: input.jobId,
+      provider: "meta",
+      nextAttemptAt: new Date(Date.now() + n2 * 60 * 60 * 1000),
+      templateKey: key2,
+      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+    }).catch(() => null);
+  }
+}
+
+async function sendClientEmailForStatusChange(input: {
+  jobId: string;
+  jobNumber: string;
+  oldStatus: JobStatus;
+  newStatus: JobStatus;
+  templateKey: string | null;
+}) {
+  const client = await prisma.client
+    .findFirst({
+      where: { jobs: { some: { id: input.jobId } } },
+      select: { email: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.email) return;
+
+  const templateKey = input.templateKey ?? defaultTemplateKeyForStatus(input.newStatus);
+  const type: OutboundMessageType = isOutboundMessageType(templateKey)
+    ? (templateKey as OutboundMessageType)
+    : OutboundMessageType.JOB_STATUS_UPDATE;
+
+  const vars = {
+    customerName: client.fullName,
+    jobNumber: input.jobNumber,
+    oldStatus: input.oldStatus,
+    newStatus: input.newStatus,
+    oldStatusLabel: input.oldStatus.replaceAll("_", " "),
+    newStatusLabel: input.newStatus.replaceAll("_", " "),
+  };
+
+  const fallbackSubject = `Update on Job #${input.jobNumber}`;
+  const fallbackBody = `Hello ${client.fullName},\n\nUpdate on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.\n\nEagle Info Solutions`;
+
+  const rendered = await renderCommunicationTemplate({
+    key: templateKey,
+    channel: "EMAIL",
+    variables: vars,
+    fallback: { subject: fallbackSubject, body: fallbackBody },
+  });
+
+  const enqueueResult = await enqueueEmailMessage({
+    to: client.email,
+    subject: rendered.subject ?? fallbackSubject,
+    body: rendered.body,
+    type,
+    jobId: input.jobId,
+    templateKey,
+    templateVars: JSON.stringify(vars),
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+  }
+}
+
+async function scheduleReadyForPickupEmailNudges(input: {
+  jobId: string;
+  jobNumber: string;
+  nudge1Hours: number | null;
+  nudge2Hours: number | null;
+  templateKey: string | null;
+}) {
+  const n1 = typeof input.nudge1Hours === "number" && input.nudge1Hours > 0 ? input.nudge1Hours : null;
+  const n2 = typeof input.nudge2Hours === "number" && input.nudge2Hours > 0 ? input.nudge2Hours : null;
+  if (!n1 && !n2) return;
+
+  const client = await prisma.client
+    .findFirst({
+      where: { jobs: { some: { id: input.jobId } } },
+      select: { email: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.email) return;
+
+  // De-dupe: remove any existing pending/failed nudges for this job.
+  await cancelReadyForPickupNudges(input.jobId, "EMAIL");
+
+  const baseKey = input.templateKey ?? OutboundMessageType.READY_FOR_PICKUP_NUDGE_1;
+  const key1 = baseKey;
+  const key2 = input.templateKey ? nudge2KeyFrom(baseKey) : OutboundMessageType.READY_FOR_PICKUP_NUDGE_2;
+
+  const makeEmail = async (key: string) => {
+    const fallbackSubject = `Pickup Reminder: Job #${input.jobNumber}`;
+    const fallbackBody = `Hello ${client.fullName},\n\nReminder: your device for job ${input.jobNumber} is ready for pickup.\n\nEagle Info Solutions`;
+    const rendered = await renderCommunicationTemplate({
+      key,
+      channel: "EMAIL",
+      variables: { customerName: client.fullName, jobNumber: input.jobNumber },
+      fallback: { subject: fallbackSubject, body: fallbackBody },
+    });
+    return { subject: rendered.subject ?? fallbackSubject, body: rendered.body };
+  };
+
+  if (n1) {
+    const msg = await makeEmail(key1);
+    await enqueueEmailMessage({
+      to: client.email,
+      subject: msg.subject,
+      body: msg.body,
+      type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_1,
+      jobId: input.jobId,
+      nextAttemptAt: new Date(Date.now() + n1 * 60 * 60 * 1000),
+      templateKey: key1,
+      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+    }).catch(() => null);
+  }
+
+  if (n2) {
+    const msg = await makeEmail(key2);
+    await enqueueEmailMessage({
+      to: client.email,
+      subject: msg.subject,
+      body: msg.body,
+      type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_2,
+      jobId: input.jobId,
+      nextAttemptAt: new Date(Date.now() + n2 * 60 * 60 * 1000),
+      templateKey: key2,
+      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+    }).catch(() => null);
   }
 }
 
@@ -258,7 +592,7 @@ export async function notifyApprovalNeeded(
   }
 }
 
-async function getUserPreferencesForRoles(roles: Array<"ADMIN" | "OPS" | "TECHNICIAN_INTERNAL" | "TECHNICIAN_EXTERNAL" | "INTAKE">) {
+async function getUserPreferencesForRoles(roles: Array<"ADMIN" | "OPS" | "TECHNICIAN_INTERNAL" | "TECHNICIAN_EXTERNAL" | "FRONT_DESK">) {
   const users = await prisma.user.findMany({
     where: { role: { in: roles }, isActive: true },
     select: { id: true },
