@@ -147,7 +147,10 @@ export async function createJobAction(
   const openStatuses = [
     "RECEIVED",
     "DIAGNOSING",
+    "REFERRED",
     "IN_EXTERNAL_REPAIR",
+    "WAITING_FOR_PARTS",
+    "RETURNED_FROM_EXTERNAL",
     "AWAITING_APPROVAL",
     "IN_REPAIR",
     "READY_FOR_PICKUP",

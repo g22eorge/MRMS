@@ -82,7 +82,7 @@ function yearOptions(count: number) {
 const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  IN_EXTERNAL_REPAIR: "External Repair",
+  REFERRED: "Referred",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
@@ -145,7 +145,18 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: {
-        status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+        status: { in: [
+          "RECEIVED",
+          "DIAGNOSING",
+          "REFERRED",
+          // Legacy external workflow states
+          "IN_EXTERNAL_REPAIR",
+          "WAITING_FOR_PARTS",
+          "RETURNED_FROM_EXTERNAL",
+          "AWAITING_APPROVAL",
+          "IN_REPAIR",
+          "READY_FOR_PICKUP",
+        ] },
       },
       select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
@@ -318,7 +329,7 @@ export default async function ReportsPage({
     };
     existing.total += 1;
     if (
-      ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
+      ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)
     ) {
       existing.open += 1;
     }
@@ -412,7 +423,7 @@ export default async function ReportsPage({
     for (const job of jobsInSelectedMonth) {
       const bucket = ensure(deviceLabel[job.deviceType] ?? job.deviceType);
       bucket.total += 1;
-      if (["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
+      if (["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
         bucket.open += 1;
       }
       if (job.status === "COMPLETED") {

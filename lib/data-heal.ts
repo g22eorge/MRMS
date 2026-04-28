@@ -10,6 +10,24 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
   const dryRun = options.dryRun === true;
   const limit = options.limit ?? 250;
 
+  // 1) Normalize legacy statuses (external workflow reduction)
+  // - assignment -> REFERRED
+  // - external-progress -> IN_REPAIR
+  if (!dryRun) {
+    try {
+      await prisma.job.updateMany({
+        where: { status: { in: ["PENDING_EXTERNAL_ASSIGNMENT", "ASSIGNED_ONE_TIME_EXTERNAL"] } },
+        data: { status: "REFERRED" },
+      });
+      await prisma.job.updateMany({
+        where: { status: { in: ["IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] } },
+        data: { status: "IN_REPAIR" },
+      });
+    } catch {
+      // If the DB is behind schema (no REFERRED yet), skip silently.
+    }
+  }
+
   const candidates = await prisma.job.findMany({
     where: {
       OR: [{ brand: "Unknown" }, { model: "Unknown" }, { deviceType: "OTHER" }],

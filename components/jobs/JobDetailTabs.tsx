@@ -236,8 +236,8 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
 
   const allowedStatusTransitions: Partial<Record<ReturnType<typeof normalizeJobStatus>, JobStatus[]>> = {
     RECEIVED: ["DIAGNOSING"],
-    DIAGNOSING: ["IN_EXTERNAL_REPAIR", "IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
-    IN_EXTERNAL_REPAIR: ["IN_REPAIR", "AWAITING_APPROVAL", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
+    DIAGNOSING: ["REFERRED", "IN_REPAIR", "AWAITING_APPROVAL", "CLOSED"],
+    REFERRED: ["IN_REPAIR", "AWAITING_APPROVAL", "READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
     AWAITING_APPROVAL: ["IN_REPAIR", "CLOSED"],
     IN_REPAIR: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"],
     READY_FOR_PICKUP: ["COMPLETED", "CLOSED"],
@@ -311,13 +311,13 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         ? 1
         : job.status === "AWAITING_APPROVAL"
           ? 2
-          : (["IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[]).includes(job.status)
+          : (["REFERRED", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[]).includes(job.status)
             ? 3
             : 4;
   const nextActionByStatus: Record<ReturnType<typeof normalizeJobStatus>, string> = {
     RECEIVED: "Start diagnosis",
     DIAGNOSING: "Capture diagnosis and set repair path",
-    IN_EXTERNAL_REPAIR: "Capture progress updates and ETA",
+    REFERRED: "Capture referral notes and handoff details",
     AWAITING_APPROVAL: "Record client approval decision",
     IN_REPAIR: "Update repair log and progress",
     READY_FOR_PICKUP: "Confirm delivery to client",
@@ -353,7 +353,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       Boolean(oneTimeExternal)
     );
   const oneTimeStatusOptions: Array<{ value: JobStatus; label: string }> = [
-    { value: "IN_EXTERNAL_REPAIR", label: "External Repair" },
+    { value: "REFERRED", label: "Referred" },
     { value: "COMPLETED", label: "Completed" },
   ];
 

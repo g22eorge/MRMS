@@ -219,13 +219,12 @@ export async function updateJobAction(formData: FormData) {
   const transitions: Partial<Record<JobStatus, JobStatus[]>> = {
     RECEIVED: [JobStatus.DIAGNOSING],
     DIAGNOSING: [
-      JobStatus.IN_EXTERNAL_REPAIR,
+      JobStatus.REFERRED,
       JobStatus.IN_REPAIR,
       JobStatus.AWAITING_APPROVAL,
       JobStatus.CLOSED,
     ],
-    // External workflow collapsed into a single status.
-    IN_EXTERNAL_REPAIR: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
+    REFERRED: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
     PENDING_EXTERNAL_ASSIGNMENT: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
     ASSIGNED_ONE_TIME_EXTERNAL: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
     WAITING_FOR_PARTS: [JobStatus.IN_REPAIR, JobStatus.AWAITING_APPROVAL, JobStatus.READY_FOR_PICKUP, JobStatus.COMPLETED, JobStatus.CLOSED],
@@ -248,7 +247,7 @@ export async function updateJobAction(formData: FormData) {
       return (
         [
           JobStatus.DIAGNOSING,
-          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.REFERRED,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
           JobStatus.COMPLETED,
@@ -260,7 +259,7 @@ export async function updateJobAction(formData: FormData) {
       return (
         [
           JobStatus.DIAGNOSING,
-          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.REFERRED,
           JobStatus.IN_REPAIR,
           JobStatus.READY_FOR_PICKUP,
           JobStatus.COMPLETED,
@@ -274,7 +273,7 @@ export async function updateJobAction(formData: FormData) {
     if (role === "OPS") {
       return (
         [
-          JobStatus.IN_EXTERNAL_REPAIR,
+          JobStatus.REFERRED,
           JobStatus.AWAITING_APPROVAL,
           JobStatus.CLOSED,
           JobStatus.IN_REPAIR,
@@ -637,7 +636,7 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
   }
 
   const payload = parsed.data;
-  const allowedOutsourceStatuses = new Set<JobStatus>([JobStatus.IN_EXTERNAL_REPAIR, JobStatus.COMPLETED]);
+  const allowedOutsourceStatuses = new Set<JobStatus>([JobStatus.REFERRED, JobStatus.COMPLETED]);
 
   const existing = await prisma.job
     .findUnique({
@@ -728,7 +727,7 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
       jobUpdate.completedAt = new Date();
     }
   } else if (existing.status === JobStatus.DIAGNOSING) {
-    jobUpdate.status = JobStatus.IN_EXTERNAL_REPAIR;
+    jobUpdate.status = JobStatus.REFERRED;
   }
 
   try {

@@ -43,7 +43,7 @@ const supportsOneTimeExternal = Boolean(
 const statusOptionLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  IN_EXTERNAL_REPAIR: "External Repair",
+  REFERRED: "Referred",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
@@ -54,15 +54,9 @@ const statusOptionLabel: Record<ReturnType<typeof normalizeJobStatus>, string> =
 const UI_TO_DB_STATUSES: Record<ReturnType<typeof normalizeJobStatus>, JobStatus[]> = {
   RECEIVED: ["RECEIVED"],
   DIAGNOSING: ["DIAGNOSING"],
-  IN_EXTERNAL_REPAIR: [
-    "PENDING_EXTERNAL_ASSIGNMENT",
-    "ASSIGNED_ONE_TIME_EXTERNAL",
-    "IN_EXTERNAL_REPAIR",
-    "WAITING_FOR_PARTS",
-    "RETURNED_FROM_EXTERNAL",
-  ],
+  REFERRED: ["REFERRED", "PENDING_EXTERNAL_ASSIGNMENT", "ASSIGNED_ONE_TIME_EXTERNAL"],
   AWAITING_APPROVAL: ["AWAITING_APPROVAL"],
-  IN_REPAIR: ["IN_REPAIR"],
+  IN_REPAIR: ["IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"],
   READY_FOR_PICKUP: ["READY_FOR_PICKUP"],
   COMPLETED: ["COMPLETED", "DELIVERED"],
   CLOSED: ["CLOSED"],

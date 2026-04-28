@@ -17,6 +17,7 @@ export default async function AppLayout({
   const openStatuses: JobStatus[] = [
     "RECEIVED",
     "DIAGNOSING",
+    "REFERRED",
     "IN_EXTERNAL_REPAIR",
     "AWAITING_APPROVAL",
     "IN_REPAIR",

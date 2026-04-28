@@ -23,12 +23,12 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
     label: "Diagnosing",
     help: "Technician is currently diagnosing the issue.",
   },
-  IN_EXTERNAL_REPAIR: {
+  REFERRED: {
     dot: "bg-violet-500",
     badge: "border-violet-200 bg-violet-50 text-violet-700",
     strip: "bg-violet-500",
-    label: "External",
-    help: "Device is with an external technician.",
+    label: "Referred",
+    help: "Job has been referred for external handling.",
   },
   AWAITING_APPROVAL: {
     dot: "bg-amber-400",

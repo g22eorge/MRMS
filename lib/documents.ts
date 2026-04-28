@@ -30,7 +30,10 @@ export function canGenerateInvoiceForStatus(status: JobStatus) {
 export function canGenerateQuotationForStatus(status: JobStatus) {
   const allowed: JobStatus[] = [
     JobStatus.DIAGNOSING,
+    JobStatus.REFERRED,
     JobStatus.IN_EXTERNAL_REPAIR,
+    JobStatus.WAITING_FOR_PARTS,
+    JobStatus.RETURNED_FROM_EXTERNAL,
     JobStatus.AWAITING_APPROVAL,
     JobStatus.IN_REPAIR,
     JobStatus.READY_FOR_PICKUP,

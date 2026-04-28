@@ -166,7 +166,7 @@ function yearOptions(count: number) {
 const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  IN_EXTERNAL_REPAIR: "External Repair",
+  REFERRED: "Referred",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",
@@ -177,7 +177,7 @@ const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
 const repairFlowReference = [
   { key: "RECEIVED", label: "Received", href: "/jobs?status=RECEIVED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "DIAGNOSING", label: "Diagnosing", href: "/jobs?status=DIAGNOSING", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "IN_EXTERNAL_REPAIR", label: "External Repair", href: "/jobs?status=IN_EXTERNAL_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
+  { key: "REFERRED", label: "Referred", href: "/jobs?status=REFERRED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]" },
   { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[var(--accent)] bg-[var(--accent)] text-white" },
@@ -362,6 +362,7 @@ export default async function DashboardPage({
     const openCount = jobs.filter((job) => [
       "RECEIVED",
       "DIAGNOSING",
+      "REFERRED",
       "IN_EXTERNAL_REPAIR",
       "AWAITING_APPROVAL",
       "IN_REPAIR",
@@ -703,7 +704,7 @@ export default async function DashboardPage({
       prisma.repairRequest.count({ where: { requestStatus: { in: ["PENDING_FRONT_DESK", "PENDING_INTAKE"] } } }).catch(() => 0),
       prisma.job.findMany({
         where: {
-          status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+          status: { in: ["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
           receivedAt: { lt: threeDaysAgo },
         },
         select: { id: true, jobNumber: true, status: true, receivedAt: true, device: { select: { brand: true, model: true } } },
@@ -712,7 +713,7 @@ export default async function DashboardPage({
       }).catch(async () => {
         const fallback = await prisma.job.findMany({
           where: {
-            status: { in: ["DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+          status: { in: ["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
             receivedAt: { lt: threeDaysAgo },
           },
           select: { id: true, jobNumber: true, status: true, receivedAt: true },
@@ -724,14 +725,14 @@ export default async function DashboardPage({
       }),
       prisma.job.findMany({
         where: {
-          status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "WAITING_FOR_PARTS"] },
+          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
           assignedToId: { not: null },
         },
         select: { status: true, assignedTo: { select: { id: true, name: true, role: true } } },
       }),
       prisma.job.count({
         where: {
-          status: { in: ["RECEIVED", "DIAGNOSING", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS"] },
+          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
           assignedToId: null,
         },
       }),
@@ -907,7 +908,7 @@ export default async function DashboardPage({
                 Awaiting {awaitingApprovalCount}
               </Link>
               <Link
-                href="/jobs?status=DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,IN_EXTERNAL_REPAIR"
+                href="/jobs?status=DIAGNOSING,REFERRED,AWAITING_APPROVAL,IN_REPAIR"
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   overdueWithDays.length > 0
                     ? "border-white/10 bg-[#0b0b0b] text-white/90 hover:border-white/20"
@@ -1181,7 +1182,7 @@ export default async function DashboardPage({
       prisma.job.count({
         where: {
           createdById: session.user.id,
-          status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
         },
       }),
       prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
@@ -1268,7 +1269,7 @@ export default async function DashboardPage({
     prisma.job.count(),
     prisma.job.count({
       where: {
-        status: { in: ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
+        status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
       },
     }),
     prisma.job.count({ where: { status: "COMPLETED" } }),

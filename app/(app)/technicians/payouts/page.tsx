@@ -17,7 +17,7 @@ type SearchParams = {
 const statusOptionLabel = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
-  IN_EXTERNAL_REPAIR: "External Repair",
+  REFERRED: "Referred",
   AWAITING_APPROVAL: "Awaiting Approval",
   IN_REPAIR: "In Repair",
   READY_FOR_PICKUP: "Ready for Pickup",

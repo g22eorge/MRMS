@@ -2,6 +2,7 @@
 export const JOB_STATUSES = [
   "RECEIVED",
   "DIAGNOSING",
+  "REFERRED",
   "PENDING_EXTERNAL_ASSIGNMENT",
   "ASSIGNED_ONE_TIME_EXTERNAL",
   "IN_EXTERNAL_REPAIR",
@@ -19,7 +20,7 @@ export const JOB_STATUSES = [
 export const UI_JOB_STATUSES = [
   "RECEIVED",
   "DIAGNOSING",
-  "IN_EXTERNAL_REPAIR",
+  "REFERRED",
   "AWAITING_APPROVAL",
   "IN_REPAIR",
   "READY_FOR_PICKUP",
@@ -31,13 +32,14 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 export type UiJobStatus = (typeof UI_JOB_STATUSES)[number];
 
 export function normalizeJobStatus(status: JobStatus): UiJobStatus {
-  if (
-    status === "PENDING_EXTERNAL_ASSIGNMENT" ||
-    status === "ASSIGNED_ONE_TIME_EXTERNAL" ||
-    status === "WAITING_FOR_PARTS" ||
-    status === "RETURNED_FROM_EXTERNAL"
-  ) {
-    return "IN_EXTERNAL_REPAIR";
+  // Legacy external assignment states now surface as a single UI stage.
+  if (status === "PENDING_EXTERNAL_ASSIGNMENT" || status === "ASSIGNED_ONE_TIME_EXTERNAL") {
+    return "REFERRED";
+  }
+
+  // Legacy external progress states are treated as active repair in the simplified UI.
+  if (status === "IN_EXTERNAL_REPAIR" || status === "WAITING_FOR_PARTS" || status === "RETURNED_FROM_EXTERNAL") {
+    return "IN_REPAIR";
   }
 
   if (status === "DELIVERED") {
