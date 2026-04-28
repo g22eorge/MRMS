@@ -189,32 +189,45 @@ export async function upsertDefaultCommunicationTemplates() {
   const templates = getDefaultCommunicationTemplates();
   let upserted = 0;
 
-  for (const t of templates) {
-    const variables = [...new Set((`${t.subject ?? ""}\n${t.body}`).match(/\{([a-zA-Z0-9_]+)\}/g) ?? [])]
-      .map((v) => v.replaceAll("{", "").replaceAll("}", ""))
-      .sort();
+  try {
+    for (const t of templates) {
+      const variables = [...new Set((`${t.subject ?? ""}\n${t.body}`).match(/\{([a-zA-Z0-9_]+)\}/g) ?? [])]
+        .map((v) => v.replaceAll("{", "").replaceAll("}", ""))
+        .sort();
 
-    await prisma.communicationTemplate.upsert({
-      where: { key_channel: { key: t.key, channel: t.channel } },
-      update: {
-        label: t.label,
-        subject: t.subject ?? null,
-        body: t.body,
-        variables: variables.length ? JSON.stringify(variables) : null,
-        isActive: true,
-      },
-      create: {
-        key: t.key,
-        channel: t.channel,
-        label: t.label,
-        subject: t.subject ?? null,
-        body: t.body,
-        variables: variables.length ? JSON.stringify(variables) : null,
-        isActive: true,
-      },
-    });
-    upserted += 1;
+      await prisma.communicationTemplate.upsert({
+        where: { key_channel: { key: t.key, channel: t.channel } },
+        update: {
+          label: t.label,
+          subject: t.subject ?? null,
+          body: t.body,
+          variables: variables.length ? JSON.stringify(variables) : null,
+          isActive: true,
+        },
+        create: {
+          key: t.key,
+          channel: t.channel,
+          label: t.label,
+          subject: t.subject ?? null,
+          body: t.body,
+          variables: variables.length ? JSON.stringify(variables) : null,
+          isActive: true,
+        },
+      });
+      upserted += 1;
+    }
+
+    return { ok: true as const, upserted };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Most common prod failure: DB not migrated yet, so the table doesn't exist.
+    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("does not exist")) {
+      return {
+        ok: false as const,
+        reason: "Database schema missing CommunicationTemplate table. Apply migrations/db push, then retry.",
+        detail: message,
+      };
+    }
+    return { ok: false as const, reason: "Failed to seed templates", detail: message };
   }
-
-  return { ok: true as const, upserted };
 }

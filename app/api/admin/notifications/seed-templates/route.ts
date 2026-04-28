@@ -54,6 +54,11 @@ export async function POST() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const res = await upsertDefaultCommunicationTemplates();
-  return NextResponse.json(res);
+  try {
+    const res = await upsertDefaultCommunicationTemplates();
+    return NextResponse.json(res, { status: res.ok ? 200 : 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, reason: "Server error", detail: message }, { status: 500 });
+  }
 }
