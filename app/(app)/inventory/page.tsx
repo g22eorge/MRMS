@@ -146,6 +146,8 @@ export default async function InventoryPage() {
   const totalValue = parts.reduce((sum, part) => sum + (part.unitCost ?? 0) * part.qtyOnHand, 0);
   const reservedCount = reservationStats.find((row) => row.status === "RESERVED")?._count.status ?? 0;
 
+  const formatUGX = (value: number) => `UGX ${Math.round(value).toLocaleString()}`;
+
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -163,26 +165,57 @@ export default async function InventoryPage() {
         </article>
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Stock Value</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">UGX {Math.round(totalValue).toLocaleString()}</p>
+          <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">{formatUGX(totalValue)}</p>
         </article>
       </section>
 
       {canManage ? (
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <header className="border-b border-[var(--line)] px-4 py-3">
-            <h2 className="text-sm font-semibold text-[var(--ink)]">Add Part</h2>
-            <p className="text-xs text-[var(--ink-muted)]">Create a new stock item (SKU must be unique).</p>
-          </header>
-          <form action={createPartAction} className="grid gap-2 p-4 md:grid-cols-5">
-            <input name="sku" placeholder="SKU" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="name" placeholder="Part name" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2" />
-            <input name="manufacturer" placeholder="Maker (optional)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <div className="grid grid-cols-2 gap-2 md:col-span-1">
-              <input name="unitCost" inputMode="decimal" placeholder="Unit cost" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14" />
-              <input name="reorderLevel" inputMode="numeric" placeholder="Reorder" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14" />
+        <section id="add-part" className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <header className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--ink)]">Add Part</h2>
+              <p className="text-xs text-[var(--ink-muted)]">Create a new stock item (SKU must be unique).</p>
             </div>
-            <div className="md:col-span-5 flex justify-end">
-              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Add</button>
+            <span className="hidden rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] md:inline-flex">
+              Admin/OPS
+            </span>
+          </header>
+          <form action={createPartAction} className="grid gap-2 p-4 md:grid-cols-12">
+            <input
+              name="sku"
+              placeholder="SKU"
+              required
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-3"
+            />
+            <input
+              name="name"
+              placeholder="Part name"
+              required
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-5"
+            />
+            <input
+              name="manufacturer"
+              placeholder="Maker (optional)"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-4"
+            />
+            <div className="grid grid-cols-2 gap-2 md:col-span-5">
+              <input
+                name="unitCost"
+                inputMode="decimal"
+                placeholder="Unit cost"
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+              <input
+                name="reorderLevel"
+                inputMode="numeric"
+                placeholder="Reorder level"
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              />
+            </div>
+            <div className="md:col-span-7 flex items-center justify-end">
+              <button type="submit" className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold">
+                Add Part
+              </button>
             </div>
           </form>
         </section>
@@ -200,7 +233,17 @@ export default async function InventoryPage() {
          </header>
 
         {parts.length === 0 ? (
-          <div className="px-4 py-8 text-sm text-[var(--ink-muted)]">No inventory rows available yet in this environment.</div>
+          <div className="px-4 py-10 text-sm text-[var(--ink-muted)]">
+            <p>No parts yet.</p>
+            {canManage ? (
+              <p className="mt-2">
+                <Link href="#add-part" className="text-[var(--accent)] underline-offset-2 hover:underline">
+                  Add your first part
+                </Link>{" "}
+                to start tracking stock and reservations.
+              </p>
+            ) : null}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
