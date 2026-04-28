@@ -3,10 +3,10 @@
 :root {
   --page-bg: #F5F3EF;
   --ink: #111111;
-  --ink-muted: #6B6B6B;
+  --ink-muted: #4B4B4B;
   --panel: #FFFFFF;
-  --panel-strong: #EDEAE4;
-  --line: #E2DED8;
+  --panel-strong: #E8E4DD;
+  --line: #D4CEC6;
   --brand: #111111;
   --brand-deep: #000000;
   --accent: #D4AF37;
@@ -59,10 +59,10 @@
 .light {
   --page-bg: #F5F3EF;
   --ink: #111111;
-  --ink-muted: #6B6B6B;
+  --ink-muted: #4B4B4B;
   --panel: #FFFFFF;
-  --panel-strong: #EDEAE4;
-  --line: #E2DED8;
+  --panel-strong: #E8E4DD;
+  --line: #D4CEC6;
   --brand: #111111;
   --brand-deep: #000000;
   --accent: #D4AF37;
