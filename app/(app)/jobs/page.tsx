@@ -333,6 +333,16 @@ export default async function JobsPage({
 
   const ctrlClass = "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14";
 
+  const preservedWithoutStatus = Object.fromEntries(
+    Object.entries(preserved).filter(([key]) => key !== "status" && key !== "page"),
+  ) as Record<string, string>;
+  function statusChipHref(nextStatus: string) {
+    const params = new URLSearchParams(preservedWithoutStatus);
+    if (nextStatus) params.set("status", nextStatus);
+    const query = params.toString();
+    return query ? `/jobs?${query}` : "/jobs";
+  }
+
   return (
     <div className="space-y-4">
 
@@ -386,65 +396,48 @@ export default async function JobsPage({
               className={`${ctrlClass} w-full pl-9`}
             />
           </div>
-          {/* Status + actions row */}
-          <div className="flex items-center gap-2">
-            <details className="relative min-w-0 flex-1">
-              <summary
-                className={`${ctrlClass} flex cursor-pointer list-none items-center justify-between pr-9 [&::-webkit-details-marker]:hidden`}
-              >
-                <span className="truncate">
-                  {statusValue ? statusOptionLabel[statusValue as keyof typeof statusOptionLabel] : "All statuses"}
-                </span>
-                <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute right-3 h-4 w-4 text-[var(--ink-muted)]" aria-hidden="true">
-                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.188l3.71-3.956a.75.75 0 0 1 1.08 1.04l-4.24 4.52a.75.75 0 0 1-1.08 0l-4.24-4.52a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-                </svg>
-              </summary>
-
-              <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_18px_45px_rgba(0,0,0,0.35)]">
-                <div className="max-h-72 overflow-auto p-1">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-[var(--panel-strong)]">
-                    <input
-                      type="radio"
-                      name="status"
-                      value=""
-                      defaultChecked={!statusValue}
-                      className="peer sr-only"
-                    />
-                    <span className="flex-1 text-[var(--ink)] peer-checked:font-semibold">All statuses</span>
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="hidden h-4 w-4 text-[var(--accent)] peer-checked:block" aria-hidden="true">
-                      <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.01 7.05a1 1 0 0 1-1.42.002L3.29 8.79a1 1 0 1 1 1.42-1.4l3.28 3.322 6.3-6.34a1 1 0 0 1 1.414-.006Z" clipRule="evenodd" />
-                    </svg>
-                  </label>
-                  {UI_JOB_STATUSES.map((s) => (
-                    <label key={s} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-[var(--panel-strong)]">
-                      <input
-                        type="radio"
-                        name="status"
-                        value={s}
-                        defaultChecked={statusValue === s}
-                        className="peer sr-only"
-                      />
-                      <span className="flex-1 text-[var(--ink)] peer-checked:font-semibold">
-                        {statusOptionLabel[s]}
-                      </span>
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="hidden h-4 w-4 text-[var(--accent)] peer-checked:block" aria-hidden="true">
-                        <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.01 7.05a1 1 0 0 1-1.42.002L3.29 8.79a1 1 0 1 1 1.42-1.4l3.28 3.322 6.3-6.34a1 1 0 0 1 1.414-.006Z" clipRule="evenodd" />
-                      </svg>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
-            {/* Apply */}
+          {/* Actions row */}
+          <div className="flex items-center justify-end gap-2">
             <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium">
               Apply
             </button>
-            {/* Reset */}
             {hasAnyFilter ? (
               <Link href="/jobs" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-center text-sm font-medium">
                 Reset
               </Link>
             ) : null}
+          </div>
+        </div>
+
+        {/* Status filter buttons */}
+        <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+            <Link
+              href={statusChipHref("")}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                statusValue
+                  ? "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                  : "border-[var(--accent)] bg-[var(--accent)] text-white"
+              }`}
+            >
+              All
+            </Link>
+            {UI_JOB_STATUSES.map((s) => {
+              const active = statusValue === s;
+              return (
+                <Link
+                  key={s}
+                  href={statusChipHref(s)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                    active
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                  }`}
+                >
+                  {statusOptionLabel[s]}
+                </Link>
+              );
+            })}
           </div>
         </div>
 
