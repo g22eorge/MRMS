@@ -75,6 +75,7 @@ export default async function JobsPage({
 }) {
   const { session, user } = await getCurrentUserRole();
   const filters = await searchParams;
+  const q = (filters.q ?? "").trim();
   const statuses = (filters.status ?? "")
     .split(",")
     .map((item) => item.trim())
@@ -152,16 +153,35 @@ export default async function JobsPage({
     user.role === "TECHNICIAN_EXTERNAL"
       ? {
           ...whereBase,
-          ...(filters.q ? { OR: [{ jobNumber: { contains: filters.q } }] } : {}),
+          ...(q
+            ? {
+                OR: [
+                  { jobNumber: { contains: q } },
+                  // External techs can still search by device details.
+                  { brand: { contains: q } },
+                  { model: { contains: q } },
+                  { device: { brand: { contains: q } } },
+                  { device: { model: { contains: q } } },
+                  { serialOrImei: { contains: q } },
+                ],
+              }
+            : {}),
         }
       : {
           ...whereBase,
-          ...(filters.q
+          ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: filters.q } },
-                  { client: { fullName: { contains: filters.q } } },
-                  { client: { phone: { contains: filters.q } } },
+                  { jobNumber: { contains: q } },
+                  { client: { fullName: { contains: q } } },
+                  { client: { phone: { contains: q } } },
+                  // Support both the legacy Job.brand/model fields and the newer Device relation.
+                  { brand: { contains: q } },
+                  { model: { contains: q } },
+                  { device: { brand: { contains: q } } },
+                  { device: { model: { contains: q } } },
+                  { serialOrImei: { contains: q } },
+                  { issueDescription: { contains: q } },
                 ],
               }
             : {}),
@@ -306,30 +326,6 @@ export default async function JobsPage({
   const returnToQuery = new URLSearchParams(preserved).toString();
   const returnTo = returnToQuery ? `/jobs?${returnToQuery}` : "/jobs";
 
-  const openNow = rows.filter((r) => !["COMPLETED", "CLOSED"].includes(r.status)).length;
-  const readyForPickup = rows.filter((r) => r.status === "READY_FOR_PICKUP").length;
-  const staleThresholdHours = 24;
-  const staleCutoff = new Date();
-  staleCutoff.setHours(staleCutoff.getHours() - staleThresholdHours);
-  const openStatuses: JobStatus[] = ["RECEIVED", "DIAGNOSING", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"];
-  const staleOpenCount = (jobs as Array<{ status: string; updatedAt: Date }>).filter(
-    (j) => openStatuses.includes(j.status as JobStatus) && j.updatedAt < staleCutoff,
-  ).length;
-  const unassignedOpenCount = (jobs as Array<{ status: string; assignedToId: string | null }>).filter(
-    (j) => openStatuses.includes(j.status as JobStatus) && !j.assignedToId,
-  ).length;
-  const completedCount = rows.filter((r) => r.status === "COMPLETED").length;
-
-  const pulseBaseFilters = Object.fromEntries(
-    Object.entries(preserved).filter(([key]) => key !== "status" && key !== "page"),
-  ) as Record<string, string>;
-  function pulseHref(statusCsv?: string) {
-    const params = new URLSearchParams(pulseBaseFilters);
-    if (statusCsv) params.set("status", statusCsv);
-    const query = params.toString();
-    return query ? `/jobs?${query}` : "/jobs";
-  }
-
   const hasAdvancedFilters = Boolean(filters.deviceType || filters.repairPath || filters.pricing || filters.from || filters.to || sort === "job_number_desc");
   const hasAnyFilter = Boolean(filters.q || filters.status || hasAdvancedFilters);
 
@@ -338,75 +334,14 @@ export default async function JobsPage({
   return (
     <div className="space-y-4">
 
-      {/* ── Stats + CTA bar ── */}
-      {/* Mobile: single row — chips scroll horizontally, New Job button fixed right */}
-      {/* Desktop: chips wrap, New Job stays right */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Scrollable chip rail */}
-        <div className="relative min-w-0 flex-1 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-r after:from-transparent after:to-[var(--page-bg)] after:content-[''] sm:after:hidden">
-        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
-          {/* Active */}
-          <Link
-            href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
-          >
-            <span className="font-bold tabular-nums text-[var(--accent)]">{openNow}</span>
-            <span className="text-[var(--ink-muted)]">Active</span>
-          </Link>
-          {/* Ready for pickup */}
-          <Link
-            href={pulseHref("READY_FOR_PICKUP")}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
-              readyForPickup > 0
-                ? "border-[var(--accent)] bg-[var(--accent)] text-white hover:opacity-90"
-                : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]/30 text-[var(--ink-muted)]"
-            }`}
-          >
-            <span className={`font-bold tabular-nums ${readyForPickup > 0 ? "text-white" : "text-[var(--ink)]"}`}>{readyForPickup}</span>
-            <span className={readyForPickup > 0 ? "text-white/80" : ""}>Pickup</span>
-          </Link>
-          {/* Stale */}
-          <Link
-            href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR")}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
-              staleOpenCount > 0
-                ? "border-black bg-black text-white hover:opacity-80"
-                : "border-[var(--line)] bg-[var(--panel)] hover:border-black/30 text-[var(--ink-muted)]"
-            }`}
-          >
-            <span className={`font-bold tabular-nums ${staleOpenCount > 0 ? "text-white" : "text-[var(--ink)]"}`}>{staleOpenCount}</span>
-            <span className={staleOpenCount > 0 ? "text-white/80" : ""}>Stale</span>
-          </Link>
-          {/* Unassigned */}
-          <Link
-            href={pulseHref("RECEIVED,DIAGNOSING,AWAITING_APPROVAL")}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
-              unassignedOpenCount > 0
-                ? "border-[var(--ink)]/40 bg-[var(--panel-strong)] hover:border-[var(--ink)]/60"
-                : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--ink)]/20 text-[var(--ink-muted)]"
-            }`}
-          >
-            <span className="font-bold tabular-nums text-[var(--ink)]">{unassignedOpenCount}</span>
-            <span className="text-[var(--ink-muted)]">Unassigned</span>
-          </Link>
-          {/* Done */}
-          <Link
-            href={pulseHref("COMPLETED")}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold transition hover:border-[var(--accent)]/30"
-          >
-            <span className="font-bold tabular-nums text-[var(--ink)]">{completedCount}</span>
-            <span className="text-[var(--ink-muted)]">Done</span>
-          </Link>
-        </div>
-        </div>
-
-        {/* New Job CTA — visible in chip rail on sm+, hidden on mobile (replaced by FAB) */}
-        {can.createJob(user) ? (
-          <Link href="/jobs/new" className="btn-premium hidden shrink-0 rounded-lg px-4 py-2 text-sm font-semibold sm:inline-flex">
+      {/* Minimal top actions (no status bar) */}
+      {can.createJob(user) ? (
+        <div className="flex justify-end">
+          <Link href="/jobs/new" className="btn-premium hidden rounded-lg px-4 py-2 text-sm font-semibold sm:inline-flex">
             + New Job
           </Link>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* ── FAB: New Job — mobile only, floats above bottom nav ── */}
       {can.createJob(user) ? (
