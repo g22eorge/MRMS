@@ -3,11 +3,15 @@ import path from "node:path";
 import { defineConfig } from "prisma/config";
 
 function getDatabaseUrl() {
-  // Prisma CLI (generate/db push/migrate) for sqlite requires a `file:` URL.
-  // In production we still connect to Turso at runtime via the Prisma libsql adapter,
-  // so keep the CLI datasource URL as a local file.
   const url = process.env.DATABASE_URL || "file:./dev.db";
 
+  // Allow Prisma CLI to target Turso/libSQL when explicitly configured.
+  // (Needed for prod `prisma migrate deploy`.)
+  if (url.startsWith("libsql:")) {
+    return url;
+  }
+
+  // Prisma CLI expects a `file:` URL for local sqlite.
   if (!url.startsWith("file:")) {
     const raw = url.replace(/^file:/, "");
     return `file:${path.resolve(process.cwd(), raw)}`;
