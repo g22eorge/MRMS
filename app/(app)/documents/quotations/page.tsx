@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getClientBill } from "@/lib/billing";
+import { formatMoney } from "@/lib/currency";
 import { canGenerateQuotationForStatus, formatQuotationNumber } from "@/lib/documents";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { JobStatus } from "@prisma/client";
@@ -91,7 +92,7 @@ export default async function QuotationsPage() {
                   <td className="hidden px-3 py-2 text-[var(--ink-muted)] md:table-cell">{job.brand} {job.model}</td>
                   <td className="px-3 py-2 text-[var(--ink-muted)]">{job.status.replaceAll("_", " ")}</td>
                   <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{canGenerateQuotationForStatus(job.status) ? quoteNumber : "-"}</td>
-                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof estimate === "number" ? estimate.toLocaleString() : "Pending"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof estimate === "number" ? formatMoney(estimate) : "Pending"}</td>
                   <td className="px-3 py-2">
                     {canGenerateQuotationForStatus(job.status) ? (
                       <a

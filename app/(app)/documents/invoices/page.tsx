@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getClientBill } from "@/lib/billing";
+import { formatMoney } from "@/lib/currency";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -67,7 +68,7 @@ export default async function InvoicesPage() {
                   </td>
                   <td className="hidden px-3 py-2 text-[var(--ink-muted)] md:table-cell">{job.invoiceNumber ?? "-"}</td>
                   <td className="px-3 py-2 text-[var(--ink-muted)]">{job.status.replaceAll("_", " ")}</td>
-                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof amount === "number" ? amount.toLocaleString() : "Pending"}</td>
+                  <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{typeof amount === "number" ? formatMoney(amount) : "Pending"}</td>
                   <td className="hidden px-3 py-2 text-[var(--ink-muted)] lg:table-cell">{job.clientPaid ? "Paid" : "Unpaid"}</td>
                   <td className="px-3 py-2">
                     {canGenerateInvoiceForStatus(job.status) ? (

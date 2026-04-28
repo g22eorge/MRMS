@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { JobStatus, NotificationChannel, NotificationType, OutboundMessageType, Prisma } from "@prisma/client";
 
+import { formatMoney } from "@/lib/currency";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { sendCustomWhatsAppMessage } from "@/lib/notifications/whatsapp";
@@ -564,7 +565,7 @@ export async function notifyApprovalNeeded(
   const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
   const targetRoles = prefs.filter((p) => p.notifyApprovalNeeded).map((p) => p.userId);
   const title = "Approval Needed";
-  const message = `Job ${jobNumber} (${clientName}) requires approval. Estimated cost: UGX ${costEstimate.toLocaleString()}`;
+  const message = `Job ${jobNumber} (${clientName}) requires approval. Estimated cost: ${formatMoney(costEstimate)}`;
 
   if (targetRoles.length > 0) {
     await prisma.notification.createMany({
@@ -587,7 +588,7 @@ export async function notifyApprovalNeeded(
   if (client?.phone && prefs.some((p) => p.whatsappEnabled)) {
     await sendCustomWhatsAppMessage(
       client.phone,
-      `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: UGX ${costEstimate.toLocaleString()}. Please confirm to proceed. - Eagle Info Solutions`
+      `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: ${formatMoney(costEstimate)}. Please confirm to proceed. - Eagle Info Solutions`
     );
   }
 }
@@ -663,7 +664,7 @@ export async function notifyEstimateSubmitted(
   const prefs = await getUserPreferencesForRoles(["ADMIN", "OPS"]);
   const targets = prefs.filter((p) => p.notifyEstimateSubmitted).map((p) => p.userId);
   const title = "Estimate Submitted";
-  const message = `External tech submitted estimate for job ${jobNumber} (${deviceInfo}) - UGX ${estimatedCost.toLocaleString()}`;
+  const message = `External tech submitted estimate for job ${jobNumber} (${deviceInfo}) - ${formatMoney(estimatedCost)}`;
 
   if (targets.length > 0) {
     await prisma.notification.createMany({

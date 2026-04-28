@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 
@@ -146,8 +147,6 @@ export default async function InventoryPage() {
   const totalValue = parts.reduce((sum, part) => sum + (part.unitCost ?? 0) * part.qtyOnHand, 0);
   const reservedCount = reservationStats.find((row) => row.status === "RESERVED")?._count.status ?? 0;
 
-  const formatUGX = (value: number) => `UGX ${Math.round(value).toLocaleString()}`;
-
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -172,7 +171,7 @@ export default async function InventoryPage() {
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Stock Value</p>
-            <p className="text-sm font-semibold leading-none text-[var(--ink)]">{formatUGX(totalValue)}</p>
+            <p className="text-sm font-semibold leading-none text-[var(--ink)]">{formatMoney(totalValue)}</p>
           </div>
         </article>
       </section>
