@@ -8,6 +8,7 @@ import { getClientBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -704,7 +705,7 @@ export default async function DashboardPage({
       prisma.repairRequest.count({ where: { requestStatus: { in: ["PENDING_FRONT_DESK", "PENDING_INTAKE"] } } }).catch(() => 0),
       prisma.job.findMany({
         where: {
-          status: { in: ["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
+          status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"]) as JobStatus[] },
           receivedAt: { lt: threeDaysAgo },
         },
         select: { id: true, jobNumber: true, status: true, receivedAt: true, device: { select: { brand: true, model: true } } },
@@ -713,7 +714,7 @@ export default async function DashboardPage({
       }).catch(async () => {
         const fallback = await prisma.job.findMany({
           where: {
-          status: { in: ["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
+          status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"]) as JobStatus[] },
             receivedAt: { lt: threeDaysAgo },
           },
           select: { id: true, jobNumber: true, status: true, receivedAt: true },
@@ -725,14 +726,14 @@ export default async function DashboardPage({
       }),
       prisma.job.findMany({
         where: {
-          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+          status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] },
           assignedToId: { not: null },
         },
         select: { status: true, assignedTo: { select: { id: true, name: true, role: true } } },
       }),
       prisma.job.count({
         where: {
-          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"] },
+          status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_REPAIR", "IN_EXTERNAL_REPAIR", "WAITING_FOR_PARTS", "RETURNED_FROM_EXTERNAL"]) as JobStatus[] },
           assignedToId: null,
         },
       }),
@@ -1182,7 +1183,7 @@ export default async function DashboardPage({
       prisma.job.count({
         where: {
           createdById: session.user.id,
-          status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"] },
+          status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] },
         },
       }),
       prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
@@ -1269,7 +1270,7 @@ export default async function DashboardPage({
     prisma.job.count(),
     prisma.job.count({
       where: {
-        status: { in: ["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
+        status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"]) as JobStatus[] },
       },
     }),
     prisma.job.count({ where: { status: "COMPLETED" } }),

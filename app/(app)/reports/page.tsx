@@ -9,6 +9,7 @@ import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -145,18 +146,20 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: {
-        status: { in: [
-          "RECEIVED",
-          "DIAGNOSING",
-          "REFERRED",
-          // Legacy external workflow states
-          "IN_EXTERNAL_REPAIR",
-          "WAITING_FOR_PARTS",
-          "RETURNED_FROM_EXTERNAL",
-          "AWAITING_APPROVAL",
-          "IN_REPAIR",
-          "READY_FOR_PICKUP",
-        ] },
+        status: {
+          in: filterSupportedJobStatuses([
+            "RECEIVED",
+            "DIAGNOSING",
+            "REFERRED",
+            // Legacy external workflow states
+            "IN_EXTERNAL_REPAIR",
+            "WAITING_FOR_PARTS",
+            "RETURNED_FROM_EXTERNAL",
+            "AWAITING_APPROVAL",
+            "IN_REPAIR",
+            "READY_FOR_PICKUP",
+          ]) as JobStatus[],
+        },
       },
       select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),

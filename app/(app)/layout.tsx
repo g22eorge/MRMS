@@ -6,6 +6,7 @@ import { JobStatus, Prisma } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { filterSupportedJobStatuses } from "@/lib/job-status";
 
 export default async function AppLayout({
   children,
@@ -14,7 +15,7 @@ export default async function AppLayout({
 }) {
   const { session, user } = await getCurrentUserRole();
 
-  const openStatuses: JobStatus[] = [
+  const openStatuses = filterSupportedJobStatuses([
     "RECEIVED",
     "DIAGNOSING",
     "REFERRED",
@@ -23,7 +24,7 @@ export default async function AppLayout({
     "IN_REPAIR",
     "READY_FOR_PICKUP",
     "WAITING_FOR_PARTS",
-  ];
+  ]) as JobStatus[];
 
   const jobsWhere: Prisma.JobWhereInput =
     user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
