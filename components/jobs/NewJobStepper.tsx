@@ -79,10 +79,16 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   });
   const [devices, setDevices] = useState<DeviceDraft[]>([blankDevice()]);
   const [existingClient, setExistingClient] = useState<null | {
+    id?: string;
     fullName: string;
     email: string | null;
     organization: string | null;
   }>(null);
+  const [clientLookupQuery, setClientLookupQuery] = useState("");
+  const [clientLookupResults, setClientLookupResults] = useState<
+    Array<{ id: string; fullName: string; phone: string; email: string | null; organization: string | null }>
+  >([]);
+  const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
@@ -138,6 +144,48 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  useEffect(() => {
+    const q = clientLookupQuery.trim();
+    if (q.length < 2) {
+      setClientLookupResults([]);
+      setClientLookupLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setClientLookupLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/clients/lookup?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setClientLookupResults(Array.isArray(data.clients) ? data.clients : []);
+      } finally {
+        if (!cancelled) setClientLookupLoading(false);
+      }
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [clientLookupQuery]);
+
+  function selectClient(client: { id: string; fullName: string; phone: string; email: string | null; organization: string | null }) {
+    setForm((prev) => ({
+      ...prev,
+      fullName: client.fullName,
+      phone: client.phone,
+      email: client.email ?? "",
+      organization: client.organization ?? "",
+    }));
+    setExistingClient({ id: client.id, fullName: client.fullName, email: client.email, organization: client.organization });
+    setClientLookupQuery("");
+    setClientLookupResults([]);
+    setTouched((prev) => ({ ...prev, fullName: true, phone: true }));
+  }
 
   const onDeviceInput = (index: number, field: keyof DeviceDraft, value: string) => {
     setDevices((prev) => {
@@ -231,13 +279,44 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       {/* Step 0 — Client Info */}
       {step === 0 ? (
         <section className="grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Find Existing Client</label>
+            <div className="relative">
+              <input
+                value={clientLookupQuery}
+                onChange={(e) => setClientLookupQuery(e.target.value)}
+                placeholder="Search by name or phone…"
+                className={inputCls}
+              />
+              {clientLookupLoading ? (
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-muted)]">Searching…</span>
+              ) : null}
+            </div>
+            {clientLookupResults.length > 0 ? (
+              <div className="mt-2 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]">
+                {clientLookupResults.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => selectClient(c)}
+                    className="flex w-full items-start justify-between gap-3 border-b border-[var(--line)] px-3 py-2 text-left text-sm last:border-b-0 hover:bg-[var(--panel)]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-[var(--ink)]">{c.fullName}</span>
+                      <span className="block truncate text-xs text-[var(--ink-muted)]">{c.phone}{c.organization ? ` · ${c.organization}` : ""}</span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">Use</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <div className="space-y-0.5">
             <input
               name="fullName"
               value={form.fullName}
               onChange={onInput}
               onBlur={() => touch("fullName")}
-              required
               placeholder="Full Name *"
               className={clientErrors.fullName ? inputErrCls : inputCls}
             />
@@ -250,13 +329,13 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
               onChange={onInput}
               onBlur={async () => {
                 touch("phone");
-                if (form.phone.trim().length < 3) { setExistingClient(null); return; }
-                const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(form.phone.trim())}`);
+                const phone = form.phone.trim();
+                if (phone.length < 3) { setExistingClient(null); return; }
+                const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(phone)}`);
                 if (!res.ok) return;
                 const data = await res.json();
                 setExistingClient(data.client ?? null);
               }}
-              required
               placeholder="Phone *"
               className={clientErrors.phone ? inputErrCls : inputCls}
             />
