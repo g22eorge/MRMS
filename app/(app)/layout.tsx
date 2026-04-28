@@ -6,7 +6,7 @@ import { JobStatus, Prisma } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { filterSupportedJobStatuses } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 
 export default async function AppLayout({
   children,

@@ -8,7 +8,7 @@ import { getClientBill } from "@/lib/billing";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
-import { filterSupportedJobStatuses } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";

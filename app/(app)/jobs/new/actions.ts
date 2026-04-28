@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import { Prisma, type SoftwareInstallerSource } from "@prisma/client";
+import { JobStatus, Prisma, type SoftwareInstallerSource } from "@prisma/client";
 import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { filterSupportedJobStatuses } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { getUploadsRoot } from "@/lib/storage";
@@ -155,7 +155,7 @@ export async function createJobAction(
       "AWAITING_APPROVAL",
       "IN_REPAIR",
       "READY_FOR_PICKUP",
-    ]);
+    ]) as JobStatus[];
 
     const createdJobs: Array<{ id: string }> = [];
 
@@ -167,7 +167,7 @@ export async function createJobAction(
           where: {
             clientId: client.id,
             serialOrImei: serial,
-            status: { in: openStatuses as any },
+            status: { in: openStatuses },
           },
           select: { id: true, jobNumber: true },
         });

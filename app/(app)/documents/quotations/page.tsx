@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getClientBill } from "@/lib/billing";
 import { canGenerateQuotationForStatus, formatQuotationNumber } from "@/lib/documents";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { filterSupportedJobStatuses } from "@/lib/job-status";
+import { JobStatus } from "@prisma/client";
+import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -30,7 +31,7 @@ export default async function QuotationsPage() {
             "READY_FOR_PICKUP",
             "COMPLETED",
             "CLOSED",
-          ]) as any,
+          ]) as JobStatus[],
         },
       },
       orderBy: { updatedAt: "desc" },

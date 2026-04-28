@@ -3,7 +3,8 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { JobTable, JobRow } from "@/components/jobs/JobTable";
-import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus, filterSupportedJobStatuses } from "@/lib/job-status";
+import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -86,7 +87,7 @@ export default async function JobsPage({
       )
     : [];
 
-  const dbStatuses = filterSupportedJobStatuses(dbStatusesRaw);
+  const dbStatuses = filterSupportedJobStatuses(dbStatusesRaw) as JobStatus[];
   const pricingFilter = filters.pricing === "needs" || filters.pricing === "priced" ? filters.pricing : "";
   const payoutFilter = filters.payout === "due" || filters.payout === "paid" ? filters.payout : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
