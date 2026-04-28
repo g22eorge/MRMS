@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { JobStatus, NotificationChannel, NotificationType, OutboundMessageType, Prisma } from "@prisma/client";
 
 import { formatMoney } from "@/lib/currency";
+import { normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { sendCustomWhatsAppMessage } from "@/lib/notifications/whatsapp";
@@ -267,7 +268,8 @@ function supportsCommunicationPolicy() {
 async function getCommunicationPolicyForStatus(status: JobStatus) {
   if (!supportsCommunicationPolicy()) return null;
   try {
-    return await prisma.communicationPolicy.findUnique({ where: { status } });
+    const normalized = normalizeJobStatus(status as unknown as LegacyJobStatus);
+    return await prisma.communicationPolicy.findUnique({ where: { status: normalized as JobStatus } });
   } catch {
     // If the table isn't migrated yet, silently fall back.
     return null;

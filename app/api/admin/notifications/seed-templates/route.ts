@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { upsertDefaultCommunicationTemplates } from "@/lib/notifications/default-templates";
+import { upsertDefaultCommunicationPolicies, upsertDefaultCommunicationTemplates } from "@/lib/notifications/default-templates";
 import { getCurrentUserRole } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -55,8 +55,13 @@ export async function POST() {
   }
 
   try {
-    const res = await upsertDefaultCommunicationTemplates();
-    return NextResponse.json(res, { status: res.ok ? 200 : 500 });
+    const [templates, policies] = await Promise.all([
+      upsertDefaultCommunicationTemplates(),
+      upsertDefaultCommunicationPolicies(),
+    ]);
+
+    const ok = Boolean(templates.ok && policies.ok);
+    return NextResponse.json({ ok, templates, policies }, { status: ok ? 200 : 500 });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ ok: false, reason: "Server error", detail: message }, { status: 500 });

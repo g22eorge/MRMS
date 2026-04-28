@@ -1,9 +1,14 @@
-import { OutboundMessageChannel, Prisma } from "@prisma/client";
+import { JobStatus as PrismaJobStatus, OutboundMessageChannel, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { UI_JOB_STATUSES, normalizeJobStatus } from "@/lib/job-status";
 
 function supportsCommsTemplates() {
   return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
+}
+
+function supportsCommunicationPolicy() {
+  return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationPolicy"));
 }
 
 export function getDefaultCommunicationTemplates(): Array<{
@@ -229,5 +234,67 @@ export async function upsertDefaultCommunicationTemplates() {
       };
     }
     return { ok: false as const, reason: "Failed to seed templates", detail: message };
+  }
+}
+
+export async function upsertDefaultCommunicationPolicies() {
+  if (!supportsCommunicationPolicy()) {
+    return { ok: false as const, reason: "CommunicationPolicy model not available" };
+  }
+
+  const statuses = UI_JOB_STATUSES;
+
+  const defaultsForStatus = (status: (typeof statuses)[number]) => {
+    if (status === "READY_FOR_PICKUP") {
+      return { templateKey: "READY_FOR_PICKUP_NUDGE_1", nudge1Hours: 24, nudge2Hours: 72 };
+    }
+    if (status === "COMPLETED") {
+      return { templateKey: "JOB_COMPLETED", nudge1Hours: null, nudge2Hours: null };
+    }
+    if (status === "RECEIVED") {
+      return { templateKey: "JOB_CREATED", nudge1Hours: null, nudge2Hours: null };
+    }
+    return { templateKey: "JOB_STATUS_UPDATE", nudge1Hours: null, nudge2Hours: null };
+  };
+
+  let upserted = 0;
+  try {
+    for (const status of statuses) {
+      // Extra safety: ensure we only ever seed normalized/UI statuses.
+      const normalized = normalizeJobStatus(status);
+      const defaults = defaultsForStatus(normalized);
+      await prisma.communicationPolicy.upsert({
+        where: { status: normalized as unknown as PrismaJobStatus },
+        update: {
+          dashboardEnabled: true,
+          whatsappEnabled: false,
+          emailEnabled: false,
+          templateKey: defaults.templateKey,
+          nudge1Hours: defaults.nudge1Hours,
+          nudge2Hours: defaults.nudge2Hours,
+        },
+        create: {
+          status: normalized as unknown as PrismaJobStatus,
+          dashboardEnabled: true,
+          whatsappEnabled: false,
+          emailEnabled: false,
+          templateKey: defaults.templateKey,
+          nudge1Hours: defaults.nudge1Hours,
+          nudge2Hours: defaults.nudge2Hours,
+        },
+      });
+      upserted += 1;
+    }
+    return { ok: true as const, upserted };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("does not exist")) {
+      return {
+        ok: false as const,
+        reason: "Database schema missing CommunicationPolicy table. Apply migrations/db push, then retry.",
+        detail: message,
+      };
+    }
+    return { ok: false as const, reason: "Failed to seed policies", detail: message };
   }
 }

@@ -6,6 +6,7 @@ import { JobStatus, OutboundMessageChannel, OutboundMessageType, Prisma } from "
 import { getCurrentUserRole } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { extractTemplateVariables } from "@/lib/notifications/templates";
+import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { revalidatePath } from "next/cache";
 
 function supportsCommsTemplates() {
@@ -199,10 +200,12 @@ export default async function NotificationTemplatesPage({
       return Number.isFinite(n) ? Math.max(0, Math.min(720, Math.floor(n))) : null;
     };
 
+    const normalizedStatus = normalizeJobStatus(parsed.data.status as unknown as LegacyJobStatus) as unknown as JobStatus;
+
     await prisma.communicationPolicy.upsert({
-      where: { status: parsed.data.status },
+      where: { status: normalizedStatus },
       create: {
-        status: parsed.data.status,
+        status: normalizedStatus,
         dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
         whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
         emailEnabled: Boolean(parsed.data.emailEnabled),
@@ -281,7 +284,9 @@ export default async function NotificationTemplatesPage({
     policies = [];
   }
 
-  const policyByStatus = new Map<JobStatus, (typeof policies)[number]>(policies.map((p) => [p.status, p]));
+  const policyByStatus = new Map<string, (typeof policies)[number]>(
+    policies.map((p) => [normalizeJobStatus(p.status as unknown as LegacyJobStatus), p])
+  );
   const knownKeys = [...new Set(Object.values(OutboundMessageType).map(String))].sort();
   const templateKeys = [...new Set(templates.map((t) => t.key))].sort();
 
@@ -443,9 +448,9 @@ export default async function NotificationTemplatesPage({
         </p>
 
         <div className="mt-3 space-y-2">
-          {Object.values(JobStatus).map((status) => {
+          {UI_JOB_STATUSES.map((status) => {
             const p = policyByStatus.get(status) ?? {
-              status,
+              status: status as unknown as JobStatus,
               dashboardEnabled: true,
               whatsappEnabled: false,
               emailEnabled: false,
