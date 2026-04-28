@@ -22,6 +22,7 @@ type SearchParams = {
   q?: string;
   segment?: string;
   page?: string;
+  create?: string;
   createError?: string;
 };
 
@@ -129,6 +130,9 @@ export default async function ClientsPage({
     });
 
     revalidatePath("/clients");
+
+    // Close the quick-create panel by returning to the base URL.
+    redirect("/clients");
   }
 
   async function deleteClientAction(formData: FormData) {
@@ -154,6 +158,17 @@ export default async function ClientsPage({
     Object.entries(filters).filter(([, value]) => typeof value === "string" && value.length > 0),
   ) as Record<string, string>;
   const hasClientFilters = Boolean(filters.q || segment !== "all");
+  const showCreate = filters.create === "1" || Boolean(filters.createError);
+
+  const preservedWithoutSegment = Object.fromEntries(
+    Object.entries(preserved).filter(([key]) => key !== "segment" && key !== "page"),
+  ) as Record<string, string>;
+  function segmentHref(next: string) {
+    const params = new URLSearchParams(preservedWithoutSegment);
+    if (next && next !== "all") params.set("segment", next);
+    const query = params.toString();
+    return query ? `/clients?${query}` : "/clients";
+  }
 
   const paginationBar = totalPages > 1 ? (
     <div className="flex items-center gap-1.5">
@@ -189,18 +204,46 @@ export default async function ClientsPage({
       {/* ── Stat chips bar ── */}
       <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">
-            <span className="font-bold text-[var(--ink)]">{totalClients}</span> total
-          </span>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
-            <span className="font-bold">{activeClients}</span> active
-          </span>
-          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">
-            <span className="font-bold text-[var(--ink)]">{newClients}</span> no job
-          </span>
-          <span className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-1 text-[11px] font-semibold text-[#9A7A00]">
-            <span className="font-bold">{withManyJobs}</span> high activity
-          </span>
+          <Link
+            href={segmentHref("all")}
+            className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+              segment === "all"
+                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            }`}
+          >
+            <span className={`font-bold ${segment === "all" ? "text-white" : "text-[var(--ink)]"}`}>{totalClients}</span> total
+          </Link>
+          <Link
+            href={segmentHref("active")}
+            className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+              segment === "active"
+                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            }`}
+          >
+            <span className={`font-bold ${segment === "active" ? "text-white" : "text-[var(--ink)]"}`}>{activeClients}</span> active
+          </Link>
+          <Link
+            href={segmentHref("new")}
+            className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+              segment === "new"
+                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            }`}
+          >
+            <span className={`font-bold ${segment === "new" ? "text-white" : "text-[var(--ink)]"}`}>{newClients}</span> no job
+          </Link>
+          <Link
+            href={segmentHref("high")}
+            className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+              segment === "high"
+                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            }`}
+          >
+            <span className={`font-bold ${segment === "high" ? "text-white" : "text-[var(--ink)]"}`}>{withManyJobs}</span> high activity
+          </Link>
         </div>
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <Link
@@ -239,47 +282,37 @@ export default async function ClientsPage({
               </Link>
             ) : null}
           </div>
-          {/* Row 2: segment chips — horizontal scroll on mobile */}
-          <div className="-mx-0.5 flex gap-1.5 overflow-x-auto px-0.5 pb-0.5 [scrollbar-width:none]">
-            {(["all", "active", "new", "high"] as const).map((seg) => {
-              const labels = { all: "All", active: "Active", new: "No Job", high: "High Activity" };
-              const href = `/clients?segment=${seg}${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}`;
-              return (
-                <Link
-                  key={seg}
-                  href={href}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                    segment === seg
-                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
-                  }`}
-                >
-                  {labels[seg]}
-                </Link>
-              );
-            })}
-          </div>
         </form>
 
-        {/* Inline create form for OPS/ADMIN — shown when ?create=1 or always on large screens */}
+        {/* Quick create form for OPS/ADMIN — collapsed by default */}
         {(user.role === "ADMIN" || user.role === "OPS") ? (
-          <form action={createClientAction} className="border-t border-[var(--line)] px-3 pb-3 pt-2.5">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quick create client</p>
-            {filters.createError ? (
-              <p className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                {filters.createError}
-              </p>
-            ) : null}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <input required name="fullName" placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input required name="phone" placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="organization" placeholder="Organization" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-            </div>
-            <button className="mt-2 w-full rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90 sm:w-auto">
-              Create
-            </button>
-          </form>
+          <details open={showCreate} className="border-t border-[var(--line)]">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
+              Quick create client
+              <span className="text-[11px] font-semibold text-[var(--accent)]">{showCreate ? "Hide" : "Show"}</span>
+            </summary>
+            <form action={createClientAction} noValidate className="px-3 pb-3">
+              {filters.createError ? (
+                <p className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                  {filters.createError}
+                </p>
+              ) : null}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <input name="fullName" placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="phone" placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="organization" placeholder="Organization" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[var(--accent)]/90">
+                  Create
+                </button>
+                <Link href="/clients" className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">
+                  Cancel
+                </Link>
+              </div>
+            </form>
+          </details>
         ) : null}
       </div>
 
