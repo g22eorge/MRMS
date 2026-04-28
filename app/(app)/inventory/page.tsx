@@ -18,11 +18,19 @@ type InventoryRow = {
   unitCost: number | null;
 };
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user } = await getCurrentUserRole();
   if (!["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(user.role)) {
     redirect("/dashboard");
   }
+
+  const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
+  const created = String(params.created ?? "") === "1";
+  const error = typeof params.error === "string" ? params.error : "";
 
   const canManage = user.role === "ADMIN" || user.role === "OPS";
 
@@ -41,17 +49,25 @@ export default async function InventoryPage() {
     const unitCost = unitCostRaw ? Number(unitCostRaw) : null;
     const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
 
-    await prisma.part.create({
-      data: {
-        sku,
-        name,
-        manufacturer: manufacturer || null,
-        unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
-        reorderLevel,
-      },
-    });
+    try {
+      await prisma.part.create({
+        data: {
+          sku,
+          name,
+          manufacturer: manufacturer || null,
+          unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
+          reorderLevel,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const isUnique = message.includes("Unique constraint") || message.includes("P2002") || message.toLowerCase().includes("unique");
+      const qs = new URLSearchParams({ error: isUnique ? "SKU already exists" : "Failed to add part" }).toString();
+      redirect(`/inventory?${qs}#add-part`);
+    }
 
     revalidatePath("/inventory");
+    redirect("/inventory?created=1#add-part");
   }
 
   async function adjustStockAction(formData: FormData) {
@@ -149,6 +165,16 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-4">
+      {error ? (
+        <div className="panel-shadow rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {created ? (
+        <div className="panel-shadow rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          Part added.
+        </div>
+      ) : null}
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
           <div className="flex items-center justify-between gap-2">
