@@ -57,7 +57,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
-  if (overdue) return { label: "Attention", tone: "bg-black text-white border-black" };
+  if (overdue) return { label: "Attention", tone: "bg-[#0b0b0b] text-white/90 border-white/10" };
   if (ready) return { label: "High", tone: "bg-[var(--accent)] text-white border-[var(--accent)]" };
   if (ageDays >= 2) return { label: "Medium", tone: "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" };
   return { label: "Normal", tone: "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]" };

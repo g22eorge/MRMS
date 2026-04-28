@@ -52,6 +52,11 @@ export function NotificationBell() {
         setError(`Status: ${res.status}`);
         return;
       }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setError("Session expired");
+        return;
+      }
       const data = await res.json();
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);

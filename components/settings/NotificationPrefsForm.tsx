@@ -80,7 +80,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
         <Toggle name="notifyPayoutGenerated" label="Payout Generated" hint="When external payout is generated." defaultChecked={prefs.notifyPayoutGenerated} />
       </div>
 
-      {state.error ? <p className="text-sm text-black">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-[var(--ink)]">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-[var(--accent)]">{state.success}</p> : null}
 
       <SubmitButton />

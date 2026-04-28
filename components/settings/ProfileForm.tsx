@@ -91,7 +91,7 @@ export function ProfileForm({
         </div>
       </div>
 
-      {state.error ? <p className="text-sm text-black md:col-span-2">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-[var(--ink)] md:col-span-2">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-[var(--accent)]">{state.success}</p> : null}
 
       <SaveButton />

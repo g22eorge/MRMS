@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserRole } from "@/lib/session";
+import { getCurrentUserRoleOptional } from "@/lib/session";
 import { getUnreadNotifications, getAllNotifications, getUnreadCount } from "@/lib/notifications";
 import { can } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
-  const { user } = await getCurrentUserRole();
+  const { user } = await getCurrentUserRoleOptional();
   if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

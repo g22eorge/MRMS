@@ -396,7 +396,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       key: "watch",
       label: "Watch",
       value: watchLabel ? `${watchLabel} (${statusAgeHours}h)` : `Healthy (${statusAgeHours}h in state)`,
-      tone: watchLabel ? "text-black" : "text-[var(--accent)]",
+      tone: watchLabel ? "text-[var(--ink)]" : "text-[var(--accent)]",
       accent: watchLabel ? "bg-[var(--panel-strong)] border-[var(--line)]" : "bg-[var(--accent)]/10 border-[var(--accent)]/30",
       priority: watchLabel ? 88 : 40,
     },
@@ -404,7 +404,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       key: "assigned",
       label: "Assigned Tech",
       value: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName ?? "Unassigned",
-      tone: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName ? "text-[var(--ink)]" : "text-black",
+      tone: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName ? "text-[var(--ink)]" : "text-[var(--ink)]",
       accent: job.assignedTo?.name || job.oneTimeExternalAssignment?.technicianName
         ? "bg-[var(--panel)] border-[var(--line)]"
         : "bg-[var(--panel-strong)] border-[var(--line)]",
@@ -438,7 +438,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
       key: "nextAction",
       label: "Next Action",
       value: nextActionByStatus[statusKey],
-      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-[var(--ink)]" : "text-black",
+      tone: job.status === "COMPLETED" || job.status === "CLOSED" ? "text-[var(--ink)]" : "text-[var(--ink)]",
       accent: job.status === "COMPLETED" || job.status === "CLOSED" ? "bg-[var(--panel)] border-[var(--line)]" : "bg-[var(--panel-strong)] border-[var(--line)]",
       priority: 84,
     },
@@ -1319,7 +1319,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
               router.refresh();
             });
           }}
-          className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0`}
+          className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0 mb-24 lg:mb-0`}
         >
           {job.workflowReason && job.workflowReason !== "NONE" ? (
             <p className="w-full text-xs text-[var(--ink-muted)]">

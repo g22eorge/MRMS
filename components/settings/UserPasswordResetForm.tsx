@@ -87,7 +87,7 @@ export function UserPasswordResetForm({
         </button>
       </div>
 
-      {state.error ? <p className="text-sm text-black md:col-span-3">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-[var(--ink)] md:col-span-3">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-[var(--accent)] md:col-span-3">{state.success}</p> : null}
       <p className="text-[11px] text-[var(--ink-muted)] md:col-span-3">
         Tip: use Generate & Copy, then paste the temporary password to the staff member over WhatsApp.

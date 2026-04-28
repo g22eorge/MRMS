@@ -573,7 +573,7 @@ export default async function ReportsPage({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Revenue Δ</p>
-            <p className={`mt-0.5 text-sm font-semibold ${revenueDelta >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${revenueDelta >= 0 ? "text-[var(--accent)]" : "text-[var(--ink)]"}`}>
               {revenueDelta >= 0 ? "+" : ""}{formatMoneyCompact(Math.abs(revenueDelta), currency)}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">vs {prevMonthString}</p>
@@ -590,7 +590,7 @@ export default async function ReportsPage({
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Momentum</p>
-            <p className={`mt-0.5 text-sm font-semibold ${completionMomentum >= 0 ? "text-[var(--accent)]" : "text-black"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${completionMomentum >= 0 ? "text-[var(--accent)]" : "text-[var(--ink)]"}`}>
               {completionMomentum >= 0 ? "+" : ""}{completionMomentum}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">completed vs prev period</p>
@@ -602,7 +602,7 @@ export default async function ReportsPage({
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">Aging Risk</p>
-            <p className={`mt-0.5 text-sm font-semibold ${delayedJobs.length > 0 ? "text-black" : "text-[var(--accent)]"}`}>
+            <p className={`mt-0.5 text-sm font-semibold ${delayedJobs.length > 0 ? "text-[var(--ink)]" : "text-[var(--accent)]"}`}>
               {delayedJobs.length}
             </p>
             <p className="text-[9px] text-[var(--ink-muted)]">open jobs &gt;3 days</p>

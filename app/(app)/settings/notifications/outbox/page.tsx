@@ -137,7 +137,7 @@ export default async function OutboxPage({
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
             {byStatus.SENT ?? 0} sent
           </span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.DEAD ?? 0) > 0 ? "border-black bg-black text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.DEAD ?? 0) > 0 ? "border-white/10 bg-[#0b0b0b] text-white/90" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
             {byStatus.DEAD ?? 0} dead
           </span>
         </div>

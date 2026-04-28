@@ -134,3 +134,65 @@ export async function getCurrentUserRole() {
 
   return { session, user };
 }
+
+// For API routes and background tasks: never redirect, return null user instead.
+export async function getCurrentUserRoleOptional() {
+  const session = await getSession();
+  if (!session?.user) {
+    return { session: null, user: null as null };
+  }
+
+  try {
+    const row = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        name: true,
+        email: true,
+        phone: true,
+        permissionGrants: { select: { permission: true } },
+      },
+    });
+
+    if (!row?.isActive) {
+      return { session, user: null as null };
+    }
+
+    return {
+      session,
+      user: {
+        id: row.id,
+        role: normalizeRole(row.role),
+        isActive: row.isActive,
+        name: row.name,
+        email: row.email,
+        phone: row.phone ?? null,
+        permissions: row.permissionGrants
+          .map((p) => p.permission)
+          .filter((permission): permission is string => typeof permission === "string" && permission.length > 0),
+      },
+    };
+  } catch {
+    // Older DB fallback
+    const baseUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, role: true, isActive: true, name: true, email: true },
+    });
+
+    if (!baseUser?.isActive) {
+      return { session, user: null as null };
+    }
+
+    return {
+      session,
+      user: {
+        ...baseUser,
+        role: normalizeRole(baseUser.role),
+        phone: null,
+        permissions: [],
+      },
+    };
+  }
+}

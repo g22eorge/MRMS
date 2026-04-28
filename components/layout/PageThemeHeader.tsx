@@ -55,6 +55,8 @@ function pageMeta(pathname: string, role: Role) {
 async function fetchJobNumber(id: string) {
   const res = await fetch(`/api/meta/job/${id}`, { cache: "no-store" });
   if (!res.ok) return null;
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
   const data = (await res.json()) as { jobNumber?: string };
   return data.jobNumber ?? null;
 }
@@ -62,6 +64,8 @@ async function fetchJobNumber(id: string) {
 async function fetchClientName(id: string) {
   const res = await fetch(`/api/meta/client/${id}`, { cache: "no-store" });
   if (!res.ok) return null;
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
   const data = (await res.json()) as { fullName?: string };
   return data.fullName ?? null;
 }

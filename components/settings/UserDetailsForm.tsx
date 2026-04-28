@@ -52,7 +52,7 @@ export function UserDetailsForm({ id, name, email, phone, action }: UserDetailsF
         pendingLabel="Saving..."
         className="btn-premium h-10 rounded-lg px-3 py-1.5 text-sm text-white md:w-fit"
       />
-      {state.error ? <p className="text-sm text-black md:col-span-2 xl:col-span-4">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-[var(--ink)] md:col-span-2 xl:col-span-4">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-[var(--accent)] md:col-span-2 xl:col-span-4">{state.success}</p> : null}
     </form>
   );

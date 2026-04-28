@@ -6,14 +6,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { sanitizeText } from "@/lib/sanitize";
-import { getCurrentUserRole } from "@/lib/session";
+import { getCurrentUserRoleOptional } from "@/lib/session";
 import { getUploadsRoot } from "@/lib/storage";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(req: NextRequest) {
-  const { session, user } = await getCurrentUserRole();
+  const { session, user } = await getCurrentUserRoleOptional();
+  if (!session?.user || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const formData = await req.formData();
   const jobId = String(formData.get("jobId") ?? "");
   const label = sanitizeText(String(formData.get("label") ?? "other"));
@@ -78,7 +81,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user } = await getCurrentUserRole();
+  const { user } = await getCurrentUserRoleOptional();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   if (user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

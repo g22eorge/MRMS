@@ -30,8 +30,8 @@ function getActionMeta(action: string): ActionMeta {
   if (action.includes("PAY") || action.includes("BILL") || action.includes("INVOICE") || action.includes("COST")) {
     return {
       icon: "$",
-      chipClass: "bg-black text-white border-black",
-      panelClass: "border-black",
+      chipClass: "bg-[#0b0b0b] text-white/90 border-white/10",
+      panelClass: "border-[var(--line)]",
     };
   }
   if (action.includes("CLOSED") || action.includes("DECLINED")) {

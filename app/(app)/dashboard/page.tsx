@@ -136,7 +136,7 @@ function RevenueMarginTrendSection({
             <div key={m.key} className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
               <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
               <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-              <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-black"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+              <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-[var(--ink)]"}`}>{formatMoneyCompact(m.margin, currency)}</p>
             </div>
           ))}
         </div>
@@ -798,26 +798,26 @@ export default async function DashboardPage({
       <div className="space-y-4">
         {/* Alert Banner */}
         {hasAlerts ? (
-          <section className="panel-shadow rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <section className="panel-shadow rounded-xl border border-[var(--accent)]/25 bg-[var(--panel)] px-4 py-3">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800">Attention Required</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Attention Required</span>
               {awaitingApprovalCount > 0 ? (
                 <Link
                   href="/jobs?status=AWAITING_APPROVAL"
-                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition hover:border-[var(--accent)]/50"
                 >
                   {awaitingApprovalCount} awaiting approval
                 </Link>
               ) : null}
               {overdueWithDays.length > 0 ? (
-                <span className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800">
+                <span className="rounded-full border border-white/10 bg-[#0b0b0b] px-2.5 py-1 text-[11px] font-medium text-white/90">
                   {overdueWithDays.length} overdue (3+ days)
                 </span>
               ) : null}
               {unassignedActiveCount > 0 ? (
                 <Link
                   href="/jobs?assignedToId=unassigned"
-                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/35"
                 >
                   {unassignedActiveCount} unassigned
                 </Link>
@@ -825,7 +825,7 @@ export default async function DashboardPage({
               {pendingRequests > 0 ? (
                 <Link
                   href="/intake"
-                  className="rounded-full border border-amber-300 bg-[var(--panel)] px-2.5 py-1 text-[11px] font-medium text-amber-800 transition hover:border-amber-400"
+                  className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/35"
                 >
                   {pendingRequests} pending requests
                 </Link>
@@ -850,7 +850,7 @@ export default async function DashboardPage({
             </Link>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${unresolvedDeviceFields > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${unresolvedDeviceFields > 0 ? "border-[var(--accent)]/35 bg-[var(--accent)]/10 text-[var(--accent)]" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"}`}>
               {unresolvedDeviceFields} unresolved
             </span>
             <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] text-[var(--ink-muted)]">
@@ -882,7 +882,7 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href="/reports"
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300"
+                className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 transition hover:border-emerald-500/40"
               >
                 Revenue {formatMoney(revenueMtd, currency)}
               </Link>
@@ -900,7 +900,7 @@ export default async function DashboardPage({
                 href="/jobs?status=AWAITING_APPROVAL"
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   awaitingApprovalCount > 0
-                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    ? "border-[var(--accent)]/35 bg-[var(--accent)]/10 text-[var(--accent)] hover:border-[var(--accent)]/55"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
@@ -910,7 +910,7 @@ export default async function DashboardPage({
                 href="/jobs?status=DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,IN_EXTERNAL_REPAIR"
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   overdueWithDays.length > 0
-                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    ? "border-white/10 bg-[#0b0b0b] text-white/90 hover:border-white/20"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
@@ -920,7 +920,7 @@ export default async function DashboardPage({
                 href="/jobs?assignedToId=unassigned"
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   unassignedActiveCount > 0
-                    ? "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300"
+                    ? "border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] hover:border-[var(--accent)]/30"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
@@ -930,7 +930,7 @@ export default async function DashboardPage({
                 href="/intake"
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                   pendingRequests > 0
-                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                    ? "border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] hover:border-[var(--accent)]/30"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
