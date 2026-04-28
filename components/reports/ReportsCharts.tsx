@@ -17,6 +17,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { formatMoneyCompact } from "@/lib/currency";
+
 export function ReportsCharts({
   statusData,
   deviceData,
@@ -118,8 +120,10 @@ export function ReportsCharts({
 
 export function RevenueLineChart({
   data,
+  currency,
 }: {
   data: { key: string; revenue: number; margin: number }[];
+  currency: string;
 }) {
   const [shouldRender, setShouldRender] = useState(false);
 
@@ -153,8 +157,20 @@ export function RevenueLineChart({
         <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis dataKey="key" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
-          <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
-          <Tooltip contentStyle={tooltipStyle} />
+          <YAxis
+            tick={{ fontSize: 11, fill: "var(--ink-muted)" }}
+            axisLine={{ stroke: "var(--line)" }}
+            tickLine={{ stroke: "var(--line)" }}
+            tickFormatter={(value) => formatMoneyCompact(Number(value), currency).replace(`${currency} `, "")}
+          />
+          <Tooltip
+            contentStyle={tooltipStyle}
+            formatter={(value, name) => {
+              const numeric = typeof value === "number" ? value : Number(value);
+              const label = name === "margin" ? "Margin" : name === "revenue" ? "Revenue" : String(name);
+              return [formatMoneyCompact(numeric, currency), label];
+            }}
+          />
           <Line
             type="monotone"
             dataKey="revenue"

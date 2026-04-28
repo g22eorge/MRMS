@@ -136,7 +136,7 @@ function RevenueMarginTrendSection({
         </div>
       ) : null}
 
-      <RevenueLineChart data={revenueTrend} />
+      <RevenueLineChart data={revenueTrend} currency={currency} />
       <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         <div className="flex w-max gap-2">
           {revenueTrend.map((m) => (
@@ -934,16 +934,11 @@ export default async function DashboardPage({
               })}
           </div>
           <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] px-3 py-3">
-            <div className="text-center">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Finance Outlook</p>
-              <Link
-                href={`/reports?period=month&month=${mtdLabel}`}
-                className="mt-1 inline-flex text-[11px] font-semibold text-[var(--accent)] hover:underline"
-              >
-                Open reports →
-              </Link>
+              <Link href={`/reports?period=month&month=${mtdLabel}`} className="text-[11px] font-semibold text-[var(--accent)] hover:underline">Open reports →</Link>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Link href={`/reports?period=month&month=${mtdLabel}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue MTD</p>
                 <p className="mt-0.5 text-sm font-semibold text-emerald-700">{formatMoney(revenueMtd, currency)}</p>
