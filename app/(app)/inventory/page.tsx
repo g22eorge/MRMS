@@ -151,21 +151,29 @@ export default async function InventoryPage() {
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active Parts</p>
-          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{parts.length}</p>
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active Parts</p>
+            <p className="text-base font-semibold leading-none text-[var(--ink)]">{parts.length}</p>
+          </div>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Low Stock</p>
-          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--accent)] md:text-2xl">{lowStock.length}</p>
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Low Stock</p>
+            <p className="text-base font-semibold leading-none text-[var(--accent)]">{lowStock.length}</p>
+          </div>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reserved</p>
-          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{reservedCount}</p>
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reserved</p>
+            <p className="text-base font-semibold leading-none text-[var(--ink)]">{reservedCount}</p>
+          </div>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Stock Value</p>
-          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{formatUGX(totalValue)}</p>
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Stock Value</p>
+            <p className="text-sm font-semibold leading-none text-[var(--ink)]">{formatUGX(totalValue)}</p>
+          </div>
         </article>
       </section>
 
@@ -174,48 +182,31 @@ export default async function InventoryPage() {
           <header className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-2.5">
             <div>
               <h2 className="text-sm font-semibold text-[var(--ink)]">Add Part</h2>
-              <p className="text-xs text-[var(--ink-muted)]">Create a new stock item (SKU must be unique).</p>
+              <p className="text-xs text-[var(--ink-muted)]">SKU and name are required.</p>
             </div>
             <span className="hidden rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] md:inline-flex">
               Admin/OPS
             </span>
           </header>
-          <form action={createPartAction} className="grid gap-2 p-3 md:grid-cols-12 md:p-4">
-            <input
-              name="sku"
-              placeholder="SKU"
-              required
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-3"
-            />
-            <input
-              name="name"
-              placeholder="Part name"
-              required
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-5"
-            />
-            <input
-              name="manufacturer"
-              placeholder="Maker (optional)"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-4"
-            />
-            <div className="grid grid-cols-2 gap-2 md:col-span-5">
+          <form action={createPartAction} className="space-y-2 p-3 md:p-4">
+            <div className="grid gap-2 md:grid-cols-12">
               <input
-                name="unitCost"
-                inputMode="decimal"
-                placeholder="Unit cost"
-                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                name="sku"
+                placeholder="SKU"
+                required
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-3"
               />
               <input
-                name="reorderLevel"
-                inputMode="numeric"
-                placeholder="Reorder level"
-                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                name="name"
+                placeholder="Part name"
+                required
+                className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-7"
               />
-            </div>
-            <div className="md:col-span-7 flex items-center justify-end">
-              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
-                Add Part
-              </button>
+              <div className="md:col-span-2 flex justify-end">
+                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2 text-sm font-semibold md:w-auto">
+                  Add
+                </button>
+              </div>
             </div>
           </form>
         </section>
