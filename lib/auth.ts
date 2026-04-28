@@ -16,7 +16,7 @@ function normalizeOrigin(value: string | undefined) {
 
 function collectTrustedOrigins() {
   const hardcoded = [
-    "https://mrms.eagleinfosolutions.com",
+    "https://care.eagleinfosolutions.com",
     "https://mrms-eight.vercel.app",
   ];
 

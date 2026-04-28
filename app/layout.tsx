@@ -18,7 +18,7 @@ const sora = Sora({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://mrms.eagleinfosolutions.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://care.eagleinfosolutions.com";
 const ogImage = `${siteUrl}/eagle-info-logo.png`;
 
 export const metadata: Metadata = {

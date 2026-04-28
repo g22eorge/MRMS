@@ -13,13 +13,13 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "@id": "https://mrms.eagleinfosolutions.com/#business",
+  "@id": "https://care.eagleinfosolutions.com/#business",
   name: "Eagle Info Solutions SMC Limited",
   description:
     "Professional repair for phones, laptops, tablets and software in Kampala, Uganda. Transparent pricing, no-fix-no-fee guarantee, 30-day warranty.",
   url: "https://eagleinfosolutions.com",
   telephone: ["+256772006344", "+256754006344"],
-  image: "https://mrms.eagleinfosolutions.com/eagle-info-logo.png",
+  image: "https://care.eagleinfosolutions.com/eagle-info-logo.png",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Shop L28, Nalubega Complex",
