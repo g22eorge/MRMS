@@ -151,27 +151,27 @@ export default async function InventoryPage() {
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Active Parts</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">{parts.length}</p>
+          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{parts.length}</p>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Low Stock</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--accent)]">{lowStock.length}</p>
+          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--accent)] md:text-2xl">{lowStock.length}</p>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reserved</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">{reservedCount}</p>
+          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{reservedCount}</p>
         </article>
-        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <article className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 md:p-3.5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Stock Value</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">{formatUGX(totalValue)}</p>
+          <p className="mt-1 text-[22px] font-semibold leading-none text-[var(--ink)] md:text-2xl">{formatUGX(totalValue)}</p>
         </article>
       </section>
 
       {canManage ? (
         <section id="add-part" className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <header className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+          <header className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-2.5">
             <div>
               <h2 className="text-sm font-semibold text-[var(--ink)]">Add Part</h2>
               <p className="text-xs text-[var(--ink-muted)]">Create a new stock item (SKU must be unique).</p>
@@ -180,7 +180,7 @@ export default async function InventoryPage() {
               Admin/OPS
             </span>
           </header>
-          <form action={createPartAction} className="grid gap-2 p-4 md:grid-cols-12">
+          <form action={createPartAction} className="grid gap-2 p-3 md:grid-cols-12 md:p-4">
             <input
               name="sku"
               placeholder="SKU"
@@ -213,7 +213,7 @@ export default async function InventoryPage() {
               />
             </div>
             <div className="md:col-span-7 flex items-center justify-end">
-              <button type="submit" className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold">
+              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
                 Add Part
               </button>
             </div>
