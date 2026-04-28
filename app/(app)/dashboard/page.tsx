@@ -103,9 +103,11 @@ async function loadRevenueMarginTrend(trendMonths: { key: string; start: Date; e
 function RevenueMarginTrendSection({
   trendMonths,
   revenueTrend,
+  currency,
 }: {
   trendMonths: { key: string; start: Date; end: Date }[];
   revenueTrend: { key: string; revenue: number; margin: number }[];
+  currency: string;
 }) {
   return (
     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -121,10 +123,6 @@ function RevenueMarginTrendSection({
             <span className="inline-block h-2 w-4 rounded-full bg-[var(--accent)]" />
             Revenue
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-[color:var(--ink)] opacity-70" />
-            Margin
-          </span>
         </div>
       </div>
 
@@ -135,6 +133,17 @@ function RevenueMarginTrendSection({
       ) : null}
 
       <RevenueLineChart data={revenueTrend} />
+      <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+        <div className="flex w-max gap-2">
+          {revenueTrend.map((m) => (
+            <div key={m.key} className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
+              <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
+              <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-[var(--ink)]"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -817,7 +826,7 @@ export default async function DashboardPage({
           </section>
         ) : null}
 
-        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} />
+        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} currency={currency} />
 
         {/* Live Repair Pipeline — with today's stats and quick actions in the header */}
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -1121,7 +1130,7 @@ export default async function DashboardPage({
           </section>
         </div>
 
-        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} />
+        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} currency={currency} />
 
       </div>
     );

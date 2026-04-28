@@ -131,6 +131,14 @@ export function RevenueLineChart({
     return () => media.removeEventListener("change", sync);
   }, []);
 
+  const tooltipStyle = {
+    backgroundColor: "var(--panel)",
+    border: "1px solid var(--line)",
+    borderRadius: 10,
+    fontSize: 12,
+    color: "var(--ink)",
+  } as const;
+
   if (!shouldRender || data.length === 0) {
     return (
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-sm text-[var(--ink-muted)]">
@@ -146,6 +154,7 @@ export function RevenueLineChart({
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis dataKey="key" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
           <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
+          <Tooltip contentStyle={tooltipStyle} />
           <Line
             type="monotone"
             dataKey="revenue"
@@ -153,16 +162,6 @@ export function RevenueLineChart({
             strokeWidth={2.5}
             dot={{ fill: "var(--accent)", strokeWidth: 0, r: 4 }}
             name="Revenue"
-          />
-          <Line
-            type="monotone"
-            dataKey="margin"
-            stroke="var(--ink)"
-            strokeOpacity={0.7}
-            strokeWidth={2}
-            strokeDasharray="4 2"
-            dot={{ fill: "var(--ink)", strokeWidth: 0, r: 3 }}
-            name="Margin"
           />
         </LineChart>
       </ResponsiveContainer>
