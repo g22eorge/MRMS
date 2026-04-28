@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getClientBill } from "@/lib/billing";
 import { canGenerateQuotationForStatus, formatQuotationNumber } from "@/lib/documents";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { filterSupportedJobStatuses } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -18,7 +19,7 @@ export default async function QuotationsPage() {
     prisma.job.findMany({
       where: {
         status: {
-          in: [
+          in: filterSupportedJobStatuses([
             "DIAGNOSING",
             "REFERRED",
             "IN_EXTERNAL_REPAIR",
@@ -29,7 +30,7 @@ export default async function QuotationsPage() {
             "READY_FOR_PICKUP",
             "COMPLETED",
             "CLOSED",
-          ],
+          ]) as any,
         },
       },
       orderBy: { updatedAt: "desc" },

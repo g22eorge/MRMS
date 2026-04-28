@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { filterSupportedJobStatuses } from "@/lib/job-status";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { getUploadsRoot } from "@/lib/storage";
@@ -144,17 +145,17 @@ export async function createJobAction(
     const maxSize = 5 * 1024 * 1024;
     const receivedAt = parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date();
 
-  const openStatuses = [
-    "RECEIVED",
-    "DIAGNOSING",
-    "REFERRED",
-    "IN_EXTERNAL_REPAIR",
-    "WAITING_FOR_PARTS",
-    "RETURNED_FROM_EXTERNAL",
-    "AWAITING_APPROVAL",
-    "IN_REPAIR",
-    "READY_FOR_PICKUP",
-  ] as const;
+    const openStatuses = filterSupportedJobStatuses([
+      "RECEIVED",
+      "DIAGNOSING",
+      "REFERRED",
+      "IN_EXTERNAL_REPAIR",
+      "WAITING_FOR_PARTS",
+      "RETURNED_FROM_EXTERNAL",
+      "AWAITING_APPROVAL",
+      "IN_REPAIR",
+      "READY_FOR_PICKUP",
+    ]);
 
     const createdJobs: Array<{ id: string }> = [];
 
@@ -162,14 +163,14 @@ export async function createJobAction(
       const device = devices[i];
       const serial = sanitizeOptionalText(device.serialOrImei);
       if (serial) {
-      const dup = await prisma.job.findFirst({
-        where: {
-          clientId: client.id,
-          serialOrImei: serial,
-          status: { in: [...openStatuses] },
-        },
-        select: { id: true, jobNumber: true },
-      });
+        const dup = await prisma.job.findFirst({
+          where: {
+            clientId: client.id,
+            serialOrImei: serial,
+            status: { in: openStatuses as any },
+          },
+          select: { id: true, jobNumber: true },
+        });
         if (dup) {
           return { error: `An open job already exists for this device serial/IMEI: ${dup.jobNumber}` };
         }
