@@ -281,20 +281,35 @@ export default async function TechniciansPage({
             </div>
           );
         })()}
-        <form>
-          <div className="space-y-2 px-3 py-2.5">
-            <input
-              name="q"
-              defaultValue={filters.q}
-              placeholder="Search job # or device"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
-            />
-            <div className="flex items-center gap-2">
-              <button className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Apply</button>
-              <Link href="/technicians" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Reset</Link>
+        {/* Auto-hide search after applying */}
+        <details className="group border-b border-[var(--line)]" open={!filters.q}>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[11px] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
+            <span className="truncate">
+              Search
+              {filters.q ? (
+                <span className="ml-2 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--ink)]">
+                  {filters.q}
+                </span>
+              ) : null}
+            </span>
+            <span className="text-[var(--accent)] group-open:hidden">Show</span>
+            <span className="hidden text-[var(--accent)] group-open:inline">Hide</span>
+          </summary>
+          <form>
+            <div className="space-y-2 px-3 pb-3">
+              <input
+                name="q"
+                defaultValue={filters.q}
+                placeholder="Search job # or device"
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
+              />
+              <div className="flex items-center gap-2">
+                <button className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Apply</button>
+                <Link href="/technicians" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-2.5 text-sm">Reset</Link>
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </details>
 
         {/* Quick filter chips + secondary action */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
