@@ -163,6 +163,16 @@ export function RevenueLineChart({
             dot={{ fill: "var(--accent)", strokeWidth: 0, r: 4 }}
             name="Revenue"
           />
+          <Line
+            type="monotone"
+            dataKey="margin"
+            stroke="#10b981"
+            strokeOpacity={0.9}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+            dot={{ fill: "#10b981", strokeWidth: 0, r: 3 }}
+            name="Margin"
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
