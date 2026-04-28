@@ -79,7 +79,7 @@ const steps = [
   { title: "Collect", body: "Pickup with a recorded job history and warranty." },
 ];
 
-export default async function HomePage() {
+export default async function Page() {
   const session = await getSession();
   if (session?.user) redirect("/dashboard");
 
