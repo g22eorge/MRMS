@@ -70,11 +70,17 @@ function monthCountInclusive(startYear: number, startMonth: number, endYear: num
   return Math.max(1, endIndex - startIndex + 1);
 }
 
-function trendMonthsSinceJan2026(end: Date) {
+function trendMonthsSinceStartOfYear(end: Date) {
   const endYear = end.getFullYear();
   const endMonth = end.getMonth() + 1;
-  const count = monthCountInclusive(2026, 1, endYear, endMonth);
+  const count = monthCountInclusive(endYear, 1, endYear, endMonth);
   return monthSequence(endYear, endMonth, count);
+}
+
+function trendMonthsForYear(year: number, endMonth: number) {
+  const safeMonth = Math.min(12, Math.max(1, endMonth));
+  const count = monthCountInclusive(year, 1, year, safeMonth);
+  return monthSequence(year, safeMonth, count);
 }
 
 async function loadRevenueMarginTrend(trendMonths: { key: string; start: Date; end: Date }[]) {
@@ -97,11 +103,9 @@ async function loadRevenueMarginTrend(trendMonths: { key: string; start: Date; e
 function RevenueMarginTrendSection({
   trendMonths,
   revenueTrend,
-  currency,
 }: {
   trendMonths: { key: string; start: Date; end: Date }[];
   revenueTrend: { key: string; revenue: number; margin: number }[];
-  currency: string;
 }) {
   return (
     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -109,7 +113,7 @@ function RevenueMarginTrendSection({
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Revenue & Margin Trend</p>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-            {trendMonths[0]?.key} – {trendMonths[trendMonths.length - 1]?.key} · Since Jan 2026
+            {trendMonths[0]?.key} – {trendMonths[trendMonths.length - 1]?.key}
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
@@ -131,17 +135,6 @@ function RevenueMarginTrendSection({
       ) : null}
 
       <RevenueLineChart data={revenueTrend} />
-      <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-        <div className="flex w-max gap-2">
-          {revenueTrend.map((m) => (
-            <div key={m.key} className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center">
-              <p className="text-[9px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
-              <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-              <p className={`text-[10px] ${m.margin >= 0 ? "text-emerald-600" : "text-[var(--ink)]"}`}>{formatMoneyCompact(m.margin, currency)}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }
@@ -685,8 +678,6 @@ export default async function DashboardPage({
       overdueJobs,
       techWorkloadJobs,
       unassignedActiveCount,
-      unresolvedDeviceFields,
-      lastDataHeal,
     ] = await Promise.all([
       prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
       prisma.job.findMany({
@@ -737,16 +728,6 @@ export default async function DashboardPage({
           assignedToId: null,
         },
       }),
-      prisma.job.count({
-        where: {
-          OR: [{ brand: "Unknown" }, { model: "Unknown" }, { deviceType: "OTHER" }],
-        },
-      }),
-      prisma.auditLog.findFirst({
-        where: { action: "DATA_HEAL_JOB_DEVICE_FIELDS" },
-        orderBy: { createdAt: "desc" },
-        select: { createdAt: true },
-      }),
     ]);
 
     const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
@@ -793,7 +774,7 @@ export default async function DashboardPage({
     const hasAlerts = overdueWithDays.length > 0 || awaitingApprovalCount > 0 || pendingRequests > 0 || unassignedActiveCount > 0;
     const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
 
-    const trendMonths = trendMonthsSinceJan2026(today);
+    const trendMonths = trendMonthsSinceStartOfYear(today);
     const revenueTrend = await loadRevenueMarginTrend(trendMonths);
 
     return (
@@ -836,32 +817,7 @@ export default async function DashboardPage({
           </section>
         ) : null}
 
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Data Quality</p>
-              <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-                Placeholder device values auto-heal daily. Run manual heal if anything is still unresolved.
-              </p>
-            </div>
-            <Link
-              href="/settings/data-heal"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
-            >
-              Open data-heal
-            </Link>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${unresolvedDeviceFields > 0 ? "border-[var(--accent)]/35 bg-[var(--accent)]/10 text-[var(--accent)]" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"}`}>
-              {unresolvedDeviceFields} unresolved
-            </span>
-            <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] text-[var(--ink-muted)]">
-              Last heal: {lastDataHeal ? new Date(lastDataHeal.createdAt).toLocaleString() : "Never"}
-            </span>
-          </div>
-        </section>
-
-        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} currency={currency} />
+        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} />
 
         {/* Live Repair Pipeline — with today's stats and quick actions in the header */}
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -964,12 +920,17 @@ export default async function DashboardPage({
                 );
               })}
           </div>
-          <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] px-3 py-3">
+            <div className="text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Finance Outlook</p>
-              <Link href={`/reports?period=month&month=${mtdLabel}`} className="text-[11px] font-semibold text-[var(--accent)] hover:underline">Open reports →</Link>
+              <Link
+                href={`/reports?period=month&month=${mtdLabel}`}
+                className="mt-1 inline-flex text-[11px] font-semibold text-[var(--accent)] hover:underline"
+              >
+                Open reports →
+              </Link>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Link href={`/reports?period=month&month=${mtdLabel}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue MTD</p>
                 <p className="mt-0.5 text-sm font-semibold text-emerald-700">{formatMoney(revenueMtd, currency)}</p>
@@ -1075,7 +1036,7 @@ export default async function DashboardPage({
         ? `/reports?period=year&year=${selectedYear}`
         : `/reports?period=month&month=${selectedPeriodLabel}`;
 
-    const trendMonths = trendMonthsSinceJan2026(new Date());
+    const trendMonths = trendMonthsForYear(selectedRange.start.getFullYear(), period === "year" ? 12 : selectedMonth.month);
 
     const [completedThisMonth, pendingBilling, externalCompleted] = await Promise.all([
       prisma.job.findMany({
@@ -1160,7 +1121,7 @@ export default async function DashboardPage({
           </section>
         </div>
 
-        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} currency={currency} />
+        <RevenueMarginTrendSection trendMonths={trendMonths} revenueTrend={revenueTrend} />
 
       </div>
     );
