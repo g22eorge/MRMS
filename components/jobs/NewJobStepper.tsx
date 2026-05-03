@@ -90,6 +90,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
   >([]);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [agreedToServiceTerms, setAgreedToServiceTerms] = useState(false);
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
 
@@ -241,12 +242,12 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     }
   }
 
-  function SubmitButton() {
+  function SubmitButton({ disabled: extraDisabled = false }: { disabled?: boolean }) {
     const { pending } = useFormStatus();
     return (
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || extraDisabled}
         className="btn-premium rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
       >
         {pending ? "Creating…" : "Create Job"}
@@ -620,6 +621,31 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       <input type="hidden" name="receivedAt" value={form.receivedAt} />
       <input type="hidden" name="devicesJson" value={JSON.stringify(devices)} />
 
+      {step === steps.length - 1 ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-4 text-sm">
+          <p className="font-semibold text-[var(--ink)]">Service Assurance</p>
+          <p className="mt-1 text-[var(--ink-muted)]">
+            Your repair will be handled by Eagle Info Solutions. For specialized cases, we may engage verified technical
+            partners under our supervision.
+          </p>
+          <p className="mt-1 text-[var(--ink-muted)]">
+            We remain fully responsible for your device, repair quality, and all communication.
+          </p>
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={agreedToServiceTerms}
+              onChange={(e) => setAgreedToServiceTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span className="text-[var(--ink-muted)]">
+              I understand and agree that Eagle Info Solutions manages all repairs, including those handled by verified
+              partner technicians.
+            </span>
+          </label>
+        </div>
+      ) : null}
+
       <div className="flex justify-between">
         <button
           type="button"
@@ -641,7 +667,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             Next
           </button>
         ) : (
-          <SubmitButton />
+          <SubmitButton disabled={!agreedToServiceTerms} />
         )}
       </div>
     </form>
