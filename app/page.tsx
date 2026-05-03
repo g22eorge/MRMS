@@ -137,7 +137,7 @@ export default async function Page() {
               <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
               <p className="relative text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">How it works</p>
               <h1 className="relative mt-2 text-2xl font-extrabold leading-tight text-[var(--ink)] md:text-3xl">Fast repair workflow</h1>
-              <p className="relative mt-2 text-sm leading-5 text-[var(--ink-muted)]">Three steps, no confusion.</p>
+              <p className="relative mt-2 hidden text-sm leading-5 text-[var(--ink-muted)] sm:block">Three steps, no confusion.</p>
               <ol className="relative mt-4 space-y-2">
                 {steps.map((step, index) => (
                   <li key={step.title} className="flex items-start gap-3 rounded-xl border border-white/8 bg-[#141414] px-4 py-3">
@@ -146,7 +146,7 @@ export default async function Page() {
                     </span>
                     <div>
                       <p className="text-xs font-semibold text-[var(--ink)]">{step.title}</p>
-                      <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{step.body}</p>
+                      <p className="mt-0.5 hidden text-[11px] leading-4 text-[var(--ink-muted)] sm:block">{step.body}</p>
                     </div>
                   </li>
                 ))}
@@ -175,7 +175,7 @@ export default async function Page() {
                     </span>
                   ))}
                 </div>
-                <p className="relative mt-3 text-[11px] text-white/55">Prefer to visit first? Use the Find Us button above for directions.</p>
+                <p className="relative mt-3 hidden text-[11px] text-white/55 sm:block">Prefer to visit first? Use the Find Us button above for directions.</p>
               </div>
 
               <div
@@ -188,7 +188,7 @@ className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition
                       <span className="mt-1.5 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--accent)]" />
                       <div>
                         <span className="font-semibold text-[var(--ink)]">{f.title}</span>
-                        <span className="text-[var(--ink-muted)]"> — {f.body}</span>
+                        <span className="hidden text-[var(--ink-muted)] sm:inline"> — {f.body}</span>
                       </div>
                     </div>
                   ))}
@@ -238,7 +238,7 @@ className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition
                   </span>
                   <div>
                     <p className="text-xs font-semibold text-[var(--ink)]">{c.title}</p>
-                    <p className="mt-0.5 text-[11px] leading-4 text-[var(--ink-muted)]">{c.body}</p>
+                    <p className="mt-0.5 hidden text-[11px] leading-4 text-[var(--ink-muted)] sm:block">{c.body}</p>
                   </div>
                 </div>
               ))}
