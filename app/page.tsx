@@ -225,7 +225,7 @@ className="fade-in rounded-2xl border border-white/8 bg-[#1e1e1e] p-5 transition
           </div>
 
           {/* Commitments */}
-          <div className="fade-in mt-5">
+          <div className="fade-in mt-5 hidden sm:block">
             <div className="mb-3 flex items-center gap-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">Our commitment to you</p>
               <div className="h-px flex-1 bg-[var(--line)]" />
