@@ -429,7 +429,7 @@ export default async function NotificationTemplatesPage({
             {templates.map((t) => {
               const vars = safeJsonArray(t.variables);
               return (
-                <details key={t.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3" open={false}>
+                <details key={t.id} className="group/details rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3" open={false}>
                   <summary className="cursor-pointer list-none">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${t.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}>
@@ -440,7 +440,19 @@ export default async function NotificationTemplatesPage({
                         {t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}
                       </span>
                       <span className="text-sm font-semibold text-[var(--ink)]">{t.label}</span>
-                      <span className="ml-auto text-[11px] text-[var(--ink-muted)]">Updated {t.updatedAt.toLocaleString()}</span>
+                      {t.metaTemplateName ? (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-mono text-emerald-700">
+                          meta: {t.metaTemplateName}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          no meta name
+                        </span>
+                      )}
+                      <span className="ml-auto flex items-center gap-2 text-[11px] text-[var(--ink-muted)]">
+                        <span>Updated {t.updatedAt.toLocaleString()}</span>
+                        <svg className="h-4 w-4 transition-transform group-open/details:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </span>
                     </div>
                   </summary>
 
