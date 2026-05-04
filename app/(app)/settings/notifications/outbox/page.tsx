@@ -20,6 +20,35 @@ const CHANNELS = Object.values(OutboundMessageChannel);
 const STATUSES = Object.values(OutboundMessageStatus);
 const TYPES = Object.values(OutboundMessageType);
 
+const STATUS_STYLES: Record<string, string> = {
+  SENT: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  PENDING: "border-amber-200 bg-amber-50 text-amber-700",
+  FAILED: "border-red-200 bg-red-50 text-red-700",
+  DEAD: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+};
+
+const CHANNEL_STYLES: Record<string, string> = {
+  WHATSAPP: "border-[#25D366]/30 bg-[#25D366]/8 text-[#128C42]",
+  EMAIL: "border-blue-200 bg-blue-50 text-blue-700",
+};
+
+function shortId(id: string) {
+  return id.slice(0, 8) + "…";
+}
+
+function shortWamid(wamid: string | null) {
+  if (!wamid) return null;
+  return wamid.slice(0, 20) + "…";
+}
+
+function fmtDate(d: Date | null | undefined) {
+  if (!d) return null;
+  return new Intl.DateTimeFormat("en-UG", {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(d));
+}
+
 export default async function OutboxPage({
   searchParams,
 }: {
@@ -73,6 +102,7 @@ export default async function OutboxPage({
         lastAttemptAt: true,
         nextAttemptAt: true,
         sentAt: true,
+        createdAt: true,
         provider: true,
         providerMessageId: true,
         providerDeliveryStatus: true,
@@ -81,7 +111,7 @@ export default async function OutboxPage({
         providerDeliveryError: true,
         lastErrorCode: true,
         lastError: true,
-        createdAt: true,
+        metaTemplateName: true,
       },
     }),
     prisma.outboundMessage.groupBy({
@@ -125,141 +155,189 @@ export default async function OutboxPage({
 
   return (
     <div className="space-y-4">
+      {/* Summary bar */}
       <div className="panel-shadow flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Status</span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.PENDING ?? 0) > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-            {byStatus.PENDING ?? 0} pending
-          </span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.FAILED ?? 0) > 0 ? "border-red-200 bg-red-50 text-red-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-            {byStatus.FAILED ?? 0} failed
-          </span>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-            {byStatus.SENT ?? 0} sent
-          </span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${(byStatus.DEAD ?? 0) > 0 ? "border-white/10 bg-[#0b0b0b] text-white/90" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-            {byStatus.DEAD ?? 0} dead
-          </span>
+          {[
+            { label: "sent", key: "SENT", style: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+            { label: "pending", key: "PENDING", style: "border-amber-200 bg-amber-50 text-amber-700" },
+            { label: "failed", key: "FAILED", style: "border-red-200 bg-red-50 text-red-700" },
+            { label: "dead", key: "DEAD", style: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]" },
+          ].map(({ label, key, style }) => (
+            <span key={key} className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${style}`}>
+              {byStatus[key] ?? 0} {label}
+            </span>
+          ))}
+          <span className="text-[11px] text-[var(--ink-muted)]">· showing {rows.length} of 200</span>
         </div>
         <form action={retryNowAction}>
-          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm">Run Retry</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-sm">
+            Run Retry
+          </button>
         </form>
       </div>
 
-      <div className="panel-shadow grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <form className="grid gap-3 md:grid-cols-4" method="GET">
-          <select name="channel" defaultValue={channel ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+      {/* Filters */}
+      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <form className="flex flex-wrap items-end gap-2" method="GET">
+          <select
+            name="channel"
+            defaultValue={channel ?? ""}
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+          >
             <option value="">All channels</option>
-            {CHANNELS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select name="status" defaultValue={status ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+          <select
+            name="status"
+            defaultValue={status ?? ""}
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+          >
             <option value="">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-            <input
-              name="type"
-              defaultValue={type ?? ""}
-              placeholder="Type (optional)"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
-            />
           <input
             name="q"
             defaultValue={q}
-            placeholder="Search id/to/error"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            placeholder="Search recipient / error / ID"
+            className="min-w-[200px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
-          <div className="md:col-span-4">
-            <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply Filters</button>
-          </div>
+          <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Filter</button>
+          {(channel || status || q) ? (
+            <a href="/settings/notifications/outbox" className="rounded-lg px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+              Clear
+            </a>
+          ) : null}
         </form>
       </div>
 
+      {/* Table */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel-strong)]/50 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-            <tr>
-              <th className="px-4 py-2.5">Status</th>
-              <th className="px-4 py-2.5">Channel</th>
-              <th className="px-4 py-2.5">Type</th>
-              <th className="px-4 py-2.5">To</th>
-              <th className="px-4 py-2.5">Attempts</th>
-              <th className="px-4 py-2.5">Last Error</th>
-              <th className="px-4 py-2.5">Provider</th>
-              <th className="px-4 py-2.5">Delivery</th>
-              <th className="px-4 py-2.5">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-[var(--line)] align-top">
-                <td className="px-4 py-2.5">
-                  <span className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-xs font-semibold">
-                    {r.status}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">{r.channel}</td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">{r.type}</td>
-                <td className="px-3 py-2 font-mono text-xs break-all">{r.to}</td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">{r.attemptCount}</td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">
-                  {r.lastErrorCode ? <div className="font-mono">{r.lastErrorCode}</div> : null}
-                  {r.lastError ? <div className="line-clamp-3 max-w-[28rem]">{r.lastError}</div> : <span>-</span>}
-                </td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">
-                  {r.provider ? <div>{r.provider}</div> : <div>-</div>}
-                  {r.providerMessageId ? <div className="font-mono break-all">{r.providerMessageId}</div> : null}
-                </td>
-                <td className="px-3 py-2 text-xs text-[var(--ink-muted)]">
-                  {r.providerDeliveryStatus ? (
-                    <>
-                      <div className="font-mono">{r.providerDeliveryStatus}</div>
-                      {r.providerDeliveryAt ? <div>{new Date(r.providerDeliveryAt).toLocaleString()}</div> : null}
-                      {r.providerDeliveryErrorCode || r.providerDeliveryError ? (
-                        <div className="mt-1">
-                          <div className="font-mono">{r.providerDeliveryErrorCode}</div>
-                          <div className="line-clamp-2 max-w-[20rem]">{r.providerDeliveryError}</div>
-                        </div>
+        {rows.length === 0 ? (
+          <div className="px-6 py-12 text-center text-sm text-[var(--ink-muted)]">
+            No messages match these filters.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
+              <thead>
+                <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60">
+                  {["Status", "Channel / Type", "Recipient", "Sent / Scheduled", "Delivery", "Error", "Actions"].map((h) => (
+                    <th key={h} className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--line)]">
+                {rows.map((r) => (
+                  <tr key={r.id} className="group align-top transition-colors hover:bg-[var(--panel-strong)]/40">
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_STYLES[r.status] ?? STATUS_STYLES.DEAD}`}>
+                        {r.status}
+                      </span>
+                    </td>
+
+                    {/* Channel + Type */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${CHANNEL_STYLES[r.channel] ?? ""}`}>
+                        {r.channel}
+                      </span>
+                      <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
+                        {r.type.replaceAll("_", " ").toLowerCase()}
+                      </p>
+                      {r.metaTemplateName ? (
+                        <p className="mt-0.5 font-mono text-[10px] text-[var(--accent)]/70">
+                          tpl: {r.metaTemplateName}
+                        </p>
                       ) : null}
-                    </>
-                  ) : (
-                    <span>-</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex flex-wrap gap-2">
-                    <form action={retryOneAction}>
-                      <input type="hidden" name="id" value={r.id} />
-                      <button className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Retry</button>
-                    </form>
-                    {r.status !== "DEAD" ? (
-                      <form action={markDeadAction}>
-                        <input type="hidden" name="id" value={r.id} />
-                        <button className="rounded-md border border-black bg-black px-3 py-1 text-xs font-semibold text-white">
-                          Mark Dead
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={9}>
-                  No outbox messages match these filters.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+                    </td>
+
+                    {/* Recipient */}
+                    <td className="px-4 py-3">
+                      <p className="font-mono text-sm font-medium text-[var(--ink)]">{r.to}</p>
+                      <p className="mt-0.5 text-[10px] text-[var(--ink-muted)]">{shortId(r.id)}</p>
+                    </td>
+
+                    {/* Sent / Scheduled */}
+                    <td className="px-4 py-3">
+                      {r.sentAt ? (
+                        <p className="text-xs font-medium text-[var(--ink)]">{fmtDate(r.sentAt)}</p>
+                      ) : r.nextAttemptAt && r.nextAttemptAt > new Date() ? (
+                        <p className="text-[11px] text-amber-600">Due {fmtDate(r.nextAttemptAt)}</p>
+                      ) : (
+                        <p className="text-[11px] text-[var(--ink-muted)]">—</p>
+                      )}
+                      <p className="mt-0.5 text-[10px] text-[var(--ink-muted)]">
+                        {r.attemptCount} attempt{r.attemptCount !== 1 ? "s" : ""}
+                      </p>
+                    </td>
+
+                    {/* Delivery */}
+                    <td className="px-4 py-3">
+                      {r.providerDeliveryStatus ? (
+                        <>
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${r.providerDeliveryStatus === "delivered" || r.providerDeliveryStatus === "read" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                            {r.providerDeliveryStatus}
+                          </span>
+                          {r.providerDeliveryAt ? (
+                            <p className="mt-0.5 text-[10px] text-[var(--ink-muted)]">{fmtDate(r.providerDeliveryAt)}</p>
+                          ) : null}
+                        </>
+                      ) : r.providerMessageId ? (
+                        <p className="font-mono text-[10px] text-[var(--ink-muted)]" title={r.providerMessageId}>
+                          {shortWamid(r.providerMessageId)}
+                        </p>
+                      ) : (
+                        <span className="text-[11px] text-[var(--ink-muted)]">—</span>
+                      )}
+                    </td>
+
+                    {/* Error */}
+                    <td className="px-4 py-3 max-w-[200px]">
+                      {r.lastError ? (
+                        <>
+                          {r.lastErrorCode ? (
+                            <span className="font-mono text-[10px] font-semibold text-red-600">{r.lastErrorCode}</span>
+                          ) : null}
+                          <p className="mt-0.5 line-clamp-3 text-[11px] text-[var(--ink-muted)]" title={r.lastError}>
+                            {r.lastError}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-[var(--ink-muted)]">—</span>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1.5">
+                        {r.status !== "SENT" ? (
+                          <form action={retryOneAction}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <button className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-xs">
+                              Retry
+                            </button>
+                          </form>
+                        ) : null}
+                        {r.status !== "DEAD" && r.status !== "SENT" ? (
+                          <form action={markDeadAction}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <button className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700">
+                              Discard
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
