@@ -3,11 +3,21 @@ import React from "react";
 
 import { prisma } from "@/lib/prisma";
 import { sendEmail, emailIsConfigured } from "@/lib/notifications/email";
-import { sendCustomWhatsAppMessage, whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
+import { sendCustomWhatsAppMessage, sendWhatsAppTemplateMessage, whatsappHealthCheck, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
 import { RepairRequestAlertEmail } from "@/emails/RepairRequestAlertEmail";
 
 const MAX_ATTEMPTS = 8;
 const LOCK_TTL_MS = 2 * 60 * 1000;
+
+function safeJsonArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function getOutboxRetryLimit(defaultLimit = 25) {
   const raw = process.env.OUTBOX_RETRY_LIMIT;
@@ -43,6 +53,9 @@ export async function enqueueWhatsAppMessage(input: {
   nextAttemptAt?: Date;
   templateKey?: string;
   templateVars?: string;
+  metaTemplateName?: string | null;
+  metaTemplateLanguage?: string | null;
+  metaTemplateVars?: string | null;
 }) {
   if (!supportsOutbox()) {
     // Old Prisma client in this runtime: fall back to best-effort direct send.
@@ -72,6 +85,9 @@ export async function enqueueWhatsAppMessage(input: {
         body: input.body,
         templateKey: input.templateKey,
         templateVars: input.templateVars,
+        metaTemplateName: input.metaTemplateName ?? null,
+        metaTemplateLanguage: input.metaTemplateLanguage ?? null,
+        metaTemplateVars: input.metaTemplateVars ?? null,
         provider: input.provider,
         repairRequestId: input.repairRequestId,
         jobId: input.jobId,
@@ -83,7 +99,14 @@ export async function enqueueWhatsAppMessage(input: {
       // If the outbox table hasn't been deployed yet, fall back to best-effort send.
       const message = error instanceof Error ? error.message : String(error);
       if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("outboundmessage")) {
-        const direct = await sendCustomWhatsAppMessage(input.to, input.body);
+        const direct = input.metaTemplateName
+          ? await sendWhatsAppTemplateMessage(
+              input.to,
+              input.metaTemplateName,
+              input.metaTemplateLanguage ?? "en",
+              safeJsonArray(input.metaTemplateVars)
+            )
+          : await sendCustomWhatsAppMessage(input.to, input.body);
         return { id: "", direct } as const;
       }
       throw error;
@@ -152,7 +175,19 @@ export async function enqueueEmailMessage(input: {
 export async function deliverOutboundMessage(id: string) {
   if (!supportsOutbox()) return { ok: false, error: "Outbox not supported in this runtime" };
 
-  const row = await prisma.outboundMessage.findUnique({ where: { id } });
+  const row = await prisma.outboundMessage.findUnique({
+    where: { id },
+    select: {
+      id: true, channel: true, status: true, type: true,
+      to: true, subject: true, body: true,
+      templateKey: true, templateVars: true,
+      metaTemplateName: true, metaTemplateLanguage: true, metaTemplateVars: true,
+      provider: true, providerMessageId: true,
+      attemptCount: true, lastAttemptAt: true, nextAttemptAt: true, sentAt: true,
+      lastErrorCode: true, lastError: true, lockedAt: true,
+      repairRequestId: true, jobId: true,
+    },
+  });
   if (!row) return { ok: false, error: "Not found" } satisfies DeliveryResult;
   if (row.status === "SENT" || row.status === "DEAD") return { ok: true, skipped: true } satisfies DeliveryResult;
   if (row.nextAttemptAt && row.nextAttemptAt > new Date()) return { ok: true, deferred: true } satisfies DeliveryResult;
@@ -219,7 +254,16 @@ export async function deliverOutboundMessage(id: string) {
   const attempt = row.attemptCount + 1;
 
   const result =
-    row.channel === "WHATSAPP" ? await sendCustomWhatsAppMessage(row.to, row.body) : await deliverEmail(row);
+    row.channel === "WHATSAPP"
+      ? row.metaTemplateName
+        ? await sendWhatsAppTemplateMessage(
+            row.to,
+            row.metaTemplateName,
+            row.metaTemplateLanguage ?? "en",
+            safeJsonArray(row.metaTemplateVars)
+          )
+        : await sendCustomWhatsAppMessage(row.to, row.body)
+      : await deliverEmail(row);
 
   if (result.success) {
     await prisma.outboundMessage.update({

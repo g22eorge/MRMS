@@ -41,13 +41,52 @@ export async function renderCommunicationTemplate(input: {
   channel: OutboundMessageChannel;
   variables: Record<string, string | number | null | undefined>;
   fallback?: { subject?: string; body: string };
-}): Promise<{ subject?: string; body: string; usedTemplate: boolean }> {
+}): Promise<{
+  subject?: string;
+  body: string;
+  usedTemplate: boolean;
+  metaTemplateName: string | null;
+  metaLanguageCode: string;
+  metaParamValues: string[];
+}> {
   const template = await getCommunicationTemplate(input.key, input.channel);
   if (!template || !template.isActive) {
-    return { subject: input.fallback?.subject, body: input.fallback?.body ?? "", usedTemplate: false };
+    return {
+      subject: input.fallback?.subject,
+      body: input.fallback?.body ?? "",
+      usedTemplate: false,
+      metaTemplateName: null,
+      metaLanguageCode: "en",
+      metaParamValues: [],
+    };
   }
 
   const subject = template.subject ? renderTemplateText(template.subject, input.variables) : undefined;
   const body = renderTemplateText(template.body, input.variables);
-  return { subject, body, usedTemplate: true };
+
+  // Extract param values in the order declared in the template's `variables` JSON array.
+  // This order must match the {{1}}, {{2}}… positions in the approved Meta template.
+  let metaParamValues: string[] = [];
+  if (template.metaTemplateName) {
+    let varOrder: string[] = [];
+    try {
+      const parsed = JSON.parse(template.variables ?? "[]");
+      if (Array.isArray(parsed)) varOrder = parsed.map(String);
+    } catch {
+      varOrder = [];
+    }
+    metaParamValues = varOrder.map((k) => {
+      const v = input.variables[k];
+      return v == null ? "" : String(v);
+    });
+  }
+
+  return {
+    subject,
+    body,
+    usedTemplate: true,
+    metaTemplateName: template.metaTemplateName ?? null,
+    metaLanguageCode: template.metaLanguageCode ?? "en",
+    metaParamValues,
+  };
 }

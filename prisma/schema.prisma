@@ -541,6 +541,11 @@ model OutboundMessage {
   templateKey      String?
   // JSON string of the variables used to render the template at enqueue time.
   templateVars     String?
+  // When set, this message is sent as a Meta-approved template message instead of free-form text.
+  metaTemplateName     String?  // approved template name, e.g. "repair_status_update"
+  metaTemplateLanguage String?  // language code, e.g. "en"
+  // JSON array of parameter VALUES in positional order matching {{1}}, {{2}}… in the template body.
+  metaTemplateVars     String?
 
   provider         String?
   providerMessageId String?
@@ -604,8 +609,11 @@ model CommunicationTemplate {
   label       String
   subject     String?
   body        String
-  // JSON array of placeholder keys (e.g. ["customerName","jobNumber"]) for UI hints.
-  variables   String?
+  // JSON array of placeholder keys in the ORDER they map to Meta template {{1}}, {{2}}…
+  variables         String?
+  // Meta / WhatsApp Business API template fields. Set these once the template is approved.
+  metaTemplateName  String?  // approved template name in Meta, e.g. "repair_status_update"
+  metaLanguageCode  String?  // e.g. "en" — defaults to "en" when metaTemplateName is set
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

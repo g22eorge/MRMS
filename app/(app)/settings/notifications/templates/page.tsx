@@ -30,6 +30,8 @@ const templateSchema = z.object({
   label: z.string().min(2).max(120),
   subject: z.string().max(160).optional(),
   body: z.string().min(8).max(4000),
+  metaTemplateName: z.string().max(120).optional(),
+  metaLanguageCode: z.string().max(20).optional(),
   isActive: z.enum(["on"]).optional(),
 });
 
@@ -80,6 +82,8 @@ export default async function NotificationTemplatesPage({
       label: String(formData.get("label") ?? "").trim(),
       subject: String(formData.get("subject") ?? "").trim(),
       body: String(formData.get("body") ?? "").trim(),
+      metaTemplateName: String(formData.get("metaTemplateName") ?? "").trim() || undefined,
+      metaLanguageCode: String(formData.get("metaLanguageCode") ?? "").trim() || undefined,
       isActive: formData.get("isActive") ? "on" : undefined,
     });
 
@@ -98,6 +102,8 @@ export default async function NotificationTemplatesPage({
           subject: parsed.data.subject ? parsed.data.subject : null,
           body: parsed.data.body,
           variables: vars.length ? JSON.stringify(vars) : null,
+          metaTemplateName: parsed.data.metaTemplateName ?? null,
+          metaLanguageCode: parsed.data.metaTemplateName ? (parsed.data.metaLanguageCode || "en") : null,
           isActive: Boolean(parsed.data.isActive),
         },
       });
@@ -125,6 +131,8 @@ export default async function NotificationTemplatesPage({
       label: String(formData.get("label") ?? "").trim(),
       subject: String(formData.get("subject") ?? "").trim(),
       body: String(formData.get("body") ?? "").trim(),
+      metaTemplateName: String(formData.get("metaTemplateName") ?? "").trim() || undefined,
+      metaLanguageCode: String(formData.get("metaLanguageCode") ?? "").trim() || undefined,
       isActive: formData.get("isActive") ? "on" : undefined,
     });
 
@@ -144,6 +152,8 @@ export default async function NotificationTemplatesPage({
           subject: parsed.data.subject ? parsed.data.subject : null,
           body: parsed.data.body,
           variables: vars.length ? JSON.stringify(vars) : null,
+          metaTemplateName: parsed.data.metaTemplateName ?? null,
+          metaLanguageCode: parsed.data.metaTemplateName ? (parsed.data.metaLanguageCode || "en") : null,
           isActive: Boolean(parsed.data.isActive),
         },
       });
@@ -235,6 +245,8 @@ export default async function NotificationTemplatesPage({
     subject: string | null;
     body: string;
     variables: string | null;
+    metaTemplateName: string | null;
+    metaLanguageCode: string | null;
     isActive: boolean;
     updatedAt: Date;
   }> = [];
@@ -260,6 +272,8 @@ export default async function NotificationTemplatesPage({
         subject: true,
         body: true,
         variables: true,
+        metaTemplateName: true,
+        metaLanguageCode: true,
         isActive: true,
         updatedAt: true,
       },
@@ -423,6 +437,43 @@ export default async function NotificationTemplatesPage({
                       defaultValue={t.body}
                       className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
                     />
+                    {t.channel === "WHATSAPP" ? (
+                      <div className="rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-3 md:col-span-2 xl:col-span-6">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]/80">
+                          Meta Approved Template (optional)
+                        </p>
+                        <p className="mb-2 text-[11px] text-[var(--ink-muted)]">
+                          Once your template is approved in Meta Business Manager, enter its name here.
+                          Variables in the <code className="font-mono">variables</code> array above map positionally to{" "}
+                          <code className="font-mono">{"{{1}}"}</code>,{" "}
+                          <code className="font-mono">{"{{2}}"}</code>… in the approved template body.
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <input
+                            name="metaTemplateName"
+                            defaultValue={t.metaTemplateName ?? ""}
+                            placeholder="Template name (e.g. repair_status_update)"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                          />
+                          <input
+                            name="metaLanguageCode"
+                            defaultValue={t.metaLanguageCode ?? "en"}
+                            placeholder="Language code (e.g. en)"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                          />
+                        </div>
+                        {t.metaTemplateName ? (
+                          <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Using template: <span className="font-mono">{t.metaTemplateName}</span> · lang: {t.metaLanguageCode ?? "en"}
+                          </p>
+                        ) : (
+                          <p className="mt-1.5 text-[11px] text-[var(--ink-muted)]">
+                            Not set — messages will send as free-form text (only delivers within 24-hour customer window).
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
                     <div className="flex flex-wrap gap-2 xl:col-span-6">
                       <button className="btn-premium rounded-lg px-3 py-2 text-sm text-white">Save</button>
                     </div>

@@ -219,6 +219,83 @@ export async function sendCustomWhatsAppMessage(
   return sendWhatsAppMessageInternal({ to, message });
 }
 
+/**
+ * Send a Meta-approved template message (business-initiated conversation).
+ * `variables` must be in the same positional order as {{1}}, {{2}}… in the approved template body.
+ */
+export async function sendWhatsAppTemplateMessage(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  variables: string[]
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
+  const config = getConfig();
+  if (!config) return { success: false, error: "WhatsApp not configured" };
+
+  const normalizedPhone = normalizeWhatsAppRecipient(to);
+
+  const components =
+    variables.length > 0
+      ? [
+          {
+            type: "body",
+            parameters: variables.map((v) => ({ type: "text", text: v })),
+          },
+        ]
+      : [];
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: normalizedPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: languageCode },
+            ...(components.length > 0 ? { components } : {}),
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let metaCode: string | undefined;
+      try {
+        const parsed = JSON.parse(errorText);
+        const code = parsed?.error?.code;
+        if (typeof code === "number" || typeof code === "string") metaCode = String(code);
+      } catch {
+        // ignore
+      }
+      return {
+        success: false,
+        errorCode: metaCode,
+        error: `WhatsApp template API error: ${response.status} ${errorText.slice(0, 200)}`,
+      };
+    }
+
+    const data = await response.json();
+    const messageId = data.messages?.[0]?.id;
+    if (messageId) {
+      console.log("[WhatsApp] Template message sent:", templateName, messageId);
+      return { success: true, messageId };
+    }
+    return { success: false, error: "No message ID returned" };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: msg };
+  }
+}
+
 async function sendWhatsAppMessageInternal({
   to,
   message,

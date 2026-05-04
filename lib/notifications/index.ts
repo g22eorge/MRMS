@@ -323,7 +323,7 @@ async function sendClientWhatsAppForStatusChange(input: {
     newStatusLabel: input.newStatus.replaceAll("_", " "),
   };
 
-  const { body } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: templateKey,
     channel: "WHATSAPP",
     variables: templateVars,
@@ -332,12 +332,15 @@ async function sendClientWhatsAppForStatusChange(input: {
 
   const enqueueResult = await enqueueWhatsAppMessage({
     to: client.phone,
-    body,
+    body: rendered.body,
     type,
     jobId: input.jobId,
     provider: "meta",
     templateKey,
     templateVars: JSON.stringify(templateVars),
+    metaTemplateName: rendered.metaTemplateName,
+    metaTemplateLanguage: rendered.metaLanguageCode,
+    metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
   }).catch(() => null);
 
   if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
@@ -392,45 +395,49 @@ async function scheduleReadyForPickupNudges(input: {
   const key1 = baseKey;
   const key2 = input.templateKey ? nudge2KeyFrom(baseKey) : OutboundMessageType.READY_FOR_PICKUP_NUDGE_2;
 
-  const makeBody = async (key: string) => {
+  const nudgeVars = { customerName: client.fullName, jobNumber: input.jobNumber };
+
+  const makeRendered = async (key: string) => {
     const fallback = `Hi ${client.fullName}, your device for job ${input.jobNumber} is ready for pickup. Please visit us to collect it. - Eagle Info Solutions`;
-    const { body } = await renderCommunicationTemplate({
+    return renderCommunicationTemplate({
       key,
       channel: "WHATSAPP",
-      variables: {
-        customerName: client.fullName,
-        jobNumber: input.jobNumber,
-      },
+      variables: nudgeVars,
       fallback: { body: fallback },
     });
-    return body;
   };
 
   if (n1) {
-    const body = await makeBody(key1);
+    const rendered = await makeRendered(key1);
     await enqueueWhatsAppMessage({
       to: client.phone,
-      body,
+      body: rendered.body,
       type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_1,
       jobId: input.jobId,
       provider: "meta",
       nextAttemptAt: new Date(Date.now() + n1 * 60 * 60 * 1000),
       templateKey: key1,
-      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+      templateVars: JSON.stringify(nudgeVars),
+      metaTemplateName: rendered.metaTemplateName,
+      metaTemplateLanguage: rendered.metaLanguageCode,
+      metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
     }).catch(() => null);
   }
 
   if (n2) {
-    const body = await makeBody(key2);
+    const rendered = await makeRendered(key2);
     await enqueueWhatsAppMessage({
       to: client.phone,
-      body,
+      body: rendered.body,
       type: OutboundMessageType.READY_FOR_PICKUP_NUDGE_2,
       jobId: input.jobId,
       provider: "meta",
       nextAttemptAt: new Date(Date.now() + n2 * 60 * 60 * 1000),
       templateKey: key2,
-      templateVars: JSON.stringify({ customerName: client.fullName, jobNumber: input.jobNumber }),
+      templateVars: JSON.stringify(nudgeVars),
+      metaTemplateName: rendered.metaTemplateName,
+      metaTemplateLanguage: rendered.metaLanguageCode,
+      metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
     }).catch(() => null);
   }
 }
