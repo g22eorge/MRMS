@@ -361,7 +361,18 @@ export default async function NotificationTemplatesPage({
             placeholder="Message body. Use placeholders like {customerName}"
             className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
           />
-          <button className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-2">Create</button>
+          <input
+            name="metaTemplateName"
+            placeholder="Meta template name (e.g. job_created)"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
+          />
+          <input
+            name="metaLanguageCode"
+            placeholder="Language (e.g. en)"
+            defaultValue="en"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
+          />
+          <button className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</button>
         </form>
       </section>
 
@@ -390,10 +401,13 @@ export default async function NotificationTemplatesPage({
                   </summary>
 
                   {vars.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {vars.map((v) => (
-                        <span key={v} className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] font-mono text-[var(--ink-muted)]">
-                          {`{${v}}`}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--ink-muted)]">Variables:</span>
+                      {vars.map((v, i) => (
+                        <span key={v} className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[11px] font-mono">
+                          <span className="text-[var(--accent)] font-bold">{`{{${i + 1}}}`}</span>
+                          <span className="text-[var(--ink-muted)]">=</span>
+                          <span className="text-[var(--ink)]">{v}</span>
                         </span>
                       ))}
                     </div>
