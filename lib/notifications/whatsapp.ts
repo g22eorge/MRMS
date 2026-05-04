@@ -1,5 +1,15 @@
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 
+async function sendRenderedWhatsApp(
+  phone: string,
+  rendered: { body: string; metaTemplateName: string | null; metaLanguageCode: string; metaParamValues: string[] }
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
+  if (rendered.metaTemplateName) {
+    return sendWhatsAppTemplateMessage(phone, rendered.metaTemplateName, rendered.metaLanguageCode, rendered.metaParamValues);
+  }
+  return sendCustomWhatsAppMessage(phone, rendered.body);
+}
+
 interface WhatsAppConfig {
   businessNumber: string;
   provider: string;
@@ -93,17 +103,14 @@ export async function sendRepairRequestConfirmation(
 
   const fallback = `Hello ${customerName},\n\nThank you for submitting your repair request (${requestNumber}).\n\nWe have received your device and will contact you shortly to confirm the diagnosis and timeline.\n\nBest regards,\nEagle Info Solutions`;
 
-  const { body: message } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: "REPAIR_REQUEST_CONFIRMATION",
     channel: "WHATSAPP",
-    variables: {
-      customerName,
-      requestNumber,
-    },
+    variables: { customerName, requestNumber },
     fallback: { body: fallback },
   });
 
-  return sendCustomWhatsAppMessage(phone, message);
+  return sendRenderedWhatsApp(phone, rendered);
 }
 
 export async function sendIntakeApprovalNotification(
@@ -119,14 +126,14 @@ export async function sendIntakeApprovalNotification(
 
   const fallback = `Hello ${customerName},\n\nYour repair request (${requestNumber}) has been APPROVED.\n\nPlease bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
 
-  const { body: message } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: "FRONT_DESK_APPROVED",
     channel: "WHATSAPP",
     variables: { customerName, requestNumber },
     fallback: { body: fallback },
   });
 
-  return sendCustomWhatsAppMessage(phone, message);
+  return sendRenderedWhatsApp(phone, rendered);
 }
 
 export async function sendIntakeRejectionNotification(
@@ -141,17 +148,14 @@ export async function sendIntakeRejectionNotification(
 
   const fallback = `Hello ${customerName},\n\nUnfortunately, we are unable to process your repair request (${requestNumber}) at this time.\n\nPlease contact us for more information.\n\nBest regards,\nEagle Info Solutions`;
 
-  const { body: message } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: "FRONT_DESK_REJECTED",
     channel: "WHATSAPP",
-    variables: {
-      customerName,
-      requestNumber,
-    },
+    variables: { customerName, requestNumber },
     fallback: { body: fallback },
   });
 
-  return sendCustomWhatsAppMessage(phone, message);
+  return sendRenderedWhatsApp(phone, rendered);
 }
 
 export async function sendJobCreatedNotification(
@@ -166,17 +170,14 @@ export async function sendJobCreatedNotification(
 
   const fallback = `Hello ${customerName},\n\nYour device has been registered as Job #${jobNumber}.\n\nWe will update you as the repair progresses.\n\nBest regards,\nEagle Info Solutions`;
 
-  const { body: message } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: "JOB_CREATED",
     channel: "WHATSAPP",
-    variables: {
-      customerName,
-      jobNumber,
-    },
+    variables: { customerName, jobNumber },
     fallback: { body: fallback },
   });
 
-  return sendCustomWhatsAppMessage(phone, message);
+  return sendRenderedWhatsApp(phone, rendered);
 }
 
 export async function sendJobCompletionNotification(
@@ -191,17 +192,14 @@ export async function sendJobCompletionNotification(
 
   const fallback = `Hello ${customerName},\n\nGreat news! Your device (Job #${jobNumber}) is ready for pickup.\n\nPlease visit our shop to collect your device.\n\nBest regards,\nEagle Info Solutions`;
 
-  const { body: message } = await renderCommunicationTemplate({
+  const rendered = await renderCommunicationTemplate({
     key: "JOB_COMPLETED",
     channel: "WHATSAPP",
-    variables: {
-      customerName,
-      jobNumber,
-    },
+    variables: { customerName, jobNumber },
     fallback: { body: fallback },
   });
 
-  return sendCustomWhatsAppMessage(phone, message);
+  return sendRenderedWhatsApp(phone, rendered);
 }
 
 export async function sendCustomWhatsAppMessage(
