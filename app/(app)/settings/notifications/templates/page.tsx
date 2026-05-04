@@ -6,6 +6,7 @@ import { JobStatus, OutboundMessageChannel, OutboundMessageType, Prisma } from "
 import { getCurrentUserRole } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { extractTemplateVariables } from "@/lib/notifications/templates";
+import { upsertDefaultCommunicationPolicies, upsertDefaultCommunicationTemplates } from "@/lib/notifications/default-templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { revalidatePath } from "next/cache";
 
@@ -69,6 +70,18 @@ export default async function NotificationTemplatesPage({
         </p>
       </section>
     );
+  }
+
+  async function seedDefaults() {
+    "use server";
+    const { user: actor } = await getCurrentUserRole();
+    if (actor.role !== "ADMIN") return;
+    await Promise.all([
+      upsertDefaultCommunicationTemplates(),
+      upsertDefaultCommunicationPolicies(),
+    ]);
+    revalidatePath("/settings/notifications/templates");
+    redirect("/settings/notifications/templates?saved=defaults+seeded");
   }
 
   async function createTemplate(formData: FormData) {
@@ -316,9 +329,21 @@ export default async function NotificationTemplatesPage({
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/settings/notifications" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
-            Open Notification Center
+            Notification Center
           </Link>
+          {user.role === "ADMIN" ? (
+            <form action={seedDefaults}>
+              <button className="btn-premium rounded-lg px-3 py-2 text-sm">
+                {templates.length === 0 ? "Create Default Templates" : "Re-seed Defaults"}
+              </button>
+            </form>
+          ) : null}
         </div>
+        {templates.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            No templates found. Click <strong>Create Default Templates</strong> to populate all 8 WhatsApp and email templates.
+          </div>
+        ) : null}
       </section>
 
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
