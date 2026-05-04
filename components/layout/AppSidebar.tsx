@@ -25,6 +25,7 @@ const nav = [
   { href: "/settings/users", label: "Users", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/branding", label: "Branding", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/notifications/templates", label: "Comms Templates", group: "admin", roles: ["ADMIN", "OPS"] },
+  { href: "/settings/notifications/whatsapp", label: "WhatsApp Channel", group: "admin", roles: ["ADMIN"] },
   { href: "/settings/profile", label: "Profile", group: "personal", roles: "all" },
   { href: "/settings/notifications", label: "Notifications", group: "personal", roles: ["ADMIN", "OPS", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] },
 ] as const;
@@ -53,6 +54,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings/users",
     "/settings/branding",
     "/settings/notifications/templates",
+    "/settings/notifications/whatsapp",
     "/settings/profile",
     "/settings/notifications",
   ],
@@ -165,6 +167,13 @@ function navIcon(href: string) {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fillRule="evenodd" d="M4 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm5.5 8.5v3.25a.75.75 0 0 1-1.5 0V10.5H5.75a.75.75 0 0 1 0-1.5h2.25V6.75a.75.75 0 0 1 1.5 0V9h2.25a.75.75 0 0 1 0 1.5H9.5Z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  if (href === "/settings/notifications/whatsapp") {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fillRule="evenodd" d="M10 2a8 8 0 1 0 3.592 15.174l2.953.819a.5.5 0 0 0 .615-.615l-.82-2.953A8 8 0 0 0 10 2Zm-1.44 4.628c.173-.099.388-.094.557.014l1.42.948a.5.5 0 0 1 .146.683l-.6.9c.322.297.616.624.875.977l.9-.6a.5.5 0 0 1 .683.147l.948 1.42a.5.5 0 0 1 .014.557c-.29.508-.81.868-1.398.967-.588.1-1.185-.07-1.63-.452l-.013-.011a7.24 7.24 0 0 1-1.856-2.548l-.007-.018c-.29-.649-.22-1.31.1-1.84.056-.098.13-.188.218-.265l.643-.88Z" clipRule="evenodd" />
       </svg>
     );
   }
