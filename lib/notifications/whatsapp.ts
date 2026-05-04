@@ -110,27 +110,19 @@ export async function sendIntakeApprovalNotification(
   phone: string,
   customerName: string,
   requestNumber: string,
-  preferredDate?: string | null
+  _preferredDate?: string | null
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const config = getConfig();
   if (!config) {
     return { success: false, error: "WhatsApp not configured" };
   }
 
-  let fallback = `Hello ${customerName},\n\nYour repair request (${requestNumber}) has been APPROVED.\n\n`;
-  if (preferredDate) {
-    fallback += `Your preferred drop-off date is: ${preferredDate}\n\n`;
-  }
-  fallback += `Please bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
+  const fallback = `Hello ${customerName},\n\nYour repair request (${requestNumber}) has been APPROVED.\n\nPlease bring your device to our shop at your convenience.\n\nBest regards,\nEagle Info Solutions`;
 
   const { body: message } = await renderCommunicationTemplate({
     key: "FRONT_DESK_APPROVED",
     channel: "WHATSAPP",
-    variables: {
-      customerName,
-      requestNumber,
-      preferredDropoffDateLine: preferredDate ? `Your preferred drop-off date is: ${preferredDate}` : "",
-    },
+    variables: { customerName, requestNumber },
     fallback: { body: fallback },
   });
 

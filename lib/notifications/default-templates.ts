@@ -43,8 +43,6 @@ export function getDefaultCommunicationTemplates(): Array<{
         "",
         "Your repair request ({requestNumber}) has been APPROVED.",
         "",
-        "{preferredDropoffDateLine}",
-        "",
         "Please bring your device to our shop at your convenience.",
         "",
         "Best regards,",
