@@ -292,7 +292,26 @@ export default async function NotificationTemplatesPage({
       },
     });
   } catch {
-    templates = [];
+    // Production DB may not have the new meta columns yet — fall back without them.
+    try {
+      const rows = await prisma.communicationTemplate.findMany({
+        orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
+        select: {
+          id: true,
+          key: true,
+          channel: true,
+          label: true,
+          subject: true,
+          body: true,
+          variables: true,
+          isActive: true,
+          updatedAt: true,
+        },
+      });
+      templates = rows.map((r) => ({ ...r, metaTemplateName: null, metaLanguageCode: null }));
+    } catch {
+      templates = [];
+    }
   }
 
   try {
