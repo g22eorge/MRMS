@@ -314,26 +314,20 @@ export default async function NotificationTemplatesPage({
 
     const normalizedStatus = normalizeJobStatus(parsed.data.status as unknown as LegacyJobStatus) as unknown as JobStatus;
 
-    await prisma.communicationPolicy.upsert({
-      where: { status: normalizedStatus },
-      create: {
-        status: normalizedStatus,
-        dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
-        whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
-        emailEnabled: Boolean(parsed.data.emailEnabled),
-        templateKey: parsed.data.templateKey ? parsed.data.templateKey : null,
-        nudge1Hours: toIntOrNull(parsed.data.nudge1Hours ?? ""),
-        nudge2Hours: toIntOrNull(parsed.data.nudge2Hours ?? ""),
-      },
-      update: {
-        dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
-        whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
-        emailEnabled: Boolean(parsed.data.emailEnabled),
-        templateKey: parsed.data.templateKey ? parsed.data.templateKey : null,
-        nudge1Hours: toIntOrNull(parsed.data.nudge1Hours ?? ""),
-        nudge2Hours: toIntOrNull(parsed.data.nudge2Hours ?? ""),
-      },
-    });
+    const policyData = {
+      dashboardEnabled: Boolean(parsed.data.dashboardEnabled),
+      whatsappEnabled: Boolean(parsed.data.whatsappEnabled),
+      emailEnabled: Boolean(parsed.data.emailEnabled),
+      templateKey: parsed.data.templateKey ? parsed.data.templateKey : null,
+      nudge1Hours: toIntOrNull(parsed.data.nudge1Hours ?? ""),
+      nudge2Hours: toIntOrNull(parsed.data.nudge2Hours ?? ""),
+    };
+    const existingPolicy = await prisma.communicationPolicy.findFirst({ where: { status: normalizedStatus } });
+    if (existingPolicy) {
+      await prisma.communicationPolicy.update({ where: { id: existingPolicy.id }, data: policyData });
+    } else {
+      await prisma.communicationPolicy.create({ data: { status: normalizedStatus, ...policyData } });
+    }
 
     revalidatePath("/settings/notifications/templates");
     redirect("/settings/notifications/templates?saved=policy");
