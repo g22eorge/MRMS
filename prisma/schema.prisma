@@ -12,17 +12,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserAccessMode {
+  FULL
+  READ_ONLY
+  RESTRICTED
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+}
+
 model User {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
-  email         String   @unique
+  email         String         @unique
   phone         String?
-  emailVerified Boolean  @default(false)
+  emailVerified Boolean        @default(false)
   image         String?
-  role          Role     @default(OPS)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  role          Role           @default(OPS)
+  isActive      Boolean        @default(true)
+  accessMode    UserAccessMode @default(FULL)
+  orgId         String?
+  org           Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([orgId])
 
   sessions     Session[]
   accounts     Account[]
@@ -214,6 +236,7 @@ model Client {
   email        String?
   organization String?
   notes        String?
+  orgId        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -259,6 +282,7 @@ model Job {
   jobNumber     String     @unique
   status        JobStatus  @default(RECEIVED)
   repairPath    RepairPath?
+  orgId         String?
   clientId      String
   client        Client     @relation(fields: [clientId], references: [id])
   deviceId      String?
@@ -359,20 +383,23 @@ model Job {
 
 model Part {
   id             String   @id @default(cuid())
-  sku            String   @unique
+  sku            String
   name           String
   manufacturer   String?
   unitCost       Float?
   qtyOnHand      Int      @default(0)
   reorderLevel   Int      @default(0)
   isActive       Boolean  @default(true)
+  orgId          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  reservations   PartReservation[]
-  transactions   PartStockTransaction[]
+  reservations      PartReservation[]
+  transactions      PartStockTransaction[]
+  locationStocks    PartLocationStock[]
 
-  @@index([isActive])
+  @@unique([sku, orgId])
+  @@index([orgId, isActive])
 }
 
 model PartReservation {
@@ -410,6 +437,35 @@ model PartStockTransaction {
 
   @@index([partId, createdAt])
   @@index([jobId])
+}
+
+model StockLocation {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, code])
+  @@index([orgId, isActive])
+}
+
+model PartLocationStock {
+  id          String   @id @default(cuid())
+  orgId       String
+  partId      String
+  locationId  String
+  qtyOnHand   Int      @default(0)
+  qtyReserved Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, locationId])
+  @@index([orgId, locationId])
+  @@index([partId])
 }
 
 model OneTimeExternalTechAssignment {
