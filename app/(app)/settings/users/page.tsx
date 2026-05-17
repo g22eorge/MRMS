@@ -63,10 +63,19 @@ type PermissionOption = {
 
 const roleOptions: Array<{ value: Role; label: string; description: string }> = [
   { value: Role.ADMIN, label: "Admin", description: "Full platform control including user management and financial approvals." },
+  { value: Role.MANAGER, label: "Manager", description: "Oversees operations, staff workload, and pipeline health across all departments." },
+  { value: Role.TECH_MANAGER, label: "Tech Manager", description: "Oversees technician performance, repair turnaround, workload balance, and quality metrics." },
+  { value: Role.FINANCE, label: "Finance", description: "Reviews invoices, approves costs, manages settlements and financial reports." },
+  { value: Role.SALES, label: "Sales", description: "Handles intake, client approvals, quotes, and revenue pipeline tracking." },
+  { value: Role.SALES_MANAGER, label: "Sales Manager", description: "Manages sales team, quotations, targets, and commissions." },
+  { value: Role.SALES_CORPORATE, label: "Corporate Sales", description: "Handles corporate accounts, invoices, and bulk quotations." },
+  { value: Role.SALES_RETAIL, label: "Retail Sales", description: "Handles walk-in retail sales, quotations, and handovers." },
+  { value: Role.SALES_POS, label: "POS Operator", description: "Runs point-of-sale transactions and daily cashier sessions." },
+  { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
   { value: Role.FRONT_DESK, label: "Front Desk", description: "Handles front desk intake, customer details, and handover documents." },
+  { value: Role.TECH_FIELD, label: "Field Technician", description: "Handles on-site visits, collections, deliveries, and client sign-offs." },
   { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
   { value: Role.TECHNICIAN_EXTERNAL, label: "External Technician", description: "External workflow access without client identity or billing history." },
-  { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
 ];
 
 const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
@@ -84,6 +93,78 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_review_external_bills",
     "can_view_accounts_summary",
     "can_approve_invoices",
+  ],
+  MANAGER: [
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_assign_jobs",
+    "can_view_approved_cost",
+    "can_view_external_updates",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+  ],
+  TECH_MANAGER: [
+    "can_run_internal_repairs",
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_assign_jobs",
+    "can_view_job_progress",
+    "can_view_approved_cost",
+    "can_view_external_updates",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+  ],
+  FINANCE: [
+    "can_search_jobs",
+    "can_view_approved_cost",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+  ],
+  SALES: [
+    "can_intake",
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_view_job_progress",
+    "can_view_approved_cost",
+    "can_view_external_quotes",
+  ],
+  SALES_MANAGER: [
+    "can_search_jobs",
+    "can_view_job_progress",
+    "can_view_approved_cost",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+    "can_create_leads",
+    "can_view_all_sales",
+    "can_create_quotations",
+    "can_approve_quotations",
+    "can_override_discount",
+    "can_create_invoices",
+    "can_manage_commissions",
+    "can_set_targets",
+    "can_view_team_targets",
+  ],
+  SALES_CORPORATE: [
+    "can_search_jobs",
+    "can_create_leads",
+    "can_create_quotations",
+    "can_create_invoices",
+  ],
+  SALES_RETAIL: [
+    "can_search_jobs",
+    "can_create_leads",
+    "can_create_quotations",
+    "can_open_pos_session",
+  ],
+  SALES_POS: [
+    "can_open_pos_session",
   ],
   OPS: [
     "can_manage_intake",
@@ -116,6 +197,12 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_search_jobs",
     "can_view_job_progress",
     "can_view_external_updates",
+  ],
+  TECH_FIELD: [
+    "can_search_jobs",
+    "can_view_job_progress",
+    "can_manage_field_visits",
+    "can_record_field_signoffs",
   ],
   TECHNICIAN_EXTERNAL: [],
 };
@@ -140,6 +227,85 @@ const roleCapabilities: Record<Role, string[]> = {
     "delete_records",
     "download_docs",
   ],
+  MANAGER: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_assign",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "parts_bills",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  TECH_MANAGER: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_assign",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "tech_notes",
+    "parts_bills",
+    "approval_cost",
+    "download_docs",
+  ],
+  FINANCE: [
+    "dashboard_view",
+    "jobs_view",
+    "client_records",
+    "parts_bills",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  SALES: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "invoices_view",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  SALES_MANAGER: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_create",
+    "client_records",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  SALES_CORPORATE: [
+    "dashboard_view",
+    "jobs_view",
+    "client_records",
+    "invoices_view",
+    "download_docs",
+  ],
+  SALES_RETAIL: [
+    "dashboard_view",
+    "jobs_view",
+    "client_records",
+    "download_docs",
+  ],
+  SALES_POS: [
+    "dashboard_view",
+    "jobs_view",
+  ],
   OPS: [
     "dashboard_view",
     "jobs_view",
@@ -181,6 +347,12 @@ const roleCapabilities: Record<Role, string[]> = {
     "device_records",
     "tech_notes",
     "download_docs",
+  ],
+  TECH_FIELD: [
+    "dashboard_view",
+    "jobs_view",
+    "device_records",
+    "tech_notes",
   ],
   TECHNICIAN_EXTERNAL: [
     "dashboard_view",
@@ -214,6 +386,12 @@ function roleLabel(role: Role) {
   if (role === "TECHNICIAN_EXTERNAL") return "External Technician";
   if (role === "FRONT_DESK" || role === "INTAKE") return "Front Desk";
   if (role === "OPS") return "Operations/Accounts";
+  if (role === "MANAGER") return "Manager";
+  if (role === "TECH_MANAGER") return "Tech Manager";
+  if (role === "FINANCE") return "Finance";
+  if (role === "SALES") return "Sales";
+  const found = roleOptions.find((r) => r.value === role);
+  if (found) return found.label;
   return "Admin";
 }
 
