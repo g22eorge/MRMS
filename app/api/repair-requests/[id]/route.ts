@@ -37,19 +37,16 @@ export async function PATCH(
 
   /* ── Convert to Job ── */
   if (status === "CONVERTED_TO_JOB") {
-    // 1. Upsert client by phone
-    const client = await prisma.client.upsert({
-      where: { phone: req.phone },
-      create: {
-        fullName: sanitizeText(req.customerName),
-        phone: req.phone,
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
-      update: {
-        fullName: sanitizeText(req.customerName),
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
-    });
+    // 1. Find-or-create client by phone
+    const existingClient = await prisma.client.findFirst({ where: { phone: req.phone } });
+    const client = existingClient
+      ? await prisma.client.update({
+          where: { id: existingClient.id },
+          data: { fullName: sanitizeText(req.customerName), email: sanitizeOptionalText(req.email) ?? undefined },
+        })
+      : await prisma.client.create({
+          data: { fullName: sanitizeText(req.customerName), phone: req.phone, email: sanitizeOptionalText(req.email) ?? undefined },
+        });
 
     // 2. Create job (retry on duplicate job number)
     let job: { id: string; jobNumber: string } | null = null;

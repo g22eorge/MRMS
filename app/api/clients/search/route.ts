@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ client: null });
   }
 
-  const client = await prisma.client.findUnique({
+  const client = await prisma.client.findFirst({
     where: { phone },
     select: { id: true, fullName: true, phone: true, email: true, organization: true },
   });

@@ -151,18 +151,15 @@ export async function setRepairRequestStatusAction(input: { id: string; status: 
 
   // Convert to Job
   if (parsed.data.status === "CONVERTED_TO_JOB") {
-    const client = await prisma.client.upsert({
-      where: { phone: req.phone },
-      create: {
-        fullName: sanitizeText(req.customerName),
-        phone: req.phone,
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
-      update: {
-        fullName: sanitizeText(req.customerName),
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
-    });
+    const existingClient = await prisma.client.findFirst({ where: { phone: req.phone } });
+    const client = existingClient
+      ? await prisma.client.update({
+          where: { id: existingClient.id },
+          data: { fullName: sanitizeText(req.customerName), email: sanitizeOptionalText(req.email) ?? undefined },
+        })
+      : await prisma.client.create({
+          data: { fullName: sanitizeText(req.customerName), phone: req.phone, email: sanitizeOptionalText(req.email) ?? undefined },
+        });
 
     let job: { id: string; jobNumber: string } | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {

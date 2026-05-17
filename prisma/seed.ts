@@ -297,10 +297,15 @@ async function ensureClient({
   email?: string;
   organization?: string;
 }) {
-  return prisma.client.upsert({
-    where: { phone },
-    update: { fullName, email: email ?? null, organization: organization ?? null },
-    create: { fullName, phone, email: email ?? null, organization: organization ?? null },
+  const existing = await prisma.client.findFirst({ where: { phone } });
+  if (existing) {
+    return prisma.client.update({
+      where: { id: existing.id },
+      data: { fullName, email: email ?? null, organization: organization ?? null },
+    });
+  }
+  return prisma.client.create({
+    data: { fullName, phone, email: email ?? null, organization: organization ?? null },
   });
 }
 

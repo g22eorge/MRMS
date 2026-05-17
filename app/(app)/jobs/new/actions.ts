@@ -121,20 +121,24 @@ export async function createJobAction(
       return { error: parsed.error.issues[0]?.message ?? "Invalid form values" };
     }
 
-    const client = await prisma.client.upsert({
-      where: { phone: parsed.data.phone },
-      create: {
-        fullName: sanitizeText(parsed.data.fullName),
-        phone: sanitizeText(parsed.data.phone),
-        email: sanitizeOptionalText(parsed.data.email),
-        organization: sanitizeOptionalText(parsed.data.organization),
-      },
-      update: {
-        fullName: sanitizeText(parsed.data.fullName),
-        email: sanitizeOptionalText(parsed.data.email),
-        organization: sanitizeOptionalText(parsed.data.organization),
-      },
-    });
+    const existingClient = await prisma.client.findFirst({ where: { phone: parsed.data.phone } });
+    const client = existingClient
+      ? await prisma.client.update({
+          where: { id: existingClient.id },
+          data: {
+            fullName: sanitizeText(parsed.data.fullName),
+            email: sanitizeOptionalText(parsed.data.email),
+            organization: sanitizeOptionalText(parsed.data.organization),
+          },
+        })
+      : await prisma.client.create({
+          data: {
+            fullName: sanitizeText(parsed.data.fullName),
+            phone: sanitizeText(parsed.data.phone),
+            email: sanitizeOptionalText(parsed.data.email),
+            organization: sanitizeOptionalText(parsed.data.organization),
+          },
+        });
 
     const parsedDevices = parseDevices(parsed.data.devicesJson);
     if (!parsedDevices.ok) {
