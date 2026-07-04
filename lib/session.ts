@@ -21,7 +21,11 @@ async function enforceDeploymentUser(user: { email: string; orgId: string | null
   const deployment = await getDeploymentContext();
   if (deployment.mode !== "CARE_SINGLE_TENANT") return;
   if (isPlatformAdminEmail(user.email)) return;
-  if (user.orgId !== EIS_ORG_ID) redirect("/login");
+  // Redirect to the force-logout route (not /login) so the session is
+  // invalidated server-side before /login renders. Otherwise the user bounces
+  // between /login (valid session -> /dashboard) and requireOrgSession
+  // (orgId mismatch -> /login) in an infinite loop.
+  if (user.orgId !== EIS_ORG_ID) redirect("/api/auth/force-logout");
 }
 
 async function isAllowedOptionalDeploymentUser(user: { email: string; orgId: string | null }) {

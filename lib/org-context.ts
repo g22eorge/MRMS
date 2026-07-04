@@ -32,7 +32,10 @@ export async function requireOrgSession() {
     }
 
     if (user!.orgId !== EIS_ORG_ID) {
-      redirect("/login");
+      // Use the force-logout route, not /login — otherwise the login page
+      // re-bounces the user back to /dashboard because their session is still
+      // valid, and requireOrgSession bounces them back to /login, ad nauseam.
+      redirect("/api/auth/force-logout");
     }
 
     return buildOrgSession(session, user!, deployment.fixedOrgId);
