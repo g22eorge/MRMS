@@ -7,7 +7,7 @@
 | # | Task | Status | Commit | Tested |
 |---|------|--------|--------|--------|
 | 1.1 | `lib/constants/payment-methods.ts` | ✅ Done | dc15632 | ✅ tsc |
-| 1.2 | Platform pages → `formatMoney` from `lib/currency.ts` | ✅ Done | — | ✅ tsc |
+| 1.2 | Platform pages → `formatMoney` from `lib/currency.ts` | ✅ Done | 38722d7 | ✅ tsc |
 | 1.3 | `lib/date-ranges.ts` + date display policy | ⬜ Pending | — | — |
 | 1.4 | Job PDF routes → `generate*Buffer` | ⬜ Pending | — | — |
 | 1.5 | Remove dead code | ⬜ Pending | — | — |
