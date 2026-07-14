@@ -11,7 +11,7 @@
 | 4.3 | Communications top-level sidebar; `/outbox` redirect | ✅ Done | 509c05a | ✅ unit |
 | 4.4 | Documents hub with tabs + per-job document timeline | ✅ Done | a868b45 | ✅ unit |
 | 4.5 | Global ⌘K command palette | ✅ Done | f667580 | ✅ unit |
-| 4.6 | Standard loading/empty/not-found/error contract | ⬜ Pending | — | — |
+| 4.6 | Standard loading/empty/not-found/error contract | ✅ Done | 7fe7385 | ✅ unit |
 | 4.7 | Quote follow-up nudges + draft expiry policy | ⬜ Pending | — | — |
 
 ---
@@ -47,3 +47,9 @@
 **Change:** App-wide command palette (⌘K / header Search) with role-gated quick actions and org-scoped job/client/invoice search API.
 
 **Doc:** [`fixes/phase-4-5-command-palette.md`](./fixes/phase-4-5-command-palette.md)
+
+### 4.6 — Page state contract
+
+**Change:** Shared loading/empty/not-found/error components; job and client detail boundaries; header subtitle guard for invalid record paths.
+
+**Doc:** [`fixes/phase-4-6-page-state-contract.md`](./fixes/phase-4-6-page-state-contract.md)
