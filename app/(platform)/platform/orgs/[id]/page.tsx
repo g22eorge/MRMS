@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBillingEventsByOrg } from "@/lib/billing-events";
+import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import {
   setBillingStatusAction,
@@ -89,8 +90,6 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   const fmt = (d: Date | null) =>
     d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "—";
-  const fmtMoney = (n: number, currency = "UGX") =>
-    new Intl.NumberFormat("en-UG", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
   return (
     <div className="space-y-6">
@@ -136,7 +135,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         {[
           { label: "Users",            value: org._count.users },
           { label: "Jobs",             value: org._count.jobs },
-          { label: "Total Paid",       value: fmtMoney(totalPaid) },
+          { label: "Total Paid",       value: formatMoney(totalPaid) },
           { label: `SMS ${smsUsed}/${smsLimit}`, value: `${smsPct}%` },
         ].map((m) => (
           <div key={m.label} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -336,7 +335,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right font-mono text-[var(--ink)]">
-                    {e.amount > 0 ? fmtMoney(e.amount, e.currency) : "—"}
+                    {e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"}
                   </td>
                   <td className="hidden px-4 py-2 font-mono text-xs text-[var(--ink-muted)] md:table-cell">{e.txRef ?? "—"}</td>
                 </tr>

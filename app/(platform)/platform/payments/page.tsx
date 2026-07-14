@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getRecentBillingEvents, getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
+import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
 
@@ -21,13 +22,6 @@ export default async function PaymentsPage() {
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
 
-  const fmtMoney = (n: number, currency = "UGX") =>
-    new Intl.NumberFormat("en-UG", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n);
-
   return (
     <div className="space-y-6">
       <div>
@@ -39,11 +33,11 @@ export default async function PaymentsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4">
           <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Revenue This Month</p>
-          <p className="mt-1 text-2xl font-bold text-[var(--ink)]">{fmtMoney(monthRevenue)}</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--ink)]">{formatMoney(monthRevenue)}</p>
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4">
           <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Total Revenue</p>
-          <p className="mt-1 text-2xl font-bold text-[var(--ink)]">{fmtMoney(totalRevenue)}</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--ink)]">{formatMoney(totalRevenue)}</p>
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4">
           <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Successful Transactions</p>
@@ -89,7 +83,7 @@ export default async function PaymentsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right font-mono">
-                  {e.amount > 0 ? fmtMoney(e.amount, e.currency) : "—"}
+                  {e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"}
                 </td>
                 <td className="px-4 py-2 text-[var(--ink-muted)]">{e.plan ? planLabel(e.plan) : "—"}</td>
                 <td className="px-4 py-2 font-mono text-xs text-[var(--ink-muted)] max-w-[160px] truncate">
