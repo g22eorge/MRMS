@@ -13,8 +13,17 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
+import { matchesDocumentPeriod } from "@/lib/documents/period-filters";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
+import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
+import {
+  DocumentPageHeader,
+  DocumentFilterBar,
+  DocumentShareMenuSection,
+  DocumentEmptyTableRow,
+  DocumentListTable,
+  DocumentListTableHead,
+} from "@/components/documents";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
@@ -288,10 +297,8 @@ export default async function DeliveryNotesPage({
   }
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-  const thisMonth = notes.filter((n) => n.deliveredAt >= monthStart).length;
+  const monthStart = now.getMonth();
+  const thisMonth = notes.filter((n) => n.deliveredAt >= new Date(now.getFullYear(), monthStart, 1)).length;
   const uniqueSources = new Set(notes.map((n) => n.invoice?.id ?? n.sale?.id).filter(Boolean)).size;
 
   const filteredNotes = notes.filter((n) => {
@@ -301,8 +308,7 @@ export default async function DeliveryNotesPage({
       if (!label.toLowerCase().includes(search)) return false;
     }
     if (methodFilter !== "all" && n.deliveryMethod !== methodFilter) return false;
-    if (periodFilter === "this_month") return n.deliveredAt >= monthStart;
-    if (periodFilter === "last_month") return n.deliveredAt >= lastMonthStart && n.deliveredAt <= lastMonthEnd;
+    if (!matchesDocumentPeriod(n.deliveredAt, periodFilter, now)) return false;
     return true;
   });
   const [invoiceOptions, saleOptions] = await Promise.all([
@@ -323,31 +329,20 @@ export default async function DeliveryNotesPage({
 
   return (
     <section className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Documents</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Delivery Notes</p>
-          </div>
-          <Link href="/documents/delivery-notes?create=1#create-delivery-note" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">Create Delivery Note</Link>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
+      <DocumentPageHeader
+        title="Delivery Notes"
+        action={
+          <Link href="/documents/delivery-notes?create=1#create-delivery-note" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
+            Create Delivery Note
+          </Link>
+        }
+        kpis={[
           { label: "Total Notes", value: notes.length, sub: "all time" },
-          { label: "This Month", value: thisMonth, sub: "delivered" },
+          { label: "This Month", value: thisMonth, sub: "delivered", accent: true },
           { label: "Unique Sources", value: uniqueSources, sub: "invoices & sales" },
           { label: "Filtered", value: filteredNotes.length, sub: "matching filters" },
-        ].map(({ label, value, sub }) => (
-          <div key={label} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">{value}</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{sub}</p>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {hasDeliverySources ? (
         <details id="create-delivery-note" open={createMode} className="group rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -392,40 +387,32 @@ export default async function DeliveryNotesPage({
         </div>
       ) : null}
 
-      {/* Filter chips + search */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1">
-          {([
-            { label: "All time", value: "all" },
-            { label: "This month", value: "this_month" },
-            { label: "Last month", value: "last_month" },
-          ] as const).map(({ label, value }) => (
-            <a key={value} href={`/documents/delivery-notes?period=${value}&method=${methodFilter}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
-              {label}
-            </a>
-          ))}
-        </div>
+      <DocumentFilterBar
+        basePath="/documents/delivery-notes"
+        q={q}
+        period={periodFilter}
+        extraQuery={{ method: methodFilter }}
+        searchPlaceholder="Search note #, client…"
+      >
         <div className="flex gap-1">
           {(["all", "PICKUP", "DELIVERY", "COURIER"] as const).map((m) => (
-            <a key={m} href={`/documents/delivery-notes?period=${periodFilter}&method=${m}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${methodFilter === m ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+            <Link
+              key={m}
+              href={`/documents/delivery-notes?period=${periodFilter}&method=${m}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${
+                methodFilter === m
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                  : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+              }`}
+            >
               {m === "all" ? "All methods" : m.charAt(0) + m.slice(1).toLowerCase()}
-            </a>
+            </Link>
           ))}
         </div>
-        <form method="GET" className="flex gap-2 flex-1 min-w-[180px]">
-          <input type="hidden" name="period" value={periodFilter} />
-          <input type="hidden" name="method" value={methodFilter} />
-          <input name="q" defaultValue={q} placeholder="Search note #, client…"
-            className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
-        </form>
-      </div>
+      </DocumentFilterBar>
 
-      <div className="doc-list overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+      <DocumentListTable>
+          <DocumentListTableHead>
             <tr>
               <th className="px-3 py-2.5">Delivery Note</th>
               <th className="hidden px-3 py-2.5 md:table-cell">Source</th>
@@ -434,7 +421,7 @@ export default async function DeliveryNotesPage({
               <th className="hidden px-3 py-2.5 lg:table-cell">Method</th>
               <th className="px-3 py-2.5">Action</th>
             </tr>
-          </thead>
+          </DocumentListTableHead>
           <tbody>
             {filteredNotes.map((n) => {
               const recipientPhone = n.invoice?.job?.client.phone ?? n.invoice?.client?.phone ?? n.sale?.client?.phone ?? null;
@@ -487,28 +474,16 @@ export default async function DeliveryNotesPage({
                           Download Delivery Note
                         </MenuActionLink>
                       </div>
-                      <MenuSection label="Share" />
-                      {recipientPhone ? (
-                        <form action={shareDeliveryNoteWhatsAppAction}>
-                          <input type="hidden" name="deliveryNoteId" value={n.id} />
-                          <MenuActionButton icon="whatsapp" tone="success">Send via WhatsApp</MenuActionButton>
-                        </form>
-                      ) : (
-                        <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">WhatsApp unavailable</span>
-                      )}
-                      {recipientEmail ? (
-                        <form action={shareDeliveryNoteEmailAction}>
-                          <input type="hidden" name="deliveryNoteId" value={n.id} />
-                          <MenuActionButton icon="open">Email delivery note</MenuActionButton>
-                        </form>
-                      ) : (
-                        <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Email unavailable</span>
-                      )}
-                      {deliveryWaPhone ? (
-                        <MenuActionLink href={`https://wa.me/${deliveryWaPhone}?text=${deliveryShareText}`} external icon="whatsapp" tone="success">
-                          Open WhatsApp Link
-                        </MenuActionLink>
-                      ) : null}
+                      <DocumentShareMenuSection
+                        hiddenFieldName="deliveryNoteId"
+                        hiddenFieldValue={n.id}
+                        recipientPhone={recipientPhone}
+                        recipientEmail={recipientEmail}
+                        whatsAppAction={shareDeliveryNoteWhatsAppAction}
+                        emailAction={shareDeliveryNoteEmailAction}
+                        emailLabel="Email delivery note"
+                        waLinkHref={deliveryWaPhone ? `https://wa.me/${deliveryWaPhone}?text=${deliveryShareText}` : null}
+                      />
                       <MenuSection label="Edit Delivery Note" />
                       <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
                         <input type="hidden" name="deliveryNoteId" value={n.id} />
@@ -535,15 +510,13 @@ export default async function DeliveryNotesPage({
               );
             })}
             {filteredNotes.length === 0 ? (
-              <tr className="border-t border-[var(--line)]">
-                <td className="px-3 py-8 text-sm text-[var(--ink-muted)]" colSpan={6}>
-                  No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed.
-                </td>
-              </tr>
+              <DocumentEmptyTableRow
+                message="No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed."
+                colSpan={6}
+              />
             ) : null}
           </tbody>
-        </table>
-      </div>
+      </DocumentListTable>
     </section>
   );
 }

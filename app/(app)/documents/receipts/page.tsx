@@ -17,7 +17,17 @@ import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
+import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
 import { shareReceiptDocument } from "@/lib/notifications/share-document";
+import {
+  DocumentPageHeader,
+  DocumentFilterBar,
+  DocumentShareMenuSection,
+  DocumentEmptyState,
+  DocumentEmptyTableRow,
+  DocumentListTable,
+  DocumentListTableHead,
+} from "@/components/documents";
 import { CreateReceiptDialog } from "./CreateReceiptDialog";
 
 export default async function ReceiptsPage({
@@ -205,17 +215,7 @@ export default async function ReceiptsPage({
     revalidatePath("/documents/receipts");
   }
 
-  const now2 = new Date();
-  const thisMonthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
-  const lastMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now2.getFullYear(), now2.getMonth(), 0, 23, 59, 59, 999);
-  const last30Start = new Date(now2.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  const periodFilter =
-    period === "this_month" ? { gte: thisMonthStart } :
-    period === "last_month" ? { gte: lastMonthStart, lte: lastMonthEnd } :
-    period === "last_30"    ? { gte: last30Start } :
-    undefined;
+  const periodFilter = dateFilterForDocumentPeriod(period);
 
   const searchWhere = q
     ? {
@@ -321,14 +321,6 @@ export default async function ReceiptsPage({
     })),
   ];
 
-
-  const PERIOD_LABELS: Record<string, string> = {
-    all: "All Time",
-    this_month: "This Month",
-    last_month: "Last Month",
-    last_30: "Last 30 Days",
-  };
-
   function methodBadge(method: string) {
     switch (method) {
       case "CASH":          return "border-emerald-500/30 bg-emerald-500/15 text-emerald-700";
@@ -341,13 +333,10 @@ export default async function ReceiptsPage({
 
   return (
     <section className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Documents</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Receipts</p>
-          </div>
-          {paymentSourceOptions.length > 0 ? (
+      <DocumentPageHeader
+        title="Receipts"
+        action={
+          paymentSourceOptions.length > 0 ? (
             <CreateReceiptDialog
               sourceOptions={paymentSourceOptions}
               baseCurrency={baseCurrency}
@@ -356,57 +345,26 @@ export default async function ReceiptsPage({
               initialOpen={createMode}
             />
           ) : (
-            <Link href="/documents/invoices" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">Create Invoice</Link>
-          )}
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Total</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{receiptsTotal}</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">this month: {thisMonth.length}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Total Amount</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{formatMoney(totalAmountBase, baseCurrency)}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">This Month</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--accent)]">{formatMoney(thisMonthAmountBase, baseCurrency)}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Cash</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{cashPaymentsCount}</p>
-          </div>
-        </div>
-      </div>
+            <Link href="/documents/invoices" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
+              Create Invoice
+            </Link>
+          )
+        }
+        kpis={[
+          { label: "Total", value: receiptsTotal, sub: `this month: ${thisMonth.length}` },
+          { label: "Total Amount", value: formatMoney(totalAmountBase, baseCurrency) },
+          { label: "This Month", value: formatMoney(thisMonthAmountBase, baseCurrency), accent: true },
+          { label: "Cash", value: cashPaymentsCount },
+        ]}
+      />
 
-      {/* Filters */}
-      <form className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search reference, invoice #, sale #…"
-          className="flex-1 min-w-[160px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
-        />
-        <div className="flex gap-1">
-          {(["all", "this_month", "last_month", "last_30"] as const).map((p) => (
-            <button
-              key={p}
-              type="submit"
-              name="period"
-              value={p}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${period === p ? "bg-[var(--accent)] text-white" : "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
-            >
-              {PERIOD_LABELS[p]}
-            </button>
-          ))}
-        </div>
-        {(q || period !== "all") && (
-          <Link href="/documents/receipts" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
-        )}
-      </form>
-
-
+      <DocumentFilterBar
+        basePath="/documents/receipts"
+        q={q}
+        period={period}
+        mode="form"
+        searchPlaceholder="Search reference, invoice #, sale #…"
+      />
 
       <div className="space-y-3 md:hidden">
         {payments.map((p) => {
@@ -470,28 +428,16 @@ export default async function ReceiptsPage({
                         Download Receipt PDF
                       </MenuActionLink>
                     </div>
-                    <MenuSection label="Share" />
-                    {recipientPhone ? (
-                      <form action={shareReceiptWhatsAppAction}>
-                        <input type="hidden" name="paymentId" value={p.id} />
-                        <MenuActionButton icon="whatsapp" tone="success">Send via WhatsApp</MenuActionButton>
-                      </form>
-                    ) : (
-                      <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">WhatsApp unavailable</span>
-                    )}
-                    {recipientEmail ? (
-                      <form action={shareReceiptEmailAction}>
-                        <input type="hidden" name="paymentId" value={p.id} />
-                        <MenuActionButton icon="open">Email receipt</MenuActionButton>
-                      </form>
-                    ) : (
-                      <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Email unavailable</span>
-                    )}
-                    {receiptWaPhone ? (
-                      <MenuActionLink href={`https://wa.me/${receiptWaPhone}?text=${receiptShareText}`} external icon="whatsapp" tone="success">
-                        Open WhatsApp Link
-                      </MenuActionLink>
-                    ) : null}
+                    <DocumentShareMenuSection
+                      hiddenFieldName="paymentId"
+                      hiddenFieldValue={p.id}
+                      recipientPhone={recipientPhone}
+                      recipientEmail={recipientEmail}
+                      whatsAppAction={shareReceiptWhatsAppAction}
+                      emailAction={shareReceiptEmailAction}
+                      emailLabel="Email receipt"
+                      waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
+                    />
                     <MenuSection label="Edit Receipt" />
                     <form action={updateReceiptAction} className="space-y-2 p-3">
                       <input type="hidden" name="paymentId" value={p.id} />
@@ -515,16 +461,11 @@ export default async function ReceiptsPage({
             </article>
           );
         })}
-        {payments.length === 0 ? (
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-8 text-center text-sm text-[var(--ink-muted)]">
-            No payments yet.
-          </div>
-        ) : null}
+        {payments.length === 0 ? <DocumentEmptyState message="No payments yet." /> : null}
       </div>
 
-      <div className="doc-list hidden overflow-x-auto rounded-xl border border-[var(--line)] md:block">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+      <DocumentListTable className="hidden md:block">
+          <DocumentListTableHead>
             <tr>
               <th className="px-3 py-2.5">Date</th>
               <th className="px-3 py-2.5">Amount</th>
@@ -533,7 +474,7 @@ export default async function ReceiptsPage({
               <th className="px-3 py-2.5">For</th>
               <th className="px-3 py-2.5">Action</th>
             </tr>
-          </thead>
+          </DocumentListTableHead>
           <tbody>
             {payments.map((p) => {
               const currency = normalizeCurrency(p.currency, baseCurrency);
@@ -591,28 +532,16 @@ export default async function ReceiptsPage({
                             Download Receipt PDF
                           </MenuActionLink>
                         </div>
-                        <MenuSection label="Share" />
-                        {recipientPhone ? (
-                          <form action={shareReceiptWhatsAppAction}>
-                            <input type="hidden" name="paymentId" value={p.id} />
-                            <MenuActionButton icon="whatsapp" tone="success">Send via WhatsApp</MenuActionButton>
-                          </form>
-                        ) : (
-                          <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">WhatsApp unavailable</span>
-                        )}
-                        {recipientEmail ? (
-                          <form action={shareReceiptEmailAction}>
-                            <input type="hidden" name="paymentId" value={p.id} />
-                            <MenuActionButton icon="open">Email receipt</MenuActionButton>
-                          </form>
-                        ) : (
-                          <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Email unavailable</span>
-                        )}
-                        {receiptWaPhone ? (
-                          <MenuActionLink href={`https://wa.me/${receiptWaPhone}?text=${receiptShareText}`} external icon="whatsapp" tone="success">
-                            Open WhatsApp Link
-                          </MenuActionLink>
-                        ) : null}
+                        <DocumentShareMenuSection
+                          hiddenFieldName="paymentId"
+                          hiddenFieldValue={p.id}
+                          recipientPhone={recipientPhone}
+                          recipientEmail={recipientEmail}
+                          whatsAppAction={shareReceiptWhatsAppAction}
+                          emailAction={shareReceiptEmailAction}
+                          emailLabel="Email receipt"
+                          waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
+                        />
                         <MenuSection label="Edit Receipt" />
                         <form action={updateReceiptAction} className="space-y-2 p-3">
                           <input type="hidden" name="paymentId" value={p.id} />
@@ -637,15 +566,10 @@ export default async function ReceiptsPage({
               );
             })}
             {payments.length === 0 ? (
-              <tr className="border-t border-[var(--line)]">
-                <td className="px-3 py-8 text-sm text-[var(--ink-muted)]" colSpan={6}>
-                  No payments yet.
-                </td>
-              </tr>
+              <DocumentEmptyTableRow message="No payments yet." colSpan={6} />
             ) : null}
           </tbody>
-        </table>
-      </div>
+      </DocumentListTable>
     </section>
   );
 }
