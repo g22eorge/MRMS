@@ -110,15 +110,3 @@ export async function getOrgSessionOptional() {
     orgId: user?.orgId ?? null,
   };
 }
-
-/**
- * Minimal org-scoped where clause fragment.
- * Merge this into any Prisma query's `where` to enforce tenant isolation.
- *
- * Usage:
- *   const { orgId } = await requireOrgSession();
- *   const jobs = await prisma.job.findMany({ where: { ...orgWhere(orgId), status: "RECEIVED" } });
- */
-export function orgWhere(orgId: string) {
-  return { orgId } as const;
-}

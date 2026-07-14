@@ -10,7 +10,7 @@
 | 1.2 | Platform pages → `formatMoney` from `lib/currency.ts` | ✅ Done | 38722d7 | ✅ tsc |
 | 1.3 | `lib/date-ranges.ts` + date display policy | ✅ Done | 58d164f | ✅ tsc |
 | 1.4 | Job PDF routes → `generate*Buffer` | ✅ Done | bf81e44 | ✅ tsc |
-| 1.5 | Remove dead code | ⬜ Pending | — | — |
+| 1.5 | Remove dead code + dedupe settings | ✅ Done | — | ✅ tsc |
 
 ---
 
@@ -34,8 +34,14 @@
 
 **Doc:** [`fixes/phase-1-3-date-ranges-and-display.md`](./fixes/phase-1-3-date-ranges-and-display.md)
 
-### 1.4 — Job PDF routes → generators (pending commit)
+### 1.4 — Job PDF routes → generators (bf81e44)
 
 **Change:** Replaced ~837 lines of duplicated route logic with thin auth wrappers calling `generate*Buffer`; added `pdf-response.ts`; aligned invoice download persistence and job-card QR into generators.
 
 **Doc:** [`fixes/phase-1-4-job-pdf-routes.md`](./fixes/phase-1-4-job-pdf-routes.md)
+
+### 1.5 — Dead code + settings dedupe
+
+**Change:** Removed `writePaymentAccountingDocuments`, `orgWhere`, and `SettingsPageHeader`; `SettingsPanel` reuses `ProfileForm` compact variant.
+
+**Doc:** [`fixes/phase-1-5-dead-code-settings.md`](./fixes/phase-1-5-dead-code-settings.md)
