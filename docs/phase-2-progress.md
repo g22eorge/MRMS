@@ -9,7 +9,7 @@
 | 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | b46d181 | ✅ tsc |
 | 2.2 | `lib/commercial/payment-sync.ts` | ✅ Done | 61ef225 | ✅ tsc |
 | 2.3 | `lib/notifications/share-document.ts` | ✅ Done | 18bc3a5 | ✅ tsc |
-| 2.4 | `lib/phone.ts` | ⬜ Pending | — | — |
+| 2.4 | `lib/phone.ts` | ✅ Done | c3ee47a | ✅ tsc |
 | 2.5 | Route `sendPdfViaWhatsApp` through outbox | ⬜ Pending | — | — |
 
 ---
@@ -28,8 +28,14 @@
 
 **Doc:** [`fixes/phase-2-2-payment-sync.md`](./fixes/phase-2-2-payment-sync.md)
 
-### 2.3 — Document share helpers
+### 2.3 — Document share helpers (18bc3a5)
 
 **Change:** Added `lib/notifications/share-document.ts`; receipts, credit notes, refunds, and delivery notes delegate WhatsApp/email share to shared recipient resolution + outbox enqueue.
 
 **Doc:** [`fixes/phase-2-3-share-document.md`](./fixes/phase-2-3-share-document.md)
+
+### 2.4 — Phone normalization (pending commit)
+
+**Change:** Added `lib/phone.ts`; SMS, WhatsApp, webhook, and clients pages use shared normalize/display helpers; new clients stored as E.164 with duplicate lookup across format variants.
+
+**Doc:** [`fixes/phase-2-4-phone-normalization.md`](./fixes/phase-2-4-phone-normalization.md)
