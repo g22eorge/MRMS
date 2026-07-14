@@ -982,7 +982,7 @@ export default async function DashboardPage({
       // Intake queue
       intakePendingCount,
       // Comms health
-      failedOutboxCount,
+      failedOutboxByStatus,
       // Inventory: out-of-stock
       outOfStockCount,
       // Cash collections — single wide MTD fetch, sliced in memory (2 queries not 6)
@@ -1057,8 +1057,12 @@ export default async function DashboardPage({
       prisma.job.findMany({ where: { ...orgFilter, repairPath: "EXTERNAL", status: { in: filterSupportedJobStatuses(["COMPLETED", "DELIVERED"]) as JobStatus[] }, externalPaid: false, assignedToId: { not: null } }, select: { id: true, assignedToId: true, externalTechFee: true, externalTechBill: true }, take: 200 }).catch(() => [] as { id: string; assignedToId: string | null; externalTechFee: number | null; externalTechBill: number | null }[]),
       // Intake pending
       prisma.repairRequest.count({ where: { ...(orgFilter.orgId ? { orgId: orgFilter.orgId } : {}), requestStatus: { in: ["PENDING_INTAKE", "PENDING_FRONT_DESK"] as never[] } } }).catch(() => 0),
-      // Failed / dead outbox messages
-      prisma.outboundMessage.count({ where: { ...(orgFilter.orgId ? { orgId: orgFilter.orgId } : {}), status: { in: ["FAILED", "DEAD"] as never[] } } }).catch(() => 0),
+      // Failed / dead outbox messages — split by status so the UI can label them honestly
+      prisma.outboundMessage.groupBy({
+        by: ["status"],
+        where: { ...(orgFilter.orgId ? { orgId: orgFilter.orgId } : {}), status: { in: ["FAILED", "DEAD"] as never[] } },
+        _count: { _all: true },
+      }).catch(() => [] as { status: string; _count: { _all: number } }[]),
       // Out-of-stock active parts
       prisma.part.count({ where: { ...orgFilter, isActive: true, qtyOnHand: { lte: 0 } } }).catch(() => 0),
       // Cash collections — single wide MTD fetch, sliced into today/yesterday/MTD in memory (2 queries not 6)
@@ -1081,6 +1085,17 @@ export default async function DashboardPage({
         ? prisma.organization.findUnique({ where: { id: user.orgId }, select: { name: true } }).then(o => o?.name ?? null).catch(() => null)
         : Promise.resolve(null as string | null),
     ]);
+
+    // Comms health: split failed vs dead so the dashboard matches the Outbox tabs
+    const failedMsgCount = failedOutboxByStatus.find((r) => r.status === "FAILED")?._count._all ?? 0;
+    const deadMsgCount   = failedOutboxByStatus.find((r) => r.status === "DEAD")?._count._all ?? 0;
+    const failedOutboxCount = failedMsgCount + deadMsgCount;
+    const failedOutboxLabel =
+      failedMsgCount > 0 && deadMsgCount > 0
+        ? `${failedMsgCount} failed · ${deadMsgCount} dead`
+        : failedMsgCount > 0
+          ? `${failedMsgCount} failed`
+          : `${deadMsgCount} dead`;
 
     // Unpack wide collections result
     const collectionsMtd       = collectionsWide.mtd;
@@ -1436,7 +1451,7 @@ export default async function DashboardPage({
                   )}
                   {failedOutboxCount > 0 && (
                     <Link href="/settings/notifications/outbox" className="flex items-center justify-between px-4 py-2 transition hover:bg-[var(--panel-strong)]">
-                      <p className="text-[12px] text-[var(--ink-muted)]"><span className="font-bold text-rose-500">{failedOutboxCount}</span> messages failed</p>
+                      <p className="text-[12px] text-[var(--ink-muted)]"><span className="font-bold text-rose-500">{failedOutboxLabel}</span> messages</p>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ink-muted)]/30"><path d="m9 18 6-6-6-6"/></svg>
                     </Link>
                   )}
@@ -1705,7 +1720,7 @@ export default async function DashboardPage({
               <div className={`flex items-center gap-2.5 border-b border-[var(--line)] px-4 py-2.5 ${failedOutboxCount > 0 ? "bg-rose-500/5" : "bg-emerald-500/5"}`}>
                 <span className={`h-2 w-2 shrink-0 rounded-full ${failedOutboxCount > 0 ? "bg-rose-500" : "bg-emerald-500"}`} />
                 <p className={`flex-1 text-[12px] font-semibold ${failedOutboxCount > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                  {failedOutboxCount > 0 ? `${failedOutboxCount} message${failedOutboxCount > 1 ? "s" : ""} failed` : "Outbox healthy"}
+                  {failedOutboxCount > 0 ? `${failedOutboxLabel} message${failedOutboxCount > 1 ? "s" : ""}` : "Outbox healthy"}
                 </p>
                 {failedOutboxCount > 0 && (
                   <Link href="/settings/notifications/outbox" className="shrink-0 rounded-md bg-rose-500/12 px-2 py-0.5 text-[10px] font-bold text-rose-600 transition hover:bg-rose-500/20">Fix</Link>
