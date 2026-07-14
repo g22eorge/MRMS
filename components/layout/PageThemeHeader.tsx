@@ -55,6 +55,13 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/settings/notifications/templates") return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
   if (pathname === "/settings/notifications/outbox") return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
   if (pathname === "/intake") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
+  if (pathname === "/documents/credit-notes") return { title: "Credit Notes", description: "Sales returns, adjustments, and item return tracking." };
+  if (pathname === "/documents/refunds") return { title: "Refunds", description: "Track refunds issued against receipts and sales." };
+  if (pathname === "/documents/delivery-notes") return { title: "Delivery Notes", description: "Delivery and handover proof for paid invoices and sales." };
+  if (pathname === "/pos") return { title: "Point of Sale", description: "Walk-in and retail sales transactions." };
+  if (parts[0] === "pos" && parts[1]) {
+    return { title: "Sale Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "Review sale lines, payments, and receipt actions." };
+  }
   return { title: "Workspace" };
 }
 
