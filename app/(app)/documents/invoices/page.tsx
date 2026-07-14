@@ -30,6 +30,10 @@ import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-met
 import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
 import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { CreateStandaloneInvoiceForm } from "./CreateStandaloneInvoiceForm";
+import {
+  InvoiceOverdueReminderBulkButton,
+  InvoiceOverdueReminderButton,
+} from "@/components/documents/InvoiceOverdueReminderForms";
 
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
@@ -40,7 +44,7 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   const db = orgDb(user.orgId);
@@ -65,6 +69,11 @@ export default async function InvoicesPage({
   const agingFilter = params.aging ?? "all";
   const q = (params.q ?? "").trim();
   const errorParam = params.error ?? "";
+  const remindedParam = params.reminded ?? "";
+  const remindedBulkParam = params.remindedBulk ?? "";
+  const reminderSkippedParam = params.reminderSkipped ?? "";
+  const reminderFailedParam = params.reminderFailed ?? "";
+  const reminderErrorParam = params.reminderError ?? "";
 
   let dbNeedsFix = false;
 
@@ -689,6 +698,22 @@ export default async function InvoicesPage({
     .sort((a, b) => b.daysOverdue - a.daysOverdue)
     .slice(0, 5);
 
+  const reminderReturnQuery = new URLSearchParams();
+  if (typeFilter !== "all") reminderReturnQuery.set("type", typeFilter);
+  if (statusFilter !== "all") reminderReturnQuery.set("status", statusFilter);
+  if (agingFilter !== "all") reminderReturnQuery.set("aging", agingFilter);
+  if (q) reminderReturnQuery.set("q", q);
+  const reminderReturnTo = `/documents/invoices${reminderReturnQuery.toString() ? `?${reminderReturnQuery.toString()}` : ""}`;
+  const reminderContext = {
+    returnTo: reminderReturnTo,
+    aging: agingFilter !== "all" ? agingFilter : undefined,
+  };
+  const bulkAgingBucket =
+    agingFilter === "1-30" || agingFilter === "31-60" || agingFilter === "61+"
+      ? agingFilter
+      : null;
+  const overdueInView = filtered.filter((i) => !i.isPaid && !i.isVoid && i.daysOverdue > 0);
+
   const typeBadgeCls: Record<string, string> = {
     REPAIR:       "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
     SERVICE:      "border border-violet-400/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
@@ -708,6 +733,34 @@ export default async function InvoicesPage({
           </p>
         </div>
       )}
+
+      {remindedParam === "1" ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            Payment reminder queued via outbox.
+          </p>
+        </div>
+      ) : null}
+
+      {remindedBulkParam ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            Reminders queued for {remindedBulkParam} invoice{Number(remindedBulkParam) === 1 ? "" : "s"}.
+            {reminderSkippedParam ? ` Skipped ${reminderSkippedParam}.` : ""}
+            {reminderFailedParam && Number(reminderFailedParam) > 0 ? ` Failed ${reminderFailedParam}.` : ""}
+          </p>
+        </div>
+      ) : null}
+
+      {reminderErrorParam ? (
+        <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
+            {reminderErrorParam === "forbidden"
+              ? "You do not have permission to send invoice reminders."
+              : decodeURIComponent(reminderErrorParam)}
+          </p>
+        </div>
+      ) : null}
 
       {/* ══════════════════════════════════════════════════════════════════════
           MOBILE ONLY — premium dark header + context-aware action panel
@@ -764,7 +817,16 @@ export default async function InvoicesPage({
                     <p className="text-[12px] font-black uppercase tracking-[0.16em] text-red-500">⚠ Overdue</p>
                     <p className="text-[13px] text-[var(--ink-muted)]">{overdueInvs.length} invoice{overdueInvs.length !== 1 ? "s" : ""} past due</p>
                   </div>
-                  <p className="text-[16px] font-black text-red-500">{formatMoneyCompact(overdueTotal, orgCurrency)}</p>
+                  <div className="flex flex-col items-end gap-2">
+                    <p className="text-[16px] font-black text-red-500">{formatMoneyCompact(overdueTotal, orgCurrency)}</p>
+                    {bulkAgingBucket && canManageInvoicePayments ? (
+                      <InvoiceOverdueReminderBulkButton
+                        aging={bulkAgingBucket}
+                        count={overdueInvs.length}
+                        context={reminderContext}
+                      />
+                    ) : null}
+                  </div>
                 </div>
                 {overdueInvs.map(inv => {
                   const client = inv.job?.client?.fullName ?? inv.client?.fullName ?? "Client";
@@ -774,8 +836,11 @@ export default async function InvoicesPage({
                         <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{client}</p>
                         <p className="text-[12px] text-red-500 font-bold">{inv.daysOverdue}d overdue · {inv.invoiceNumber}</p>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
                         <p className="text-[13px] font-black text-red-500">{formatMoneyCompact(inv.balance, orgCurrency)}</p>
+                        {canManageInvoicePayments ? (
+                          <InvoiceOverdueReminderButton invoiceId={inv.id} context={reminderContext} compact />
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -1002,6 +1067,20 @@ export default async function InvoicesPage({
         })}
       </div>
 
+      {bulkAgingBucket && overdueInView.length > 0 && canManageInvoicePayments ? (
+        <div className="hidden lg:flex items-center justify-between rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3">
+          <p className="text-sm text-[var(--ink-muted)]">
+            {overdueInView.length} overdue invoice{overdueInView.length !== 1 ? "s" : ""} in the{" "}
+            <span className="font-semibold text-[var(--ink)]">{bulkAgingBucket === "61+" ? "61+ days" : `${bulkAgingBucket} days`}</span> bucket
+          </p>
+          <InvoiceOverdueReminderBulkButton
+            aging={bulkAgingBucket}
+            count={overdueInView.length}
+            context={reminderContext}
+          />
+        </div>
+      ) : null}
+
       {/* ── CRITICAL OVERDUE ALERTS (desktop only — mobile sees Collect Revenue) ── */}
       {criticalOverdue.length > 0 && (
         <div className="hidden lg:block rounded-xl border border-red-300/40 bg-red-500/5 p-4">
@@ -1030,6 +1109,9 @@ export default async function InvoicesPage({
                     <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[12px] font-bold text-red-700">
                       {inv.daysOverdue}d overdue
                     </span>
+                    {canManageInvoicePayments ? (
+                      <InvoiceOverdueReminderButton invoiceId={inv.id} context={reminderContext} compact />
+                    ) : null}
                   </div>
                 </div>
               );
@@ -1267,8 +1349,12 @@ export default async function InvoicesPage({
                   </a>
 
                   {/* ── Action strip ── */}
-                  {hasActions ? (
-                    <div className="flex items-center justify-end border-t border-[var(--line)]/60 px-4 pb-2.5 pt-2">
+                  {hasActions || (isOverdue && canManageInvoicePayments) ? (
+                    <div className="flex items-center justify-end gap-2 border-t border-[var(--line)]/60 px-4 pb-2.5 pt-2">
+                      {isOverdue && canManageInvoicePayments ? (
+                        <InvoiceOverdueReminderButton invoiceId={inv.id} context={reminderContext} compact />
+                      ) : null}
+                      {hasActions ? (
                       <RowActionsMenu label={`Invoice actions for ${inv.invoiceNumber}`}>
                         <div className="py-1 text-left">
                           {isRepair && inv.job ? (
@@ -1312,6 +1398,7 @@ export default async function InvoicesPage({
                           ) : null}
                         </div>
                       </RowActionsMenu>
+                      ) : null}
                     </div>
                   ) : null}
 
@@ -1492,6 +1579,9 @@ export default async function InvoicesPage({
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1.5">
+                      {isOverdue && canManageInvoicePayments ? (
+                        <InvoiceOverdueReminderButton invoiceId={inv.id} context={reminderContext} compact />
+                      ) : null}
                       {(isRepair && inv.job) || inv.payments[0]?.id || inv.deliveryNotes[0]?.id || canManageInvoicePayments || "ADMIN" === user.role ? (
                         <RowActionsMenu label={`Invoice actions for ${inv.invoiceNumber}`}>
                           <div className="py-1 text-left">
