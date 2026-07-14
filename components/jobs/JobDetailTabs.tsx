@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
+import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
@@ -15,6 +16,7 @@ import { resolveTechCost } from "@/lib/billing";
 import { formatEATDateTime } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import { can } from "@/lib/permissions";
 
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "timeline", "photos", "messages"] as const;
@@ -544,7 +546,7 @@ type Props = {
   };
 };
 
-export function JobDetailTabs({ role, permissions = [], job, technicians, deviceHistory = [], returnTo = "/jobs", returnLabel = "All jobs", initialTab }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", returnLabel = "All jobs", initialTab }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -565,6 +567,7 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
   const [confirmClose, setConfirmClose] = useState(false);
+  const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [showPayoutForm, setShowPayoutForm] = useState(false);
 
@@ -588,6 +591,29 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
   const canAssignJobs = can.assignJobs(permissionUser);
   const canUpdateClientCommunication = can.approveWork(permissionUser);
   const isIntake = role === "FRONT_DESK";
+
+  function handleStatusUpdateResult(
+    res: { error?: string; statusChangedTo?: JobStatus },
+    explicitNextStatus?: JobStatus,
+  ) {
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success("Status updated");
+    setSavedSection("status");
+    const changedTo = res.statusChangedTo ?? explicitNextStatus;
+    if (
+      shouldOpenJobCompletionFlow({
+        statusChangedTo: changedTo,
+        canManageFinancials,
+        clientBill: job.clientBill,
+      })
+    ) {
+      setCompletionFlowOpen(true);
+    }
+    router.refresh();
+  }
 
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
@@ -923,13 +949,11 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
         {!isTerminal && statusActions.length > 0 ? (
           <form action={(fd) => {
             fd.set("jobId", job.id);
-            fd.set("status", statusActions[0]);
+            fd.set("nextStatus", statusActions[0]);
             fd.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
               const res = await updateJobAction(fd);
-              if (res.error) { toast.error(res.error); return; }
-              toast.success("Status updated");
-              router.refresh();
+              handleStatusUpdateResult(res, statusActions[0]);
             });
           }}>
             <button
@@ -2337,14 +2361,12 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
+              const nextStatus = formData.get("nextStatus");
               const res = await updateJobAction(formData);
-              if (res.error) {
-                toast.error(res.error);
-                return;
-              }
-              toast.success("Status updated");
-              setSavedSection("status");
-              router.refresh();
+              handleStatusUpdateResult(
+                res,
+                typeof nextStatus === "string" ? (nextStatus as JobStatus) : undefined,
+              );
             });
           }}
           className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0 mb-24 lg:mb-0`}
@@ -2487,6 +2509,20 @@ export function JobDetailTabs({ role, permissions = [], job, technicians, device
           </div>
         </div>
       </div>
+
+      <JobCompletionFlowModal
+        open={completionFlowOpen}
+        onClose={() => setCompletionFlowOpen(false)}
+        jobId={job.id}
+        jobNumber={job.jobNumber}
+        clientName={job.client?.fullName}
+        clientPhone={job.client?.phone}
+        clientBill={clientBillValue}
+        balanceDue={clientBalanceDue}
+        baseCurrency={orgBaseCurrency}
+        initialInvoiceNumber={job.invoiceNumber}
+        onOpenFinancials={() => setActive("financials")}
+      />
     </div>
   );
 }

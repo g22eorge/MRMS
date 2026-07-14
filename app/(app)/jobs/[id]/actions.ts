@@ -684,9 +684,16 @@ export async function updateJobAction(formData: FormData) {
           },
         });
 
+  const statusChangedTo =
+    payload.nextStatus && payload.nextStatus !== existing.status ? payload.nextStatus : undefined;
+
   if (!job) {
     console.error("[updateJobAction] job fetch after update returned null — notifications skipped", { jobId: existing.id });
-    return { success: true, warn: "Job updated but post-update fetch failed — notifications may not have fired." };
+    return {
+      success: true,
+      warn: "Job updated but post-update fetch failed — notifications may not have fired.",
+      statusChangedTo,
+    };
   }
 
   // Notifications must compare against the pre-update snapshot.
@@ -722,7 +729,10 @@ export async function updateJobAction(formData: FormData) {
   revalidatePath("/technicians");
   revalidatePath("/dashboard");
 
-  return { success: true };
+  const resolvedStatusChangedTo =
+    existing.status !== job.status ? job.status : statusChangedTo;
+
+  return { success: true, statusChangedTo: resolvedStatusChangedTo };
 }
 
 export async function recordClientPaymentAction(formData: FormData) {
@@ -1297,6 +1307,27 @@ export async function sendQuotationViaWhatsAppAction(
     auditAction: "QUOTATION_SENT_WHATSAPP",
     auditDetail: { quotationNumber: result.quotationNumber },
   });
+}
+
+export async function issueJobInvoiceAction(
+  jobId: string,
+): Promise<{ success: true; invoiceNumber: string } | { success: false; error: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS"].includes(user.role) && !can.approveInvoices({ role: user.role, permissions: user.permissions })) {
+    return { success: false, error: "Not authorised" };
+  }
+
+  const result = await generateInvoiceBuffer(jobId, user.name, user.role, user.id, orgId, {
+    persistInvoiceRecord: true,
+  });
+  if (!result.ok) return { success: false, error: result.error };
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/documents/invoices");
+  revalidatePath("/dashboard");
+
+  return { success: true, invoiceNumber: result.invoiceNumber };
 }
 
 export async function sendInvoiceViaWhatsAppAction(
