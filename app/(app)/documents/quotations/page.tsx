@@ -23,8 +23,24 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { ensureInvoiceFromQuotation, ensureQuotationFromJob } from "@/lib/commercial/document-workflow";
 import { sendQuotationViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { enqueueEmailMessage } from "@/lib/notifications/whatsapp-outbox";
+import {
+  ExpireStaleDraftsButton,
+  QuoteFollowUpBulkButton,
+  QuoteFollowUpButton,
+} from "@/components/documents/QuotationFollowUpForms";
+import { shouldExpireQuotationDraft } from "@/lib/commercial/quote-followups";
 
-type SearchParams = { q?: string; approval?: string; period?: string };
+type SearchParams = {
+  q?: string;
+  approval?: string;
+  period?: string;
+  followupSent?: string;
+  followupBulk?: string;
+  followupSkipped?: string;
+  followupFailed?: string;
+  followupError?: string;
+  expiredDrafts?: string;
+};
 
 export default async function QuotationsPage({
   searchParams,
@@ -37,7 +53,14 @@ export default async function QuotationsPage({
   }
   await requireModule(OrgModule.INVOICING);
 
-  const { q, approval: approvalFilter, period: periodFilter = "all" } = await searchParams;
+  const params = await searchParams;
+  const { q, approval: approvalFilter, period: periodFilter = "all" } = params;
+  const followupSentParam = params.followupSent ?? "";
+  const followupBulkParam = params.followupBulk ?? "";
+  const followupSkippedParam = params.followupSkipped ?? "";
+  const followupFailedParam = params.followupFailed ?? "";
+  const followupErrorParam = params.followupError ?? "";
+  const expiredDraftsParam = params.expiredDrafts ?? "";
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -289,7 +312,7 @@ export default async function QuotationsPage({
         clientApproved: true,
         approvalDate: true,
         client: { select: { fullName: true, phone: true, email: true } },
-        quotations: { select: { id: true, quoteNumber: true, status: true, validUntil: true, notes: true, convertedToInvoiceId: true }, orderBy: { createdAt: "desc" }, take: 1 },
+        quotations: { select: { id: true, quoteNumber: true, status: true, validUntil: true, notes: true, convertedToInvoiceId: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
       },
     }),
     prisma.quotation.findMany({
@@ -345,7 +368,43 @@ export default async function QuotationsPage({
     (j) => j.status === "AWAITING_APPROVAL" && j.clientApproved === null,
   ).length;
   const standalonePendingCount = standaloneQuotations.filter((quotation) => ["DRAFT", "SENT"].includes(quotation.status)).length;
+  const standaloneSentCount = standaloneQuotations.filter((quotation) => quotation.status === "SENT").length;
+  const followUpAwaitingCount = pendingCount + standaloneSentCount;
+  const staleDraftCount =
+    standaloneQuotations.filter(
+      (quotation) =>
+        quotation.status === "DRAFT" &&
+        shouldExpireQuotationDraft({
+          status: quotation.status,
+          createdAt: quotation.createdAt,
+          validUntil: quotation.validUntil,
+        }),
+    ).length +
+    jobs.filter((job) => {
+      const draft = job.quotations[0];
+      return (
+        draft?.status === "DRAFT" &&
+        shouldExpireQuotationDraft({
+          status: draft.status,
+          createdAt: draft.createdAt,
+          validUntil: draft.validUntil,
+        })
+      );
+    }).length;
   const totalQuoteCount = jobs.length + standaloneQuotations.length;
+
+  const canSendQuoteFollowUps =
+    ["ADMIN", "OPS"].includes(user.role) ||
+    can.createQuotations(user) ||
+    can.approveQuotations(user);
+  const canExpireStaleDrafts = can.createQuotations(user) || ["ADMIN", "OPS"].includes(user.role);
+
+  const followUpReturnQuery = new URLSearchParams();
+  if (q) followUpReturnQuery.set("q", q);
+  if (approvalFilter) followUpReturnQuery.set("approval", approvalFilter);
+  if (periodFilter && periodFilter !== "all") followUpReturnQuery.set("period", periodFilter);
+  const followUpReturnTo = `/documents/quotations${followUpReturnQuery.toString() ? `?${followUpReturnQuery.toString()}` : ""}`;
+  const followUpContext = { returnTo: followUpReturnTo };
 
   // Period filter applied client-side (jobs are already fetched)
   const periodFilteredJobs = jobs.filter((j) => {
@@ -365,6 +424,42 @@ export default async function QuotationsPage({
 
   return (
     <section className="space-y-4">
+
+      {followupSentParam === "1" ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            Quote follow-up queued via outbox.
+          </p>
+        </div>
+      ) : null}
+
+      {followupBulkParam ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            Follow-ups queued for {followupBulkParam} quote{Number(followupBulkParam) === 1 ? "" : "s"}.
+            {followupSkippedParam ? ` Skipped ${followupSkippedParam}.` : ""}
+            {followupFailedParam && Number(followupFailedParam) > 0 ? ` Failed ${followupFailedParam}.` : ""}
+          </p>
+        </div>
+      ) : null}
+
+      {expiredDraftsParam ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            Expired {expiredDraftsParam} stale draft quotation{Number(expiredDraftsParam) === 1 ? "" : "s"}.
+          </p>
+        </div>
+      ) : null}
+
+      {followupErrorParam ? (
+        <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
+            {followupErrorParam === "forbidden"
+              ? "You do not have permission to send quote follow-ups or expire drafts."
+              : decodeURIComponent(followupErrorParam)}
+          </p>
+        </div>
+      ) : null}
 
       {/* ── Mobile quick-gen explainer ── */}
       <div className="sm:hidden rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/6 px-4 py-3">
@@ -398,11 +493,26 @@ export default async function QuotationsPage({
               {pendingCount + standalonePendingCount} awaiting client
             </span>
           )}
+          {canSendQuoteFollowUps && followUpAwaitingCount > 0 ? (
+            <QuoteFollowUpBulkButton count={followUpAwaitingCount} context={followUpContext} />
+          ) : null}
         </div>
         <Link href="/sales/quotations/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
           + New Quote
         </Link>
       </div>
+
+      {canExpireStaleDrafts && staleDraftCount > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3">
+          <div>
+            <p className="text-[12px] font-black uppercase tracking-[0.16em] text-amber-600">Stale drafts</p>
+            <p className="text-[13px] text-[var(--ink-muted)]">
+              {staleDraftCount} draft quotation{staleDraftCount === 1 ? "" : "s"} past the expiry policy
+            </p>
+          </div>
+          <ExpireStaleDraftsButton count={staleDraftCount} context={followUpContext} />
+        </div>
+      ) : null}
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -525,6 +635,9 @@ export default async function QuotationsPage({
                       <td className="px-3 py-2.5 text-right text-xs text-[var(--ink-muted)]">{quotation._count.items}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex justify-end gap-1.5">
+                          {canSendQuoteFollowUps && quotation.status === "SENT" ? (
+                            <QuoteFollowUpButton quotationId={quotation.id} context={followUpContext} compact />
+                          ) : null}
                           <a href={`/api/quotations/${quotation.id}`} target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</a>
                           <Link href={`/sales/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5 text-xs font-semibold">Open</Link>
                         </div>
@@ -734,6 +847,11 @@ export default async function QuotationsPage({
                     {/* Actions */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
+                        {canSendQuoteFollowUps &&
+                        job.status === "AWAITING_APPROVAL" &&
+                        job.clientApproved === null ? (
+                          <QuoteFollowUpButton jobId={job.id} context={followUpContext} compact />
+                        ) : null}
                         {canGenerate ? (
                           <>
                             {/* Primary: PDF */}
