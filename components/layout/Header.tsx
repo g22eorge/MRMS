@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/shared/NotificationBell";
+import { CommandPaletteTrigger } from "@/components/command-palette/CommandPaletteProvider";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
@@ -128,8 +129,10 @@ export function Header({
             </Link>
           )}
 
-          {/* Spacer */}
-          <div className="flex-1" />
+          {/* Spacer on mobile; search trigger on desktop */}
+          <div className="flex-1 md:flex md:justify-center">
+            <CommandPaletteTrigger />
+          </div>
 
           {/* ── Action pill group ─────────────────────────────────────── */}
           <div className="flex items-center gap-1">
