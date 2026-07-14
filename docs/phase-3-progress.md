@@ -28,7 +28,7 @@
 
 **Doc:** [`fixes/phase-3-2-document-kit.md`](./fixes/phase-3-2-document-kit.md)
 
-### 3.3 — Line-item form primitives
+### 3.3 — Line-item form primitives (00253a6)
 
 **Change:** Added `lib/forms/line-items.ts`, `hooks/useLineItemsState.ts`, and `components/forms/*`; migrated six create forms off local `keyCounter`/`nextId` patterns.
 
