@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBillingEventsByOrg } from "@/lib/billing-events";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { formatEATMediumDate } from "@/lib/date-eat";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import {
   setBillingStatusAction,
@@ -88,8 +89,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     .filter((e) => e.status === "successful" && e.event === "charge.completed")
     .reduce((s, e) => s + e.amount, 0);
 
-  const fmt = (d: Date | null) =>
-    d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const fmt = (d: Date | null) => (d ? formatEATMediumDate(d) : "—");
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { CreateReceiptDialog } from "./CreateReceiptDialog";
 
@@ -495,7 +496,7 @@ export default async function ReceiptsPage({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-                    {p.receivedAt.toLocaleDateString()} · {p.receivedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {formatEATDate(p.receivedAt)} · {formatEATTime(p.receivedAt)}
                   </p>
                   <p className="mt-1 mono text-base font-black text-[var(--ink)]">{formatMoney(p.amount, currency)}</p>
                 </div>
@@ -618,7 +619,7 @@ export default async function ReceiptsPage({
 
               return (
                 <tr key={p.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                  <td className="px-3 py-2.5 text-[var(--ink-muted)]">{p.receivedAt.toLocaleDateString()}<br /><span className="text-[12px]">{p.receivedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></td>
+                  <td className="px-3 py-2.5 text-[var(--ink-muted)]">{formatEATDate(p.receivedAt)}<br /><span className="text-[12px]">{formatEATTime(p.receivedAt)}</span></td>
                   <td className="px-3 py-2.5 mono font-bold text-[var(--ink)]">{formatMoney(p.amount, currency)}</td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${methodBadge(p.method)}`}>

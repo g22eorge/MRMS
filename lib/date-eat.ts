@@ -29,3 +29,37 @@ export function formatEATMonthLabel(year: number, month: number) {
     timeZone: EAT_TIMEZONE,
   });
 }
+
+/** List/table date: "15 Jan" (no year). */
+export function formatEATShortDate(value: Date | string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(EAT_LOCALE, {
+    day: "numeric",
+    month: "short",
+    timeZone: EAT_TIMEZONE,
+  });
+}
+
+/** List/table date with year: "15 Jan 2025". */
+export function formatEATMediumDate(value: Date | string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(EAT_LOCALE, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: EAT_TIMEZONE,
+  });
+}
+
+/** Time only in EAT: "14:30". */
+export function formatEATTime(value: Date | string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleTimeString(EAT_LOCALE, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: EAT_TIMEZONE,
+  });
+}

@@ -16,6 +16,7 @@ import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
 import { CreateCreditNoteDialog } from "./CreateCreditNoteDialog";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { formatEATMediumDate } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -323,7 +324,7 @@ export default async function CreditNotesPage({
   const currency = org.baseCurrency;
 
   const fmt = (d: Date | string | null) =>
-    d ? new Date(d).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "—";
+    d ? formatEATMediumDate(d) : "—";
 
   return (
     <div className="space-y-4">

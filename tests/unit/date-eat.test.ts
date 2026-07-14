@@ -3,7 +3,10 @@ import {
   formatEATDate,
   formatEATDateTime,
   formatEATDocDate,
+  formatEATMediumDate,
   formatEATMonthLabel,
+  formatEATShortDate,
+  formatEATTime,
 } from "../../lib/date-eat";
 
 // All assertions use EAT (UTC+3 / Africa/Nairobi).
@@ -82,5 +85,28 @@ describe("formatEATMonthLabel()", () => {
     for (let m = 1; m <= 12; m++) {
       expect(() => formatEATMonthLabel(2025, m)).not.toThrow();
     }
+  });
+});
+
+describe("formatEATShortDate()", () => {
+  it("includes day and short month", () => {
+    const result = formatEATShortDate(FIXED);
+    expect(result).toContain("15");
+    expect(result).toContain("Jan");
+  });
+});
+
+describe("formatEATMediumDate()", () => {
+  it("includes day, month, and year", () => {
+    const result = formatEATMediumDate(FIXED);
+    expect(result).toContain("15");
+    expect(result).toContain("Jan");
+    expect(result).toContain("2025");
+  });
+});
+
+describe("formatEATTime()", () => {
+  it("returns a time string with colon separator", () => {
+    expect(formatEATTime(FIXED)).toMatch(/\d:\d/);
   });
 });

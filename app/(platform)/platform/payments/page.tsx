@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getRecentBillingEvents, getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { formatEATMediumDate } from "@/lib/date-eat";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
 
@@ -19,8 +20,7 @@ export default async function PaymentsPage() {
     (e) => e.status === "successful" && e.event === "charge.completed",
   ).length;
 
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
+  const fmt = (d: Date) => formatEATMediumDate(d);
 
   return (
     <div className="space-y-6">

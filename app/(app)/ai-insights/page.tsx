@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { BusinessCopilot } from "@/components/ai-insights/BusinessCopilot";
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
+import { daysBetween, monthRangeFromDate, previousMonthRange } from "@/lib/date-ranges";
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -22,21 +23,6 @@ const OPEN_JOB_STATUSES = [
   "IN_REPAIR",
   "READY_FOR_PICKUP",
 ] as const;
-
-function monthRange(date: Date) {
-  return {
-    start: new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0),
-    end: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999),
-  };
-}
-
-function previousMonthRange(date: Date) {
-  return monthRange(new Date(date.getFullYear(), date.getMonth() - 1, 1));
-}
-
-function daysBetween(start: Date, end: Date) {
-  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
-}
 
 function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
@@ -97,7 +83,7 @@ export default async function AiInsightsPage() {
 
   const db = orgDb(user.orgId);
   const now = new Date();
-  const current = monthRange(now);
+  const current = monthRangeFromDate(now);
   const previous = previousMonthRange(now);
   const currency = getAppCurrency();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;

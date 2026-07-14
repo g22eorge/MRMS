@@ -25,6 +25,7 @@ import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuAc
 import { createReceiptForPayment, nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
 import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { CreateStandaloneInvoiceForm } from "./CreateStandaloneInvoiceForm";
 
@@ -1283,7 +1284,7 @@ export default async function InvoicesPage({
                       </div>
                       <div className="mt-0.5 flex items-center justify-between gap-2">
                         <p className="truncate text-[13px] text-[var(--ink-muted)]">
-                          {inv.invoiceNumber} · {inv.issuedAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                          {inv.invoiceNumber} · {formatEATShortDate(inv.issuedAt)}
                         </p>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${statusCls}`}>
                           {statusLabel}
@@ -1443,8 +1444,8 @@ export default async function InvoicesPage({
                   <td className="px-3 py-2.5">
                     <p className="mono text-sm font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
                     <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-                      {inv.issuedAt.toLocaleDateString()}
-                      {inv.dueDate ? ` · due ${inv.dueDate.toLocaleDateString()}` : ""}
+                      {formatEATDate(inv.issuedAt)}
+                      {inv.dueDate ? ` · due ${formatEATDate(inv.dueDate)}` : ""}
                     </p>
                     <span
                       className={`mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[12px] font-semibold ${typeBadgeCls[inv.invoiceType] ?? typeBadgeCls.OTHER}`}

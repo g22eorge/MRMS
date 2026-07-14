@@ -9,6 +9,7 @@ import { MobileActivityFeed } from "@/components/reports/MobileActivityFeed";
 import { getClientBill, getExternalTechBill, resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
+import { monthLabel, monthRange, monthSequence, yearRange } from "@/lib/date-ranges";
 import { loadBilledTotals, loadCashCollectionsByChannel, loadReceivablesTotal } from "@/lib/finance/reconciliation";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -30,33 +31,6 @@ function parseMonth(monthParam?: string) {
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   }
   return { year: y, month: m };
-}
-
-function monthRange(year: number, month: number) {
-  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
-  const end = new Date(year, month, 0, 23, 59, 59, 999);
-  return { start, end };
-}
-
-function yearRange(year: number) {
-  const start = new Date(year, 0, 1, 0, 0, 0, 0);
-  const end = new Date(year, 11, 31, 23, 59, 59, 999);
-  return { start, end };
-}
-
-function monthLabel(year: number, month: number) {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function monthSequence(endYear: number, endMonth: number, count: number) {
-  return Array.from({ length: count }, (_, idx) => {
-    const d = new Date(endYear, endMonth - 1 - (count - 1 - idx), 1);
-    return {
-      key: monthLabel(d.getFullYear(), d.getMonth() + 1),
-      start: new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0),
-      end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
-    };
-  });
 }
 
 function monthOptions(count: number) {

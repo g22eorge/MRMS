@@ -6,6 +6,7 @@ import { ensureDefaultAiKnowledge, formatKnowledgeContext, retrieveAiKnowledge }
 import { getAiSettings, logAiPrompt, redactPii } from "@/lib/ai-governance";
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
+import { daysBetween, monthRangeFromDate, previousMonthRange } from "@/lib/date-ranges";
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -44,21 +45,6 @@ Rules:
   when there are real issues. If everything is healthy, say so in one sentence.
 - If data is insufficient, name exactly which Duuka ProMax page has the missing information.`;
 
-function monthRange(date: Date) {
-  return {
-    start: new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0),
-    end: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999),
-  };
-}
-
-function previousMonthRange(date: Date) {
-  return monthRange(new Date(date.getFullYear(), date.getMonth() - 1, 1));
-}
-
-function daysBetween(start: Date, end: Date) {
-  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
-}
-
 function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
 }
@@ -81,7 +67,7 @@ function changePhrase(current: number, previous: number) {
 async function buildBusinessDataPack(orgId: string) {
   const db = orgDb(orgId);
   const now = new Date();
-  const current = monthRange(now);
+  const current = monthRangeFromDate(now);
   const previous = previousMonthRange(now);
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 

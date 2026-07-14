@@ -14,6 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
@@ -504,7 +505,7 @@ export default async function DeliveryNotesPage({
                   ) : "-"}
                 </td>
                 <td className="hidden px-3 py-2.5 text-[var(--ink-muted)] lg:table-cell">{n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? "-"}</td>
-                <td className="px-3 py-2.5 text-[var(--ink-muted)]">{n.deliveredAt.toLocaleDateString()}<br /><span className="text-[12px]">{n.deliveredAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></td>
+                <td className="px-3 py-2.5 text-[var(--ink-muted)]">{formatEATDate(n.deliveredAt)}<br /><span className="text-[12px]">{formatEATTime(n.deliveredAt)}</span></td>
                 <td className="hidden px-3 py-2.5 lg:table-cell">
                   {n.deliveryMethod ? (
                     <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">

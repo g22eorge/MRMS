@@ -14,6 +14,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { formatEATDate } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -563,7 +564,7 @@ export default async function RefundsPage({
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
                       <span className="font-medium text-[var(--ink)]">{clientNameM}</span>
                       <span className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(r.amount, refundCurrencyM)}</span>
-                      <span className="text-[var(--ink-muted)]">{r.refundedAt.toLocaleDateString()}</span>
+                      <span className="text-[var(--ink-muted)]">{formatEATDate(r.refundedAt)}</span>
                     </div>
                     {(r.reference || r.note) && (
                       <div className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
@@ -671,7 +672,7 @@ export default async function RefundsPage({
                   return (
                     <tr key={r.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
                       <td className="whitespace-nowrap px-4 py-3 text-[var(--ink-muted)]">
-                        {r.refundedAt.toLocaleDateString()}
+                        {formatEATDate(r.refundedAt)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-0.5">
