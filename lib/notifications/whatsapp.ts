@@ -463,7 +463,7 @@ export async function sendWhatsAppDocument(
   filename: string,
   caption?: string,
   cfg?: WhatsAppConfig,
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
   const config = cfg ?? getConfig();
   if (!config) return { success: false, error: "WhatsApp not configured" };
 
@@ -488,8 +488,20 @@ export async function sendWhatsAppDocument(
       },
     );
     if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `Document send failed: ${res.status} ${text.slice(0, 200)}` };
+      const errorText = await res.text();
+      let metaCode: string | undefined;
+      try {
+        const parsed = JSON.parse(errorText);
+        const code = parsed?.error?.code;
+        if (typeof code === "number" || typeof code === "string") metaCode = String(code);
+      } catch {
+        // ignore
+      }
+      return {
+        success: false,
+        errorCode: metaCode,
+        error: `Document send failed: ${res.status} ${errorText.slice(0, 200)}`,
+      };
     }
     const data = await res.json();
     const messageId = data.messages?.[0]?.id;
