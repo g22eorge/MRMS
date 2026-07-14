@@ -1259,7 +1259,7 @@ export default async function DashboardPage({
             <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
                 <p className="text-sm font-semibold text-[var(--ink)]">
-                  Revenue <span className="font-normal text-[var(--ink-muted)]">· {monthLabel(today.getFullYear(), today.getMonth() + 1)}</span>
+                  Cash received <span className="font-normal text-[var(--ink-muted)]">· {monthLabel(today.getFullYear(), today.getMonth() + 1)}</span>
                 </p>
                 <Link href="/reports" className="text-[12px] font-semibold text-[var(--accent)]">Reports →</Link>
               </div>
@@ -1292,7 +1292,7 @@ export default async function DashboardPage({
               </div>
               {/* Total */}
               <Link href="/reports" className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--accent)]/6 px-4 py-2.5 transition hover:bg-[var(--accent)]/10">
-                <p className="text-[12px] font-semibold text-[var(--ink)]">Total this month</p>
+                <p className="text-[12px] font-semibold text-[var(--ink)]">Cash received this month</p>
                 <p className="text-[16px] font-black tabular-nums text-[var(--accent)]">{formatMoneyCompact(totalMtd, currency)}</p>
               </Link>
             </section>

@@ -3,30 +3,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest } from "next/server";
 
 import { ensureDefaultAiKnowledge, formatKnowledgeContext, retrieveAiKnowledge } from "@/lib/ai-knowledge";
+import { buildBusinessDataPack, changePhrase, type BusinessDataPack } from "@/lib/ai/business-metrics";
 import { getAiSettings, logAiPrompt, redactPii } from "@/lib/ai-governance";
-import { getClientBill, resolveTechCost } from "@/lib/billing";
-import { getAppCurrency } from "@/lib/currency";
-import { daysBetween, monthRangeFromDate, previousMonthRange } from "@/lib/date-ranges";
 import { can } from "@/lib/permissions";
-import { orgDb } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCurrentUserRoleOptional } from "@/lib/session";
 
 export const runtime = "nodejs";
-
-const OPEN_JOB_STATUSES = [
-  "RECEIVED",
-  "DIAGNOSING",
-  "REFERRED",
-  "PENDING_EXTERNAL_ASSIGNMENT",
-  "ASSIGNED_ONE_TIME_EXTERNAL",
-  "IN_EXTERNAL_REPAIR",
-  "WAITING_FOR_PARTS",
-  "RETURNED_FROM_EXTERNAL",
-  "AWAITING_APPROVAL",
-  "IN_REPAIR",
-  "READY_FOR_PICKUP",
-] as const;
 
 const SYSTEM_PROMPT = `You are the Duuka ProMax Business Copilot for owners and managers.
 
@@ -45,185 +28,11 @@ Rules:
   when there are real issues. If everything is healthy, say so in one sentence.
 - If data is insufficient, name exactly which Duuka ProMax page has the missing information.`;
 
-function sum(values: number[]) {
-  return values.reduce((total, value) => total + value, 0);
-}
-
-function pctChange(current: number, previous: number) {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return ((current - previous) / previous) * 100;
-}
-
 function formatAmount(value: number, currency: string) {
   return `${currency} ${Math.round(value).toLocaleString()}`;
 }
 
-function changePhrase(current: number, previous: number) {
-  const change = pctChange(current, previous);
-  if (change === 0) return "flat versus last month";
-  return `${change > 0 ? "up" : "down"} ${Math.abs(change).toFixed(1)}% versus last month`;
-}
-
-async function buildBusinessDataPack(orgId: string) {
-  const db = orgDb(orgId);
-  const now = new Date();
-  const current = monthRangeFromDate(now);
-  const previous = previousMonthRange(now);
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-  const [
-    jobsThisMonth,
-    jobsPrevMonth,
-    completedThisMonth,
-    completedPrevMonth,
-    openJobs,
-    jobsByStatus,
-    paidSalesThisMonth,
-    paidSalesPrevMonth,
-    paidInvoicesThisMonth,
-    paidInvoicesPrevMonth,
-    openInvoices,
-    expensesThisMonth,
-    expensesPrevMonth,
-    parts,
-    openPurchaseOrders,
-    supplierBills,
-    leadsByStatus,
-    salesTargets,
-  ] = await Promise.all([
-    db.job.count({ where: { receivedAt: { gte: current.start, lte: current.end } } }),
-    db.job.count({ where: { receivedAt: { gte: previous.start, lte: previous.end } } }),
-    db.job.findMany({
-      where: { status: "COMPLETED", completedAt: { gte: current.start, lte: current.end } },
-      select: { clientBill: true, externalTechBill: true, externalTechFee: true, completedAt: true, receivedAt: true, repairPath: true },
-    }),
-    db.job.findMany({
-      where: { status: "COMPLETED", completedAt: { gte: previous.start, lte: previous.end } },
-      select: { clientBill: true, externalTechBill: true, externalTechFee: true },
-    }),
-    db.job.findMany({
-      where: { status: { in: [...OPEN_JOB_STATUSES] } },
-      select: { status: true, receivedAt: true, updatedAt: true, repairPath: true },
-      orderBy: { receivedAt: "asc" },
-      take: 500,
-    }),
-    db.job.groupBy({ by: ["status"], _count: { status: true } }),
-    db.sale.findMany({ where: { status: "PAID", paidAt: { gte: current.start, lte: current.end } }, select: { totalAmount: true } }),
-    db.sale.findMany({ where: { status: "PAID", paidAt: { gte: previous.start, lte: previous.end } }, select: { totalAmount: true } }),
-    db.invoice.findMany({ where: { status: "PAID", paidAt: { gte: current.start, lte: current.end } }, select: { totalAmount: true } }),
-    db.invoice.findMany({ where: { status: "PAID", paidAt: { gte: previous.start, lte: previous.end } }, select: { totalAmount: true } }),
-    db.invoice.findMany({
-      where: { status: { in: ["DRAFT", "ISSUED"] } },
-      select: { totalAmount: true, paidAmount: true, dueDate: true, issuedAt: true },
-      orderBy: { issuedAt: "asc" },
-      take: 500,
-    }),
-    db.expense.aggregate({ where: { paidAt: { gte: current.start, lte: current.end } }, _sum: { amount: true } }),
-    db.expense.aggregate({ where: { paidAt: { gte: previous.start, lte: previous.end } }, _sum: { amount: true } }),
-    db.part.findMany({ where: { isActive: true }, select: { name: true, qtyOnHand: true, reorderLevel: true, unitCost: true } }),
-    db.purchaseOrder.count({ where: { status: { in: ["DRAFT", "ORDERED", "PARTIAL"] } } }),
-    db.supplierBill.findMany({
-      where: { status: { in: ["POSTED", "PART_PAID"] } },
-      select: { totalAmount: true, paidAmount: true, dueAt: true },
-      orderBy: { issuedAt: "asc" },
-      take: 500,
-    }),
-    db.lead.groupBy({ by: ["status"], _count: { status: true }, _sum: { estimatedValue: true } }),
-    db.salesTarget.aggregate({ where: { period: monthKey }, _sum: { targetRevenue: true, targetValue: true, actualValue: true } }),
-  ]);
-
-  const repairRevenue = sum(completedThisMonth.map((job) => getClientBill(job) ?? 0));
-  const repairRevenuePrev = sum(completedPrevMonth.map((job) => getClientBill(job) ?? 0));
-  const externalRepairCost = sum(completedThisMonth.map((job) => resolveTechCost(job.externalTechFee, job.externalTechBill)));
-  const salesRevenue = sum(paidSalesThisMonth.map((sale) => sale.totalAmount));
-  const salesRevenuePrev = sum(paidSalesPrevMonth.map((sale) => sale.totalAmount));
-  const invoiceRevenue = sum(paidInvoicesThisMonth.map((invoice) => invoice.totalAmount));
-  const invoiceRevenuePrev = sum(paidInvoicesPrevMonth.map((invoice) => invoice.totalAmount));
-  const totalRevenue = repairRevenue + salesRevenue + invoiceRevenue;
-  const totalRevenuePrev = repairRevenuePrev + salesRevenuePrev + invoiceRevenuePrev;
-  const expenses = expensesThisMonth._sum.amount ?? 0;
-  const expensesPrev = expensesPrevMonth._sum.amount ?? 0;
-  const lowStockParts = parts.filter((part) => part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel);
-  const inventoryValue = sum(parts.map((part) => part.qtyOnHand * (part.unitCost ?? 0)));
-  const overdueJobs = openJobs.filter((job) => daysBetween(job.receivedAt, now) >= 7);
-  const staleJobs = openJobs.filter((job) => daysBetween(job.updatedAt, now) >= 3);
-  const awaitingApproval = openJobs.filter((job) => job.status === "AWAITING_APPROVAL");
-  const waitingForParts = openJobs.filter((job) => job.status === "WAITING_FOR_PARTS");
-  const overdueInvoices = openInvoices.filter((invoice) => invoice.dueDate && invoice.dueDate < now);
-  const receivables = sum(openInvoices.map((invoice) => Math.max(0, invoice.totalAmount - invoice.paidAmount)));
-  const overdueSupplierBills = supplierBills.filter((bill) => bill.dueAt && bill.dueAt < now);
-  const payables = sum(supplierBills.map((bill) => Math.max(0, bill.totalAmount - bill.paidAmount)));
-  const target = (salesTargets._sum.targetRevenue ?? 0) + (salesTargets._sum.targetValue ?? 0);
-  const targetActual = salesTargets._sum.actualValue ?? totalRevenue;
-
-  return {
-    generatedAt: now.toISOString(),
-    period: monthKey,
-    currency: getAppCurrency(),
-    repairs: {
-      jobsThisMonth,
-      jobsPrevMonth,
-      jobVolumeChangePct: pctChange(jobsThisMonth, jobsPrevMonth),
-      completedThisMonth: completedThisMonth.length,
-      completedPrevMonth: completedPrevMonth.length,
-      openJobs: openJobs.length,
-      overdueJobs: overdueJobs.length,
-      staleJobs: staleJobs.length,
-      awaitingApproval: awaitingApproval.length,
-      waitingForParts: waitingForParts.length,
-      averageTurnaroundDays: completedThisMonth.length
-        ? sum(completedThisMonth.map((job) => daysBetween(job.receivedAt, job.completedAt ?? now))) / completedThisMonth.length
-        : 0,
-      statusDistribution: jobsByStatus.map((item) => ({ status: item.status, count: item._count.status })),
-    },
-    sales: {
-      posRevenue: salesRevenue,
-      posRevenuePrev: salesRevenuePrev,
-      paidInvoiceRevenue: invoiceRevenue,
-      paidInvoiceRevenuePrev: invoiceRevenuePrev,
-      openLeads: leadsByStatus.filter((lead) => !["WON", "LOST"].includes(lead.status)).reduce((count, lead) => count + lead._count.status, 0),
-      wonLeads: leadsByStatus.find((lead) => lead.status === "WON")?._count.status ?? 0,
-      pipelineValue: sum(leadsByStatus.map((lead) => lead._sum.estimatedValue ?? 0)),
-      leadDistribution: leadsByStatus.map((lead) => ({ status: lead.status, count: lead._count.status, estimatedValue: lead._sum.estimatedValue ?? 0 })),
-      target,
-      targetActual,
-      targetProgressPct: target > 0 ? (targetActual / target) * 100 : null,
-    },
-    finance: {
-      totalRevenue,
-      totalRevenuePrev,
-      totalRevenueChangePct: pctChange(totalRevenue, totalRevenuePrev),
-      repairRevenue,
-      repairRevenuePrev,
-      externalRepairCost,
-      expenses,
-      expensesPrev,
-      expenseChangePct: pctChange(expenses, expensesPrev),
-      cashMarginSignal: totalRevenue - externalRepairCost - expenses,
-      receivables,
-      overdueInvoices: overdueInvoices.length,
-      payables,
-      overdueSupplierBills: overdueSupplierBills.length,
-    },
-    inventory: {
-      activeParts: parts.length,
-      lowStockParts: lowStockParts.length,
-      inventoryValue,
-      openPurchaseOrders,
-      topLowStockParts: lowStockParts.slice(0, 10).map((part) => ({ name: part.name, qtyOnHand: part.qtyOnHand, reorderLevel: part.reorderLevel })),
-    },
-    riskSignals: {
-      revenueDown: totalRevenue < totalRevenuePrev,
-      negativeCashMargin: totalRevenue - externalRepairCost - expenses < 0,
-      hasOverdueJobs: overdueJobs.length > 0,
-      hasLowStock: lowStockParts.length > 0,
-      hasOverdueReceivables: overdueInvoices.length > 0,
-      hasOverduePayables: overdueSupplierBills.length > 0,
-    },
-  };
-}
-
-function riskList(data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
+function riskList(data: BusinessDataPack) {
   return [
     data.repairs.overdueJobs > 0
       ? `${data.repairs.overdueJobs} open repair job(s) are older than 7 days. These are likely client-experience and cash-conversion risks.`
@@ -246,8 +55,8 @@ function riskList(data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
     data.finance.overdueSupplierBills > 0
       ? `${data.finance.overdueSupplierBills} supplier bill(s) are overdue. Payables outstanding: ${formatAmount(data.finance.payables, data.currency)}.`
       : null,
-    data.finance.totalRevenue < data.finance.totalRevenuePrev
-      ? `Revenue is ${changePhrase(data.finance.totalRevenue, data.finance.totalRevenuePrev)}. Check repair completions, POS sales, paid invoices, and lead conversion.`
+    data.finance.cashReceived < data.finance.cashReceivedPrev
+      ? `Cash received is ${changePhrase(data.finance.cashReceived, data.finance.cashReceivedPrev)}. Check repair collections, POS sales, invoice payments, and lead conversion.`
       : null,
     data.finance.cashMarginSignal < 0
       ? `Cash margin signal is negative at ${formatAmount(data.finance.cashMarginSignal, data.currency)} after external repair costs and expenses.`
@@ -258,7 +67,7 @@ function riskList(data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
   ].filter((item): item is string => Boolean(item));
 }
 
-function actionList(data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
+function actionList(data: BusinessDataPack) {
   const actions = [
     data.repairs.overdueJobs > 0 || data.repairs.staleJobs > 0
       ? "Run a repair blocker review today: every overdue/stale job needs an owner, blocker, next action, and client update."
@@ -291,7 +100,7 @@ function actionList(data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
     : ["No severe risk signal is currently dominant. Keep monitoring daily job movement, collections, low stock, and expense discipline."];
 }
 
-function fallbackAnswer(question: string, data: Awaited<ReturnType<typeof buildBusinessDataPack>>) {
+function fallbackAnswer(question: string, data: BusinessDataPack) {
   const focus = question.toLowerCase();
   const risks = riskList(data);
   const actions = actionList(data);
@@ -350,7 +159,7 @@ function fallbackAnswer(question: string, data: Awaited<ReturnType<typeof buildB
   return lines.filter((l) => l !== undefined).join("\n\n");
 }
 
-async function askGemini(apiKey: string, question: string, dataPack: Awaited<ReturnType<typeof buildBusinessDataPack>>, knowledgeContext = "", configuredModel?: string | null) {
+async function askGemini(apiKey: string, question: string, dataPack: BusinessDataPack, knowledgeContext = "", configuredModel?: string | null) {
   const modelNames = [
     configuredModel,
     process.env.GEMINI_MODEL,

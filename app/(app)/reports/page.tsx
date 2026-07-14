@@ -721,9 +721,9 @@ export default async function ReportsPage({
         {/* 2×2 key metric tiles */}
         <div className="grid grid-cols-2 gap-2">
           {([
-            { label: "Revenue",   value: formatMoneyCompact(revenueSelected, currency),     tone: "text-emerald-600", bg: "bg-emerald-500/10" },
+            { label: "Cash received",   value: formatMoneyCompact(totalAllChannels, currency),     tone: "text-emerald-600", bg: "bg-emerald-500/10" },
             { label: "Completed", value: String(completedSelected.length),                   tone: "text-[var(--ink)]", bg: "bg-sky-500/10" },
-            { label: "Total Billed", value: formatMoneyCompact(totalBilledAllChannels, currency), tone: "text-[var(--accent)]", bg: "bg-[var(--accent)]/10" },
+            { label: "Repair value", value: formatMoneyCompact(revenueSelected, currency), tone: "text-[var(--accent)]", bg: "bg-[var(--accent)]/10" },
             { label: "Expenses",  value: formatMoneyCompact(expensesTotal, currency),        tone: expensesTotal > 0 ? "text-amber-600" : "text-[var(--ink-muted)]", bg: "bg-amber-500/10" },
           ] as { label: string; value: string; tone: string; bg: string }[]).map(({ label, value, tone, bg }) => (
             <div key={label} className={`rounded-2xl border border-[var(--line)] ${bg} px-4 py-3`}>
@@ -828,7 +828,7 @@ export default async function ReportsPage({
         <div className="grid grid-cols-3 divide-x divide-[var(--line)] lg:grid-cols-6">
           {/* Revenue + sparkline */}
           <div className="px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Revenue</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash received</p>
             <div className="mt-1 flex items-end justify-between gap-2">
               <p className="text-xl font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(totalAllChannels, currency)}</p>
               {sparklineMonths.some((m) => m.revenue > 0) && (
