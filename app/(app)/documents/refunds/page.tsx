@@ -13,8 +13,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
-
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
+import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +58,7 @@ export default async function RefundsPage({
     if (!sourceId || !["invoice", "sale", "creditNote"].includes(sourceType)) return;
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) return;
 
-    const method = PAYMENT_METHODS.includes(methodRaw as PaymentMethod)
-      ? (methodRaw as PaymentMethod)
-      : "CASH" as PaymentMethod;
+    const method = parsePaymentMethod(methodRaw, "CASH");
 
     let invoiceId: string | null = null;
     let saleId: string | null = null;
@@ -437,7 +434,7 @@ export default async function RefundsPage({
                 className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm"
               >
                 {PAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
+                  <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>
                 ))}
               </select>
             </div>
@@ -514,7 +511,7 @@ export default async function RefundsPage({
         >
           <option value="all">All Methods</option>
           {PAYMENT_METHODS.map((m) => (
-            <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
+            <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>
           ))}
         </select>
         <button

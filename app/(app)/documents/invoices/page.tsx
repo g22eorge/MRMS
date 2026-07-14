@@ -24,10 +24,10 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment, nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { CreateStandaloneInvoiceForm } from "./CreateStandaloneInvoiceForm";
 
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
@@ -263,9 +263,7 @@ export default async function InvoicesPage({
     const existingPaid = invoice.paidAmount ?? 0;
     if (existingPaid + amount > invoice.totalAmount) return;
 
-    const safeMethod: PaymentMethod = PAYMENT_METHODS.includes(method as PaymentMethod)
-      ? (method as PaymentMethod)
-      : ("OTHER" as PaymentMethod);
+    const safeMethod = parsePaymentMethod(method, "OTHER");
 
     await prisma.$transaction(async (tx) => {
       const payment = await tx.payment.create({

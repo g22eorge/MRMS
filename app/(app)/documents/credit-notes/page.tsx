@@ -15,8 +15,7 @@ import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
 import { CreateCreditNoteDialog } from "./CreateCreditNoteDialog";
-
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
+import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +86,7 @@ export default async function CreditNotesPage({
     const alreadyRefunded = cn.refunds.reduce((s, r) => s + r.amount, 0);
     if (alreadyRefunded + amountRaw > cn.totalAmount) return;
 
-    const method = PAYMENT_METHODS.includes(methodRaw as PaymentMethod) ? (methodRaw as PaymentMethod) : "CASH" as PaymentMethod;
+    const method = parsePaymentMethod(methodRaw, "CASH");
 
     await prisma.refund.create({
       data: {
@@ -487,7 +486,7 @@ export default async function CreditNotesPage({
                           <div>
                             <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Method</label>
                             <select name="method" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]">
-                              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.replace("_", " ")}</option>)}
+                              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                             </select>
                           </div>
                           <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]" />
@@ -613,7 +612,7 @@ export default async function CreditNotesPage({
                                 <div>
                                   <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Method</label>
                                   <select name="method" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]">
-                                    {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.replace("_", " ")}</option>)}
+                                    {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                                   </select>
                                 </div>
                                 <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]" />

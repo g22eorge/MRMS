@@ -11,8 +11,7 @@ import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
-
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
+import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 
 type SearchParams = {
   q?: string;
@@ -148,7 +147,7 @@ async function receiveInvoicePaymentAction(formData: FormData) {
   const reference = String(formData.get("reference") ?? "").trim();
 
   if (!invoiceId || !Number.isFinite(amountRaw) || amountRaw <= 0) return;
-  const method: PaymentMethod = PAYMENT_METHODS.includes(methodRaw as PaymentMethod) ? (methodRaw as PaymentMethod) : "OTHER";
+  const method = parsePaymentMethod(methodRaw, "OTHER");
 
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, orgId },
@@ -550,7 +549,7 @@ export default async function PayoutFollowupsPage({
                         <input type="hidden" name="invoiceId" value={inv.id} />
                         <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
                         <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
-                          {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
+                          {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                         </select>
                         <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
                       </form>
@@ -585,7 +584,7 @@ export default async function PayoutFollowupsPage({
                                 <input type="hidden" name="invoiceId" value={inv.id} />
                                 <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
                                 <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
-                                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
+                                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                                 </select>
                                 <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
                               </form>

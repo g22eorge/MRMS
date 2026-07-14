@@ -13,10 +13,9 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { CreateReceiptDialog } from "./CreateReceiptDialog";
-
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 export default async function ReceiptsPage({
   searchParams,
@@ -54,7 +53,7 @@ export default async function ReceiptsPage({
     const currency = normalizeCurrency(formData.get("currency"), baseCurrency);
     if (!sourceId || !["invoice", "sale"].includes(sourceType) || !Number.isFinite(amount) || amount <= 0) return null;
 
-    const method = PAYMENT_METHODS.includes(methodRaw as PaymentMethod) ? (methodRaw as PaymentMethod) : "OTHER" as PaymentMethod;
+    const method = parsePaymentMethod(methodRaw, "OTHER");
     if (sourceType === "invoice") {
       const invoice = await db.invoice.findFirst({ where: { id: sourceId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, clientId: true, jobId: true } });
       if (!invoice || invoice.paidAmount + amount > invoice.totalAmount) return null;
@@ -104,7 +103,7 @@ export default async function ReceiptsPage({
     const note = String(formData.get("note") ?? "").trim();
     if (!paymentId || !Number.isFinite(amount) || amount <= 0) return;
 
-    const method = PAYMENT_METHODS.includes(methodRaw as PaymentMethod) ? (methodRaw as PaymentMethod) : "OTHER" as PaymentMethod;
+    const method = parsePaymentMethod(methodRaw, "OTHER");
 
     const source = await prisma.payment.findFirst({
       where: { id: paymentId, orgId },
@@ -412,7 +411,7 @@ export default async function ReceiptsPage({
             <CreateReceiptDialog
               sourceOptions={paymentSourceOptions}
               baseCurrency={baseCurrency}
-              paymentMethods={PAYMENT_METHODS as string[]}
+              paymentMethods={[...PAYMENT_METHODS]}
               action={createReceiptAction}
               initialOpen={createMode}
             />
@@ -558,7 +557,7 @@ export default async function ReceiptsPage({
                       <input type="hidden" name="paymentId" value={p.id} />
                       <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
-                        {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
+                        {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                       </select>
                       <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
@@ -679,7 +678,7 @@ export default async function ReceiptsPage({
                           <input type="hidden" name="paymentId" value={p.id} />
                           <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                           <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
-                            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
+                            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                           </select>
                           <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                           <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
