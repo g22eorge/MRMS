@@ -33,3 +33,9 @@
 **Change:** Added `lib/date-ranges.ts`; extended `date-eat.ts` with list formatters; standardised document page dates to DD/MM/YYYY; deduped `monthRange` in dashboard, reports, AI insights, copilot.
 
 **Doc:** [`fixes/phase-1-3-date-ranges-and-display.md`](./fixes/phase-1-3-date-ranges-and-display.md)
+
+### 1.4 — Job PDF routes → generators (pending commit)
+
+**Change:** Replaced ~837 lines of duplicated route logic with thin auth wrappers calling `generate*Buffer`; added `pdf-response.ts`; aligned invoice download persistence and job-card QR into generators.
+
+**Doc:** [`fixes/phase-1-4-job-pdf-routes.md`](./fixes/phase-1-4-job-pdf-routes.md)

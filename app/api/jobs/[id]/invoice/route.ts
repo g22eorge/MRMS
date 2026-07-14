@@ -1,114 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { createElement } from "react";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 
-import { getClientBill } from "@/lib/billing";
-import { formatMoney, normalizeCurrency } from "@/lib/currency";
-import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { canGenerateInvoiceForStatus, formatQuotationNumber } from "@/lib/documents";
 import { can } from "@/lib/permissions";
-import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
-import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
+import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
+import { jobPdfErrorStatus, pdfAttachmentResponse, pdfGenerationErrorResponse } from "@/lib/pdf/pdf-response";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function formatInvoiceDate(value: Date) {
-  return value.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "2-digit",
-    timeZone: "Africa/Nairobi",
-  });
-}
-
-function prettyEnum(value: string | null | undefined) {
-  if (!value) return "N/A";
-  return value.replaceAll("_", " ");
-}
-
-function compactText(value: string | null | undefined, max = 90) {
-  if (!value) return "N/A";
-  const flat = value.replace(/\s+/g, " ").trim();
-  if (flat.length <= max) return flat;
-  return `${flat.slice(0, max - 1)}...`;
-}
-
-function compactListText(value: string | null | undefined, max = 220) {
-  if (!value) return "N/A";
-  const normalized = value
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .join("\n");
-  if (normalized.length <= max) return normalized;
-  return `${normalized.slice(0, max - 1)}...`;
-}
-
-async function toDataUriFromRemote(url: string) {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return null;
-  const contentType = res.headers.get("content-type") || "image/png";
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  const b64 = Buffer.from(bytes).toString("base64");
-  return `data:${contentType};base64,${b64}`;
-}
-
-async function toDataUriFromLocal(filePath: string, contentType: string) {
-  const bytes = await readFile(filePath);
-  return `data:${contentType};base64,${bytes.toString("base64")}`;
-}
-
-async function resolveInvoiceLogo() {
-  const localCandidates: Array<{ file: string; type: string }> = [
-    { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
-    { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
-    { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },
-    { file: path.join(process.cwd(), "public", "eagle-info-logo.webp"), type: "image/webp" },
-    { file: path.join(process.cwd(), "public", "invoice-logo.png"), type: "image/png" },
-    { file: path.join(process.cwd(), "public", "invoice-logo.jpg"), type: "image/jpeg" },
-    { file: path.join(process.cwd(), "public", "invoice-logo.jpeg"), type: "image/jpeg" },
-    { file: path.join(process.cwd(), "public", "invoice-logo.webp"), type: "image/webp" },
-  ];
-
-  for (const candidate of localCandidates) {
-    try {
-      return await toDataUriFromLocal(candidate.file, candidate.type);
-    } catch {
-      // try next
-    }
-  }
-
-  const explicit = process.env.INVOICE_LOGO_URL;
-  if (explicit) {
-    if (explicit.startsWith("data:")) return explicit;
-    if (explicit.startsWith("http://") || explicit.startsWith("https://")) {
-      const remote = await toDataUriFromRemote(explicit);
-      if (remote) return remote;
-    }
-  }
-
-  const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  if (baseUrl) {
-    const remoteCandidates = [
-      `${baseUrl}/eagle-info-logo.png`,
-      `${baseUrl}/eagle-info-logo.jpg`,
-      `${baseUrl}/eagle-info-logo.jpeg`,
-      `${baseUrl}/invoice-logo.png`,
-    ];
-    for (const candidate of remoteCandidates) {
-      const remote = await toDataUriFromRemote(candidate);
-      if (remote) return remote;
-    }
-  }
-
-  return undefined;
-}
 
 export async function GET(
   _req: NextRequest,
@@ -117,247 +17,53 @@ export async function GET(
   const { id } = await context.params;
   const { session, user, orgId, org: orgCtx } = await requireOrgSession();
 
-  if (!( ["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user) )) {
+  if (!(["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const job = await prisma.job.findUnique({
-    where: { id, orgId },
-    select: {
-      id: true,
-      jobNumber: true,
-      status: true,
-      invoiceNumber: true,
-      invoiceIssuedAt: true,
-      repairPath: true,
-      deviceType: true,
-      brand: true,
-      model: true,
-      serialOrImei: true,
-      accessories: true,
-      physicalNotes: true,
-      issueDescription: true,
-      workflowReason: true,
-      statusNote: true,
-      diagnosisNotes: true,
-      externalDiagnosis: true,
-      recommendedRepair: true,
-      recommendationOption: true,
-      communicationStatus: true,
-      clientConversationNote: true,
-      lastClientContactAt: true,
-      partsNeeded: true,
-      clientBill: true,
-      vatApplicable: true,
-      externalTechBill: true,
-      externalTechFee: true,
-      externalPaid: true,
-      externalPaidAt: true,
-      externalPaymentRef: true,
-      clientApproved: true,
-      approvalDate: true,
-      quotedAt: true,
-      repairTimeline: true,
-      timelineMinMinutes: true,
-      timelineMaxMinutes: true,
-      timelineConfidence: true,
-      timelineNote: true,
-      technicianNotes: true,
-      workDone: true,
-      partsReplaced: true,
-      receivedAt: true,
-      completedAt: true,
-      deliveredAt: true,
-      deliveryMethod: true,
-      deliveredTo: true,
-      closedAt: true,
-      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
-    },
-  });
-
-  if (!job) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  if (!canGenerateInvoiceForStatus(job.status)) {
-    return NextResponse.json(
-      { error: "Invoice can be generated only after repair reaches pickup/completion stage." },
-      { status: 409 },
-    );
-  }
-
   const isReadOnly = orgCtx.access.isSuspended || user.accessMode === "READ_ONLY";
-  if (isReadOnly && !job.invoiceNumber) {
-    return NextResponse.json(
-      { error: "Workspace is read-only. Generating new invoices is disabled until billing is restored." },
-      { status: 402 },
-    );
-  }
-
-  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { plan: true, baseCurrency: true } }).catch(() => null);
-  const currency = normalizeCurrency(org?.baseCurrency, "UGX");
-  const branding = await getDocumentBrandingSettings(orgId);
-  const templateKey = resolveTemplateKey({
-    kind: "INVOICE",
-    requestedKey: (branding as unknown as { invoiceTemplateKey?: string | null }).invoiceTemplateKey,
-    plan: org?.plan ?? "STARTER",
-  });
-  const InvoiceDoc = InvoiceTemplateComponent(templateKey);
-  const clientBill = getClientBill(job) ?? 0;
-  const vatApplicable = (job as { vatApplicable?: boolean }).vatApplicable ?? true;
-  const vatRate = Math.max(0, branding.vatRatePercent) / 100;
-  const repairCost = vatApplicable && clientBill > 0 ? clientBill / (1 + vatRate) : clientBill;
-  const vatAmount = vatApplicable ? Math.max(clientBill - repairCost, 0) : 0;
-  const issuedAtDate = new Date();
-  const dueDate = new Date(issuedAtDate);
-  dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
-  const logoUrl = await resolveInvoiceLogo();
-  const normalizedFooterText = (branding.footerText ?? "").trim();
-  const issuedAtForNumber = job.invoiceIssuedAt ?? issuedAtDate;
-  const quotationNumber = formatQuotationNumber(
-    job.jobNumber,
-    issuedAtForNumber,
-    branding.quotePrefix,
-    branding.quoteFormat,
-    branding.sequencePadLength,
-  );
-  const preferredInvoiceNumber = job.invoiceNumber?.trim() || `INV-${quotationNumber.replace(/\s+/g, "-")}`;
-  let invoiceNumber = preferredInvoiceNumber;
-
-  const invoiceTotal = clientBill;
-
-  if (!isReadOnly) {
+  if (isReadOnly) {
+    const existing = await prisma.job.findFirst({
+      where: { id, orgId },
+      select: { invoiceNumber: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (!existing.invoiceNumber) {
+      return NextResponse.json(
+        { error: "Workspace is read-only. Generating new invoices is disabled until billing is restored." },
+        { status: 402 },
+      );
+    }
+  } else {
     try {
-      assertOrgCanMutate({ access: orgCtx.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+      assertOrgCanMutate({
+        access: orgCtx.access,
+        userRole: user.role,
+        userAccessMode: user.accessMode,
+        kind: "GENERAL",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Workspace is read-only.";
       return NextResponse.json({ error: message }, { status: 403 });
     }
-    invoiceNumber = await prisma.$transaction(async (tx) => {
-      const existingInvoice = await tx.invoice.findFirst({
-        where: { orgId, jobId: job.id },
-        select: { id: true, invoiceNumber: true },
-      });
-      const safeInvoiceNumber = await nextAvailableInvoiceNumber(
-        tx,
-        existingInvoice?.invoiceNumber ?? preferredInvoiceNumber,
-        existingInvoice?.id,
-      );
-
-      if (existingInvoice) {
-        await tx.invoice.update({
-          where: { id: existingInvoice.id },
-          data: {
-            invoiceNumber: safeInvoiceNumber,
-            issuedAt: issuedAtDate,
-            totalAmount: invoiceTotal,
-            status: invoiceTotal <= 0 ? "PAID" : "ISSUED",
-          },
-        });
-      } else {
-        await tx.invoice.create({
-          data: {
-            orgId,
-            jobId: job.id,
-            invoiceNumber: safeInvoiceNumber,
-            issuedAt: issuedAtDate,
-            totalAmount: invoiceTotal,
-            status: invoiceTotal <= 0 ? "PAID" : "ISSUED",
-          },
-        });
-      }
-
-      await tx.job.update({
-        where: { id: job.id },
-        data: {
-          invoiceIssuedAt: issuedAtDate,
-          invoiceNumber: safeInvoiceNumber,
-        },
-      });
-
-      return safeInvoiceNumber;
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        jobId: job.id,
-        userId: session.user.id,
-        action: "INVOICE_GENERATED",
-        detail: JSON.stringify({ invoiceNumber }),
-        orgId,
-      },
-    }).catch(() => { /* audit log failure must never block PDF delivery */ });
   }
 
-  const invoiceElement = createElement(InvoiceDoc as never, {
-    companyName: branding.companyName,
-    companyTagline: branding.companyTagline ?? "",
-    companyAddressLine1: branding.companyAddressLine1,
-    companyAddressLine2: branding.companyAddressLine2,
-    companyContacts: branding.companyContacts,
-    companyEmail: branding.companyEmail ?? "",
-    companyWebsite: branding.companyWebsite ?? "",
-    companyLogoUrl: logoUrl,
-    documentTitle: "INVOICE",
-    quotationNumber,
-    invoiceNumber,
-    dateIssued: formatInvoiceDate(issuedAtDate),
-    validUntil: formatInvoiceDate(dueDate),
-    repairId: job.jobNumber,
-    preparedByName: user.name,
-    preparedByRole: user.role,
-    clientName: job.client.fullName,
-    clientPhone: job.client.phone,
-    clientEmail: compactText(job.client.email, 36),
-    clientOrganization: compactText(job.client.organization, 40),
-    deviceType: prettyEnum(job.deviceType),
-    deviceLabel: compactText(`${job.brand} ${job.model}`, 45),
-    serialOrImei: compactText(job.serialOrImei, 30),
-    accessories: compactText(job.accessories, 60),
-    physicalCondition: compactText(job.physicalNotes, 80),
-    customerIssue: compactListText(job.issueDescription, 180),
-    diagnosisSummary: compactListText(job.diagnosisNotes ?? job.externalDiagnosis, 180),
-    scopeOfWork: compactListText(job.recommendedRepair ?? job.workDone, 180),
-    workDone: compactListText(job.workDone, 180),
-    partsReplaced: compactListText(job.partsReplaced, 180),
-    repairCost: formatMoney(repairCost, currency),
-    vatApplicable,
-    vatLabel: `${branding.vatLabel ?? "VAT"} (${branding.vatRatePercent ?? 0}%)`,
-    vatAmount: formatMoney(vatAmount, currency),
-    totalAmountPayable: formatMoney(clientBill, currency),
-    estimatedDuration: compactText(job.repairTimeline ?? job.timelineNote, 60),
-    approvalStatus: job.clientApproved === true ? "Approved" : "Not recorded",
-    recommendation: compactText(job.recommendationOption ?? job.recommendedRepair, 80),
-    notes: compactListText(job.technicianNotes ?? job.statusNote, 160),
-    isPaid: job.clientApproved === true,
-    status: prettyEnum(job.status),
-    currency,
-    termsText: branding.termsText ?? "",
-    footerText: normalizedFooterText,
-    signatureCompanyLabel: branding.signatureCompanyLabel ?? "Company",
-    signatureClientLabel: branding.signatureClientLabel ?? "Client",
-  });
+  const result = await generateInvoiceBuffer(
+    id,
+    user.name,
+    user.role,
+    session.user.id,
+    orgId,
+    isReadOnly
+      ? { skipPersist: true }
+      : { persistInvoiceRecord: true },
+  );
 
-  let body: Uint8Array;
-  try {
-    const pdf = await renderToBuffer(invoiceElement as never);
-    body = new Uint8Array(pdf);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown PDF generation error";
-    return NextResponse.json(
-      { error: `Invoice PDF generation failed: ${message}` },
-      { status: 500 },
-    );
+  if (!result.ok) {
+    return pdfGenerationErrorResponse(result.error, jobPdfErrorStatus(result.error));
   }
 
-  const bytes = new Uint8Array(body.length);
-  bytes.set(body);
-  const blob = new Blob([bytes], { type: "application/pdf" });
-
-  return new Response(blob, {
-    headers: {
-      "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="invoice-${job.jobNumber}.pdf"`,
-    },
-  });
+  return pdfAttachmentResponse(result.buffer, result.filename);
 }
