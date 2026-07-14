@@ -9,34 +9,29 @@
 
 ## Problem
 
-Every list page had its own search box with different placeholders and scopes. Quick actions (New Job, Record Payment, etc.) lived only on the dashboard. Staff could not jump to a job, client, or invoice from anywhere in the app.
+Every list page had its own search box with different placeholders and scopes. Quick actions (New Job, Record Payment, etc.) lived only on the dashboard. Staff had no global way to jump to a job, client, or invoice from anywhere in the app.
 
 ---
 
 ## Change
 
-### Global command palette
+### Command palette UI
 
-- **⌘K / Ctrl+K** opens a modal search surface from any authenticated app page
-- Desktop header **Search…** button as a visible affordance
-- **Quick actions** mirror the dashboard grid (New Job, Record Payment, Product Sale, Add Expense, Purchase Order, New Intake) — filtered by role and org modules
-- **Navigation shortcuts** for Jobs, Clients, Invoices, and Outbox when permitted
+- **`CommandPalette`** mounted in the app shell — opens with **⌘K / Ctrl+K** or the header **Search** button
+- Keyboard navigation (↑ ↓ Enter, Esc)
+- Debounced search input with grouped results
 
-### Live search (`/api/command-palette/search`)
+### Server search API
 
-Org-scoped, role-aware matches for:
+- **`GET /api/command-palette?q=`** — org-scoped, role-aware
+- Searches **jobs** (by ref, client, phone, device), **clients** (name, phone, email), **invoices** (number, client, job ref)
+- Respects technician assignment scoping and hides client PII from external tech job hits
 
-- **Jobs** — job number, serial/IMEI, client name (when allowed)
-- **Clients** — name, phone variants, email
-- **Invoices** — invoice number, linked job ref, client name
+### Quick actions
 
-Results link to job detail, client list filter, or invoice/financials context.
-
-### Shared helpers
-
-- `lib/command-palette/quick-actions.ts` — action catalog + client-side filter
-- `lib/command-palette/search.ts` — server search aggregation
-- `components/command-palette/CommandPaletteProvider.tsx` — keyboard shortcut, modal UI, provider context
+- **`buildCommandPaletteQuickActions`** mirrors dashboard verbs: New Job, Record Payment, POS Sale, Add Expense, Purchase Order, New Intake
+- Adds navigation shortcuts: Jobs, Clients, Invoices, Outbox, Dashboard
+- Filtered by role/permissions
 
 ---
 
@@ -49,9 +44,9 @@ npx bun test tests/unit/command-palette.test.ts
 
 Manual:
 
-1. Press **⌘K** (or **Ctrl+K**) on any app page — palette opens.
-2. With empty query, quick actions appear for your role.
-3. Type a job ref, client phone, or invoice number — matching rows appear; Enter navigates.
+1. Press **⌘K** (or tap Search on mobile) from any page.
+2. Type a job number / client phone / invoice number → jump to the right place.
+3. With empty query, quick actions reflect your role.
 
 ---
 
@@ -59,10 +54,11 @@ Manual:
 
 | File | Role |
 |------|------|
-| `lib/command-palette/quick-actions.ts` | Quick action catalog |
-| `lib/command-palette/search.ts` | Org-scoped entity search |
-| `app/api/command-palette/search/route.ts` | Search API |
-| `components/command-palette/CommandPaletteProvider.tsx` | Palette UI + shortcut |
-| `app/(app)/layout.tsx` | Provider mount |
+| `lib/command-palette/types.ts` | Action + search hit types |
+| `lib/command-palette/quick-actions.ts` | Role-gated quick actions |
+| `lib/command-palette/search.ts` | Org-scoped search queries |
+| `app/api/command-palette/route.ts` | Palette API |
+| `components/command-palette/CommandPalette.tsx` | Modal UI + keyboard handling |
 | `components/layout/Header.tsx` | Search trigger button |
-| `tests/unit/command-palette.test.ts` | Action/filter tests |
+| `app/(app)/layout.tsx` | Global mount |
+| `tests/unit/command-palette.test.ts` | Quick action tests |
