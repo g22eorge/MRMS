@@ -1,0 +1,23 @@
+# Phase 3 — Structural refactors: progress log
+
+**Branch:** `phase-0-bug-triage` (continued)  
+**Source plan:** [`system-analysis.md`](./system-analysis.md) → Consolidation roadmap → Phase 3  
+**Method:** one fix at a time; document in `docs/fixes/`; one commit per fix.
+
+| # | Task | Status | Commit | Tested |
+|---|------|--------|--------|--------|
+| 3.1 | Prisma scoper consolidation | ✅ Done | f381b80 | ✅ tsc |
+| 3.2 | `components/documents/` kit (receipts + delivery-notes first) | ⬜ Pending | — | — |
+| 3.3 | Line-item form primitives | ⬜ Pending | — | — |
+| 3.4 | `components/ui/Modal.tsx` | ⬜ Pending | — | — |
+| 3.5 | Consolidate `/platform` + `/platform-admin` | ⬜ Pending | — | — |
+
+---
+
+## Log
+
+### 3.1 — Prisma scoper consolidation (pending commit)
+
+**Change:** Unified `orgDb` and `scopedDb` on `scopedDb` implementation; shared model list in `lib/org-scoped-models.ts`; canonical entry `lib/db.ts`; removed duplicate `orgDb` from `lib/prisma.ts`.
+
+**Doc:** [`fixes/phase-3-1-prisma-scoper.md`](./fixes/phase-3-1-prisma-scoper.md)
