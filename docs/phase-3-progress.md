@@ -7,7 +7,7 @@
 | # | Task | Status | Commit | Tested |
 |---|------|--------|--------|--------|
 | 3.1 | Prisma scoper consolidation | ✅ Done | f381b80 | ✅ tsc |
-| 3.2 | `components/documents/` kit (receipts + delivery-notes first) | ⬜ Pending | — | — |
+| 3.2 | `components/documents/` kit (receipts + delivery-notes first) | ✅ Done | 05ad68c | ✅ tsc |
 | 3.3 | Line-item form primitives | ⬜ Pending | — | — |
 | 3.4 | `components/ui/Modal.tsx` | ⬜ Pending | — | — |
 | 3.5 | Consolidate `/platform` + `/platform-admin` | ⬜ Pending | — | — |
@@ -16,8 +16,14 @@
 
 ## Log
 
-### 3.1 — Prisma scoper consolidation (pending commit)
+### 3.1 — Prisma scoper consolidation (f381b80)
 
 **Change:** Unified `orgDb` and `scopedDb` on `scopedDb` implementation; shared model list in `lib/org-scoped-models.ts`; canonical entry `lib/db.ts`; removed duplicate `orgDb` from `lib/prisma.ts`.
 
 **Doc:** [`fixes/phase-3-1-prisma-scoper.md`](./fixes/phase-3-1-prisma-scoper.md)
+
+### 3.2 — Document page kit (pending commit)
+
+**Change:** Added `components/documents/*` and `lib/documents/period-filters.ts`; migrated receipts and delivery-notes to shared header, KPI, filters, share menu, and table shell.
+
+**Doc:** [`fixes/phase-3-2-document-kit.md`](./fixes/phase-3-2-document-kit.md)
