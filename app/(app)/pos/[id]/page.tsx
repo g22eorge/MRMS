@@ -13,6 +13,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
@@ -35,10 +36,6 @@ async function recalcSaleTotals(
   const vatAmount = taxable * vatRate;
   const totalAmount = taxable + vatAmount;
 
-  const payAgg = await tx.payment.aggregate({ where: { saleId, orgId }, _sum: { amount: true } });
-  const paidAmount = payAgg._sum.amount ?? 0;
-  const isPaid = totalAmount > 0 && paidAmount >= totalAmount;
-
   await tx.sale.update({
     where: { id: saleId },
     data: {
@@ -46,11 +43,9 @@ async function recalcSaleTotals(
       discountAmount,
       vatAmount,
       totalAmount,
-      paidAmount,
-      paidAt: isPaid ? new Date() : null,
-      status: isPaid ? "PAID" : "OPEN",
     },
   });
+  await syncSalePaymentState(tx, { orgId, saleId });
 }
 
 export default async function SalePage({ params }: { params: Promise<{ id: string }> }) {
@@ -467,18 +462,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         },
       });
 
-      const payAgg = await tx.payment.aggregate({ where: { saleId, orgId }, _sum: { amount: true } });
-      const paidAmount = payAgg._sum.amount ?? 0;
-      const isPaid = existingSale.totalAmount > 0 && paidAmount >= existingSale.totalAmount;
-
-      await tx.sale.update({
-        where: { id: saleId },
-        data: {
-          paidAmount,
-          paidAt: isPaid ? new Date() : null,
-          status: isPaid ? "PAID" : "OPEN",
-        },
-      });
+      await syncSalePaymentState(tx, { orgId, saleId });
     });
 
     revalidatePath(`/pos/${saleId}`);

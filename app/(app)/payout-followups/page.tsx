@@ -11,6 +11,7 @@ import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 
 type SearchParams = {
@@ -157,25 +158,20 @@ async function receiveInvoicePaymentAction(formData: FormData) {
   if ((invoice.paidAmount ?? 0) + amountRaw > invoice.totalAmount) return;
 
   const currency = getAppCurrency();
+  const baseCurrency = org.baseCurrency;
 
   await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.create({
       data: { invoiceId: invoice.id, currency, amount: amountRaw, method, reference: reference || null, createdById: user.id, orgId },
     });
     await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount: amountRaw, currency, issuedById: user.id });
-    const payments = await tx.payment.findMany({ where: { invoiceId: invoice.id }, select: { amount: true } });
-    const paidAmount = payments.reduce((s, p) => s + p.amount, 0);
-    const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-    await tx.invoice.update({
-      where: { id: invoice.id },
-      data: { paidAmount, paidAt: isPaid ? new Date() : null, status: isPaid ? "PAID" : "ISSUED" },
+    await syncInvoicePaymentState(tx, {
+      orgId,
+      invoiceId: invoice.id,
+      baseCurrency,
+      actorUserId: user.id,
+      clientPaymentRef: reference || null,
     });
-    if (invoice.jobId) {
-      await tx.job.update({
-        where: { id: invoice.jobId },
-        data: { clientPaid: isPaid, clientPaidAt: isPaid ? new Date() : null, clientPaidById: isPaid ? user.id : null, clientPaymentRef: reference || null },
-      });
-    }
   });
 
   revalidatePath("/payout-followups");

@@ -13,6 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
@@ -62,11 +63,7 @@ export default async function ReceiptsPage({
       await prisma.$transaction(async (tx) => {
         const payment = await tx.payment.create({ data: { orgId, invoiceId: invoice.id, amount, method, reference: reference || null, currency, createdById: user.id } });
         await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount, currency, issuedById: user.id });
-        const payments = await tx.payment.findMany({ where: { invoiceId: invoice.id, orgId }, select: { amount: true, currency: true, exchangeRateToBase: true } });
-        const paidAmount = payments.reduce((sum, p) => sum + toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }), 0);
-        const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-        await tx.invoice.updateMany({ where: { id: invoice.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED" } });
-        if (invoice.jobId) await tx.job.updateMany({ where: { id: invoice.jobId, orgId }, data: { clientPaid: isPaid, clientPaidAt: isPaid ? new Date() : null, clientPaidById: isPaid ? user.id : null } });
+        await syncInvoicePaymentState(tx, { orgId, invoiceId: invoice.id, baseCurrency, actorUserId: user.id });
       });
       await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "RECEIPT_CREATED", summary: "Receipt generated from invoice" });
     } else {
@@ -78,10 +75,7 @@ export default async function ReceiptsPage({
       await prisma.$transaction(async (tx) => {
         const payment = await tx.payment.create({ data: { orgId, saleId: sale.id, amount, method, reference: reference || null, currency: saleCurrency, createdById: user.id } });
         await createReceiptForPayment(tx, { orgId, paymentId: payment.id, saleId: sale.id, clientId: sale.clientId, amount, currency: saleCurrency, issuedById: user.id });
-        const payAgg = await tx.payment.aggregate({ where: { saleId: sale.id, orgId }, _sum: { amount: true } });
-        const paidAmount = payAgg._sum.amount ?? 0;
-        const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
-        await tx.sale.updateMany({ where: { id: sale.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: isPaid ? "PAID" : "OPEN" } });
+        await syncSalePaymentState(tx, { orgId, saleId: sale.id });
       });
       await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: sale.id, action: "RECEIPT_CREATED", summary: "Receipt generated from sale" });
     }
@@ -133,21 +127,14 @@ export default async function ReceiptsPage({
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });
         if (invoice) {
-          const payments = await tx.payment.findMany({ where: { invoiceId: invoice.id, orgId }, select: { amount: true, currency: true, exchangeRateToBase: true } });
-          const paidAmount = payments.reduce((sum, p) => sum + toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }), 0);
-          const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-          await tx.invoice.updateMany({ where: { id: invoice.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED" } });
-          if (invoice.jobId) await tx.job.updateMany({ where: { id: invoice.jobId, orgId }, data: { clientPaid: isPaid, clientPaidAt: isPaid ? new Date() : null, clientPaidById: isPaid ? user.id : null } });
+          await syncInvoicePaymentState(tx, { orgId, invoiceId: invoice.id, baseCurrency, actorUserId: user.id });
         }
       }
 
       if (source.saleId) {
         const sale = await tx.sale.findFirst({ where: { id: source.saleId, orgId }, select: { id: true, totalAmount: true } });
         if (sale) {
-          const agg = await tx.payment.aggregate({ where: { saleId: sale.id, orgId }, _sum: { amount: true } });
-          const paidAmount = agg._sum.amount ?? 0;
-          const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
-          await tx.sale.updateMany({ where: { id: sale.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: isPaid ? "PAID" : "OPEN" } });
+          await syncSalePaymentState(tx, { orgId, saleId: sale.id });
         }
       }
     });
@@ -178,21 +165,14 @@ export default async function ReceiptsPage({
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });
         if (invoice) {
-          const payments = await tx.payment.findMany({ where: { invoiceId: invoice.id, orgId }, select: { amount: true, currency: true, exchangeRateToBase: true } });
-          const paidAmount = payments.reduce((sum, p) => sum + toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }), 0);
-          const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-          await tx.invoice.updateMany({ where: { id: invoice.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED" } });
-          if (invoice.jobId) await tx.job.updateMany({ where: { id: invoice.jobId, orgId }, data: { clientPaid: isPaid, clientPaidAt: isPaid ? new Date() : null, clientPaidById: isPaid ? user.id : null } });
+          await syncInvoicePaymentState(tx, { orgId, invoiceId: invoice.id, baseCurrency, actorUserId: user.id });
         }
       }
 
       if (source.saleId) {
         const sale = await tx.sale.findFirst({ where: { id: source.saleId, orgId }, select: { id: true, totalAmount: true } });
         if (sale) {
-          const agg = await tx.payment.aggregate({ where: { saleId: sale.id, orgId }, _sum: { amount: true } });
-          const paidAmount = agg._sum.amount ?? 0;
-          const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
-          await tx.sale.updateMany({ where: { id: sale.id, orgId }, data: { paidAmount, paidAt: isPaid ? new Date() : null, status: isPaid ? "PAID" : "OPEN" } });
+          await syncSalePaymentState(tx, { orgId, saleId: sale.id });
         }
       }
     });

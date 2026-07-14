@@ -23,6 +23,7 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment, nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
@@ -233,7 +234,8 @@ export default async function InvoicesPage({
     const rawAmount = String(formData.get("amount") ?? "").replace(/[^\d.]/g, "").trim();
     const method = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
-    const baseCurrency = "UGX";
+    const org = await prisma.organization.findUnique({ where: { id: orgId! }, select: { baseCurrency: true } });
+    const baseCurrency = org?.baseCurrency ?? "UGX";
     const currency = normalizeCurrency(formData.get("currency"), baseCurrency);
     const exchangeRateToBaseRaw = String(formData.get("exchangeRateToBase") ?? "").trim();
     if (!invoiceId) return;
@@ -289,43 +291,13 @@ export default async function InvoicesPage({
         issuedById: user.id,
       });
 
-      const payments = await tx.payment.findMany({
-        where: { invoiceId: invoice.id },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
+      await syncInvoicePaymentState(tx, {
+        orgId: orgId!,
+        invoiceId: invoice.id,
+        baseCurrency,
+        actorUserId: user.id,
+        clientPaymentRef: reference || null,
       });
-      const paidAmount = payments.reduce(
-        (sum, p) =>
-          sum +
-          toBaseAmount({
-            amount: p.amount,
-            currency: p.currency,
-            baseCurrency: "UGX",
-            exchangeRateToBase: p.exchangeRateToBase,
-          }),
-        0,
-      );
-      const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          paidAmount,
-          paidAt: isPaid ? new Date() : null,
-          status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED",
-        },
-      });
-
-      if (invoice.jobId) {
-        await tx.job.update({
-          where: { id: invoice.jobId },
-          data: {
-            clientPaid: isPaid,
-            clientPaidAt: isPaid ? new Date() : null,
-            clientPaidById: isPaid ? user.id : null,
-            clientPaymentRef: reference || null,
-          },
-        });
-      }
     });
 
     revalidatePath("/documents/invoices");

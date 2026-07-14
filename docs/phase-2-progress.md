@@ -7,7 +7,7 @@
 | # | Task | Status | Commit | Tested |
 |---|------|--------|--------|--------|
 | 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | b46d181 | ✅ tsc |
-| 2.2 | `lib/commercial/payment-sync.ts` | ⬜ Pending | — | — |
+| 2.2 | `lib/commercial/payment-sync.ts` | ✅ Done | — | ✅ tsc |
 | 2.3 | `lib/notifications/share-document.ts` | ⬜ Pending | — | — |
 | 2.4 | `lib/phone.ts` | ⬜ Pending | — | — |
 | 2.5 | Route `sendPdfViaWhatsApp` through outbox | ⬜ Pending | — | — |
@@ -21,3 +21,9 @@
 **Change:** Added `lib/ai/business-metrics.ts` with `buildBusinessDataPack()`; AI Insights + copilot consume it; cash received uses `loadCashCollectionsByChannel` (matches Dashboard/Reports); UI labels distinguish cash received vs completed repair value.
 
 **Doc:** [`fixes/phase-2-1-business-metrics.md`](./fixes/phase-2-1-business-metrics.md)
+
+### 2.2 — Payment sync helpers
+
+**Change:** Added `syncInvoicePaymentState` / `syncSalePaymentState`; migrated receipts, invoices, jobs, payout-followups, and POS payment paths.
+
+**Doc:** [`fixes/phase-2-2-payment-sync.md`](./fixes/phase-2-2-payment-sync.md)

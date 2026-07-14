@@ -35,6 +35,7 @@ import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 
 const workflowReasonValues = [
@@ -863,33 +864,17 @@ export async function recordClientPaymentAction(formData: FormData) {
         },
       });
 
-       const payments = await tx.payment.findMany({
-          where: { orgId, invoiceId: invoice.id },
-          select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
-        });
-        const paidAmount = payments.reduce(
-          (sum, p) => sum + (p.kind === "REFUND" ? -1 : 1) * toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }),
-          0,
-        );
-       const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
-
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          paidAmount,
-          paidAt: isPaid ? new Date() : null,
-          status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED",
-        },
+      const { paidAmount, isPaid } = await syncInvoicePaymentState(tx, {
+        orgId,
+        invoiceId: invoice.id,
+        baseCurrency,
+        actorUserId: session.user.id,
+        clientPaymentRef: reference || null,
       });
 
-      // Keep legacy job flags in sync for existing queues.
-      await tx.job.update({
-        where: { id: job.id },
+      await tx.job.updateMany({
+        where: { id: job.id, orgId },
         data: {
-          clientPaid: isPaid,
-          clientPaidAt: isPaid ? new Date() : null,
-          clientPaidById: isPaid ? session.user.id : null,
-          clientPaymentRef: reference || null,
           invoiceNumber,
           invoiceIssuedAt: issuedAt,
         },
