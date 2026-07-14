@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { formatPhoneDisplay, phoneTelHref } from "@/lib/phone";
 
 const updateClientSchema = z.object({
   fullName: z.string().min(2),
@@ -207,7 +208,7 @@ export default async function ClientDetailPage({
           <div className="min-w-0">
             <p className="truncate text-[13px] font-bold text-[var(--ink)]">{client.fullName}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <a href={`tel:${client.phone}`} className="transition hover:text-[var(--accent)]">{client.phone}</a>
+              <a href={phoneTelHref(client.phone) ?? `tel:${client.phone}`} className="transition hover:text-[var(--accent)]">{formatPhoneDisplay(client.phone)}</a>
               {client.email ? <><span className="opacity-40">·</span><span>{client.email}</span></> : null}
               {client.organization ? <><span className="opacity-40">·</span><span className="truncate">{client.organization}</span></> : null}
               {client.address ? <><span className="opacity-40">·</span><span className="truncate">{client.address}</span></> : null}

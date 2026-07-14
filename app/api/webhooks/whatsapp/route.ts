@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { normalizeUgPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +15,6 @@ function verifySignature({ rawBody, signature, appSecret }: { rawBody: string; s
   } catch {
     return false;
   }
-}
-
-// Normalize to digits-only, Uganda-aware (mirrors whatsapp.ts)
-function normalizePhone(input: string): string {
-  const digits = input.replace(/\D+/g, "");
-  if (digits.startsWith("256")) return digits;
-  if (digits.length === 10 && digits.startsWith("0")) return `256${digits.slice(1)}`;
-  return digits;
 }
 
 export async function GET(request: NextRequest) {
@@ -79,7 +72,7 @@ async function handleInboundMessage(msg: MetaMessage): Promise<void> {
 
   if (!wamid || !rawFrom || !ts) return;
 
-  const from = normalizePhone(rawFrom);
+  const from = normalizeUgPhone(rawFrom, { format: "whatsapp" }) ?? rawFrom.replace(/\D+/g, "");
   const timestamp = new Date(ts * 1000);
 
   // Determine content

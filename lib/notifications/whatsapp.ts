@@ -1,6 +1,7 @@
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { getAtConfig, sendSms } from "@/lib/notifications/sms";
+import { normalizeUgPhone } from "@/lib/phone";
 
 async function sendRenderedWhatsApp(
   phone: string,
@@ -418,13 +419,7 @@ async function sendWhatsAppMessageInternal({
 }
 
 function normalizeWhatsAppRecipient(input: string): string {
-  const digits = input.replace(/\D+/g, "");
-
-  // Uganda convenience: allow 0xxxxxxxxx or +256xxxxxxxxx inputs.
-  if (digits.startsWith("256")) return digits;
-  if (digits.length === 10 && digits.startsWith("0")) return `256${digits.slice(1)}`;
-
-  return digits;
+  return normalizeUgPhone(input, { format: "whatsapp" }) ?? input.replace(/\D+/g, "");
 }
 
 export async function uploadWhatsAppMedia(
