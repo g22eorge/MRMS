@@ -85,7 +85,15 @@ export default async function ClientsPage({
     db.client.count({ where: { jobs: { some: {} } } }).catch(() => 0),
     db.client.count({ where: { jobs: { none: {} } } }).catch(() => 0),
     db.client.count({ where: { jobs: { some: {} } } }).catch(() => 0), // approx for "high" tab badge
-    db.client.count({ where: { createdAt: { gte: monthStart } } }).catch(() => 0),
+    // "New this month" = created this month AND no job history from before this month.
+    // Guards against bulk-imported clients whose createdAt was set at import time
+    // but who came with historical jobs (they aren't "new").
+    db.client.count({
+      where: {
+        createdAt: { gte: monthStart },
+        jobs: { none: { receivedAt: { lt: monthStart } } },
+      },
+    }).catch(() => 0),
     db.client.count({ where: { jobs: { some: { status: { notIn: [JobStatus.COMPLETED, JobStatus.CLOSED] } } } } }).catch(() => 0),
     db.client.count({ where: { organization: { not: null } } }).catch(() => 0),
   ]);
@@ -309,7 +317,7 @@ export default async function ClientsPage({
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">New This Month</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiNewThisMonth}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">+{kpiNewThisMonth} this month</p>
+          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">first seen this month</p>
         </div>
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">With Active Jobs</p>

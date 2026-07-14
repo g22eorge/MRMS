@@ -84,9 +84,9 @@ Same duplication cluster as code finding 6 (5,353 LOC): each page reimplemented 
 
 Dashboard Communications card: "**43 messages failed** — Fix". Outbox shows **Failed · 5** and **Dead · 38** (43 = 5 + 38, silently combined). A user clicking "Fix" lands on counts that don't visibly contain "43". Also: the outbox lives at `/settings/notifications/outbox` (a typed `/outbox` 404s) — deep nesting for an operational queue promoted on the dashboard. Align the label ("5 failed · 38 dead") or the outbox summary, and consider a top-level route/redirect.
 
-### UX-7. `/jobs/board` renders as a job called "board" (P2)
+### UX-7. `/jobs/board` renders as a job called "board" (P2) — *downgraded after retest*
 
-`/jobs/board` is captured by the `/jobs/[id]` dynamic route: header shows "Job Details — Ref board" with skeleton loaders that never resolve. Two issues: the board view toggle is not a real route (or the route order is wrong), and an invalid job ref shows an infinite skeleton instead of a not-found state. Add a `notFound()` guard on unresolved refs.
+**Phase 0 retest (2026-07-14):** the `notFound()` guard already exists in `jobs/[id]/page.tsx` and `/jobs/board` resolves to a proper "We could not find that record" state with Go-to-jobs/Dashboard actions. The "endless skeleton" in the original walkthrough was dev-server compile latency, not a bug. Remaining nit only: the header still reads "Job Details — Ref board" above the not-found card. No Phase 0 action required.
 
 ### UX-8. Client phone display inconsistency (P2)
 
