@@ -11,8 +11,8 @@
 | 0.2 | Real page titles: credit notes, delivery notes, POS | ✅ Done | e5988c4 | ✅ Browser |
 | 0.3 | `notFound()` guard on `/jobs/[id]` | ✅ No fix needed | — | ✅ Browser |
 | 0.4 | Dashboard outbox label: "5 failed · 38 dead" not "43 failed" | ✅ Done | 38d3b69 | ✅ Browser |
-| 0.5 | Clients "new this month" KPI (77/77 import artifact) | ✅ Done | — | ✅ SQL |
-| 1.1 | `lib/constants/payment-methods.ts` | ✅ Done | — | ✅ tsc |
+| 0.5 | Clients "new this month" KPI (77/77 import artifact) | ✅ Done | ec6c5bd | ✅ SQL |
+| 1.1 | `lib/constants/payment-methods.ts` | ✅ Done | dc15632 | ✅ tsc |
 
 ---
 
