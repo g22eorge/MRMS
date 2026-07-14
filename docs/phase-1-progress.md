@@ -8,7 +8,7 @@
 |---|------|--------|--------|--------|
 | 1.1 | `lib/constants/payment-methods.ts` | ✅ Done | dc15632 | ✅ tsc |
 | 1.2 | Platform pages → `formatMoney` from `lib/currency.ts` | ✅ Done | 38722d7 | ✅ tsc |
-| 1.3 | `lib/date-ranges.ts` + date display policy | ✅ Done | — | ✅ tsc |
+| 1.3 | `lib/date-ranges.ts` + date display policy | ✅ Done | 58d164f | ✅ tsc |
 | 1.4 | Job PDF routes → `generate*Buffer` | ⬜ Pending | — | — |
 | 1.5 | Remove dead code | ⬜ Pending | — | — |
 
@@ -28,7 +28,7 @@
 
 **Doc:** [`fixes/phase-1-2-platform-format-money.md`](./fixes/phase-1-2-platform-format-money.md)
 
-### 1.3 — Date ranges + EAT display (pending commit)
+### 1.3 — Date ranges + EAT display (58d164f)
 
 **Change:** Added `lib/date-ranges.ts`; extended `date-eat.ts` with list formatters; standardised document page dates to DD/MM/YYYY; deduped `monthRange` in dashboard, reports, AI insights, copilot.
 
