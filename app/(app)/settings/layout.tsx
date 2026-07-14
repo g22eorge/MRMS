@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { SettingsShell, type SettingsNavGroup } from "@/components/settings/SettingsShell";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -129,14 +130,16 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       ].filter(Boolean) as SettingsNavGroup["items"],
     },
     {
-      title: "Messages",
+      title: "Communications",
       items: [
         ["ADMIN", "OPS"].includes(user.role)
-          ? { href: "/settings/notifications/templates", label: "Templates", description: "WhatsApp and email" }
-            : null,
-        user.role === "ADMIN" ? { href: "/settings/notifications/whatsapp", label: "WhatsApp", description: "Provider connection" } : null,
+          ? { href: COMMUNICATIONS_ROUTES.outbox, label: "Outbox", description: "Delivery queue and retries" }
+          : null,
         ["ADMIN", "OPS"].includes(user.role)
-          ? { href: "/settings/notifications/outbox", label: "Outbox", description: "Delivery status" }
+          ? { href: COMMUNICATIONS_ROUTES.templates, label: "Templates", description: "WhatsApp and email" }
+          : null,
+        user.role === "ADMIN"
+          ? { href: COMMUNICATIONS_ROUTES.whatsapp, label: "WhatsApp", description: "Provider connection" }
           : null,
       ].filter(Boolean) as SettingsNavGroup["items"],
     },

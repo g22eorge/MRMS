@@ -39,6 +39,15 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   turbopack: { root: process.cwd() },
+  async redirects() {
+    return [
+      { source: "/outbox", destination: "/communications/outbox", permanent: false },
+      { source: "/settings/notifications/outbox", destination: "/communications/outbox", permanent: false },
+      { source: "/settings/notifications/templates", destination: "/communications/templates", permanent: false },
+      { source: "/settings/notifications/whatsapp", destination: "/communications/whatsapp", permanent: false },
+      { source: "/communications/policies", destination: "/communications/templates#policies", permanent: false },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },

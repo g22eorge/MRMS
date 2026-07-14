@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
 import { SearchToggle } from "@/components/shared/SearchToggle";
@@ -8,6 +7,8 @@ import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageT
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { revalidateCommunicationsOutbox } from "@/lib/communications/revalidate";
 import { deliverOutboundMessageForOrg, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
@@ -132,7 +133,7 @@ export default async function OutboxPage({
     const { user, orgId } = await requireOrgSession();
     if (!(user.role === "ADMIN" || user.role === "OPS")) redirect("/dashboard");
     await retryDueOutboundMessages(getOutboxRetryLimit(25), { orgId });
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
 
   async function retryOneAction(formData: FormData) {
@@ -142,7 +143,7 @@ export default async function OutboxPage({
     const id = String(formData.get("id") ?? "");
     if (!id) return;
     await deliverOutboundMessageForOrg(id, orgId);
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
 
   async function markDeadAction(formData: FormData) {
@@ -155,25 +156,25 @@ export default async function OutboxPage({
       where: { id, orgId },
       data: { status: "DEAD", nextAttemptAt: new Date(0), lockedAt: null },
     });
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          href="/settings/notifications"
+          href={COMMUNICATIONS_ROUTES.preferences}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Notifications
+          My notification preferences
         </Link>
         <div className="flex flex-wrap gap-2">
-          <Link href="/settings/notifications/templates" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+          <Link href={COMMUNICATIONS_ROUTES.templates} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
             Templates
           </Link>
           {user.role === "ADMIN" ? (
-            <Link href="/settings/notifications/whatsapp" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+            <Link href={COMMUNICATIONS_ROUTES.whatsapp} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
               WhatsApp
             </Link>
           ) : null}
@@ -192,7 +193,7 @@ export default async function OutboxPage({
             { label: "Dead", key: "DEAD" },
           ].map(({ label, key }) => {
             const active = (status ?? "") === key;
-            const href = `/settings/notifications/outbox?${new URLSearchParams({ ...(channel ? { channel } : {}), ...(q ? { q } : {}), ...(key ? { status: key } : {}) }).toString()}`;
+            const href = `${COMMUNICATIONS_ROUTES.outbox}?${new URLSearchParams({ ...(channel ? { channel } : {}), ...(q ? { q } : {}), ...(key ? { status: key } : {}) }).toString()}`;
             return (
               <Link
                 key={key || "all"}
@@ -209,7 +210,7 @@ export default async function OutboxPage({
         {/* Right actions */}
         <div className="flex shrink-0 items-center gap-2">
           <SearchToggle
-            basePath="/settings/notifications/outbox"
+            basePath={COMMUNICATIONS_ROUTES.outbox}
             defaultValue={q}
             placeholder="Search recipient / error / ID"
             preserve={{ channel: channel ?? undefined, status: status ?? undefined }}

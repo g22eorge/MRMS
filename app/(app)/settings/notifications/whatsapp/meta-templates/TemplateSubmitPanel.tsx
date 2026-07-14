@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 
 export interface TemplateDefinition {
   metaName: string;
@@ -107,7 +109,7 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/settings/notifications/whatsapp"
+          <Link href={COMMUNICATIONS_ROUTES.whatsapp}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             WhatsApp Settings

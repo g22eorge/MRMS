@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { requireOrgSession } from "@/lib/org-context";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { revalidateCommunicationsWhatsapp } from "@/lib/communications/revalidate";
 import { whatsappConfigSummaryForOrg, whatsappHealthCheckForOrg } from "@/lib/notifications/whatsapp";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { WhatsAppConfigForm } from "@/components/settings/WhatsAppConfigForm";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function WhatsAppSettingsPage() {
   const { user, orgId } = await requireOrgSession();
-  if (user.role !== "ADMIN") redirect("/settings/notifications");
+  if (user.role !== "ADMIN") redirect(COMMUNICATIONS_ROUTES.outbox);
 
   const [currentConfig, summary] = await Promise.all([
     getOrgWhatsAppConfig(orgId),
@@ -31,11 +33,11 @@ export default async function WhatsAppSettingsPage() {
     <div className="space-y-4">
       {/* Back link */}
       <Link
-        href="/settings/notifications"
+        href={COMMUNICATIONS_ROUTES.outbox}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Notifications
+        Communications
       </Link>
 
       {/* Connected account panel */}
@@ -131,20 +133,20 @@ export default async function WhatsAppSettingsPage() {
       {/* Links */}
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/settings/notifications/whatsapp/meta-templates"
+          href={COMMUNICATIONS_ROUTES.templates}
           className="btn-premium rounded-lg px-3 py-1.5 text-sm"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline h-3.5 w-3.5 mr-1.5 align-[-2px]" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
           Generate Meta Templates →
         </Link>
         <Link
-          href="/settings/notifications/outbox"
+          href={COMMUNICATIONS_ROUTES.outbox}
           className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm"
         >
           View Message Outbox →
         </Link>
         <Link
-          href="/settings/notifications/templates"
+          href={COMMUNICATIONS_ROUTES.templates}
           className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm"
         >
           Edit Message Templates →

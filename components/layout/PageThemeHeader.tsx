@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { can } from "@/lib/permissions";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 
 function pageMeta(pathname: string, role: Role) {
   const parts = pathname.split("/").filter(Boolean);
@@ -54,6 +55,10 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/settings/notifications") return { title: "Notifications", description: "Choose which job events trigger alerts for your account." };
   if (pathname === "/settings/notifications/templates") return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
   if (pathname === "/settings/notifications/outbox") return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
+  if (pathname === COMMUNICATIONS_ROUTES.outbox) return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
+  if (pathname === COMMUNICATIONS_ROUTES.templates) return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
+  if (pathname === COMMUNICATIONS_ROUTES.whatsapp) return { title: "WhatsApp", description: "Configure Meta WhatsApp Business connection for this workspace." };
+  if (pathname.startsWith("/communications")) return { title: "Communications", description: "Outbox delivery, templates, WhatsApp config, and status policies." };
   if (pathname === "/intake") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
   if (pathname === "/documents/credit-notes") return { title: "Credit Notes", description: "Sales returns, adjustments, and item return tracking." };
   if (pathname === "/documents/refunds") return { title: "Refunds", description: "Track refunds issued against receipts and sales." };

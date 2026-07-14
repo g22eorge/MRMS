@@ -147,7 +147,7 @@ test.describe("Mobile bottom navigation at 390×844", () => {
     const subPageLinks = page.locator(
       ".mobile-bottom-nav a[href='/settings/users'], " +
       ".mobile-bottom-nav a[href='/settings/branding'], " +
-      ".mobile-bottom-nav a[href='/settings/notifications/templates']"
+      ".mobile-bottom-nav a[href='/communications/templates']"
     );
     const count = await subPageLinks.count();
     expect(count, "Settings sub-pages should not appear in bottom nav").toBe(0);

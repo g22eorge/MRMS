@@ -13,7 +13,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ok: true,
-      message: "Default communication templates are no longer seeded. Orgs create their own templates in /settings/notifications/templates.",
+      message: "Default communication templates are no longer seeded. Orgs create their own templates in /communications/templates.",
     },
     { status: 200 },
   );
@@ -29,7 +29,7 @@ export async function POST() {
     {
       ok: false,
       reason: "Disabled",
-      message: "Default communication templates are no longer seeded. Create org templates in /settings/notifications/templates.",
+      message: "Default communication templates are no longer seeded. Create org templates in /communications/templates.",
     },
     { status: 410 },
   );

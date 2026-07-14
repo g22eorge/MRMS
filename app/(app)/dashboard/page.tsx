@@ -16,6 +16,7 @@ import { loadCashCollectionsByChannelWide, loadReceivablesTotal } from "@/lib/fi
 import { UI_JOB_STATUSES, JobStatus, isOpenJobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { getJobPayoutsByIds, getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
@@ -1424,7 +1425,7 @@ export default async function DashboardPage({
                     </Link>
                   )}
                   {failedOutboxCount > 0 && (
-                    <Link href="/settings/notifications/outbox" className="flex items-center justify-between px-4 py-2 transition hover:bg-[var(--panel-strong)]">
+                    <Link href={COMMUNICATIONS_ROUTES.outbox} className="flex items-center justify-between px-4 py-2 transition hover:bg-[var(--panel-strong)]">
                       <p className="text-[12px] text-[var(--ink-muted)]"><span className="font-bold text-rose-500">{failedOutboxLabel}</span> messages</p>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--ink-muted)]/30"><path d="m9 18 6-6-6-6"/></svg>
                     </Link>
@@ -1688,7 +1689,7 @@ export default async function DashboardPage({
             <section className="panel-shadow flex flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
                 <p className="text-sm font-semibold text-[var(--ink)]">Communications</p>
-                <Link href="/settings/notifications/outbox" className="text-[12px] font-semibold text-[var(--accent)]">Outbox →</Link>
+                <Link href={COMMUNICATIONS_ROUTES.outbox} className="text-[12px] font-semibold text-[var(--accent)]">Outbox →</Link>
               </div>
               {/* Outbox health status */}
               <div className={`flex items-center gap-2.5 border-b border-[var(--line)] px-4 py-2.5 ${failedOutboxCount > 0 ? "bg-rose-500/5" : "bg-emerald-500/5"}`}>
@@ -1697,16 +1698,16 @@ export default async function DashboardPage({
                   {failedOutboxCount > 0 ? `${failedOutboxLabel} message${failedOutboxCount > 1 ? "s" : ""}` : "Outbox healthy"}
                 </p>
                 {failedOutboxCount > 0 && (
-                  <Link href="/settings/notifications/outbox" className="shrink-0 rounded-md bg-rose-500/12 px-2 py-0.5 text-[10px] font-bold text-rose-600 transition hover:bg-rose-500/20">Fix</Link>
+                  <Link href={COMMUNICATIONS_ROUTES.outbox} className="shrink-0 rounded-md bg-rose-500/12 px-2 py-0.5 text-[10px] font-bold text-rose-600 transition hover:bg-rose-500/20">Fix</Link>
                 )}
               </div>
               {/* Compact channel links */}
               <div className="divide-y divide-[var(--line)]">
                 {([
-                  { dot: "bg-emerald-500", label: "WhatsApp",  href: "/settings/notifications/whatsapp" },
-                  { dot: "bg-sky-500",     label: "Outbox",    href: "/settings/notifications/outbox" },
-                  { dot: "bg-violet-500",  label: "Templates", href: "/settings/notifications" },
-                  { dot: "bg-amber-500",   label: "Policies",  href: "/settings/notifications" },
+                  { dot: "bg-emerald-500", label: "WhatsApp",  href: COMMUNICATIONS_ROUTES.whatsapp },
+                  { dot: "bg-sky-500",     label: "Outbox",    href: COMMUNICATIONS_ROUTES.outbox },
+                  { dot: "bg-violet-500",  label: "Templates", href: COMMUNICATIONS_ROUTES.templates },
+                  { dot: "bg-amber-500",   label: "Policies",  href: COMMUNICATIONS_ROUTES.policies },
                 ] as const).map((row) => (
                   <Link key={row.label} href={row.href} className="flex items-center gap-2.5 px-4 py-2.5 transition hover:bg-[var(--panel-strong)]">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.dot}`} />

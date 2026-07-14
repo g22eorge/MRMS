@@ -7,7 +7,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
-import { revalidatePath } from "next/cache";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
 
 function supportsCommsTemplates() {
   return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
@@ -70,7 +71,7 @@ export default async function NotificationTemplatesPage({
       .catch(() => null);
     const companyName = (branding?.companyName ?? "").trim();
     if (!companyName) {
-      redirect("/settings/notifications/templates?error=Set+company+name+first+in+Settings+%E2%86%92+Branding");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Set+company+name+first+in+Settings+%E2%86%92+Branding`);
     }
 
     const rows = await prisma.communicationTemplate.findMany({
@@ -104,8 +105,8 @@ export default async function NotificationTemplatesPage({
       updated += 1;
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect(`/settings/notifications/templates?saved=${encodeURIComponent(`brand+replaced+(${updated})`)}`);
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=${encodeURIComponent(`brand+replaced+(${updated})`)}`);
   }
 
   if (!supportsCommsTemplates()) {
@@ -123,11 +124,11 @@ export default async function NotificationTemplatesPage({
   const topNav = (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <Link
-        href="/settings/notifications"
+        href={COMMUNICATIONS_ROUTES.preferences}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Notifications
+        My notification preferences
       </Link>
       <div className="flex flex-wrap gap-2">
         {user.role === "ADMIN" ? (
@@ -141,11 +142,11 @@ export default async function NotificationTemplatesPage({
             </button>
           </form>
         ) : null}
-        <Link href="/settings/notifications/outbox" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+        <Link href={COMMUNICATIONS_ROUTES.outbox} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
           Outbox
         </Link>
         {user.role === "ADMIN" ? (
-          <Link href="/settings/notifications/whatsapp" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+          <Link href={COMMUNICATIONS_ROUTES.whatsapp} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
             WhatsApp
           </Link>
         ) : null}
@@ -172,7 +173,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success) {
-      redirect("/settings/notifications/templates?error=Invalid+template+input");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+template+input`);
     }
 
     const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
@@ -195,13 +196,13 @@ export default async function NotificationTemplatesPage({
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("Unique constraint") || msg.includes("P2002")) {
-        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+key+already+exists+for+that+channel`);
       }
-      redirect("/settings/notifications/templates?error=Failed+to+create+template");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Failed+to+create+template`);
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=template");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=template`);
   }
 
   async function updateTemplate(formData: FormData) {
@@ -222,7 +223,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success || !parsed.data.id) {
-      redirect("/settings/notifications/templates?error=Invalid+template+update");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+template+update`);
     }
 
     const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
@@ -235,7 +236,7 @@ export default async function NotificationTemplatesPage({
       select: { id: true },
     }).catch(() => null);
     if (!existing) {
-      redirect("/settings/notifications/templates?error=Template+not+found");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+not+found`);
     }
 
     // Try full update first; if meta columns are missing in DB, fall back to updating without them.
@@ -275,20 +276,20 @@ export default async function NotificationTemplatesPage({
             },
           });
         } catch {
-          redirect("/settings/notifications/templates?error=Failed+to+update+template");
+          redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Failed+to+update+template`);
         }
-        revalidatePath("/settings/notifications/templates");
-        redirect("/settings/notifications/templates?error=Template+saved+but+meta+fields+need+DB+migration+-+click+Apply+Migration");
+        revalidateCommunicationsTemplates();
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+saved+but+meta+fields+need+DB+migration+-+click+Apply+Migration`);
       }
       if (msg.includes("Unique constraint") || msg.includes("P2002")) {
-        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+key+already+exists+for+that+channel`);
       }
-      redirect(`/settings/notifications/templates?error=${encodeURIComponent("Failed to update: " + msg.slice(0, 120))}`);
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=${encodeURIComponent("Failed to update: " + msg.slice(0, 120))}`);
     }
 
     if (saved) {
-      revalidatePath("/settings/notifications/templates");
-      redirect("/settings/notifications/templates?saved=template");
+      revalidateCommunicationsTemplates();
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=template`);
     }
   }
 
@@ -320,11 +321,11 @@ export default async function NotificationTemplatesPage({
       }
     }
 
-    revalidatePath("/settings/notifications/templates");
+    revalidateCommunicationsTemplates();
     if (errors.length > 0) {
-      redirect(`/settings/notifications/templates?error=${encodeURIComponent("Migration partial: " + errors.join("; "))}`);
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=${encodeURIComponent("Migration partial: " + errors.join("; "))}`);
     }
-    redirect(`/settings/notifications/templates?saved=Migration+applied+(${applied}+columns+added)`);
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=Migration+applied+(${applied}+columns+added)`);
   }
 
   async function deleteTemplate(formData: FormData) {
@@ -332,11 +333,11 @@ export default async function NotificationTemplatesPage({
     const { user: actor, orgId: deleteOrgId } = await requireOrgSession();
     if (actor.role !== "ADMIN") redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
-    if (!id) redirect("/settings/notifications/templates?error=Missing+template+id");
+    if (!id) redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Missing+template+id`);
 
     await prisma.communicationTemplate.deleteMany({ where: { id, orgId: deleteOrgId } }).catch(() => null);
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=deleted");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=deleted`);
   }
 
   async function deduplicateTemplates() {
@@ -365,8 +366,8 @@ export default async function NotificationTemplatesPage({
       await prisma.communicationTemplate.deleteMany({ where: { id: { in: toDelete }, orgId: dedupeOrgId } });
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect(`/settings/notifications/templates?saved=Removed+${toDelete.length}+duplicate${toDelete.length !== 1 ? "s" : ""}`);
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=Removed+${toDelete.length}+duplicate${toDelete.length !== 1 ? "s" : ""}`);
   }
 
   async function upsertPolicy(formData: FormData) {
@@ -385,7 +386,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success) {
-      redirect("/settings/notifications/templates?error=Invalid+policy+input");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+policy+input`);
     }
 
     const toIntOrNull = (value: string) => {
@@ -418,8 +419,8 @@ export default async function NotificationTemplatesPage({
       },
     });
 
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=policy");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=policy`);
   }
 
   let templates: Array<{
@@ -741,7 +742,7 @@ export default async function NotificationTemplatesPage({
         )}
       </section>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <section id="policies" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Status Policy</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Controls which channels are enabled per job status and which template key is used. Nudges are in hours.
