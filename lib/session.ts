@@ -4,17 +4,13 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { getDeploymentContext } from "@/lib/deployment-context";
+import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { EIS_ORG_ID } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
 
 function normalizeRole(role: Role): Role {
   // Keep legacy role values working with new UI language.
   return role === "INTAKE" ? "FRONT_DESK" : role;
-}
-
-function isPlatformAdminEmail(email?: string | null) {
-  const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
-  return Boolean(adminEmail && email && email.toLowerCase() === adminEmail);
 }
 
 async function enforceDeploymentUser(user: { email: string; orgId: string | null }) {

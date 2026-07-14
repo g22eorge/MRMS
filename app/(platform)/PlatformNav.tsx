@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
+
 const NAV = [
-  { href: "/platform", label: "Organisations", exact: true },
-  { href: "/platform/payments", label: "Payments" },
-  { href: "/platform/audit", label: "Audit Log" },
-  { href: "/platform/settings", label: "Settings" },
+  { href: PLATFORM_ROUTES.home, label: "Organisations", exact: true },
+  { href: PLATFORM_ROUTES.payments, label: "Payments" },
+  { href: PLATFORM_ROUTES.audit, label: "Audit Log" },
+  { href: PLATFORM_ROUTES.settings, label: "Settings" },
 ];
 
 export function PlatformNav() {

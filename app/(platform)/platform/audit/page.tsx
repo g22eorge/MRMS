@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +80,7 @@ export default async function PlatformAuditPage({
           <a href={exportHref} className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             Export CSV
           </a>
-          <Link href="/platform" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
+          <Link href={PLATFORM_ROUTES.home} className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             Organisations
           </Link>
         </div>
@@ -125,7 +126,7 @@ export default async function PlatformAuditPage({
                   </td>
                   <td className="px-4 py-3">
                     {org ? (
-                      <Link href={`/platform/orgs/${org.id}`} className="font-medium text-[var(--ink)] hover:underline">{org.name}</Link>
+                      <Link href={PLATFORM_ROUTES.org(org.id)} className="font-medium text-[var(--ink)] hover:underline">{org.name}</Link>
                     ) : (
                       <span className="font-mono text-xs text-[var(--ink-muted)]">{event.orgId ?? "—"}</span>
                     )}

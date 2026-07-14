@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
+import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { checkRateLimit, rateLimitHeaders, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -34,12 +35,11 @@ export async function POST(request: NextRequest) {
 
   // Platform admin is always exempt (matched later during credential check,
   // but we check the same env var for a quick bypass without a DB query).
-  const platformAdmin = process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase();
   let isExempt = process.env.E2E_DISABLE_RATE_LIMIT === "1";
-  if (!isExempt && platformAdmin && path.endsWith("/sign-in/email")) {
+  if (!isExempt && path.endsWith("/sign-in/email")) {
     try {
       const body = await request.clone().json();
-      isExempt = typeof body.email === "string" && body.email.toLowerCase() === platformAdmin;
+      isExempt = typeof body.email === "string" && checkIsPlatformAdmin(body.email);
     } catch {
       // ignore parse errors
     }

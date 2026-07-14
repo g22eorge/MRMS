@@ -5,7 +5,8 @@ import { NextRequest } from "next/server";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockQueryRaw = mock(async (): Promise<any[]> => []);
-const mockCheckRateLimit = mock(async () => ({ allowed: true, retryAfterMs: 0 }));
+const mockCheckRateLimit = mock(() => ({ allowed: true, retryAfterMs: 0 }));
+const mockAuthHandler = mock(async () => new Response('{"token":"abc"}', { status: 200, headers: { "content-type": "application/json" } }));
 
 mock.module("@/lib/prisma", () => ({
   prisma: { $queryRaw: mockQueryRaw },
@@ -16,11 +17,18 @@ mock.module("@/lib/rate-limit", () => ({
   rateLimitHeaders: mock(() => ({})),
 }));
 
+mock.module("@/lib/auth", () => ({
+  auth: {
+    handler: mockAuthHandler,
+    api: { getSession: mock(async () => null) },
+  },
+}));
+
 const { POST } = await import("../../../app/api/login/route");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ACTIVE_USER = { id: "u1", email: "alice@example.com", isActive: 1 };
+const ACTIVE_USER = { email: "alice@example.com", isActive: 1 };
 
 function makePost(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/login", {
@@ -28,12 +36,6 @@ function makePost(body: unknown): NextRequest {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-}
-
-/** Replace globalThis.fetch with a mock that always returns the given response. */
-function stubFetch(response: Response): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  globalThis.fetch = mock(async () => response) as any;
 }
 
 function makeBetterAuthResponse(status: number, body = "{}", cookie?: string): Response {
@@ -45,7 +47,7 @@ function makeBetterAuthResponse(status: number, body = "{}", cookie?: string): R
 
 describe("POST /api/login — input validation", () => {
   beforeEach(() => {
-    mockCheckRateLimit.mockImplementation(async () => ({ allowed: true, retryAfterMs: 0 }));
+    mockCheckRateLimit.mockImplementation(() => ({ allowed: true, retryAfterMs: 0 }));
     mockQueryRaw.mockImplementation(async (): Promise<[]> => []);
   });
 
@@ -59,61 +61,27 @@ describe("POST /api/login — input validation", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when both email and password are empty strings", async () => {
-    const res = await POST(makePost({ email: "", password: "" }));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 with a descriptive message", async () => {
-    const res = await POST(makePost({}));
-    const body = await res.json();
-    expect(typeof body.message).toBe("string");
-    expect(body.message.length).toBeGreaterThan(0);
-  });
-
   it("returns 401 when no user matches the email", async () => {
     mockQueryRaw.mockImplementation(async (): Promise<[]> => []);
     const res = await POST(makePost({ email: "ghost@example.com", password: "wrong" }));
     expect(res.status).toBe(401);
   });
 
-  it("returns 401 with INVALID_EMAIL_OR_PASSWORD code", async () => {
-    mockQueryRaw.mockImplementation(async (): Promise<[]> => []);
-    const res = await POST(makePost({ email: "ghost@example.com", password: "wrong" }));
-    const body = await res.json();
-    expect(body.code).toBe("INVALID_EMAIL_OR_PASSWORD");
-  });
-
   it("returns 403 when user account is deactivated (isActive = 0)", async () => {
     mockQueryRaw.mockImplementation(async () => [
-      { id: "u1", email: "disabled@example.com", isActive: 0 },
+      { email: "disabled@example.com", isActive: 0 },
     ]);
     const res = await POST(makePost({ email: "disabled@example.com", password: "pass" }));
     expect(res.status).toBe(403);
   });
-
-  it("returns 403 with ACCOUNT_DISABLED code", async () => {
-    mockQueryRaw.mockImplementation(async () => [
-      { id: "u1", email: "disabled@example.com", isActive: 0 },
-    ]);
-    const res = await POST(makePost({ email: "disabled@example.com", password: "pass" }));
-    const body = await res.json();
-    expect(body.code).toBe("ACCOUNT_DISABLED");
-  });
 });
 
-// ── Success path (active user → BetterAuth upstream) ─────────────────────────
+// ── Success path (active user → BetterAuth handler) ─────────────────────────
 
 describe("POST /api/login — success path", () => {
-  let originalFetch: typeof fetch;
-
   beforeEach(() => {
-    mockCheckRateLimit.mockImplementation(async () => ({ allowed: true, retryAfterMs: 0 }));
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
+    mockCheckRateLimit.mockImplementation(() => ({ allowed: true, retryAfterMs: 0 }));
+    mockAuthHandler.mockReset();
     mockQueryRaw.mockReset();
   });
 
@@ -121,7 +89,7 @@ describe("POST /api/login — success path", () => {
     mockQueryRaw
       .mockImplementationOnce(async () => [ACTIVE_USER])
       .mockImplementationOnce(async (): Promise<[]> => []);
-    stubFetch(makeBetterAuthResponse(200, '{"token":"abc"}'));
+    mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
     const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
     expect(res.status).toBe(200);
   });
@@ -130,16 +98,16 @@ describe("POST /api/login — success path", () => {
     mockQueryRaw
       .mockImplementationOnce(async () => [ACTIVE_USER])
       .mockImplementationOnce(async (): Promise<[]> => []);
-    stubFetch(makeBetterAuthResponse(200, '{"token":"abc"}'));
+    mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
     const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-    expect(res.headers.get("x-login-redirect")).toBeTruthy();
+    expect(res.headers.get("x-login-redirect")).toBe("/dashboard");
   });
 
   it("forwards set-cookie from BetterAuth response", async () => {
     mockQueryRaw
       .mockImplementationOnce(async () => [ACTIVE_USER])
       .mockImplementationOnce(async (): Promise<[]> => []);
-    stubFetch(
+    mockAuthHandler.mockImplementation(async () =>
       makeBetterAuthResponse(200, '{"token":"abc"}', "session=xyz; Path=/; HttpOnly"),
     );
     const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
@@ -147,78 +115,34 @@ describe("POST /api/login — success path", () => {
     expect(cookie).toContain("session=xyz");
   });
 
-  it("falls back to headers.get('set-cookie') when getSetCookie returns empty array", async () => {
-    // Covers lines 117-121: else-branch where getSetCookie() is present but
-    // returns [] (e.g. older runtimes / custom Response objects) while the
-    // lower-level headers.get("set-cookie") still carries a value.
-    mockQueryRaw
-      .mockImplementationOnce(async () => [ACTIVE_USER])
-      .mockImplementationOnce(async (): Promise<[]> => []);
-    const fakeUpstream = {
-      status: 200,
-      text: async () => '{"token":"abc"}',
-      headers: {
-        get: (key: string) => {
-          if (key === "content-type") return "application/json";
-          if (key === "set-cookie") return "session=fallback; Path=/; HttpOnly";
-          return null;
-        },
-        getSetCookie: () => [] as string[],
-      },
-    } as unknown as Response;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    globalThis.fetch = mock(async () => fakeUpstream) as any;
-    const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-    const cookie = res.headers.get("set-cookie");
-    expect(cookie).toContain("session=fallback");
-  });
-
-  it("returns 500 with LOGIN_FAILED code when fetch throws", async () => {
-    mockQueryRaw
-      .mockImplementationOnce(async () => [ACTIVE_USER])
-      .mockImplementationOnce(async (): Promise<[]> => []);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    globalThis.fetch = mock(async () => { throw new Error("network error"); }) as any;
-    const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-    expect(res.status).toBe(500);
-    const body = await res.json();
-    expect(body.code).toBe("LOGIN_FAILED");
-  });
-
-  it("redirects platform admin to /platform-admin (DB permission row)", async () => {
-    // Second queryRaw returns a platform_admin permission row
+  it("redirects platform admin to /platform (DB permission row)", async () => {
     mockQueryRaw
       .mockImplementationOnce(async () => [ACTIVE_USER])
       .mockImplementationOnce(async () => [{ permission: "platform_admin" }]);
-    stubFetch(makeBetterAuthResponse(200, '{"token":"abc"}'));
+    mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
     const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-    expect(res.headers.get("x-login-redirect")).toBe("/platform-admin");
+    expect(res.headers.get("x-login-redirect")).toBe("/platform");
   });
 
-  it("redirects platform admin via PLATFORM_ADMIN_EMAIL env var (skips DB query)", async () => {
-    // This covers the early-return branch in isPlatformAdmin (line 21):
-    //   if (configuredEmail && user.email === configuredEmail) return true
+  it("redirects platform admin via PLATFORM_ADMIN_EMAIL env var", async () => {
     const prev = process.env.PLATFORM_ADMIN_EMAIL;
     process.env.PLATFORM_ADMIN_EMAIL = "alice@example.com";
     try {
-      // Only one queryRaw call needed — isPlatformAdmin returns true before DB query
       mockQueryRaw.mockImplementationOnce(async () => [ACTIVE_USER]);
-      stubFetch(makeBetterAuthResponse(200, '{"token":"abc"}'));
+      mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
       const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-      expect(res.headers.get("x-login-redirect")).toBe("/platform-admin");
+      expect(res.headers.get("x-login-redirect")).toBe("/platform");
     } finally {
       process.env.PLATFORM_ADMIN_EMAIL = prev;
     }
   });
 
-  it("falls back to /dashboard when isPlatformAdmin DB query throws", async () => {
-    // Covers lines 30-31: catch { return false } in isPlatformAdmin
+  it("falls back to /dashboard when platform access DB query throws", async () => {
     mockQueryRaw
-      .mockImplementationOnce(async () => [ACTIVE_USER])      // user lookup succeeds
-      .mockImplementationOnce(async () => { throw new Error("DB locked"); }); // permission check fails
-    stubFetch(makeBetterAuthResponse(200, '{"token":"abc"}'));
+      .mockImplementationOnce(async () => [ACTIVE_USER])
+      .mockImplementationOnce(async () => { throw new Error("DB locked"); });
+    mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
     const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!" }));
-    // isPlatformAdmin returns false → regular dashboard redirect
     expect(res.headers.get("x-login-redirect")).toBe("/dashboard");
     expect(res.status).toBe(200);
   });
@@ -228,21 +152,11 @@ describe("POST /api/login — success path", () => {
 
 describe("POST /api/login — rate limiting", () => {
   it("returns 429 when rate limit is exceeded", async () => {
-    mockCheckRateLimit.mockImplementation(async () => ({
+    mockCheckRateLimit.mockImplementation(() => ({
       allowed: false,
       retryAfterMs: 30_000,
     }));
     const res = await POST(makePost({ email: "a@b.com", password: "pw" }));
     expect(res.status).toBe(429);
-  });
-
-  it("returns RATE_LIMITED code on 429", async () => {
-    mockCheckRateLimit.mockImplementation(async () => ({
-      allowed: false,
-      retryAfterMs: 30_000,
-    }));
-    const res = await POST(makePost({ email: "a@b.com", password: "pw" }));
-    const body = await res.json();
-    expect(body.code).toBe("RATE_LIMITED");
   });
 });

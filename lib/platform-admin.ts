@@ -64,8 +64,17 @@ export async function assertPlatformAdmin(): Promise<NonNullable<PlatformUser> |
  * (e.g. the app layout that needs to conditionally render an admin sidebar link).
  *
  *   const isPlatformAdmin = checkIsPlatformAdmin(user.email);
+ *
+ * Email-only check — used for deployment bypass and UI hints. Server routes that
+ * mutate platform data must use requirePlatformAdmin()/assertPlatformAdmin().
  */
 export function checkIsPlatformAdmin(email: string): boolean {
   const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
   return Boolean(adminEmail && email.toLowerCase() === adminEmail);
+}
+
+/** Alias used by session/deployment guards when only the email is known. */
+export function isPlatformAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return checkIsPlatformAdmin(email);
 }

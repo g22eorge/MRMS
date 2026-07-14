@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { OrgPlan, OrgModule } from "@prisma/client";
 import { setOrgAtSenderId } from "@/lib/org-whatsapp-config";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { revalidatePlatformHome, revalidatePlatformOrg, revalidatePlatformOrgAndHome } from "@/lib/platform/revalidate";
 
 export async function setPlanAction(formData: FormData) {
   await requirePlatformAdmin();
@@ -15,7 +15,7 @@ export async function setPlanAction(formData: FormData) {
     where: { id: orgId },
     data: { plan, billingStatus: plan === "STARTER" ? "TRIALING" : "ACTIVE" },
   });
-  revalidatePath("/platform");
+  revalidatePlatformHome();
 }
 
 export async function toggleOrgActive(formData: FormData) {
@@ -24,7 +24,7 @@ export async function toggleOrgActive(formData: FormData) {
   const isActive = formData.get("isActive") === "true";
   if (!orgId) return;
   await prisma.organization.update({ where: { id: orgId }, data: { isActive: !isActive } });
-  revalidatePath("/platform");
+  revalidatePlatformHome();
 }
 
 export async function extendTrialAction(formData: FormData) {
@@ -47,7 +47,7 @@ export async function extendTrialAction(formData: FormData) {
     where: { id: orgId },
     data: { trialEndsAt: newDate, billingStatus: "TRIALING" },
   });
-  revalidatePath("/platform");
+  revalidatePlatformHome();
 }
 
 export async function runCommercialSeedAction() {
@@ -58,7 +58,7 @@ export async function runCommercialSeedAction() {
   } catch (err) {
     console.error("[seed:commercial]", err);
   }
-  revalidatePath("/platform");
+  revalidatePlatformHome();
 }
 
 export async function setOrgSmsSenderAction(formData: FormData) {
@@ -66,11 +66,10 @@ export async function setOrgSmsSenderAction(formData: FormData) {
   const orgId = formData.get("orgId") as string;
   const raw = (formData.get("senderId") as string | null)?.trim() ?? "";
   if (!orgId) return;
-  // AT sender IDs: alphanumeric only, 1–11 chars (or empty to clear)
   const senderId = raw === "" ? null : raw;
   if (senderId && (senderId.length > 11 || !/^[A-Za-z0-9]+$/.test(senderId))) return;
   await setOrgAtSenderId(orgId, senderId);
-  revalidatePath(`/platform/orgs/${orgId}`);
+  revalidatePlatformOrg(orgId);
 }
 
 export async function setOrgAiModelAction(formData: FormData) {
@@ -79,7 +78,7 @@ export async function setOrgAiModelAction(formData: FormData) {
   const model = ((formData.get("aiModel") as string | null) ?? "").trim() || null;
   if (!orgId) return;
   await prisma.organization.update({ where: { id: orgId }, data: { aiModel: model } });
-  revalidatePath(`/platform/orgs/${orgId}`);
+  revalidatePlatformOrg(orgId);
 }
 
 export async function toggleOrgModuleAction(formData: FormData) {
@@ -99,7 +98,7 @@ export async function toggleOrgModuleAction(formData: FormData) {
       });
     }
   } catch { /* table may not exist yet */ }
-  revalidatePath(`/platform/orgs/${orgId}`);
+  revalidatePlatformOrg(orgId);
 }
 
 export async function setBillingStatusAction(formData: FormData) {
@@ -111,8 +110,7 @@ export async function setBillingStatusAction(formData: FormData) {
     where: { id: orgId },
     data: { billingStatus: status as never },
   });
-  revalidatePath("/platform");
-  revalidatePath(`/platform/orgs/${orgId}`);
+  revalidatePlatformOrgAndHome(orgId);
 }
 
 export async function updateOrgDetailsAction(formData: FormData) {
@@ -127,6 +125,5 @@ export async function updateOrgDetailsAction(formData: FormData) {
   const enableRepair = formData.get("enableRepairModule");
   if (enableRepair !== null) data.enableRepairModule = enableRepair === "true";
   await prisma.organization.update({ where: { id: orgId }, data: data as never });
-  revalidatePath(`/platform/orgs/${orgId}`);
-  revalidatePath(`/platform-admin/orgs/${orgId}`);
+  revalidatePlatformOrg(orgId);
 }

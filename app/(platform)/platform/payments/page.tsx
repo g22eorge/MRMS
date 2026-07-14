@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getRecentBillingEvents, getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATMediumDate } from "@/lib/date-eat";
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
 
@@ -64,7 +65,7 @@ export default async function PaymentsPage() {
               <tr key={e.id} className="hover:bg-[var(--gold)]/5">
                 <td className="px-4 py-2 text-[var(--ink-muted)] whitespace-nowrap">{fmt(e.createdAt)}</td>
                 <td className="px-4 py-2">
-                  <Link href={`/platform/orgs/${e.orgId}`} className="font-medium text-[var(--ink)] hover:underline">
+                  <Link href={PLATFORM_ROUTES.org(e.orgId)} className="font-medium text-[var(--ink)] hover:underline">
                     {e.orgName ?? e.orgId}
                   </Link>
                 </td>

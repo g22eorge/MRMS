@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { setPlatformSetting, deletePlatformSetting } from "@/lib/platform-settings";
 import { registerIpn, getRegisteredIpns } from "@/lib/pesapal";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { revalidatePlatformSettings } from "@/lib/platform/revalidate";
 
 export async function savePesapalSettingsAction(
   _prev: { ok: boolean; error?: string } | null,
@@ -17,7 +17,7 @@ export async function savePesapalSettingsAction(
   try {
     if (consumerKey) await setPlatformSetting("PESAPAL_CONSUMER_KEY", consumerKey);
     if (consumerSecret) await setPlatformSetting("PESAPAL_CONSUMER_SECRET", consumerSecret);
-    revalidatePath("/platform/settings");
+    revalidatePlatformSettings();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
@@ -43,7 +43,7 @@ export async function clearPlatformKeyAction(
   }
   try {
     await deletePlatformSetting(key);
-    revalidatePath("/platform/settings");
+    revalidatePlatformSettings();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed" };
@@ -67,7 +67,7 @@ export async function saveAtSettingsAction(
     if (apiKey) await setPlatformSetting("AT_API_KEY", apiKey);
     if (username) await setPlatformSetting("AT_USERNAME", username);
     if (senderId) await setPlatformSetting("AT_SENDER_ID", senderId);
-    revalidatePath("/platform/settings");
+    revalidatePlatformSettings();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
@@ -88,13 +88,13 @@ export async function registerIpnAction(
     const found = existing.find((i) => i.url === ipnUrl && i.status === "Active");
     if (found) {
       await setPlatformSetting("PESAPAL_IPN_ID", found.ipn_id);
-      revalidatePath("/platform/settings");
+      revalidatePlatformSettings();
       return { ok: true, ipnId: found.ipn_id };
     }
 
     const ipnId = await registerIpn(ipnUrl);
     await setPlatformSetting("PESAPAL_IPN_ID", ipnId);
-    revalidatePath("/platform/settings");
+    revalidatePlatformSettings();
     return { ok: true, ipnId };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "IPN registration failed" };

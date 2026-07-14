@@ -1,33 +1,14 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
-import { assertPlatformAdmin, checkIsPlatformAdmin } from "@/lib/platform-admin";
+import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import type { OrgModule } from "@prisma/client";
 
+import { setOrgModulesAction } from "./actions";
+
 export const dynamic = "force-dynamic";
-
-async function setModulesAction(formData: FormData) {
-  "use server";
-  const admin = await assertPlatformAdmin();
-  if (!admin) return;
-
-  const orgId = String(formData.get("orgId") ?? "");
-  if (!orgId) return;
-
-  const granted = ALL_MODULES.filter((m) => formData.get(`module_${m}`) === "1");
-
-  await prisma.$transaction([
-    prisma.orgModuleGrant.deleteMany({ where: { orgId } }),
-    prisma.orgModuleGrant.createMany({
-      data: granted.map((module) => ({ orgId, module })),
-    }),
-  ]);
-
-  revalidatePath("/admin/orgs");
-}
 
 export default async function AdminOrgsPage() {
   const { user } = await requireOrgSession();
@@ -90,7 +71,7 @@ export default async function AdminOrgsPage() {
               </div>
 
               {/* Module toggles */}
-              <form action={setModulesAction} className="p-4">
+              <form action={setOrgModulesAction} className="p-4">
                 <input type="hidden" name="orgId" value={org.id} />
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                   {ALL_MODULES.map((mod) => {

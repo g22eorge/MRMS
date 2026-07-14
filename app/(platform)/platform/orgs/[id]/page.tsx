@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getBillingEventsByOrg } from "@/lib/billing-events";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATMediumDate } from "@/lib/date-eat";
+import { PLATFORM_PLAN_CHIP, PLATFORM_ROUTES, PLATFORM_STATUS_CHIP } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import {
   setBillingStatusAction,
@@ -20,20 +21,8 @@ import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_CHIP: Record<string, string> = {
-  TRIALING:  "bg-blue-500/10    text-blue-700    border-blue-400/30    dark:text-blue-400",
-  ACTIVE:    "bg-emerald-500/10 text-emerald-700 border-emerald-400/30 dark:text-emerald-400",
-  PAST_DUE:  "bg-red-500/10     text-red-700     border-red-400/30     dark:text-red-400",
-  CANCELLED: "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",
-};
-
-const PLAN_CHIP: Record<string, string> = {
-  STARTER:    "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",
-  STANDARD:   "bg-sky-500/10    text-sky-700    border-sky-400/30    dark:text-sky-400",
-  GROWTH:     "bg-amber-500/10  text-amber-700  border-amber-400/30  dark:text-amber-400",
-  PREMIUM:    "bg-violet-500/10 text-violet-700 border-violet-400/30 dark:text-violet-400",
-  ENTERPRISE: "bg-purple-500/10 text-purple-700 border-purple-400/30 dark:text-purple-400",
-};
+const STATUS_CHIP = PLATFORM_STATUS_CHIP;
+const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">{children}</p>;
@@ -95,7 +84,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     <div className="space-y-6">
 
       {/* Back + breadcrumb */}
-      <Link href="/platform" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
+      <Link href={PLATFORM_ROUTES.home} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         Organisations
       </Link>

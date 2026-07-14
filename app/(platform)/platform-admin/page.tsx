@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 
-// Legacy duplicate of /platform. The two trees drifted (this copy passed
-// `userCount`/`jobCount` to OrgTable, which expects `_count.users`/`_count.jobs`,
-// crashing with "Cannot read properties of undefined (reading 'users')").
-// Redirect until the trees are consolidated (system-analysis.md, Phase 3.5).
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
+
+// Legacy duplicate of /platform. Redirect to the canonical platform console.
 export default function PlatformAdminRedirect() {
-  redirect("/platform");
+  redirect(PLATFORM_ROUTES.home);
 }
