@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+
+import { LineItemsPanel, lineItemInputClass } from "@/components/forms";
+import { useLineItemsState } from "@/hooks/useLineItemsState";
 
 import { createSupplierBillAction } from "../actions";
 
@@ -20,14 +23,10 @@ type GoodsReceived = {
   grnNumber: string;
   items: Array<{ description: string; quantity: number; unitCost: number }>;
 };
-type LineItem = { key: number; description: string; quantity: number; unitCost: number };
+type LineData = { description: string; quantity: number; unitCost: number };
 
-let keyCounter = 0;
-function nextKey() { return ++keyCounter; }
-function blankLine(): LineItem { return { key: nextKey(), description: "", quantity: 1, unitCost: 0 }; }
-function fromSourceLine(line: { description: string; quantity: number; unitCost: number }): LineItem {
+function mapSourceLine(line: { description: string; quantity: number; unitCost: number }): LineData {
   return {
-    key: nextKey(),
     description: line.description,
     quantity: Math.max(1, Math.floor(Number(line.quantity) || 1)),
     unitCost: Math.max(0, Number(line.unitCost) || 0),
@@ -61,32 +60,41 @@ export function NewSupplierBillForm({
   const [supplierId, setSupplierId] = useState(initialSupplierId);
   const [selectedPoId, setSelectedPoId] = useState(initialPoId);
   const [selectedGrnId, setSelectedGrnId] = useState(defaultGrnId ?? "");
-  const sourceLines = useMemo(() => {
-    if (defaultGrn?.items.length) return defaultGrn.items.map(fromSourceLine);
+  const { lines, addLine, removeLine, updateLine, replaceLines, appendToFormData } = useLineItemsState<LineData>(
+    () => ({ description: "", quantity: 1, unitCost: 0 }),
+  );
+
+  const initialLines = useMemo(() => {
+    if (defaultGrn?.items.length) return defaultGrn.items.map(mapSourceLine);
     if (defaultPo?.items.length) {
-      return defaultPo.items.map((item) => fromSourceLine({ description: item.description, quantity: item.qtyOrdered, unitCost: item.unitCost }));
+      return defaultPo.items.map((item) =>
+        mapSourceLine({ description: item.description, quantity: item.qtyOrdered, unitCost: item.unitCost }),
+      );
     }
-    return [blankLine()];
+    return null;
   }, [defaultGrn, defaultPo]);
-  const [lines, setLines] = useState<LineItem[]>(sourceLines);
+
+  useEffect(() => {
+    if (initialLines?.length) replaceLines(initialLines);
+  }, [initialLines, replaceLines]);
 
   const supplierPOs = purchaseOrders.filter((po) => !supplierId || po.supplierId === supplierId);
-  const supplierGRNs = goodsReceived.filter((grn) =>
-    (!supplierId || grn.supplierId === supplierId) &&
-    (!selectedPoId || !grn.poId || grn.poId === selectedPoId),
+  const supplierGRNs = goodsReceived.filter(
+    (grn) =>
+      (!supplierId || grn.supplierId === supplierId) && (!selectedPoId || !grn.poId || grn.poId === selectedPoId),
   );
 
   function setLinesFromGrn(grnId: string) {
     const grn = goodsReceived.find((item) => item.id === grnId);
     if (!grn) {
       setSelectedGrnId("");
-      setLines([blankLine()]);
+      replaceLines([{ description: "", quantity: 1, unitCost: 0 }]);
       return;
     }
     setSelectedGrnId(grn.id);
     setSupplierId(grn.supplierId);
     if (grn.poId) setSelectedPoId(grn.poId);
-    setLines(grn.items.length ? grn.items.map(fromSourceLine) : [blankLine()]);
+    replaceLines(grn.items.length ? grn.items.map(mapSourceLine) : [{ description: "", quantity: 1, unitCost: 0 }]);
   }
 
   function setLinesFromPo(poId: string) {
@@ -94,29 +102,36 @@ export function NewSupplierBillForm({
     setSelectedPoId(poId);
     setSelectedGrnId("");
     if (!po) {
-      setLines([blankLine()]);
+      replaceLines([{ description: "", quantity: 1, unitCost: 0 }]);
       return;
     }
     setSupplierId(po.supplierId);
-    setLines(
+    replaceLines(
       po.items.length
-        ? po.items.map((item) => fromSourceLine({ description: item.description, quantity: item.qtyOrdered, unitCost: item.unitCost }))
-        : [blankLine()],
+        ? po.items.map((item) =>
+            mapSourceLine({ description: item.description, quantity: item.qtyOrdered, unitCost: item.unitCost }),
+          )
+        : [{ description: "", quantity: 1, unitCost: 0 }],
     );
   }
 
-  function updateLine(key: number, patch: Partial<LineItem>) {
-    setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+  function resetLinesForSupplier() {
+    setSelectedPoId("");
+    setSelectedGrnId("");
+    replaceLines([{ description: "", quantity: 1, unitCost: 0 }]);
   }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    fd.set("items", JSON.stringify(lines.map(({ description, quantity, unitCost }) => ({ description, quantity, unitCost }))));
+    appendToFormData(fd, "items", ({ description, quantity, unitCost }) => ({ description, quantity, unitCost }));
     startTransition(async () => {
       const result = await createSupplierBillAction(fd);
-      if (result.error) { setError(result.error); return; }
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       router.push(`/inventory/supplier-bills/${result.id}`);
     });
   }
@@ -169,9 +184,7 @@ export function NewSupplierBillForm({
               value={supplierId}
               onChange={(e) => {
                 setSupplierId(e.target.value);
-                setSelectedPoId("");
-                setSelectedGrnId("");
-                setLines([blankLine()]);
+                resetLinesForSupplier();
               }}
               className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]"
             >
@@ -225,34 +238,33 @@ export function NewSupplierBillForm({
         <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
       </div>
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)]">
-          <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Line Items</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">
-              {selectedGrnId ? "Loaded from selected GRN." : selectedPoId ? "Loaded from selected PO." : "Add supplier invoice lines."}
-            </p>
-          </div>
-          <button type="button" onClick={() => setLines((prev) => [...prev, { key: nextKey(), description: "", quantity: 1, unitCost: 0 }])} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">+ Add Line</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-right w-24">Qty</th><th className="px-3 py-2 text-right w-32">Unit Cost</th><th className="px-3 py-2 text-right w-32">Total</th><th className="px-3 py-2 w-8" /></tr></thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {lines.map((line) => (
-                <tr key={line.key}>
-                  <td className="px-3 py-2"><input value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} required className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--ink)]" /></td>
-                  <td className="px-3 py-2"><input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-xs text-[var(--ink)]" /></td>
-                  <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={line.unitCost} onChange={(e) => updateLine(line.key, { unitCost: parseFloat(e.target.value) || 0 })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-xs text-[var(--ink)]" /></td>
-                  <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--ink-muted)]">{(line.quantity * line.unitCost).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-center">{lines.length > 1 ? <button type="button" onClick={() => setLines((prev) => prev.filter((item) => item.key !== line.key))} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button> : null}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot><tr className="border-t border-[var(--line)] bg-[var(--gold)]/5"><td colSpan={3} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td><td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td><td /></tr></tfoot>
-          </table>
-        </div>
-      </div>
+      <LineItemsPanel
+        title="Line Items"
+        subtitle={
+          selectedGrnId
+            ? "Loaded from selected GRN."
+            : selectedPoId
+              ? "Loaded from selected PO."
+              : "Add supplier invoice lines."
+        }
+        onAddLine={addLine}
+      >
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-right w-24">Qty</th><th className="px-3 py-2 text-right w-32">Unit Cost</th><th className="px-3 py-2 text-right w-32">Total</th><th className="px-3 py-2 w-8" /></tr></thead>
+          <tbody className="divide-y divide-[var(--line)]">
+            {lines.map((line) => (
+              <tr key={line.key}>
+                <td className="px-3 py-2"><input value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} required className={lineItemInputClass} /></td>
+                <td className="px-3 py-2"><input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className={`${lineItemInputClass} text-right`} /></td>
+                <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={line.unitCost} onChange={(e) => updateLine(line.key, { unitCost: parseFloat(e.target.value) || 0 })} className={`${lineItemInputClass} text-right`} /></td>
+                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--ink-muted)]">{(line.quantity * line.unitCost).toLocaleString()}</td>
+                <td className="px-3 py-2 text-center">{lines.length > 1 ? <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button> : null}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot><tr className="border-t border-[var(--line)] bg-[var(--gold)]/5"><td colSpan={3} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td><td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td><td /></tr></tfoot>
+        </table>
+      </LineItemsPanel>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="flex gap-2">

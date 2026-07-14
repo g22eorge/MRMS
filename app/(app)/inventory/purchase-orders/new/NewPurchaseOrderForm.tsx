@@ -3,19 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+
+import { PartSelect, lineItemInputClass } from "@/components/forms";
+import { useLineItemsState } from "@/hooks/useLineItemsState";
+import { parseFormNumber } from "@/lib/forms/line-items";
+
 import { createPurchaseOrderAction } from "../actions";
 
 type Supplier = { id: string; name: string };
 type Part = { id: string; name: string; sku: string; unitCost: number | null };
-type LineItem = { key: number; description: string; qtyOrdered: number; unitCost: number; partId: string };
-
-let keyCounter = 0;
-function nextKey() { return ++keyCounter; }
-
-function parseNumber(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+type LineData = { description: string; qtyOrdered: number; unitCost: number; partId: string };
 
 const fieldClass = "mt-1 w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/10";
 const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]";
@@ -33,9 +30,12 @@ export function NewPurchaseOrderForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState(defaultSupplierId ?? "");
-  const [lines, setLines] = useState<LineItem[]>([
-    { key: nextKey(), description: "", qtyOrdered: 1, unitCost: 0, partId: "" },
-  ]);
+  const { lines, addLine, removeLine, updateLine, appendToFormData } = useLineItemsState<LineData>(() => ({
+    description: "",
+    qtyOrdered: 1,
+    unitCost: 0,
+    partId: "",
+  }));
 
   const selectedSupplier = suppliers.find((supplier) => supplier.id === supplierId);
   const canSubmit = suppliers.length > 0;
@@ -46,18 +46,6 @@ export function NewPurchaseOrderForm({
     const zeroCostLines = lines.filter((line) => line.description.trim() && line.unitCost <= 0).length;
     return { subtotal, quantity, readyLines, zeroCostLines };
   }, [lines]);
-
-  function addLine() {
-    setLines((prev) => [...prev, { key: nextKey(), description: "", qtyOrdered: 1, unitCost: 0, partId: "" }]);
-  }
-
-  function removeLine(key: number) {
-    setLines((prev) => (prev.length > 1 ? prev.filter((line) => line.key !== key) : prev));
-  }
-
-  function updateLine(key: number, patch: Partial<LineItem>) {
-    setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
-  }
 
   function onPartSelect(key: number, partId: string) {
     const part = parts.find((candidate) => candidate.id === partId);
@@ -71,12 +59,12 @@ export function NewPurchaseOrderForm({
     const fd = new FormData(e.currentTarget);
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     if (submitter?.name) fd.set(submitter.name, submitter.value);
-    fd.set("items", JSON.stringify(lines.map(({ description, qtyOrdered, unitCost, partId }) => ({
+    appendToFormData(fd, "items", ({ description, qtyOrdered, unitCost, partId }) => ({
       description,
       qtyOrdered,
       unitCost,
       partId: partId || undefined,
-    }))));
+    }));
 
     startTransition(async () => {
       const result = await createPurchaseOrderAction(fd);
@@ -168,21 +156,22 @@ export function NewPurchaseOrderForm({
                   <tr key={line.key} className="align-top">
                     <td className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">{index + 1}</td>
                     <td className="px-3 py-2">
-                      <select value={line.partId} onChange={(event) => onPartSelect(line.key, event.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none">
-                        <option value="">Custom item</option>
-                        {parts.map((part) => (
-                          <option key={part.id} value={part.id}>{part.sku} - {part.name}</option>
-                        ))}
-                      </select>
+                      <PartSelect
+                        value={line.partId}
+                        parts={parts}
+                        onChange={(partId) => onPartSelect(line.key, partId)}
+                        customLabel="Custom item"
+                        className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none"
+                      />
                     </td>
                     <td className="px-3 py-2">
-                      <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none" />
+                      <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass} text-sm`} />
                     </td>
                     <td className="px-3 py-2">
-                      <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseNumber(event.target.value))) })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-sm tabular-nums text-[var(--ink)] outline-none" />
+                      <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
                     </td>
                     <td className="px-3 py-2">
-                      <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseNumber(event.target.value)) })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-sm tabular-nums text-[var(--ink)] outline-none" />
+                      <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
                     </td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{lineTotal.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right">
