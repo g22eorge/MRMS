@@ -8,7 +8,7 @@
 |---|------|--------|--------|--------|
 | 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | b46d181 | ✅ tsc |
 | 2.2 | `lib/commercial/payment-sync.ts` | ✅ Done | 61ef225 | ✅ tsc |
-| 2.3 | `lib/notifications/share-document.ts` | ✅ Done | — | ✅ tsc |
+| 2.3 | `lib/notifications/share-document.ts` | ✅ Done | 18bc3a5 | ✅ tsc |
 | 2.4 | `lib/phone.ts` | ⬜ Pending | — | — |
 | 2.5 | Route `sendPdfViaWhatsApp` through outbox | ⬜ Pending | — | — |
 
