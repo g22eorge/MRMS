@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
 import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
+import { JobDocumentTimeline } from "@/components/jobs/JobDocumentTimeline";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
@@ -17,9 +18,10 @@ import { formatEATDateTime } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
+import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
 
-const tabs = ["overview", "client", "diagnosis", "repair", "financials", "timeline", "photos", "messages"] as const;
+const tabs = ["overview", "client", "diagnosis", "repair", "financials", "documents", "timeline", "photos", "messages"] as const;
 
 function formatUtcDateTime(value: Date | string) {
   return formatEATDateTime(value);
@@ -398,6 +400,7 @@ type Props = {
   returnTo?: string;
   returnLabel?: string;
   initialTab?: string;
+  documentTimeline?: JobDocumentTimelineEntry[];
   technicians: Array<{
     id: string;
     name: string;
@@ -546,7 +549,7 @@ type Props = {
   };
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", returnLabel = "All jobs", initialTab }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", returnLabel = "All jobs", initialTab, documentTimeline = [] }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -585,6 +588,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
     canViewFinancials ||
     can.viewApprovedCost(permissionUser);
   const canGenerateInvoice = ["ADMIN", "OPS"].includes(role) || canManageFinancials;
+  const canViewJobDocuments =
+    canViewFinancials ||
+    canGenerateJobCard ||
+    canGenerateQuotation ||
+    ["ADMIN", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER"].includes(role);
 
   const isSoftwareJob = (job.serviceType ?? "HARDWARE") !== "HARDWARE";
   const canManagePayouts = role === "ADMIN" || can.reviewExternalBills(permissionUser);
@@ -618,6 +626,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const visibleTabs = tabs.filter((tab) => {
     if (tab === "client") return role !== "TECHNICIAN_EXTERNAL";
     if (tab === "financials") return canViewFinancials;
+    if (tab === "documents") return canViewJobDocuments;
     if (tab === "timeline") return ["ADMIN", "OPS", "FRONT_DESK"].includes(role) || can.viewClientInfo(permissionUser);
     if ((tab === "diagnosis" || tab === "repair") && isIntake) return false;
     if (tab === "messages") return ["ADMIN", "OPS", "FRONT_DESK"].includes(role);
@@ -2202,6 +2211,42 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </form>
       ) : null}
 
+      {active === "documents" && canViewJobDocuments ? (
+        <div className={`${panelShellClass} space-y-4`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--ink)]">Document lifecycle</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                All paperwork for this repair in order — from job card through invoice, receipt, and delivery.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {showJobCardAction ? (
+                <a href={`/api/jobs/${job.id}/job-card`} target="_blank" rel="noreferrer" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
+                  Job Card PDF
+                </a>
+              ) : null}
+              {showQuotationAction ? (
+                <a href={`/api/jobs/${job.id}/quotation`} target="_blank" rel="noreferrer" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
+                  Quotation PDF
+                </a>
+              ) : null}
+              {showInvoiceAction ? (
+                <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
+                  Invoice PDF
+                </a>
+              ) : null}
+            </div>
+          </div>
+          {documentHints.length > 0 ? (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs text-amber-800">
+              {documentHints.join(" ")}
+            </div>
+          ) : null}
+          <JobDocumentTimeline entries={documentTimeline} baseCurrency={orgBaseCurrency} />
+        </div>
+      ) : null}
+
       {active === "timeline" && ["ADMIN", "OPS", "FRONT_DESK"].includes(role) ? (
         <div className={`${panelShellClass} space-y-4`}>
           {canUpdateClientCommunication ? (
@@ -2481,6 +2526,12 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("financials"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     Financials
+                  </button>
+                ) : null}
+                {canViewJobDocuments ? (
+                  <button type="button" onClick={() => { setMobileMoreOpen(false); setActive("documents"); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Documents
                   </button>
                 ) : null}
                 {showJobCardAction || showQuotationAction || showInvoiceAction ? (

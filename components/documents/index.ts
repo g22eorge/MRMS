@@ -4,3 +4,4 @@ export { DocumentFilterBar, PeriodFilterChips, DOCUMENT_PERIOD_OPTIONS } from ".
 export { DocumentShareMenuSection } from "./DocumentShareMenuSection";
 export { DocumentEmptyState, DocumentEmptyTableRow } from "./DocumentEmptyState";
 export { DocumentListTable, DocumentListTableHead } from "./DocumentListTable";
+export { DocumentsShell } from "./DocumentsShell";
