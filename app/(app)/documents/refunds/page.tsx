@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { OutboundMessageType, type PaymentMethod } from "@prisma/client";
+import { type PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import { formatMoney, formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
@@ -12,7 +12,7 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
 
@@ -138,29 +138,7 @@ export default async function RefundsPage({
 
     const refundId = String(formData.get("refundId") ?? "").trim();
     if (!refundId) return;
-    const refund = await prisma.refund.findFirst({
-      where: { id: refundId, orgId },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
-        creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, phone: true } } } } } },
-      },
-    });
-    const recipient = refund?.invoice?.job?.client ?? refund?.invoice?.client ?? refund?.sale?.client ?? refund?.creditNote?.sale.client ?? null;
-    if (!refund || !recipient?.phone) return;
-
-    const source = refund.invoice?.invoiceNumber ?? refund.sale?.saleNumber ?? refund.creditNote?.creditNoteNumber ?? "refund";
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/refunds/${refund.id}`;
-    await enqueueWhatsAppMessage({
-      orgId,
-      jobId: refund.invoice?.job?.id,
-      to: recipient.phone,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-      body: `Hi ${recipient.fullName}, your refund document for ${source} is ready.\n\nAmount: ${formatMoney(refund.amount, refund.currency)}\nDownload PDF: ${pdfUrl}`,
-    });
+    await shareRefundDocument({ orgId, refundId, channel: "whatsapp" });
     revalidatePath("/documents/refunds");
   }
 
@@ -171,30 +149,7 @@ export default async function RefundsPage({
 
     const refundId = String(formData.get("refundId") ?? "").trim();
     if (!refundId) return;
-    const refund = await prisma.refund.findFirst({
-      where: { id: refundId, orgId },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, email: true } } } }, client: { select: { fullName: true, email: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, email: true } } } },
-        creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, email: true } } } } } },
-      },
-    });
-    const recipient = refund?.invoice?.job?.client ?? refund?.invoice?.client ?? refund?.sale?.client ?? refund?.creditNote?.sale.client ?? null;
-    if (!refund || !recipient?.email) return;
-
-    const source = refund.invoice?.invoiceNumber ?? refund.sale?.saleNumber ?? refund.creditNote?.creditNoteNumber ?? "refund";
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/refunds/${refund.id}`;
-    await enqueueEmailMessage({
-      orgId,
-      jobId: refund.invoice?.job?.id,
-      to: recipient.email,
-      subject: `Refund document for ${source}`,
-      body: `Hi ${recipient.fullName},\n\nYour refund document for ${source} is ready.\n\nAmount: ${formatMoney(refund.amount, refund.currency)}\nDownload PDF: ${pdfUrl}`,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-    });
+    await shareRefundDocument({ orgId, refundId, channel: "email" });
     revalidatePath("/documents/refunds");
   }
 

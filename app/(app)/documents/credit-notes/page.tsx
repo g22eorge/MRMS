@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { OutboundMessageType, type PaymentMethod } from "@prisma/client";
+import { type PaymentMethod } from "@prisma/client";
 
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -12,7 +12,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
 import { CreateCreditNoteDialog } from "./CreateCreditNoteDialog";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
@@ -122,26 +122,7 @@ export default async function CreditNotesPage({
 
     const creditNoteId = String(formData.get("creditNoteId") ?? "").trim();
     if (!creditNoteId) return;
-    const creditNote = await prisma.creditNote.findFirst({
-      where: { id: creditNoteId, orgId },
-      select: {
-        id: true,
-        creditNoteNumber: true,
-        totalAmount: true,
-        currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
-      },
-    });
-    const recipient = creditNote?.sale.client ?? null;
-    if (!creditNote || !recipient?.phone) return;
-
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/credit-notes/${creditNote.id}`;
-    await enqueueWhatsAppMessage({
-      orgId,
-      to: recipient.phone,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-      body: `Hi ${recipient.fullName}, your credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.\n\nAmount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}\nDownload PDF: ${pdfUrl}`,
-    });
+    await shareCreditNoteDocument({ orgId, creditNoteId, channel: "whatsapp" });
     revalidatePath("/documents/credit-notes");
     redirect("/documents/credit-notes");
   }
@@ -153,27 +134,7 @@ export default async function CreditNotesPage({
 
     const creditNoteId = String(formData.get("creditNoteId") ?? "").trim();
     if (!creditNoteId) return;
-    const creditNote = await prisma.creditNote.findFirst({
-      where: { id: creditNoteId, orgId },
-      select: {
-        id: true,
-        creditNoteNumber: true,
-        totalAmount: true,
-        currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, email: true } } } },
-      },
-    });
-    const recipient = creditNote?.sale.client ?? null;
-    if (!creditNote || !recipient?.email) return;
-
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/credit-notes/${creditNote.id}`;
-    await enqueueEmailMessage({
-      orgId,
-      to: recipient.email,
-      subject: `Credit note ${creditNote.creditNoteNumber}`,
-      body: `Hi ${recipient.fullName},\n\nYour credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.\n\nAmount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}\nDownload PDF: ${pdfUrl}`,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-    });
+    await shareCreditNoteDocument({ orgId, creditNoteId, channel: "email" });
     revalidatePath("/documents/credit-notes");
     redirect("/documents/credit-notes");
   }

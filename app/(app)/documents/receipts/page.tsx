@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { OutboundMessageType, type PaymentMethod } from "@prisma/client";
+import { type PaymentMethod } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -16,7 +16,7 @@ import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { shareReceiptDocument } from "@/lib/notifications/share-document";
 import { CreateReceiptDialog } from "./CreateReceiptDialog";
 
 export default async function ReceiptsPage({
@@ -189,27 +189,7 @@ export default async function ReceiptsPage({
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     if (!paymentId) return;
-    const payment = await prisma.payment.findFirst({
-      where: { id: paymentId, orgId },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
-      },
-    });
-    const recipient = payment?.invoice?.job?.client ?? payment?.invoice?.client ?? payment?.sale?.client ?? null;
-    if (!payment || !recipient?.phone) return;
-    const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/payments/${payment.id}/receipt`;
-    const source = payment.invoice?.invoiceNumber ?? payment.sale?.saleNumber ?? "payment";
-    await enqueueWhatsAppMessage({
-      orgId,
-      jobId: payment.invoice?.job?.id,
-      to: recipient.phone,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-      body: `Hi ${recipient.fullName}, your receipt for ${source} is ready.\n\nAmount: ${formatMoney(payment.amount, payment.currency)}\nDownload PDF: ${receiptUrl}`,
-    });
+    await shareReceiptDocument({ orgId, paymentId, channel: "whatsapp" });
     revalidatePath("/documents/receipts");
   }
 
@@ -220,29 +200,7 @@ export default async function ReceiptsPage({
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     if (!paymentId) return;
-    const payment = await prisma.payment.findFirst({
-      where: { id: paymentId, orgId },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, email: true } } } }, client: { select: { fullName: true, email: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, email: true } } } },
-      },
-    });
-    const recipient = payment?.invoice?.job?.client ?? payment?.invoice?.client ?? payment?.sale?.client ?? null;
-    if (!payment || !recipient?.email) return;
-    const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/payments/${payment.id}/receipt`;
-    const source = payment.invoice?.invoiceNumber ?? payment.sale?.saleNumber ?? "payment";
-    const body = `Hi ${recipient.fullName},\n\nYour receipt for ${source} is ready.\n\nAmount: ${formatMoney(payment.amount, payment.currency)}\nDownload PDF: ${receiptUrl}`;
-    await enqueueEmailMessage({
-      orgId,
-      jobId: payment.invoice?.job?.id,
-      to: recipient.email,
-      subject: `Receipt for ${source}`,
-      body,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-    });
+    await shareReceiptDocument({ orgId, paymentId, channel: "email" });
     revalidatePath("/documents/receipts");
   }
 

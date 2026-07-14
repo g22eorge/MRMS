@@ -1,0 +1,252 @@
+import { OutboundMessageType } from "@prisma/client";
+
+import { formatMoney } from "@/lib/currency";
+import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { prisma } from "@/lib/prisma";
+
+export type DocumentShareChannel = "whatsapp" | "email";
+
+export type DocumentRecipient = {
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+};
+
+/** Prefer job-linked client, then invoice client, then sale client, then credit-note sale client. */
+export function resolveLinkedDocumentRecipient(sources: {
+  jobClient?: DocumentRecipient | null;
+  invoiceClient?: DocumentRecipient | null;
+  saleClient?: DocumentRecipient | null;
+  creditNoteSaleClient?: DocumentRecipient | null;
+}): DocumentRecipient | null {
+  return (
+    sources.jobClient ??
+    sources.invoiceClient ??
+    sources.saleClient ??
+    sources.creditNoteSaleClient ??
+    null
+  );
+}
+
+export function documentPdfUrl(path: string): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+async function dispatchDocumentShare(params: {
+  orgId: string;
+  channel: DocumentShareChannel;
+  jobId?: string | null;
+  recipient: DocumentRecipient;
+  whatsappBody: string;
+  emailSubject: string;
+  emailBody: string;
+}): Promise<boolean> {
+  if (params.channel === "whatsapp") {
+    if (!params.recipient.phone) return false;
+    await enqueueWhatsAppMessage({
+      orgId: params.orgId,
+      jobId: params.jobId ?? undefined,
+      to: params.recipient.phone,
+      type: OutboundMessageType.JOB_STATUS_UPDATE,
+      body: params.whatsappBody,
+    });
+    return true;
+  }
+
+  if (!params.recipient.email) return false;
+  await enqueueEmailMessage({
+    orgId: params.orgId,
+    jobId: params.jobId ?? undefined,
+    to: params.recipient.email,
+    subject: params.emailSubject,
+    body: params.emailBody,
+    type: OutboundMessageType.JOB_STATUS_UPDATE,
+  });
+  return true;
+}
+
+const invoiceClientSelect = {
+  fullName: true,
+  phone: true,
+  email: true,
+} as const;
+
+const linkedInvoiceSelect = {
+  invoiceNumber: true,
+  job: {
+    select: {
+      id: true,
+      jobNumber: true,
+      client: { select: invoiceClientSelect },
+    },
+  },
+  client: { select: invoiceClientSelect },
+} as const;
+
+const linkedSaleSelect = {
+  saleNumber: true,
+  client: { select: invoiceClientSelect },
+} as const;
+
+export async function shareReceiptDocument(params: {
+  orgId: string;
+  paymentId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const payment = await prisma.payment.findFirst({
+    where: { id: params.paymentId, orgId: params.orgId },
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      invoice: { select: linkedInvoiceSelect },
+      sale: { select: linkedSaleSelect },
+    },
+  });
+  if (!payment) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({
+    jobClient: payment.invoice?.job?.client ?? null,
+    invoiceClient: payment.invoice?.client ?? null,
+    saleClient: payment.sale?.client ?? null,
+  });
+  if (!recipient) return false;
+
+  const source = payment.invoice?.invoiceNumber ?? payment.sale?.saleNumber ?? "payment";
+  const pdfUrl = documentPdfUrl(`/api/payments/${payment.id}/receipt`);
+  const amountLine = `Amount: ${formatMoney(payment.amount, payment.currency)}`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    jobId: payment.invoice?.job?.id,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, your receipt for ${source} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Receipt for ${source}`,
+    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for ${source} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
+export async function shareCreditNoteDocument(params: {
+  orgId: string;
+  creditNoteId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const creditNote = await prisma.creditNote.findFirst({
+    where: { id: params.creditNoteId, orgId: params.orgId },
+    select: {
+      id: true,
+      creditNoteNumber: true,
+      totalAmount: true,
+      currency: true,
+      sale: { select: linkedSaleSelect },
+    },
+  });
+  if (!creditNote) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({ saleClient: creditNote.sale.client });
+  if (!recipient) return false;
+
+  const pdfUrl = documentPdfUrl(`/api/credit-notes/${creditNote.id}`);
+  const amountLine = `Amount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}`;
+  const intro = `Your credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Credit note ${creditNote.creditNoteNumber}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
+export async function shareRefundDocument(params: {
+  orgId: string;
+  refundId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const refund = await prisma.refund.findFirst({
+    where: { id: params.refundId, orgId: params.orgId },
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      invoice: { select: linkedInvoiceSelect },
+      sale: { select: linkedSaleSelect },
+      creditNote: {
+        select: {
+          creditNoteNumber: true,
+          sale: { select: { client: { select: invoiceClientSelect } } },
+        },
+      },
+    },
+  });
+  if (!refund) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({
+    jobClient: refund.invoice?.job?.client ?? null,
+    invoiceClient: refund.invoice?.client ?? null,
+    saleClient: refund.sale?.client ?? null,
+    creditNoteSaleClient: refund.creditNote?.sale.client ?? null,
+  });
+  if (!recipient) return false;
+
+  const source =
+    refund.invoice?.invoiceNumber ??
+    refund.sale?.saleNumber ??
+    refund.creditNote?.creditNoteNumber ??
+    "refund";
+  const pdfUrl = documentPdfUrl(`/api/refunds/${refund.id}`);
+  const amountLine = `Amount: ${formatMoney(refund.amount, refund.currency)}`;
+  const intro = `Your refund document for ${source} is ready.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    jobId: refund.invoice?.job?.id,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Refund document for ${source}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
+export async function shareDeliveryNoteDocument(params: {
+  orgId: string;
+  deliveryNoteId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const note = await prisma.deliveryNote.findFirst({
+    where: { id: params.deliveryNoteId, orgId: params.orgId },
+    select: {
+      id: true,
+      deliveryNoteNumber: true,
+      invoice: { select: linkedInvoiceSelect },
+      sale: { select: linkedSaleSelect },
+    },
+  });
+  if (!note) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({
+    jobClient: note.invoice?.job?.client ?? null,
+    invoiceClient: note.invoice?.client ?? null,
+    saleClient: note.sale?.client ?? null,
+  });
+  if (!recipient) return false;
+
+  const source = note.invoice?.invoiceNumber ?? note.sale?.saleNumber ?? note.deliveryNoteNumber;
+  const pdfUrl = documentPdfUrl(`/api/delivery-notes/${note.id}`);
+  const intro = `Your delivery note ${note.deliveryNoteNumber} for ${source} is ready.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    jobId: note.invoice?.job?.id,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Delivery note ${note.deliveryNoteNumber}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\nDownload PDF: ${pdfUrl}`,
+  });
+}

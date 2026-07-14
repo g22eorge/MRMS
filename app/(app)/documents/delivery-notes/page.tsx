@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { OutboundMessageType, type DeliveryMethod } from "@prisma/client";
+import { type DeliveryMethod } from "@prisma/client";
 
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
@@ -13,7 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
@@ -195,26 +195,7 @@ export default async function DeliveryNotesPage({
 
     const deliveryNoteId = String(formData.get("deliveryNoteId") ?? "").trim();
     if (!deliveryNoteId) return;
-    const note = await prisma.deliveryNote.findFirst({
-      where: { id: deliveryNoteId, orgId },
-      select: {
-        id: true,
-        deliveryNoteNumber: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
-      },
-    });
-    const recipient = note?.invoice?.job?.client ?? note?.invoice?.client ?? note?.sale?.client ?? null;
-    if (!note || !recipient?.phone) return;
-    const source = note.invoice?.invoiceNumber ?? note.sale?.saleNumber ?? note.deliveryNoteNumber;
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/delivery-notes/${note.id}`;
-    await enqueueWhatsAppMessage({
-      orgId,
-      jobId: note.invoice?.job?.id,
-      to: recipient.phone,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-      body: `Hi ${recipient.fullName}, your delivery note ${note.deliveryNoteNumber} for ${source} is ready.\n\nDownload PDF: ${pdfUrl}`,
-    });
+    await shareDeliveryNoteDocument({ orgId, deliveryNoteId, channel: "whatsapp" });
     revalidatePath("/documents/delivery-notes");
     redirect("/documents/delivery-notes");
   }
@@ -226,28 +207,7 @@ export default async function DeliveryNotesPage({
 
     const deliveryNoteId = String(formData.get("deliveryNoteId") ?? "").trim();
     if (!deliveryNoteId) return;
-    const note = await prisma.deliveryNote.findFirst({
-      where: { id: deliveryNoteId, orgId },
-      select: {
-        id: true,
-        deliveryNoteNumber: true,
-        invoice: { select: { invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, email: true } } } }, client: { select: { fullName: true, email: true } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, email: true } } } },
-      },
-    });
-    const recipient = note?.invoice?.job?.client ?? note?.invoice?.client ?? note?.sale?.client ?? null;
-    if (!note || !recipient?.email) return;
-    const source = note.invoice?.invoiceNumber ?? note.sale?.saleNumber ?? note.deliveryNoteNumber;
-    const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/delivery-notes/${note.id}`;
-    const body = `Hi ${recipient.fullName},\n\nYour delivery note ${note.deliveryNoteNumber} for ${source} is ready.\n\nDownload PDF: ${pdfUrl}`;
-    await enqueueEmailMessage({
-      orgId,
-      jobId: note.invoice?.job?.id,
-      to: recipient.email,
-      subject: `Delivery note ${note.deliveryNoteNumber}`,
-      body,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
-    });
+    await shareDeliveryNoteDocument({ orgId, deliveryNoteId, channel: "email" });
     revalidatePath("/documents/delivery-notes");
     redirect("/documents/delivery-notes");
   }

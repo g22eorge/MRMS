@@ -8,7 +8,7 @@
 |---|------|--------|--------|--------|
 | 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | b46d181 | ✅ tsc |
 | 2.2 | `lib/commercial/payment-sync.ts` | ✅ Done | 61ef225 | ✅ tsc |
-| 2.3 | `lib/notifications/share-document.ts` | ⬜ Pending | — | — |
+| 2.3 | `lib/notifications/share-document.ts` | ✅ Done | — | ✅ tsc |
 | 2.4 | `lib/phone.ts` | ⬜ Pending | — | — |
 | 2.5 | Route `sendPdfViaWhatsApp` through outbox | ⬜ Pending | — | — |
 
@@ -22,8 +22,14 @@
 
 **Doc:** [`fixes/phase-2-1-business-metrics.md`](./fixes/phase-2-1-business-metrics.md)
 
-### 2.2 — Payment sync helpers
+### 2.2 — Payment sync helpers (61ef225)
 
 **Change:** Added `syncInvoicePaymentState` / `syncSalePaymentState`; migrated receipts, invoices, jobs, payout-followups, and POS payment paths.
 
 **Doc:** [`fixes/phase-2-2-payment-sync.md`](./fixes/phase-2-2-payment-sync.md)
+
+### 2.3 — Document share helpers
+
+**Change:** Added `lib/notifications/share-document.ts`; receipts, credit notes, refunds, and delivery notes delegate WhatsApp/email share to shared recipient resolution + outbox enqueue.
+
+**Doc:** [`fixes/phase-2-3-share-document.md`](./fixes/phase-2-3-share-document.md)
