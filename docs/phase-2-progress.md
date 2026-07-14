@@ -6,7 +6,7 @@
 
 | # | Task | Status | Commit | Tested |
 |---|------|--------|--------|--------|
-| 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | — | ✅ tsc |
+| 2.1 | `lib/ai/business-metrics.ts` + revenue labels | ✅ Done | b46d181 | ✅ tsc |
 | 2.2 | `lib/commercial/payment-sync.ts` | ⬜ Pending | — | — |
 | 2.3 | `lib/notifications/share-document.ts` | ⬜ Pending | — | — |
 | 2.4 | `lib/phone.ts` | ⬜ Pending | — | — |
@@ -16,7 +16,7 @@
 
 ## Log
 
-### 2.1 — Shared business metrics pack
+### 2.1 — Shared business metrics pack (b46d181)
 
 **Change:** Added `lib/ai/business-metrics.ts` with `buildBusinessDataPack()`; AI Insights + copilot consume it; cash received uses `loadCashCollectionsByChannel` (matches Dashboard/Reports); UI labels distinguish cash received vs completed repair value.
 
