@@ -10,7 +10,7 @@
 | 2.2 | `lib/commercial/payment-sync.ts` | ✅ Done | 61ef225 | ✅ tsc |
 | 2.3 | `lib/notifications/share-document.ts` | ✅ Done | 18bc3a5 | ✅ tsc |
 | 2.4 | `lib/phone.ts` | ✅ Done | c3ee47a | ✅ tsc |
-| 2.5 | Route `sendPdfViaWhatsApp` through outbox | ⬜ Pending | — | — |
+| 2.5 | Route `sendPdfViaWhatsApp` through outbox | ✅ Done | 409a923 | ✅ tsc |
 
 ---
 
@@ -34,8 +34,18 @@
 
 **Doc:** [`fixes/phase-2-3-share-document.md`](./fixes/phase-2-3-share-document.md)
 
-### 2.4 — Phone normalization (pending commit)
+### 2.4 — Phone normalization (c3ee47a)
 
 **Change:** Added `lib/phone.ts`; SMS, WhatsApp, webhook, and clients pages use shared normalize/display helpers; new clients stored as E.164 with duplicate lookup across format variants.
 
 **Doc:** [`fixes/phase-2-4-phone-normalization.md`](./fixes/phase-2-4-phone-normalization.md)
+
+### 2.5 — WhatsApp PDF outbox (409a923)
+
+**Change:** Added `lib/notifications/whatsapp-document-outbox.ts`; job PDF WhatsApp sends enqueue document metadata and deliver through `deliverOutboundMessage` with unified retry/error handling.
+
+**Doc:** [`fixes/phase-2-5-whatsapp-pdf-outbox.md`](./fixes/phase-2-5-whatsapp-pdf-outbox.md)
+
+---
+
+**Phase 2 status:** All items complete (2.1–2.5).
