@@ -9,7 +9,7 @@
 | 4.1 | Job-completion → invoice → payment guided sequence (FLOW-1) | ✅ Done | 08df1f7 | ✅ tsc + unit |
 | 4.2 | One-click overdue reminders + bulk bucket reminders | ✅ Done | d59e795 | ✅ unit |
 | 4.3 | Communications top-level sidebar; `/outbox` redirect | ✅ Done | 509c05a | ✅ unit |
-| 4.4 | Documents hub with tabs + per-job document timeline | ⬜ Pending | — | — |
+| 4.4 | Documents hub with tabs + per-job document timeline | ✅ Done | a868b45 | ✅ unit |
 | 4.5 | Global ⌘K command palette | ⬜ Pending | — | — |
 | 4.6 | Standard loading/empty/not-found/error contract | ⬜ Pending | — | — |
 | 4.7 | Quote follow-up nudges + draft expiry policy | ⬜ Pending | — | — |
@@ -35,3 +35,9 @@
 **Change:** Top-level **Communications** sidebar section; canonical `/communications/*` routes; `/outbox` and legacy settings notification paths redirect; dashboard and settings links updated.
 
 **Doc:** [`fixes/phase-4-3-communications-sidebar.md`](./fixes/phase-4-3-communications-sidebar.md)
+
+### 4.4 — Documents hub + job document timeline
+
+**Change:** Tabbed **Documents** hub shell for all document list pages; `/documents` redirects to role-default tab; job detail **Documents** tab shows chronological paperwork lifecycle.
+
+**Doc:** [`fixes/phase-4-4-documents-hub-timeline.md`](./fixes/phase-4-4-documents-hub-timeline.md)
