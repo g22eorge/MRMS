@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { CommandPaletteTrigger } from "@/components/command-palette/CommandPaletteProvider";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
@@ -129,13 +128,33 @@ export function Header({
             </Link>
           )}
 
-          {/* Spacer on mobile; search trigger on desktop */}
-          <div className="flex-1 md:flex md:justify-center">
-            <CommandPaletteTrigger />
-          </div>
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* ── Action pill group ─────────────────────────────────────── */}
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] md:hidden"
+              aria-label="Open search"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+              className="hidden items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] md:flex"
+              aria-label="Open command palette"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+              Search
+              <kbd className="rounded border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-muted)]">⌘K</kbd>
+            </button>
             {/* Notifications */}
             {can.viewNotifications({ role: role as never, permissions }) ? (
               <NotificationBell />

@@ -1,48 +1,38 @@
 import { describe, expect, it } from "bun:test";
 
 import {
-  buildCommandPaletteActions,
-  filterCommandActions,
+  buildCommandPaletteQuickActions,
+  filterCommandPaletteActions,
   normalizeCommandQuery,
 } from "../../lib/command-palette/quick-actions";
 
 describe("command palette quick actions", () => {
-  it("includes dashboard quick actions for ADMIN with modules enabled", () => {
-    const actions = buildCommandPaletteActions({
-      role: "ADMIN",
-      permissions: [],
-      enabledModules: new Set(["JOBS", "INVOICING", "POS", "PURCHASE_ORDERS"]),
-    });
-    const ids = actions.map((action) => action.id);
-    expect(ids).toContain("new-job");
-    expect(ids).toContain("record-payment");
-    expect(ids).toContain("product-sale");
-    expect(ids).toContain("purchase-order");
+  it("includes dashboard for all roles", () => {
+    const actions = buildCommandPaletteQuickActions({ role: "TECHNICIAN_INTERNAL", permissions: [] });
+    expect(actions.some((action) => action.id === "dashboard")).toBe(true);
   });
 
-  it("filters actions by query keywords", () => {
-    const actions = buildCommandPaletteActions({
-      role: "ADMIN",
-      permissions: [],
-      enabledModules: new Set(["JOBS", "INVOICING"]),
-    });
-    const filtered = filterCommandActions(actions, "receipt");
-    expect(filtered.some((action) => action.id === "record-payment")).toBe(true);
-    expect(filtered.some((action) => action.id === "new-job")).toBe(false);
+  it("includes new job and record payment for ADMIN", () => {
+    const actions = buildCommandPaletteQuickActions({ role: "ADMIN", permissions: [] });
+    expect(actions.some((action) => action.id === "new-job")).toBe(true);
+    expect(actions.some((action) => action.id === "record-payment")).toBe(true);
+    expect(actions.some((action) => action.id === "outbox")).toBe(true);
   });
 
-  it("normalizes whitespace in queries", () => {
-    expect(normalizeCommandQuery("  job   123  ")).toBe("job 123");
-  });
-
-  it("keeps TECHNICIAN_EXTERNAL actions minimal", () => {
-    const actions = buildCommandPaletteActions({
-      role: "TECHNICIAN_EXTERNAL",
-      permissions: [],
-      enabledModules: new Set(["JOBS", "INVOICING"]),
-    });
-    expect(actions.some((action) => action.id === "open-clients")).toBe(false);
+  it("excludes financial actions for TECHNICIAN_INTERNAL without finance perms", () => {
+    const actions = buildCommandPaletteQuickActions({ role: "TECHNICIAN_INTERNAL", permissions: [] });
     expect(actions.some((action) => action.id === "record-payment")).toBe(false);
-    expect(actions.length).toBe(0);
+    expect(actions.some((action) => action.id === "jobs")).toBe(true);
+  });
+
+  it("filters actions by query", () => {
+    const actions = buildCommandPaletteQuickActions({ role: "ADMIN", permissions: [] });
+    const filtered = filterCommandPaletteActions(actions, "invoice");
+    expect(filtered.some((action) => action.id === "invoices")).toBe(true);
+    expect(filtered.every((action) => [action.label, action.description ?? "", ...(action.keywords ?? [])].join(" ").toLowerCase().includes("invoice"))).toBe(true);
+  });
+
+  it("normalizes query text", () => {
+    expect(normalizeCommandQuery("  Invoice  ")).toBe("invoice");
   });
 });

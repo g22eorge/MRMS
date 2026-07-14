@@ -1,6 +1,6 @@
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
-import { CommandPaletteProvider } from "@/components/command-palette/CommandPaletteProvider";
 import { AiGuideBubble } from "@/components/ai-guide/AiGuideBubble";
+import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
@@ -168,7 +168,6 @@ export default async function AppLayout({
   const procurementAttentionCount = purchaseRequestAttentionCount + purchaseOrderAttentionCount;
 
   return (
-    <CommandPaletteProvider role={user.role} permissions={user.permissions} enabledModules={[...enabledModules]}>
     <div className="min-h-dvh overflow-x-clip md:flex md:h-screen md:overflow-hidden">
       <ClientOnlySidebar
         role={user.role}
@@ -245,8 +244,8 @@ export default async function AppLayout({
       <div className="hidden lg:block">
         <QuickActionFAB actions={isSuspended ? [] : buildFabActions(user)} />
       </div>
+      <CommandPalette role={user.role} />
     </div>
-    </CommandPaletteProvider>
   );
 }
 
