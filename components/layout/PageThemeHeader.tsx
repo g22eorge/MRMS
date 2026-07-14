@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { can } from "@/lib/permissions";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { isEntityRecordId } from "@/lib/page-state/contract";
 
 function pageMeta(pathname: string, role: Role) {
   const parts = pathname.split("/").filter(Boolean);
@@ -30,14 +31,14 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/jobs") return { title: "Jobs", description: "Track intake, repair progress, and completion at a glance." };
   if (pathname === "/jobs/new") return { title: "New Job Intake", description: "Capture client, device, issue, and submission details." };
   if (parts[0] === "jobs" && parts[1] && parts[2] === "edit") {
-    return { title: "Edit Job", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "Update job details and technician notes." };
+    return { title: "Edit Job", description: "Update job details and technician notes." };
   }
   if (parts[0] === "jobs" && parts[1]) {
-    return { title: "Job Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "Review status, diagnosis, repair log, financials, and timeline." };
+    return { title: "Job Details", description: "Review status, diagnosis, repair log, financials, and timeline." };
   }
   if (pathname === "/clients") return { title: "Clients", description: "Directory, engagement level, and quick access to client history." };
   if (parts[0] === "clients" && parts[1]) {
-    return { title: "Client Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "View client profile, job history, and notes timeline." };
+    return { title: "Client Details", description: "View client profile, job history, and notes timeline." };
   }
   if (pathname === "/reports") return { title: "Reports", description: "Operational and financial insights for repair performance." };
   if (pathname === "/ai-insights") return { title: "AI Insights", description: "Decision support across repairs, sales, finance, inventory, and operational risk." };
@@ -144,17 +145,17 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
   useEffect(() => {
     let cancelled = false;
     const parts = pathname.split("/").filter(Boolean);
+    setResolvedSubtitle(null);
 
     const load = async () => {
-      if (parts[0] === "jobs" && parts[1]) {
-        if (parts[1] === "new") return;
+      if (parts[0] === "jobs" && parts[1] && isEntityRecordId(parts[1])) {
         const jobNumber = await fetchJobNumber(parts[1]);
         if (!cancelled && jobNumber) {
           setResolvedSubtitle({ path: pathname, text: jobNumber });
         }
         return;
       }
-      if (parts[0] === "clients" && parts[1]) {
+      if (parts[0] === "clients" && parts[1] && isEntityRecordId(parts[1])) {
         const clientName = await fetchClientName(parts[1]);
         if (!cancelled && clientName) {
           setResolvedSubtitle({ path: pathname, text: clientName });

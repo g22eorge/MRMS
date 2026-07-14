@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { PageEmptyState } from "@/components/page-state";
+
 type DocumentEmptyStateProps = {
   message: string;
   action?: ReactNode;
@@ -7,23 +9,10 @@ type DocumentEmptyStateProps = {
 };
 
 export function DocumentEmptyState({ message, action, className = "" }: DocumentEmptyStateProps) {
-  return (
-    <div
-      className={`rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-8 text-center text-sm text-[var(--ink-muted)] ${className}`}
-    >
-      <p>{message}</p>
-      {action ? <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div> : null}
-    </div>
-  );
+  return <PageEmptyState title={message} action={action} className={className} variant="panel" />;
 }
 
 /** Table row empty state — use inside `<tbody>`. */
 export function DocumentEmptyTableRow({ message, colSpan }: { message: string; colSpan: number }) {
-  return (
-    <tr className="border-t border-[var(--line)]">
-      <td className="px-3 py-8 text-sm text-[var(--ink-muted)]" colSpan={colSpan}>
-        {message}
-      </td>
-    </tr>
-  );
+  return <PageEmptyState title={message} variant="table-row" colSpan={colSpan} />;
 }

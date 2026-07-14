@@ -1,5 +1,5 @@
-import { PageLoadingSkeleton } from "@/components/shared/PageLoadingSkeleton";
+import { PageLoadingState } from "@/components/page-state";
 
 export default function DocumentsLoading() {
-  return <PageLoadingSkeleton />;
+  return <PageLoadingState variant="list" />;
 }
