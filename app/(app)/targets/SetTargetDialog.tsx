@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { TargetEntityType, TargetMetric, TargetPeriod } from "@prisma/client";
 
+import { Modal } from "@/components/ui/Modal";
+
 import { setTarget } from "./actions";
 
 type User = { id: string; name: string };
@@ -147,14 +149,11 @@ export function SetTargetDialog({ users, departments, branches }: Props) {
         Set Target
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} aria-hidden="true" />
-          <div className="panel-shadow relative z-10 w-full max-w-lg rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6">
-            <h2 className="text-base font-semibold text-[var(--ink)]">Set Target</h2>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">Define a performance target for a user, department, or branch.</p>
+      <Modal open={open} onClose={handleClose} size="lg" ariaLabel="Set Target" backdropClassName="bg-black/40" panelClassName="p-6">
+        <h2 className="text-base font-semibold text-[var(--ink)]">Set Target</h2>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">Define a performance target for a user, department, or branch.</p>
 
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--ink)]">Entity Type</label>
                 <select
@@ -271,10 +270,8 @@ export function SetTargetDialog({ users, departments, branches }: Props) {
                   {isPending ? "Saving…" : "Save Target"}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </>
   );
 }
