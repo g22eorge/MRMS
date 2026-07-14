@@ -7,7 +7,7 @@
 | # | Task | Status | Commit | Tested |
 |---|------|--------|--------|--------|
 | 4.1 | Job-completion → invoice → payment guided sequence (FLOW-1) | ✅ Done | 08df1f7 | ✅ tsc + unit |
-| 4.2 | One-click overdue reminders + bulk bucket reminders | ⬜ Pending | — | — |
+| 4.2 | One-click overdue reminders + bulk bucket reminders | ✅ Done | d59e795 | ✅ unit |
 | 4.3 | Communications top-level sidebar; `/outbox` redirect | ⬜ Pending | — | — |
 | 4.4 | Documents hub with tabs + per-job document timeline | ⬜ Pending | — | — |
 | 4.5 | Global ⌘K command palette | ⬜ Pending | — | — |
@@ -23,3 +23,9 @@
 **Change:** Guided modal after `COMPLETED` status; `issueJobInvoiceAction`; `statusChangedTo` on `updateJobAction`; mobile `nextStatus` fix.
 
 **Doc:** [`fixes/phase-4-1-job-completion-flow.md`](./fixes/phase-4-1-job-completion-flow.md)
+
+### 4.2 — Overdue invoice reminders
+
+**Change:** Outbox-backed overdue reminder messages; per-row **Send reminder** and **Remind all in bucket** on invoices aging views.
+
+**Doc:** [`fixes/phase-4-2-invoice-overdue-reminders.md`](./fixes/phase-4-2-invoice-overdue-reminders.md)
