@@ -12,7 +12,7 @@
 | 4.4 | Documents hub with tabs + per-job document timeline | ✅ Done | a868b45 | ✅ unit |
 | 4.5 | Global ⌘K command palette | ✅ Done | f667580 | ✅ unit |
 | 4.6 | Standard loading/empty/not-found/error contract | ✅ Done | 7fe7385 | ✅ unit |
-| 4.7 | Quote follow-up nudges + draft expiry policy | ⬜ Pending | — | — |
+| 4.7 | Quote follow-up nudges + draft expiry policy | ✅ Done | 0483966 | ✅ unit |
 
 ---
 
@@ -53,3 +53,9 @@
 **Change:** Shared loading/empty/not-found/error components; job and client detail boundaries; header subtitle guard for invalid record paths.
 
 **Doc:** [`fixes/phase-4-6-page-state-contract.md`](./fixes/phase-4-6-page-state-contract.md)
+
+### 4.7 — Quote follow-up nudges + draft expiry
+
+**Change:** Outbox-backed quote follow-ups for awaiting jobs and sent standalone quotations; bulk **Follow up all awaiting**; draft expiry policy with **Expire stale drafts** action.
+
+**Doc:** [`fixes/phase-4-7-quote-followup-expiry.md`](./fixes/phase-4-7-quote-followup-expiry.md)
