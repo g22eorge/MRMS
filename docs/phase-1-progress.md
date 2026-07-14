@@ -10,7 +10,7 @@
 | 1.2 | Platform pages → `formatMoney` from `lib/currency.ts` | ✅ Done | 38722d7 | ✅ tsc |
 | 1.3 | `lib/date-ranges.ts` + date display policy | ✅ Done | 58d164f | ✅ tsc |
 | 1.4 | Job PDF routes → `generate*Buffer` | ✅ Done | bf81e44 | ✅ tsc |
-| 1.5 | Remove dead code + dedupe settings | ✅ Done | — | ✅ tsc |
+| 1.5 | Remove dead code + dedupe settings | ✅ Done | c575cbf | ✅ tsc |
 
 ---
 
@@ -40,7 +40,7 @@
 
 **Doc:** [`fixes/phase-1-4-job-pdf-routes.md`](./fixes/phase-1-4-job-pdf-routes.md)
 
-### 1.5 — Dead code + settings dedupe
+### 1.5 — Dead code + settings dedupe (c575cbf)
 
 **Change:** Removed `writePaymentAccountingDocuments`, `orgWhere`, and `SettingsPageHeader`; `SettingsPanel` reuses `ProfileForm` compact variant.
 
