@@ -10,7 +10,7 @@
 | 4.2 | One-click overdue reminders + bulk bucket reminders | ✅ Done | d59e795 | ✅ unit |
 | 4.3 | Communications top-level sidebar; `/outbox` redirect | ✅ Done | 509c05a | ✅ unit |
 | 4.4 | Documents hub with tabs + per-job document timeline | ✅ Done | a868b45 | ✅ unit |
-| 4.5 | Global ⌘K command palette | ⬜ Pending | — | — |
+| 4.5 | Global ⌘K command palette | ✅ Done | b4ff4d5 | ✅ unit |
 | 4.6 | Standard loading/empty/not-found/error contract | ⬜ Pending | — | — |
 | 4.7 | Quote follow-up nudges + draft expiry policy | ⬜ Pending | — | — |
 
@@ -41,3 +41,9 @@
 **Change:** Tabbed **Documents** hub shell for all document list pages; `/documents` redirects to role-default tab; job detail **Documents** tab shows chronological paperwork lifecycle.
 
 **Doc:** [`fixes/phase-4-4-documents-hub-timeline.md`](./fixes/phase-4-4-documents-hub-timeline.md)
+
+### 4.5 — Global ⌘K command palette
+
+**Change:** Global command palette with ⌘K/Ctrl+K; dashboard quick actions + live job/client/invoice search from anywhere.
+
+**Doc:** [`fixes/phase-4-5-command-palette.md`](./fixes/phase-4-5-command-palette.md)
