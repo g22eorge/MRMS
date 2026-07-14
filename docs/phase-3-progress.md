@@ -10,7 +10,7 @@
 | 3.2 | `components/documents/` kit (receipts + delivery-notes first) | ✅ Done | 05ad68c | ✅ tsc |
 | 3.3 | Line-item form primitives | ✅ Done | 00253a6 | ✅ tsc |
 | 3.4 | `components/ui/Modal.tsx` | ✅ Done | 2a48afb | ✅ tsc |
-| 3.5 | Consolidate `/platform` + `/platform-admin` | ✅ Done | — | — |
+| 3.5 | Consolidate `/platform` + `/platform-admin` | ✅ Done | 8e12f57 | ✅ tsc |
 
 ---
 
@@ -40,7 +40,7 @@
 
 **Doc:** [`fixes/phase-3-4-modal.md`](./fixes/phase-3-4-modal.md)
 
-### 3.5 — Platform route consolidation
+### 3.5 — Platform route consolidation (8e12f57)
 
 **Change:** Canonical `/platform` tree with legacy `/platform-admin` redirects; shared routes/revalidate/login-redirect helpers; unified platform-admin gates; login redirect to `/platform`; extracted admin org modules action.
 
