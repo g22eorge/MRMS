@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
 import { can } from "@/lib/permissions";
-import { orgDb } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";

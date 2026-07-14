@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import type { BankTransactionType } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";

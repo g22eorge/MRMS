@@ -4,7 +4,8 @@ import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
 import { daysBetween, monthRangeFromDate, previousMonthRange } from "@/lib/date-ranges";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 
 export const OPEN_JOB_STATUSES = [
   "RECEIVED",

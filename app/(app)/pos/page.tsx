@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 
 import { formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";

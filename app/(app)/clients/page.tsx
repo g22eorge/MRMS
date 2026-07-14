@@ -9,7 +9,7 @@ import { z } from "zod";
 
 
 import { can } from "@/lib/permissions";
-import { orgDb } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { formatEATDate } from "@/lib/date-eat";

@@ -5,7 +5,7 @@ import { FieldVisitStatus } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
 import { can } from "@/lib/permissions";
-import { orgDb } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { formatEATDateTime } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
-import { orgDb } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 
 type Tile = { label: string; href: string; icon: string; color: string; description: string };
 

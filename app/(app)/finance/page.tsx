@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { can } from "@/lib/permissions";
-import { prisma, orgDb } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import {
