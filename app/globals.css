@@ -323,6 +323,9 @@ pre,
   --dc-good: #2c8f61;
   --dc-warn: #bd8410;
   --dc-crit: #c9463a;
+  --dc-crit-soft: rgba(201, 70, 58, 0.12);
+  --dc-blue: #3d6fb4;
+  --dc-violet: #7c5ccf;
   --dc-shadow: 0 1px 2px rgba(40, 33, 15, 0.03), 0 10px 30px -20px rgba(40, 33, 15, 0.16);
   --dc-shadow-hover: 0 1px 2px rgba(40, 33, 15, 0.05), 0 16px 38px -20px rgba(40, 33, 15, 0.26);
 }
@@ -342,6 +345,9 @@ pre,
     --dc-good: #43bf85;
     --dc-warn: #dda52c;
     --dc-crit: #e5695c;
+    --dc-crit-soft: rgba(229, 105, 92, 0.15);
+    --dc-blue: #6fa1e0;
+    --dc-violet: #a78bfa;
     --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
     --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
   }
@@ -361,36 +367,55 @@ pre,
   --dc-good: #43bf85;
   --dc-warn: #dda52c;
   --dc-crit: #e5695c;
+  --dc-crit-soft: rgba(229, 105, 92, 0.15);
+  --dc-blue: #6fa1e0;
+  --dc-violet: #a78bfa;
   --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
   --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
 }
-.dash-cal .dc-card {
+.dc-card {
   background: var(--dc-panel);
   border-radius: 16px;
   box-shadow: var(--dc-shadow);
 }
-.dash-cal .dc-lift {
+.dc-lift {
   transition: box-shadow 200ms ease;
 }
-.dash-cal .dc-lift:hover {
+.dc-lift:hover {
   box-shadow: var(--dc-shadow-hover);
 }
-.dash-cal .dc-btn {
+.dc-btn {
   background: var(--dc-accent);
   color: #fff;
   box-shadow: var(--dc-shadow);
   transition: filter 150ms ease;
 }
-.dash-cal .dc-btn:hover {
+.dc-btn:hover {
   filter: brightness(1.06);
 }
 @media (prefers-color-scheme: dark) {
-  .dash-cal .dc-btn {
+  .dc-btn {
     color: #1c1600;
   }
 }
-.theme-blackgold .dash-cal .dc-btn {
+.theme-blackgold .dc-btn {
   color: #1c1600;
+}
+
+/* Calm palette remap for the job detail page. The JobDetailTabs component is
+   very large and uses the app tokens (--panel, --panel-strong, --line, --ink,
+   --accent) throughout; remapping them to the shared --dc-* calm values on a
+   `.jobdetail-cal` wrapper gives the whole page the flat warm surface without
+   editing hundreds of class names. Scoped to the wrapper only. */
+.jobdetail-cal {
+  --panel: var(--dc-panel);
+  --panel-strong: var(--dc-panel-2);
+  --line: var(--dc-line);
+  --ink: var(--dc-ink);
+  --ink-muted: var(--dc-ink-2);
+  --accent: var(--dc-accent);
+  --accent-fg: var(--dc-accent-2);
+  --accent-muted: var(--dc-accent-soft);
 }
 
 /* Elevated panel (modals, dropdowns) */
