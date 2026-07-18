@@ -80,7 +80,6 @@ export function Header({
   role,
   permissions = [],
   isPlatformAdmin = false,
-  orgName = null,
   orgUsers = [],
 }: HeaderProps) {
   const router = useRouter();
@@ -101,8 +100,8 @@ export function Header({
   return (
     <>
       {/* ── Top header ────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--panel)]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center gap-3 px-4 md:px-6 xl:max-w-[1360px]">
+      <header className="sticky top-0 z-30 border-b border-[var(--dc-line)] bg-[var(--dc-side)]/85 px-4 backdrop-blur-md md:px-6">
+        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center gap-3 xl:max-w-[1360px]">
 
           {/* Mobile: ← back button on sub-pages, logo on primary tabs */}
           {showMobileBack ? (
@@ -110,7 +109,7 @@ export function Header({
               type="button"
               onClick={() => router.back()}
               aria-label="Go back"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl p-0 text-[var(--ink)] transition active:bg-[var(--panel-strong)] lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink)] transition active:bg-[var(--dc-panel-2)] lg:hidden"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -130,14 +129,14 @@ export function Header({
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-            className="hidden h-9 w-64 items-center gap-2 rounded-lg border border-[var(--line)] bg-transparent px-2.5 text-[13px] text-[var(--ink-muted)] transition hover:border-[var(--ink-muted)]/40 hover:text-[var(--ink)] md:flex lg:w-72"
+            className="hidden h-9 w-64 items-center gap-2 rounded-[10px] border border-[var(--dc-line)] bg-[var(--dc-panel)] px-2.5 text-[13px] text-[var(--dc-ink-3)] transition hover:border-[var(--dc-ink-3)]/50 hover:text-[var(--dc-ink)] md:flex lg:w-72"
             aria-label="Open command palette"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
             </svg>
             Search
-            <kbd className="ml-auto text-[11px] font-medium tracking-wide text-[var(--ink-muted)]/70">⌘K</kbd>
+            <kbd className="ml-auto rounded-[5px] border border-[var(--dc-line)] px-1.5 py-0.5 text-[10.5px] font-semibold tracking-wide text-[var(--dc-ink-3)]">⌘K</kbd>
           </button>
 
           {/* Spacer pushes the action group to the right edge */}
@@ -149,7 +148,7 @@ export function Header({
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-              className="flex h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)] md:hidden"
               aria-label="Open search"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -171,7 +170,7 @@ export function Header({
               onClick={() => openSettings("profile")}
               title="Settings"
               aria-label="Open settings"
-              className="hidden h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] sm:flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)] sm:flex"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -181,7 +180,7 @@ export function Header({
           </div>
 
           {/* Hairline divider between icons and identity */}
-          <div className="hidden h-5 w-px bg-[var(--line)] sm:block" aria-hidden="true" />
+          <div className="hidden h-5 w-px bg-[var(--dc-line)] sm:block" aria-hidden="true" />
 
           {/* ── User menu — minimal: avatar + first name + chevron ── */}
           <div className="relative">
@@ -190,16 +189,16 @@ export function Header({
               onClick={() => setMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex h-9 items-center gap-2 rounded-lg py-0 pl-1 pr-1 transition hover:bg-[var(--panel-strong)] sm:pr-1.5"
+              className="flex h-9 items-center gap-2 rounded-[10px] py-0 pl-1 pr-1 transition hover:bg-[var(--dc-panel-2)] sm:pr-1.5"
               title="Account menu"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-[12px] font-black text-black select-none">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[var(--dc-accent)] text-[12px] font-black text-[#1c1600] select-none">
                 {initials(userName)}
               </div>
-              <span className="hidden truncate text-[13px] font-semibold leading-none text-[var(--ink)] sm:block max-w-[110px]">
+              <span className="hidden truncate text-[12.5px] font-semibold leading-none text-[var(--dc-ink)] sm:block max-w-[110px]">
                 {userName.split(" ")[0]}
               </span>
-              <svg className="hidden sm:block h-3.5 w-3.5 text-[var(--ink-muted)] transition-transform duration-150" style={{ transform: menuOpen ? "rotate(180deg)" : "none" }} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <svg className="hidden sm:block h-3.5 w-3.5 text-[var(--dc-ink-3)] transition-transform duration-150" style={{ transform: menuOpen ? "rotate(180deg)" : "none" }} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
               </svg>
             </button>
@@ -211,29 +210,22 @@ export function Header({
                 <div className="fixed inset-0 z-40" onClick={closeMenu} />
                 <div
                   role="menu"
-                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-xl"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--dc-line)] bg-[var(--dc-panel)] shadow-xl"
                 >
                   {/* Identity */}
-                  <div className="border-b border-[var(--line)] px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[13px] font-black text-black">
-                        {initials(userName)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="truncate text-[13px] font-bold text-[var(--ink)]">{userName}</p>
-                          <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleAccent(role)}`}>
-                            {roleDisplay(role)}
-                          </span>
-                        </div>
-                        <p className="truncate text-[12px] text-[var(--ink-muted)]">{userEmail}</p>
-                      </div>
+                  <div className="flex items-center gap-2.5 border-b border-[var(--dc-line)] px-3.5 py-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--dc-accent)] text-[13px] font-black text-[#1c1600]">
+                      {initials(userName)}
                     </div>
-                    {orgName && (
-                      <p className="mt-2 truncate text-[13px] font-medium text-[var(--ink-muted)]">
-                        <span className="text-[var(--ink-muted)]/60">Org:</span> {orgName}
-                      </p>
-                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-[13px] font-bold text-[var(--dc-ink)]">{userName}</p>
+                        <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleAccent(role)}`}>
+                          {roleDisplay(role)}
+                        </span>
+                      </div>
+                      <p className="truncate text-[12px] text-[var(--dc-ink-3)]">{userEmail}</p>
+                    </div>
                   </div>
 
                   {/* Menu items */}
@@ -244,14 +236,11 @@ export function Header({
                     <MenuItem icon={
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M8 7a5 5 0 1 1 3.61 4.804L9.999 13H8.5a.5.5 0 0 0-.5.5v1H6.5a.5.5 0 0 0-.5.5v1.379l-.743.743a2 2 0 1 1-2.836-2.836l4.83-4.83A5.02 5.02 0 0 1 8 7Zm5-3a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" clipRule="evenodd" /></svg>
                     } label="Change password" onClick={() => openSettings("password")} />
-                    <MenuItem icon={
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M8.34 1.804A1 1 0 0 1 9.32 1h1.36a1 1 0 0 1 .98.804l.295 1.473c.497.144.971.342 1.411.59l1.247-.834a1 1 0 0 1 1.262.125l.962.962a1 1 0 0 1 .125 1.262l-.834 1.248c.248.44.446.914.59 1.41l1.473.296a1 1 0 0 1 .804.98v1.361a1 1 0 0 1-.804.98l-1.473.295a6.95 6.95 0 0 1-.59 1.411l.834 1.247a1 1 0 0 1-.125 1.262l-.962.962a1 1 0 0 1-1.262.125l-1.248-.834a6.953 6.953 0 0 1-1.41.59l-.296 1.473a1 1 0 0 1-.98.804H9.32a1 1 0 0 1-.98-.804l-.295-1.473a6.957 6.957 0 0 1-1.411-.59l-1.247.834a1 1 0 0 1-1.262-.125l-.962-.962a1 1 0 0 1-.125-1.262l.834-1.248a6.957 6.957 0 0 1-.59-1.41l-1.473-.296a1 1 0 0 1-.804-.98V9.32a1 1 0 0 1 .804-.98l1.473-.295c.144-.497.342-.971.59-1.411L3.03 5.387a1 1 0 0 1 .125-1.262l.962-.962A1 1 0 0 1 5.38 3.038l1.248.834a6.957 6.957 0 0 1 1.41-.59L8.34 1.804ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" /></svg>
-                    } label="Settings" onClick={() => openSettings("profile")} />
                   </div>
 
                   {/* Admin section */}
                   {role === "ADMIN" && (
-                    <div className="border-t border-[var(--line)] py-1">
+                    <div className="border-t border-[var(--dc-line)] py-1">
                       <MenuItem icon={
                         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M2.046 15.253c-.18.01-.34-.092-.382-.266a6.5 6.5 0 0 1 11.672 0c-.042.174-.202.276-.382.266a34.816 34.816 0 0 0-10.908 0Z"/><path d="M16.75 9.5a.75.75 0 0 0-1.5 0v1.25H14a.75.75 0 0 0 0 1.5h1.25V13.5a.75.75 0 0 0 1.5 0v-1.25H18a.75.75 0 0 0 0-1.5h-1.25V9.5Z"/></svg>
                       } label="Manage users" onClick={() => { closeMenu(); router.push("/settings/users"); }} />
@@ -260,7 +249,7 @@ export function Header({
 
                   {/* Platform admin */}
                   {isPlatformAdmin && (
-                    <div className="border-t border-[var(--line)] py-1">
+                    <div className="border-t border-[var(--dc-line)] py-1">
                       <Link
                         role="menuitem"
                         href="/platform"
@@ -276,7 +265,7 @@ export function Header({
                   )}
 
                   {/* Sign out */}
-                  <div className="border-t border-[var(--line)] py-1">
+                  <div className="border-t border-[var(--dc-line)] py-1">
                     <button
                       role="menuitem"
                       type="button"
@@ -338,10 +327,10 @@ function MenuItem({
     <button
       role="menuitem"
       type="button"
-      className="flex w-full items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
+      className="flex w-full items-center gap-2.5 px-3.5 py-1.5 text-[12px] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
       onClick={onClick}
     >
-      <span className="shrink-0 text-[var(--ink-muted)]">{icon}</span>
+      <span className="shrink-0 text-[var(--dc-ink-3)]">{icon}</span>
       {label}
     </button>
   );
@@ -365,7 +354,7 @@ function ThemeToggle() {
       title={isDark ? "Switch to light" : "Switch to dark"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-pressed={isDark}
-      className="flex h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+      className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
     >
       {isDark ? (
         /* Moon — currently dark, click to go light */

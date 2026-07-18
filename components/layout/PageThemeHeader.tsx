@@ -89,25 +89,6 @@ async function fetchClientName(id: string) {
   return data.fullName ?? null;
 }
 
-function roleTag(role: Role) {
-  if (role === "ADMIN") return "Admin";
-  if (role === "TECHNICIAN_INTERNAL") return "Internal Tech";
-  if (role === "TECHNICIAN_EXTERNAL") return "External Tech";
-  if (role === "OPS") return "Operations";
-  if (role === "FRONT_DESK") return "Front Desk";
-  return "Operations";
-}
-
-function roleTagStyle(role: Role) {
-  // Don't use --ink as a background: in dark theme it's near-white.
-  if (role === "ADMIN") return "bg-[var(--accent)] text-black border border-[var(--accent)]/35";
-  if (role === "OPS") return "bg-[var(--accent)]/15 text-[#9A7A00] border border-[var(--accent)]/30";
-  if (role === "TECHNICIAN_INTERNAL") return "bg-blue-500/10 text-blue-700 border border-blue-400/30 dark:text-blue-400";
-  if (role === "TECHNICIAN_EXTERNAL") return "bg-purple-500/10 text-purple-700 border border-purple-400/30 dark:text-purple-400";
-  if (role === "FRONT_DESK") return "bg-emerald-500/10 text-emerald-700 border border-emerald-400/30 dark:text-emerald-400";
-  return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
-}
-
 /**
  * PRIMARY_TABS — the 5 bottom-nav tabs that are "home" screens.
  * These have their own custom native headers on mobile, so:
@@ -192,24 +173,19 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
         </div>
       </div>
 
-      {/* sm+: compact card with accent bar and role badge */}
-      <section className="hidden sm:flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 panel-shadow">
-        <div className="h-5 w-0.5 shrink-0 rounded-full bg-gradient-to-b from-[var(--accent)] to-[var(--accent)]/40" />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-            <h1 className="text-[13px] font-bold tracking-tight text-[var(--ink)]">{meta.title}</h1>
-            {subtitle ? (
-              <span className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-mono font-medium text-[var(--ink-muted)]">
-                {subtitle}
-              </span>
-            ) : null}
-            {meta.description ? (
-              <span className="text-[13px] text-[var(--ink-muted)]">{meta.description}</span>
-            ) : null}
-          </div>
-          <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleTagStyle(role)}`}>
-            {roleTag(role)}
-          </span>
+      {/* sm+: flat title bar with a single accent tick — matches the calm shell */}
+      <section className="hidden items-center gap-3 rounded-2xl bg-[var(--dc-panel)] px-4 py-2.5 shadow-[var(--dc-shadow)] sm:flex">
+        <div className="h-5 w-[3px] shrink-0 rounded-full bg-[var(--dc-accent)]" />
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2">
+          <h1 className="text-[13px] font-bold tracking-tight text-[var(--dc-ink)]">{meta.title}</h1>
+          {subtitle ? (
+            <span className="rounded border border-[var(--dc-line)] bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[12px] font-mono font-medium text-[var(--dc-ink-3)]">
+              {subtitle}
+            </span>
+          ) : null}
+          {meta.description ? (
+            <span className="text-[13px] text-[var(--dc-ink-3)]">{meta.description}</span>
+          ) : null}
         </div>
       </section>
     </>

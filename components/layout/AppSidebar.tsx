@@ -201,15 +201,15 @@ export function AppSidebar({
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-1 ${
+        className={`group relative flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40 focus-visible:ring-offset-1 ${
           active
-            ? "bg-[var(--accent-muted)] font-semibold text-[var(--ink)]"
-            : "font-medium text-[var(--ink)]/85 hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+            ? "bg-[var(--dc-accent-soft)] font-semibold text-[var(--dc-accent-2)] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--dc-accent)]"
+            : "font-medium text-[var(--dc-ink-2)] hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
         }`}
       >
         <span
           className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px] ${
-            active ? "text-[var(--accent)]" : "text-[var(--ink)]/55 group-hover:text-[var(--ink)]"
+            active ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink-3)] group-hover:text-[var(--dc-ink-2)]"
           }`}
         >
           {navIcon(item.href)}
@@ -217,12 +217,12 @@ export function AppSidebar({
         <span className="flex-1 truncate">{item.label}</span>
         <span className="flex items-center gap-1">
           {typeof nb === "number" && nb > 0 && (
-            <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[11px] font-bold text-black">
+            <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[10px] font-bold text-[#1c1600]">
               {nb > 99 ? "99+" : nb} new
             </span>
           )}
           {typeof cb === "number" && cb > 0 && (
-            <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
+            <span className="rounded-full bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--dc-ink-2)]">
               {cb > 99 ? "99+" : cb}
             </span>
           )}
@@ -232,14 +232,14 @@ export function AppSidebar({
   };
 
   return (
-    <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
+    <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--dc-side)] border-r border-[var(--dc-line)]">
 
       {/* ── Brand — exactly h-14 so its border-b lines up with the top header ── */}
       <Link
         href="/"
-        className="flex h-14 shrink-0 items-center border-b border-[var(--line)] px-5 hover:opacity-80 transition-opacity"
+        className="flex h-14 shrink-0 items-center border-b border-[var(--dc-line-soft)] px-5 hover:opacity-80 transition-opacity"
       >
-        <AppLogo height={36} priority />
+        <AppLogo height={48} priority />
       </Link>
 
       {/* ── Navigation ── */}
@@ -261,12 +261,12 @@ export function AppSidebar({
                 type="button"
                 onClick={() => toggleGroup(section.group)}
                 aria-expanded={open}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink)]/60 transition-colors hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+                className="flex w-full items-center gap-2 rounded-[9px] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--dc-ink-3)] transition-colors hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40"
               >
                 <span>{section.label}</span>
-                <span className="h-px flex-1 bg-[var(--line)]/60" />
+                <span className="h-px flex-1 bg-[var(--dc-line-soft)]" />
                 {!open && attention > 0 && (
-                  <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-black">
+                  <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[10px] font-bold text-[#1c1600]">
                     {attention > 99 ? "99+" : attention}
                   </span>
                 )}
@@ -274,7 +274,7 @@ export function AppSidebar({
                   viewBox="0 0 20 20"
                   fill="currentColor"
                   aria-hidden="true"
-                  className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`}
+                  className={`h-3.5 w-3.5 shrink-0 text-[var(--dc-ink-3)] transition-transform ${open ? "" : "-rotate-90"}`}
                 >
                   <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
                 </svg>
@@ -287,16 +287,16 @@ export function AppSidebar({
 
       {/* ── Platform admin section ── */}
       {isPlatformAdmin && (
-        <div className="border-t border-[var(--line)] px-3 py-2">
+        <div className="border-t border-[var(--dc-line-soft)] px-3 py-2">
           <p className="mb-1 px-2 text-[13px] font-bold uppercase tracking-[0.18em] text-amber-500/70">
             Platform Admin
           </p>
           <Link
             href="/admin/orgs"
-            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-[9px] px-2 py-1.5 text-[12px] font-medium transition-colors ${
               pathname.startsWith("/admin/orgs")
                 ? "bg-amber-500/15 text-amber-600"
-                : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+                : "text-[var(--dc-ink-2)] hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
             }`}
           >
             <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center text-amber-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
@@ -310,11 +310,11 @@ export function AppSidebar({
       )}
 
       {/* ── Footer ── */}
-      <div className="border-t border-[var(--line)] px-5 py-3 text-left">
+      <div className="border-t border-[var(--dc-line-soft)] px-5 py-3 text-left">
         {orgName && (
-          <p className="truncate text-[13px] font-semibold text-[var(--ink)]" title={orgName}>{orgName}</p>
+          <p className="truncate text-[13px] font-semibold text-[var(--dc-ink)]" title={orgName}>{orgName}</p>
         )}
-        <p className="mt-0.5 text-[12px] font-medium tracking-[0.08em] text-[var(--accent)]" aria-hidden="true">Duuka Pro Max</p>
+        <p className="mt-0.5 text-[12px] font-medium tracking-[0.08em] text-[var(--dc-accent-2)]" aria-hidden="true">Duuka Pro Max</p>
       </div>
     </aside>
   );
