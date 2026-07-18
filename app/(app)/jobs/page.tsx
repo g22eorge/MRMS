@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { SearchToggle } from "@/components/shared/SearchToggle";
 import { JobTable, JobRow } from "@/components/jobs/JobTable";
+import { JobsAttentionStrip } from "@/components/jobs/JobsAttentionStrip";
 import { JobBoardView } from "@/components/jobs/JobBoardView";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -43,7 +44,7 @@ const jobListSelect = {
   deviceType: true, brand: true, model: true, serialOrImei: true,
   clientId: true, deviceId: true, assignedToId: true,
   issueDescription: true, diagnosisNotes: true,
-  client:     { select: { id: true, fullName: true } },
+  client:     { select: { id: true, fullName: true, phone: true } },
   assignedTo: { select: { id: true, name: true } },
   device:     { select: { id: true, deviceType: true, brand: true, model: true } },
 } as const;
@@ -276,7 +277,7 @@ export default async function JobsPage({
       canLoadClientRows
         ? prisma.client.findMany({
             where: { id: { in: clientIds } },
-            select: { id: true, fullName: true },
+            select: { id: true, fullName: true, phone: true },
           })
         : Promise.resolve([]),
       prisma.user.findMany({
@@ -324,6 +325,21 @@ export default async function JobsPage({
     const total = dbStatusList.reduce((sum, s) => sum + (dbStatusCountMap.get(s) ?? 0), 0);
     if (total > 0) uiStatusCountMap.set(uiStatus, total);
   }
+
+  // Attention counts — aggregate counts only (no rows), scoped to org + role.
+  const overdueThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [overdueCount, completedUnpaidCount] = await Promise.all([
+    prisma.job.count({
+      where: {
+        orgId, ...roleScopeFilter,
+        receivedAt: { lte: overdueThreshold },
+        status: { notIn: filterSupportedJobStatuses(["COMPLETED", "CLOSED", "DELIVERED"]) as JobStatus[] },
+      },
+    }).catch(() => 0),
+    prisma.job.count({
+      where: { orgId, ...roleScopeFilter, status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false },
+    }).catch(() => 0),
+  ]);
 
   const isBoard = filters.view === "board";
 
@@ -418,6 +434,8 @@ export default async function JobsPage({
       brand: job.device?.brand ?? fallbackFields.brand ?? "",
       model: job.device?.model ?? fallbackFields.model ?? "",
       clientName: "client" in job ? job.client?.fullName : undefined,
+      clientPhone: "client" in job ? job.client?.phone ?? null : null,
+      issue: job.issueDescription ?? null,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       updatedAt: job.updatedAt,
@@ -638,60 +656,17 @@ export default async function JobsPage({
         </div>
       ) : null}
 
-      {/* ── Desktop pipeline bar (hidden on mobile) — calm flat card ── */}
-      {!isExternalTech && (() => {
-        const PIPELINE_STATUSES: Array<{ key: string; label: string; color: string }> = [
-          { key: "RECEIVED",          label: "Received",   color: "var(--dc-ink-3)" },
-          { key: "DIAGNOSING",        label: "Diagnosing", color: "var(--dc-blue)" },
-          { key: "REFERRED",          label: "Referred",   color: "var(--dc-violet)" },
-          { key: "AWAITING_APPROVAL", label: "Awaiting",   color: "var(--dc-warn)" },
-          { key: "IN_REPAIR",         label: "In Repair",  color: "var(--dc-accent)" },
-          { key: "READY_FOR_PICKUP",  label: "Ready",      color: "var(--dc-good)" },
-        ];
-        const activeTotal = PIPELINE_STATUSES.reduce((s, p) => s + (uiStatusCountMap.get(p.key) ?? 0), 0);
-        if (activeTotal === 0) return null;
-        return (
-          <div className="dc-card hidden overflow-hidden px-5 py-4 lg:block">
-            <div className="mb-3 flex items-baseline gap-2">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">Active pipeline</h3>
-              <span className="text-[11px] text-[var(--dc-ink-3)]">· {activeTotal} open job{activeTotal !== 1 ? "s" : ""}</span>
-              <Link href={overdueChipHref} className="ml-auto text-[11px] font-semibold text-[var(--dc-warn)] transition hover:opacity-80">
-                {filters.overdue === "1" ? "← all jobs" : "View overdue →"}
-              </Link>
-            </div>
-            {/* Proportional bar */}
-            <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-[var(--dc-panel-2)]">
-              {PIPELINE_STATUSES.map((p) => {
-                const cnt = uiStatusCountMap.get(p.key) ?? 0;
-                if (cnt === 0) return null;
-                return (
-                  <Link
-                    key={p.key}
-                    href={statusChipHref(p.key)}
-                    title={`${p.label}: ${cnt}`}
-                    style={{ width: `${Math.round((cnt / activeTotal) * 100)}%`, backgroundColor: p.color }}
-                    className="h-full rounded-sm opacity-85 transition-opacity hover:opacity-100"
-                  />
-                );
-              })}
-            </div>
-            {/* Legend */}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-              {PIPELINE_STATUSES.map((p) => {
-                const cnt = uiStatusCountMap.get(p.key) ?? 0;
-                if (cnt === 0) return null;
-                return (
-                  <Link key={p.key} href={statusChipHref(p.key)} className="flex items-center gap-1.5 transition hover:opacity-80">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-                    <span className="text-[11.5px] text-[var(--dc-ink-3)]">{p.label}</span>
-                    <span className="text-[11.5px] font-bold text-[var(--dc-ink)]">{cnt}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── Attention strip (desktop) — action-first cards ── */}
+      {!isExternalTech ? (
+        <JobsAttentionStrip
+          cards={[
+            { key: "overdue", label: "Overdue", count: overdueCount, sub: "past promised date", tone: "crit", href: overdueChipHref },
+            { key: "awaiting", label: "Awaiting approval", count: uiStatusCountMap.get("AWAITING_APPROVAL") ?? 0, sub: "quotes pending", tone: "warn", href: statusChipHref("AWAITING_APPROVAL") },
+            { key: "ready", label: "Ready for pickup", count: uiStatusCountMap.get("READY_FOR_PICKUP") ?? 0, sub: "nudge the client", tone: "good", href: statusChipHref("READY_FOR_PICKUP") },
+            { key: "unpaid", label: "Completed · unpaid", count: completedUnpaidCount, sub: "awaiting payment", tone: "accent", href: statusChipHref("COMPLETED") },
+          ]}
+        />
+      ) : null}
 
       {/* ── Desktop filter bar (hidden on mobile) — calm flat toolbar ── */}
       <div className="dc-card hidden overflow-hidden lg:block">

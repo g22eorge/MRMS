@@ -63,6 +63,8 @@ export type JobRow = {
   brand: string;
   model: string;
   clientName?: string;
+  clientPhone?: string | null;
+  issue?: string | null;
   assignedTo?: string;
   receivedAt: Date;
   updatedAt?: Date;
@@ -325,15 +327,21 @@ export function JobTable({
       key: "device",
       header: "Device",
       cell: (job) => (
-        <>
-          <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">
-            {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
-          </p>
-          <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--ink-muted)]">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--panel-strong)] text-[var(--ink-muted)] [&_svg]:h-[18px] [&_svg]:w-[18px]">
             <DeviceIcon type={job.deviceType} />
-            {deviceLabel[job.deviceType] ?? job.deviceType}
           </span>
-        </>
+          <div className="min-w-0">
+            <p className="max-w-[13rem] truncate font-semibold text-[var(--ink)]">
+              {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
+            </p>
+            {job.issue ? (
+              <p className="max-w-[13rem] truncate text-[12px] text-[var(--ink-muted)]">{job.issue}</p>
+            ) : (
+              <p className="text-[12px] text-[var(--ink-muted)]">{deviceLabel[job.deviceType] ?? job.deviceType}</p>
+            )}
+          </div>
+        </div>
       ),
     },
     {
@@ -346,7 +354,10 @@ export function JobTable({
           key: "client",
           header: "Client",
           cell: (job: JobRow) => (
-            <p className="max-w-[13rem] truncate text-[var(--ink)]">{job.clientName ?? <span className="text-[var(--ink-muted)]">—</span>}</p>
+            <div className="min-w-0">
+              <p className="max-w-[13rem] truncate text-[var(--ink)]">{job.clientName ?? <span className="text-[var(--ink-muted)]">—</span>}</p>
+              {job.clientPhone ? <p className="truncate text-[12px] tabular-nums text-[var(--ink-muted)]">{job.clientPhone}</p> : null}
+            </div>
           ),
         }]
       : []),
@@ -356,15 +367,24 @@ export function JobTable({
           header: "Assigned",
           headerClassName: "hidden 2xl:table-cell",
           className: "hidden 2xl:table-cell",
-          cell: (job: JobRow) => (
-            <p className="max-w-[11rem] truncate text-[var(--ink-muted)]">{job.assignedTo ?? "—"}</p>
-          ),
+          cell: (job: JobRow) =>
+            job.assignedTo ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[11px] font-bold text-[var(--accent)]">
+                  {job.assignedTo.charAt(0).toUpperCase()}
+                </span>
+                <span className="max-w-[9rem] truncate text-[var(--ink-muted)]">{job.assignedTo}</span>
+              </div>
+            ) : (
+              <span className="text-[var(--ink-muted)]">—</span>
+            ),
         }]
       : []),
     {
       key: "received",
       header: "Received",
-      className: "whitespace-nowrap text-[var(--ink-muted)]",
+      headerClassName: "hidden 2xl:table-cell",
+      className: "hidden whitespace-nowrap text-[var(--ink-muted)] 2xl:table-cell",
       cell: (job) => formatEATDate(job.receivedAt),
     },
     {
@@ -376,6 +396,8 @@ export function JobTable({
     {
       key: "flag",
       header: "Flag",
+      headerClassName: "hidden 2xl:table-cell",
+      className: "hidden 2xl:table-cell",
       cell: (job) => {
         const flagCfg = getJobListFlag(job, canManagePricing);
         return (
@@ -393,21 +415,21 @@ export function JobTable({
     ...(canSeeCost
       ? [{
           key: "cost",
-          header: showClientFacingCostOnly ? "Cost" : "Ext. Bill",
+          header: showClientFacingCostOnly ? "Balance" : "Ext. Bill",
           align: "right" as const,
-          headerClassName: "hidden 2xl:table-cell",
-          className: "hidden whitespace-nowrap 2xl:table-cell",
-          cell: (job: JobRow) => (
-            <span className="font-semibold text-[var(--ink)]">
-              {showClientFacingCostOnly
-                ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
-                  ? formatMoney(job.clientBill)
-                  : <span className="font-normal text-[var(--ink-muted)]">—</span>
-                : job.externalTechBill
-                  ? formatMoney(job.externalTechBill)
-                  : <span className="font-normal text-[var(--ink-muted)]">—</span>}
-            </span>
-          ),
+          headerClassName: "hidden whitespace-nowrap xl:table-cell",
+          className: "hidden whitespace-nowrap xl:table-cell",
+          cell: (job: JobRow) => {
+            if (showClientFacingCostOnly) {
+              if (job.clientPaid) return <span className="font-semibold text-emerald-600">Paid</span>;
+              return typeof job.clientBill === "number" && job.clientBill > 0
+                ? <span className="font-semibold text-amber-600">{formatMoney(job.clientBill)}</span>
+                : <span className="font-normal text-[var(--ink-muted)]">—</span>;
+            }
+            return job.externalTechBill
+              ? <span className="font-semibold text-[var(--ink)]">{formatMoney(job.externalTechBill)}</span>
+              : <span className="font-normal text-[var(--ink-muted)]">—</span>;
+          },
         }]
       : []),
   ];
