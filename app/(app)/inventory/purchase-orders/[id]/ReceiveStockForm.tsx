@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DataTable } from "@/components/ui/DataTable";
 import { receiveStockAction } from "../actions";
 
 type Item = { id: string; description: string; qtyOrdered: number; qtyReceived: number };
@@ -54,45 +55,58 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
             ))}
           </select>
         </label>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-2 py-1.5 text-left">Item</th>
-                <th className="w-24 px-2 py-1.5 text-right">Ordered</th>
-                <th className="w-24 px-2 py-1.5 text-right">Current</th>
-                <th className="w-28 px-2 py-1.5 text-right">New</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {items.map((item) => {
-                const current = quantities[item.id] ?? item.qtyReceived;
-                return (
-                  <tr key={item.id}>
-                    <td className="px-2 py-1.5 font-medium text-[var(--ink)]">{item.description}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-[var(--ink-muted)]">{item.qtyOrdered}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-[var(--ink-muted)]">{item.qtyReceived}</td>
-                    <td className="px-2 py-1.5 text-right">
-                  <input
-                    type="number"
-                    min={0}
-                    max={item.qtyOrdered}
-                    value={current}
-                    onChange={(e) =>
-                      setQuantities((prev) => ({
-                        ...prev,
-                        [item.id]: Math.min(item.qtyOrdered, parseInt(e.target.value, 10) || 0),
-                      }))
-                    }
-                    className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-right text-sm tabular-nums text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
-                  />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          dense
+          rows={items}
+          getRowKey={(item) => item.id}
+          empty="No line items to receive."
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              className: "font-medium text-[var(--ink)]",
+              cell: (item) => item.description,
+            },
+            {
+              key: "ordered",
+              header: "Ordered",
+              align: "right",
+              headerClassName: "w-24",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (item) => item.qtyOrdered,
+            },
+            {
+              key: "current",
+              header: "Current",
+              align: "right",
+              headerClassName: "w-24",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (item) => item.qtyReceived,
+            },
+            {
+              key: "new",
+              header: "New",
+              align: "right",
+              headerClassName: "w-28",
+              cell: (item) => (
+                <input
+                  type="number"
+                  min={0}
+                  max={item.qtyOrdered}
+                  value={quantities[item.id] ?? item.qtyReceived}
+                  onChange={(e) =>
+                    setQuantities((prev) => ({
+                      ...prev,
+                      [item.id]: Math.min(item.qtyOrdered, parseInt(e.target.value, 10) || 0),
+                    }))
+                  }
+                  className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-right text-sm tabular-nums text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+                />
+              ),
+            },
+          ]}
+        />
 
         {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
         {saved && <p className="text-xs font-semibold text-green-600">Stock received and inventory updated.</p>}

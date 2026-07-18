@@ -8,6 +8,10 @@ import { prisma } from "@/lib/prisma";
 import { formatEATDate } from "@/lib/date-eat";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection } from "@/components/shared/RowActionsMenu";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { createLead, advanceLeadStageAction } from "./actions";
 
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -20,22 +24,22 @@ const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   STALE: "Stale",
 };
 
-const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  NEW:           "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  CONTACTED:     "border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
-  QUALIFIED:     "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  PROPOSAL_SENT: "border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  WON:           "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  LOST:          "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  STALE:         "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+const LEAD_STATUS_TONES: Record<string, BadgeTone> = {
+  NEW:           "info",
+  CONTACTED:     "purple",
+  QUALIFIED:     "warning",
+  PROPOSAL_SENT: "orange",
+  WON:           "success",
+  LOST:          "danger",
+  STALE:         "neutral",
 };
 
-const QUOTATION_STATUS_COLORS: Record<string, string> = {
-  DRAFT:    "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  SENT:     "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  ACCEPTED: "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  REJECTED: "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  EXPIRED:  "border-[var(--line)] bg-[var(--panel-strong)]/60 text-[var(--ink-muted)]",
+const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT:    "neutral",
+  SENT:     "info",
+  ACCEPTED: "success",
+  REJECTED: "danger",
+  EXPIRED:  "slate",
 };
 
 type SearchParams = {
@@ -44,6 +48,7 @@ type SearchParams = {
   q?: string;
   createError?: string;
   newLead?: string;
+  page?: string;
 };
 
 export default async function SalesPage({
@@ -64,6 +69,7 @@ export default async function SalesPage({
   const activeTab    = filters.tab === "quotations" ? "quotations" : "leads";
   const statusFilter = filters.status as LeadStatus | undefined;
   const searchQ      = (filters.q ?? "").trim();
+  const page         = parsePage(filters.page);
   const currency     = getAppCurrency();
 
   const onlyOwn = !can.viewAllSales(user) && can.createLeads(user);
@@ -125,6 +131,8 @@ export default async function SalesPage({
     sourceStatusGroups,
     overdueLeads,
     lostReasonGroups,
+    leadsTotal,
+    quotationsTotal,
   ] = await Promise.all([
     activeTab === "leads"
       ? prisma.lead.findMany({
@@ -134,7 +142,8 @@ export default async function SalesPage({
             createdBy:  { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: "desc" },
-          take: 100,
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -147,7 +156,8 @@ export default async function SalesPage({
             createdBy: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "desc" },
-          take: 100,
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -248,7 +258,25 @@ export default async function SalesPage({
       where: { orgId: user.orgId, ...ownLeadAccess, status: "LOST", lostReason: { not: null } },
       _count: { lostReason: true },
     }).catch(() => []),
+
+    // Whole-dataset totals for the active tab's paginated list.
+    activeTab === "leads"
+      ? prisma.lead.count({ where: leadsWhere }).catch(() => 0)
+      : Promise.resolve(0),
+
+    activeTab === "quotations"
+      ? prisma.quotation.count({ where: quotationWhere }).catch(() => 0)
+      : Promise.resolve(0),
   ]);
+
+  const listTotal = activeTab === "leads" ? leadsTotal : quotationsTotal;
+  const listUnit = activeTab === "leads" ? "leads" : "quotations";
+  const pageView = paginationView(page, listTotal);
+  const listHref = pageHrefBuilder("/sales", {
+    tab: activeTab,
+    status: statusFilter ?? "",
+    q: searchQ,
+  });
 
   // ── Compute KPIs ────────────────────────────────────────────────────────
   const statusCounts: Partial<Record<LeadStatus, number>> = {};
@@ -353,76 +381,57 @@ export default async function SalesPage({
   const LOST_REASONS = ["Price too high", "Chose competitor", "No budget", "Bad timing", "Unreachable", "Other"];
 
   return (
-    <div className="space-y-4">
-
-      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">CRM</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">Sales</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Leads pipeline and quotations</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeTab === "leads" && can.createLeads(user) ? (
-            <Link
-              href="/sales?tab=leads&newLead=1"
-              className="btn-premium rounded-lg px-4 py-2.5 text-[12px] font-bold"
-            >
-              + New Lead
-            </Link>
-          ) : null}
-          {activeTab === "quotations" && can.createQuotations(user) ? (
-            <Link
-              href="/sales/quotations/new"
-              className="btn-premium rounded-lg px-4 py-2.5 text-[12px] font-bold"
-            >
-              + New Quotation
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      {/* ── KPI TILES ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-
-        {/* Active pipeline */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Active Pipeline</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(pipelineValue, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{activePipeline} open lead{activePipeline !== 1 ? "s" : ""}</p>
-        </div>
-
-        {/* Won this month */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Won This Month</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-emerald-600">{wonThisMonth}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">
-            {conversionRate}% conversion
-            {wonMomChange !== null && (
-              <span className={`ml-1 font-semibold ${wonMomChange >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                {wonMomChange >= 0 ? "+" : ""}{wonMomChange.toFixed(0)}% MoM
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Quotations */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Quotations</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(quoteTotal, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">
-            {acceptanceRate}% accepted · <span className="text-emerald-600 font-semibold">{formatMoneyCompact(acceptedTotal, currency)}</span>
-          </p>
-        </div>
-
-        {/* Follow-ups due */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Follow-ups Due</p>
-          <p className={`mt-1 text-lg font-bold tabular-nums ${followupsDue > 0 ? "text-amber-600" : "text-[var(--ink)]"}`}>{followupsDue}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{followupsDue > 0 ? "overdue or due today" : "all clear"}</p>
-        </div>
-      </div>
-
+    <ListPageLayout
+      header={{
+        eyebrow: "CRM",
+        title: "Sales",
+        description: "Leads pipeline and quotations",
+        actions: (
+          <>
+            {activeTab === "leads" && can.createLeads(user) ? (
+              <Link
+                href="/sales?tab=leads&newLead=1"
+                className="btn-premium rounded-lg px-4 py-2.5 text-[12px] font-bold"
+              >
+                + New Lead
+              </Link>
+            ) : null}
+            {activeTab === "quotations" && can.createQuotations(user) ? (
+              <Link
+                href="/sales/quotations/new"
+                className="btn-premium rounded-lg px-4 py-2.5 text-[12px] font-bold"
+              >
+                + New Quotation
+              </Link>
+            ) : null}
+          </>
+        ),
+        kpis: [
+          {
+            label: "Active Pipeline",
+            value: formatMoneyCompact(pipelineValue, currency),
+            sub: `${activePipeline} open lead${activePipeline !== 1 ? "s" : ""}`,
+          },
+          {
+            label: "Won This Month",
+            value: wonThisMonth,
+            valueClass: "text-emerald-600",
+            sub: `${conversionRate}% conversion${wonMomChange !== null ? ` · ${wonMomChange >= 0 ? "+" : ""}${wonMomChange.toFixed(0)}% MoM` : ""}`,
+          },
+          {
+            label: "Quotations",
+            value: formatMoneyCompact(quoteTotal, currency),
+            sub: `${acceptanceRate}% accepted · ${formatMoneyCompact(acceptedTotal, currency)}`,
+          },
+          {
+            label: "Follow-ups Due",
+            value: followupsDue,
+            valueClass: followupsDue > 0 ? "text-amber-600" : undefined,
+            sub: followupsDue > 0 ? "overdue or due today" : "all clear",
+          },
+        ],
+      }}
+    >
       {/* ══════════════════════════════════════════════════════════════════════
           1. VISUAL FUNNEL + FORECAST
       ══════════════════════════════════════════════════════════════════════ */}
@@ -788,31 +797,32 @@ export default async function SalesPage({
               </div>
             ) : null}
 
-            {leads.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-                <p className="text-sm font-medium text-[var(--ink-muted)]">No leads match this view</p>
-                {statusFilter ? (
-                  <Link href="/sales?tab=leads" className="text-xs text-[var(--accent)] hover:underline">
-                    Clear filter
-                  </Link>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                {/* ── Mobile lead cards ── */}
-                <div className="divide-y divide-[var(--line)] lg:hidden">
-                  {leads.map((lead) => {
-                    const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !["WON", "LOST", "STALE"].includes(lead.status);
-                    const nextStage = NEXT_STAGE[lead.status as LeadStatus];
-                    const isTerminal = ["WON","LOST","STALE"].includes(lead.status);
-                    return (
-                      <div key={`m-${lead.id}`} className="border-b border-[var(--line)] last:border-b-0">
+            <DataTable
+              frameless
+              rows={leads}
+              getRowKey={(lead) => lead.id}
+              empty={
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-sm font-medium text-[var(--ink-muted)]">No leads match this view</p>
+                  {statusFilter ? (
+                    <Link href="/sales?tab=leads" className="text-xs text-[var(--accent)] hover:underline">
+                      Clear filter
+                    </Link>
+                  ) : null}
+                </div>
+              }
+              renderMobileCard={(lead) => {
+                const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !["WON", "LOST", "STALE"].includes(lead.status);
+                const nextStage = NEXT_STAGE[lead.status as LeadStatus];
+                const isTerminal = ["WON","LOST","STALE"].includes(lead.status);
+                return (
+                  <div>
                         <Link href={`/sales/leads/${lead.id}`} className="block px-4 py-3 transition-colors active:bg-[var(--panel-strong)]/40">
                           <div className="mb-1 flex items-center justify-between gap-2">
                             <span className="text-[14px] font-semibold text-[var(--ink)]">{lead.fullName}</span>
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-semibold ${LEAD_STATUS_COLORS[lead.status]}`}>
+                            <StatusBadge tone={toneFor(LEAD_STATUS_TONES, lead.status)}>
                               {LEAD_STATUS_LABELS[lead.status]}
-                            </span>
+                            </StatusBadge>
                           </div>
                           <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
                             <span>{lead.phone}</span>
@@ -868,116 +878,150 @@ export default async function SalesPage({
                             </RowActionsMenu>
                           </div>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* ── Desktop leads table ── */}
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full min-w-[720px] border-collapse text-[13px]">
-                    <thead className="bg-[var(--panel-strong)]/50 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-                      <tr className="border-b border-[var(--line)]">
-                        <th className="px-4 py-2.5">Name</th>
-                        <th className="px-4 py-2.5">Phone</th>
-                        <th className="px-4 py-2.5">Source</th>
-                        <th className="px-4 py-2.5">Status</th>
-                        <th className="px-4 py-2.5">Assigned To</th>
-                        <th className="px-4 py-2.5">Created By</th>
-                        <th className="px-4 py-2.5">Est. Value</th>
-                        <th className="px-4 py-2.5">Follow-up</th>
-                        <th className="px-4 py-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {leads.map((lead) => {
-                        const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !["WON", "LOST", "STALE"].includes(lead.status);
-                        return (
-                          <tr key={`d-${lead.id}`} className="transition-colors hover:bg-[var(--panel-strong)]/40">
-                            <td className="px-4 py-3 font-medium text-[var(--ink)]">
-                              <Link href={`/sales/leads/${lead.id}`} className="hover:text-[var(--accent)] hover:underline">{lead.fullName}</Link>
-                              {lead.organization ? <span className="ml-1.5 text-[13px] text-[var(--ink-muted)]">{lead.organization}</span> : null}
-                            </td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{lead.phone}</td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{lead.source.replace(/_/g, " ")}</td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-semibold ${LEAD_STATUS_COLORS[lead.status]}`}>
-                                {LEAD_STATUS_LABELS[lead.status]}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{lead.assignedTo?.name ?? <span className="opacity-40">—</span>}</td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{lead.createdBy?.name ?? <span className="opacity-40">—</span>}</td>
-                            <td className="px-4 py-3 font-medium text-[var(--ink)]">
-                              {lead.estimatedValue != null ? formatMoney(lead.estimatedValue, currency) : <span className="opacity-40 font-normal">—</span>}
-                            </td>
-                            <td className="px-4 py-3">
-                              {lead.followUpAt ? (
-                                <span className={`inline-flex items-center gap-1 text-[12px] ${isOverdue ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
-                                  {isOverdue && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                                  {formatEATDate(lead.followUpAt)}
-                                </span>
-                              ) : <span className="opacity-40 text-[var(--ink-muted)]">—</span>}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <RowActionsMenu label={`Lead actions for ${lead.fullName}`}>
-                                  <div className="py-1 text-left">
-                                    <MenuActionLink href={`/sales/leads/${lead.id}`} icon="open">
-                                      Open Lead
-                                    </MenuActionLink>
-                                    {!["WON","LOST","STALE"].includes(lead.status) && NEXT_STAGE[lead.status as LeadStatus] ? (
-                                      <form action={advanceLeadStageAction}>
-                                        <input type="hidden" name="leadId" value={lead.id} />
-                                        <input type="hidden" name="newStatus" value={NEXT_STAGE[lead.status as LeadStatus]!} />
-                                        <MenuActionButton icon="save" tone="accent">
-                                          Advance to {LEAD_STATUS_LABELS[NEXT_STAGE[lead.status as LeadStatus]!]}
-                                        </MenuActionButton>
-                                      </form>
-                                    ) : null}
-                                  </div>
-                                  {!["WON","LOST","STALE"].includes(lead.status) ? (
-                                    <>
-                                      <MenuSection label="Mark Lost" />
-                                      <div className="w-56 p-3 pt-2 text-left">
-                                        <form action={advanceLeadStageAction} className="space-y-1.5">
-                                          <input type="hidden" name="leadId" value={lead.id} />
-                                          <input type="hidden" name="newStatus" value="LOST" />
-                                          <select name="lostReason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] outline-none">
-                                            <option value="">Select reason</option>
-                                            {LOST_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                          </select>
-                                          <MenuActionButton icon="close" tone="danger" className="bg-red-500/8">Confirm Lost</MenuActionButton>
-                                        </form>
-                                      </div>
-                                    </>
-                                  ) : null}
-                                </RowActionsMenu>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Pipeline total footer */}
-                {leads.some((l) => l.estimatedValue != null) && (
-                  <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5">
-                    <span className="text-[13px] text-[var(--ink-muted)]">
-                      {leads.length} lead{leads.length !== 1 ? "s" : ""} shown
-                    </span>
-                    <span className="text-[13px] font-semibold text-[var(--ink)]">
-                      Pipeline:{" "}
-                      <span className="text-[var(--accent)]">
-                        {formatMoney(
-                          leads.reduce((s, l) => s + (l.estimatedValue ?? 0), 0),
-                          currency,
-                        )}
-                      </span>
-                    </span>
                   </div>
-                )}
-              </>
-            )}
+                );
+              }}
+              columns={[
+                {
+                  key: "name",
+                  header: "Name",
+                  className: "font-medium text-[var(--ink)]",
+                  cell: (lead) => (
+                    <>
+                      <Link href={`/sales/leads/${lead.id}`} className="hover:text-[var(--accent)] hover:underline">{lead.fullName}</Link>
+                      {lead.organization ? <span className="ml-1.5 text-[13px] text-[var(--ink-muted)]">{lead.organization}</span> : null}
+                    </>
+                  ),
+                },
+                {
+                  key: "phone",
+                  header: "Phone",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (lead) => lead.phone,
+                },
+                {
+                  key: "source",
+                  header: "Source",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (lead) => lead.source.replace(/_/g, " "),
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  cell: (lead) => (
+                    <StatusBadge tone={toneFor(LEAD_STATUS_TONES, lead.status)}>
+                      {LEAD_STATUS_LABELS[lead.status]}
+                    </StatusBadge>
+                  ),
+                },
+                {
+                  key: "assignedTo",
+                  header: "Assigned To",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (lead) => lead.assignedTo?.name ?? <span className="opacity-40">—</span>,
+                },
+                {
+                  key: "createdBy",
+                  header: "Created By",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (lead) => lead.createdBy?.name ?? <span className="opacity-40">—</span>,
+                },
+                {
+                  key: "estValue",
+                  header: "Est. Value",
+                  className: "font-medium text-[var(--ink)]",
+                  cell: (lead) =>
+                    lead.estimatedValue != null ? formatMoney(lead.estimatedValue, currency) : <span className="opacity-40 font-normal">—</span>,
+                },
+                {
+                  key: "followUp",
+                  header: "Follow-up",
+                  cell: (lead) => {
+                    const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !["WON", "LOST", "STALE"].includes(lead.status);
+                    return lead.followUpAt ? (
+                      <span className={`inline-flex items-center gap-1 text-[12px] ${isOverdue ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
+                        {isOverdue && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                        {formatEATDate(lead.followUpAt)}
+                      </span>
+                    ) : <span className="opacity-40 text-[var(--ink-muted)]">—</span>;
+                  },
+                },
+              ]}
+              actions={(lead) => (
+                <RowActionsMenu label={`Lead actions for ${lead.fullName}`}>
+                  <div className="py-1 text-left">
+                    <MenuActionLink href={`/sales/leads/${lead.id}`} icon="open">
+                      Open Lead
+                    </MenuActionLink>
+                    {!["WON","LOST","STALE"].includes(lead.status) && NEXT_STAGE[lead.status as LeadStatus] ? (
+                      <form action={advanceLeadStageAction}>
+                        <input type="hidden" name="leadId" value={lead.id} />
+                        <input type="hidden" name="newStatus" value={NEXT_STAGE[lead.status as LeadStatus]!} />
+                        <MenuActionButton icon="save" tone="accent">
+                          Advance to {LEAD_STATUS_LABELS[NEXT_STAGE[lead.status as LeadStatus]!]}
+                        </MenuActionButton>
+                      </form>
+                    ) : null}
+                  </div>
+                  {!["WON","LOST","STALE"].includes(lead.status) ? (
+                    <>
+                      <MenuSection label="Mark Lost" />
+                      <div className="w-56 p-3 pt-2 text-left">
+                        <form action={advanceLeadStageAction} className="space-y-1.5">
+                          <input type="hidden" name="leadId" value={lead.id} />
+                          <input type="hidden" name="newStatus" value="LOST" />
+                          <select name="lostReason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] outline-none">
+                            <option value="">Select reason</option>
+                            {LOST_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <MenuActionButton icon="close" tone="danger" className="bg-red-500/8">Confirm Lost</MenuActionButton>
+                        </form>
+                      </div>
+                    </>
+                  ) : null}
+                </RowActionsMenu>
+              )}
+              tableFooter={
+                leads.some((l) => l.estimatedValue != null) ? (
+                  <tr>
+                    {/* 8 columns + actions column */}
+                    <td colSpan={9} className="px-4 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-normal text-[var(--ink-muted)]">
+                          {leads.length} lead{leads.length !== 1 ? "s" : ""} shown
+                        </span>
+                        <span className="text-[13px] font-semibold text-[var(--ink)]">
+                          Pipeline:{" "}
+                          <span className="text-[var(--accent)]">
+                            {formatMoney(
+                              leads.reduce((s, l) => s + (l.estimatedValue ?? 0), 0),
+                              currency,
+                            )}
+                          </span>
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : undefined
+              }
+            />
+            {/* Pipeline total (mobile — tfoot renders on lg+ only) */}
+            {leads.length > 0 && leads.some((l) => l.estimatedValue != null) ? (
+              <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5 lg:hidden">
+                <span className="text-[13px] text-[var(--ink-muted)]">
+                  {leads.length} lead{leads.length !== 1 ? "s" : ""} shown
+                </span>
+                <span className="text-[13px] font-semibold text-[var(--ink)]">
+                  Pipeline:{" "}
+                  <span className="text-[var(--accent)]">
+                    {formatMoney(
+                      leads.reduce((s, l) => s + (l.estimatedValue ?? 0), 0),
+                      currency,
+                    )}
+                  </span>
+                </span>
+              </div>
+            ) : null}
           </div>
         ) : (
           /* ── QUOTATIONS TAB ──────────────────────────────────────── */
@@ -1005,96 +1049,108 @@ export default async function SalesPage({
               </div>
             )}
 
-            {quotations.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-                <p className="text-sm font-medium text-[var(--ink-muted)]">No quotations yet</p>
-                {can.createQuotations(user) ? (
-                  <Link
-                    href="/sales/quotations/new"
-                    className="text-xs text-[var(--accent)] hover:underline"
-                  >
-                    Create first quotation
+            <DataTable
+              frameless
+              rows={quotations}
+              getRowKey={(q) => q.id}
+              empty={
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-sm font-medium text-[var(--ink-muted)]">No quotations yet</p>
+                  {can.createQuotations(user) ? (
+                    <Link
+                      href="/sales/quotations/new"
+                      className="text-xs text-[var(--accent)] hover:underline"
+                    >
+                      Create first quotation
+                    </Link>
+                  ) : null}
+                </div>
+              }
+              renderMobileCard={(q) => {
+                const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
+                const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
+                return (
+                  <Link href={`/sales/quotations/${q.id}`} className="block px-4 py-3 transition-colors hover:bg-[var(--panel-strong)]/40">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-mono text-[13px] font-bold text-[var(--ink)]">{q.quoteNumber}</span>
+                      <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
+                    </div>
+                    {recipientName && <p className="text-[12px] text-[var(--ink-muted)]">{recipientName}</p>}
+                    <div className="mt-1 flex items-center gap-3 text-[13px]">
+                      <span className="font-semibold text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
+                      {q.validUntil && (
+                        <span className={`flex items-center gap-0.5 ${isExpired ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
+                          {isExpired && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                          valid to {formatEATDate(q.validUntil)}
+                        </span>
+                      )}
+                    </div>
                   </Link>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                {/* ── Mobile quotation cards ── */}
-                <div className="divide-y divide-[var(--line)] lg:hidden">
-                  {quotations.map((q) => {
-                    const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
+                );
+              }}
+              columns={[
+                {
+                  key: "quote",
+                  header: "Quote #",
+                  className: "font-mono text-[12px] font-semibold text-[var(--ink)]",
+                  cell: (q) => (
+                    <Link href={`/sales/quotations/${q.id}`} className="hover:text-[var(--accent)] hover:underline">{q.quoteNumber}</Link>
+                  ),
+                },
+                {
+                  key: "recipient",
+                  header: "Client / Lead",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (q) => (q.client?.fullName ?? q.lead?.fullName) ?? <span className="opacity-40">—</span>,
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  cell: (q) => <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>,
+                },
+                {
+                  key: "total",
+                  header: "Total",
+                  className: "font-medium text-[var(--ink)]",
+                  cell: (q) => formatMoney(q.totalAmount, q.currency),
+                },
+                {
+                  key: "created",
+                  header: "Created",
+                  className: "text-[var(--ink-muted)]",
+                  cell: (q) => formatEATDate(q.createdAt),
+                },
+                {
+                  key: "validUntil",
+                  header: "Valid Until",
+                  cell: (q) => {
                     const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
-                    return (
-                      <Link key={`m-${q.id}`} href={`/sales/quotations/${q.id}`} className="block px-4 py-3 transition-colors hover:bg-[var(--panel-strong)]/40">
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <span className="font-mono text-[13px] font-bold text-[var(--ink)]">{q.quoteNumber}</span>
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-semibold ${QUOTATION_STATUS_COLORS[q.status] ?? ""}`}>{q.status}</span>
-                        </div>
-                        {recipientName && <p className="text-[12px] text-[var(--ink-muted)]">{recipientName}</p>}
-                        <div className="mt-1 flex items-center gap-3 text-[13px]">
-                          <span className="font-semibold text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
-                          {q.validUntil && (
-                            <span className={`flex items-center gap-0.5 ${isExpired ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
-                              {isExpired && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                              valid to {formatEATDate(q.validUntil)}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-                {/* ── Desktop quotations table ── */}
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full min-w-[700px] border-collapse text-[13px]">
-                    <thead className="bg-[var(--panel-strong)]/50 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-                      <tr className="border-b border-[var(--line)]">
-                        <th className="px-4 py-2.5">Quote #</th>
-                        <th className="px-4 py-2.5">Client / Lead</th>
-                        <th className="px-4 py-2.5">Status</th>
-                        <th className="px-4 py-2.5">Total</th>
-                        <th className="px-4 py-2.5">Created</th>
-                        <th className="px-4 py-2.5">Valid Until</th>
-                        <th className="px-4 py-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {quotations.map((q) => {
-                        const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
-                        const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
-                        return (
-                          <tr key={`d-${q.id}`} className="transition-colors hover:bg-[var(--panel-strong)]/40">
-                            <td className="px-4 py-3 font-mono text-[12px] font-semibold text-[var(--ink)]">
-                              <Link href={`/sales/quotations/${q.id}`} className="hover:text-[var(--accent)] hover:underline">{q.quoteNumber}</Link>
-                            </td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{recipientName ?? <span className="opacity-40">—</span>}</td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-semibold ${QUOTATION_STATUS_COLORS[q.status] ?? ""}`}>{q.status}</span>
-                            </td>
-                            <td className="px-4 py-3 font-medium text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</td>
-                            <td className="px-4 py-3 text-[var(--ink-muted)]">{formatEATDate(q.createdAt)}</td>
-                            <td className="px-4 py-3">
-                              {q.validUntil ? (
-                                <span className={`inline-flex items-center gap-1 text-[12px] ${isExpired ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
-                                  {isExpired && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                                  {formatEATDate(q.validUntil)}
-                                </span>
-                              ) : <span className="opacity-40 text-[var(--ink-muted)]">—</span>}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <Link href={`/sales/quotations/${q.id}`} className="btn-premium-secondary whitespace-nowrap rounded-lg px-2.5 py-1 text-[13px] font-semibold">Open</Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+                    return q.validUntil ? (
+                      <span className={`inline-flex items-center gap-1 text-[12px] ${isExpired ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}`}>
+                        {isExpired && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                        {formatEATDate(q.validUntil)}
+                      </span>
+                    ) : <span className="opacity-40 text-[var(--ink-muted)]">—</span>;
+                  },
+                },
+              ]}
+              actions={(q) => (
+                <Link href={`/sales/quotations/${q.id}`} className="btn-premium-secondary whitespace-nowrap rounded-lg px-2.5 py-1 text-[13px] font-semibold">Open</Link>
+              )}
+            />
           </div>
         )}
+
+        <TablePagination
+          page={pageView.page}
+          totalPages={pageView.totalPages}
+          rangeStart={pageView.rangeStart}
+          rangeEnd={pageView.rangeEnd}
+          total={pageView.total}
+          unit={listUnit}
+          hrefForPage={listHref}
+        />
       </div>
-    </div>
+    </ListPageLayout>
   );
 }

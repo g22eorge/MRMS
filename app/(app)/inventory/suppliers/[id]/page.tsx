@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -12,34 +14,34 @@ import { createSupplierPriceAction, deleteSupplierPriceAction, updateSupplierPri
 
 export const dynamic = "force-dynamic";
 
-const PO_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  ORDERED: "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  PARTIAL: "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  RECEIVED: "border border-green-400/30 bg-green-500/10 text-green-700 dark:text-green-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const PO_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  ORDERED: "info",
+  PARTIAL: "warning",
+  RECEIVED: "success",
+  CANCELLED: "danger",
 };
 
-const BILL_STATUS_COLORS: Record<string, string> = {
-  POSTED: "border border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  PART_PAID: "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  PAID: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const BILL_STATUS_TONES: Record<string, BadgeTone> = {
+  POSTED: "sky",
+  PART_PAID: "warning",
+  PAID: "success",
+  CANCELLED: "danger",
 };
 
-const REQUEST_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  SUBMITTED: "border border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  APPROVED: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  REJECTED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  CANCELLED: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  CONVERTED: "border border-violet-400/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+const REQUEST_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  SUBMITTED: "sky",
+  APPROVED: "success",
+  REJECTED: "danger",
+  CANCELLED: "neutral",
+  CONVERTED: "violet",
 };
 
-const GRN_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  POSTED: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const GRN_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "success",
+  CANCELLED: "danger",
 };
 
 export default async function SupplierDetailPage({
@@ -246,66 +248,56 @@ export default async function SupplierDetailPage({
               <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-semibold">Add</button>
             </form>
 
-            {prices.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--ink-muted)]">No supplier prices yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                      <th className="px-4 py-2.5 text-left">Item</th>
-                      <th className="px-4 py-2.5 text-right">Unit Cost</th>
-                      <th className="px-4 py-2.5 text-right">MOQ</th>
-                      <th className="px-4 py-2.5 text-right">Lead</th>
-                      <th className="px-4 py-2.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--line)]">
-                    {prices.map((price) => (
-                      <tr key={price.id} className="align-top hover:bg-[var(--gold)]/5">
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-[var(--ink)]">{price.partId ? partLabel.get(price.partId) ?? price.description : price.description}</p>
-                          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">{formatMoney(price.unitCost, price.currency)}</td>
-                        <td className="px-4 py-3 text-right text-[var(--ink-muted)]">{price.minQuantity ?? "-"}</td>
-                        <td className="px-4 py-3 text-right text-[var(--ink-muted)]">{price.leadTimeDays != null ? `${price.leadTimeDays}d` : "-"}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end">
-                            <RowActionsMenu label={`Supplier price actions for ${price.description}`}>
-                              <div className="w-72 p-3">
-                                <form action={updateSupplierPriceAction} className="grid gap-2 text-left">
-                                  <input type="hidden" name="id" value={price.id} />
-                                  <input type="hidden" name="supplierId" value={supplier.id} />
-                                  <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
-                                    <option value="">No linked item</option>
-                                    {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
-                                  </select>
-                                  <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                                  <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                                  <input name="unitCost" defaultValue={price.unitCost} required inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <input name="minQuantity" defaultValue={price.minQuantity ?? ""} placeholder="MOQ" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                                    <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                                  </div>
-                                  <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase outline-none focus:border-[var(--accent)]/60" />
-                                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Save Price</button>
-                                </form>
-                                <form action={deleteSupplierPriceAction} className="mt-2 border-t border-[var(--line)] pt-2">
-                                  <input type="hidden" name="id" value={price.id} />
-                                  <input type="hidden" name="supplierId" value={supplier.id} />
-                                  <button type="submit" className="text-xs font-semibold text-red-600 hover:text-red-700">Delete</button>
-                                </form>
-                              </div>
-                            </RowActionsMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable
+              frameless
+              rows={prices}
+              getRowKey={(price) => price.id}
+              rowClassName={() => "align-top"}
+              empty="No supplier prices yet."
+              columns={[
+                {
+                  key: "item",
+                  header: "Item",
+                  cell: (price) => (
+                    <>
+                      <p className="font-semibold text-[var(--ink)]">{price.partId ? partLabel.get(price.partId) ?? price.description : price.description}</p>
+                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
+                    </>
+                  ),
+                },
+                { key: "unitCost", header: "Unit Cost", align: "right", className: "font-semibold tabular-nums text-[var(--ink)]", cell: (price) => formatMoney(price.unitCost, price.currency) },
+                { key: "moq", header: "MOQ", align: "right", className: "text-[var(--ink-muted)]", cell: (price) => price.minQuantity ?? "-" },
+                { key: "lead", header: "Lead", align: "right", className: "text-[var(--ink-muted)]", cell: (price) => (price.leadTimeDays != null ? `${price.leadTimeDays}d` : "-") },
+              ]}
+              actions={(price) => (
+                <RowActionsMenu label={`Supplier price actions for ${price.description}`}>
+                  <div className="w-72 p-3">
+                    <form action={updateSupplierPriceAction} className="grid gap-2 text-left">
+                      <input type="hidden" name="id" value={price.id} />
+                      <input type="hidden" name="supplierId" value={supplier.id} />
+                      <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+                        <option value="">No linked item</option>
+                        {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
+                      </select>
+                      <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="unitCost" defaultValue={price.unitCost} required inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input name="minQuantity" defaultValue={price.minQuantity ?? ""} placeholder="MOQ" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                        <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      </div>
+                      <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase outline-none focus:border-[var(--accent)]/60" />
+                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Save Price</button>
+                    </form>
+                    <form action={deleteSupplierPriceAction} className="mt-2 border-t border-[var(--line)] pt-2">
+                      <input type="hidden" name="id" value={price.id} />
+                      <input type="hidden" name="supplierId" value={supplier.id} />
+                      <button type="submit" className="text-xs font-semibold text-red-600 hover:text-red-700">Delete</button>
+                    </form>
+                  </div>
+                </RowActionsMenu>
+              )}
+            />
           </section>
 
           <div className="grid gap-4 2xl:grid-cols-2">
@@ -314,32 +306,38 @@ export default async function SupplierDetailPage({
               count={supplier._count.purchaseOrders}
               action={<Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New PO</Link>}
             >
-              {supplier.purchaseOrders.length === 0 ? (
-                <EmptyText>No purchase orders yet.</EmptyText>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-sm">
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {supplier.purchaseOrders.map((po) => {
-                        const orderedQty = po.items.reduce((sum, item) => sum + item.qtyOrdered, 0);
-                        const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
-                        return (
-                          <tr key={po.id} className="hover:bg-[var(--gold)]/5">
-                            <td className="px-4 py-3">
-                              <Link href={`/inventory/purchase-orders/${po.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{po.reference ?? po.id.slice(-6).toUpperCase()}</Link>
-                              <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(po.orderedAt)} · {receivedQty}/{orderedQty} received</p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${PO_STATUS_COLORS[po.status] ?? PO_STATUS_COLORS.DRAFT}`}>{po.status}</span>
-                            </td>
-                            <td className="px-4 py-3 text-right text-xs text-[var(--ink-muted)]">{po._count.items} lines</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                frameless
+                hideHeader
+                rows={supplier.purchaseOrders}
+                getRowKey={(po) => po.id}
+                empty="No purchase orders yet."
+                columns={[
+                  {
+                    key: "po",
+                    cell: (po) => {
+                      const orderedQty = po.items.reduce((sum, item) => sum + item.qtyOrdered, 0);
+                      const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
+                      return (
+                        <>
+                          <Link href={`/inventory/purchase-orders/${po.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{po.reference ?? po.id.slice(-6).toUpperCase()}</Link>
+                          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(po.orderedAt)} · {receivedQty}/{orderedQty} received</p>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "status",
+                    cell: (po) => <StatusBadge tone={toneFor(PO_STATUS_TONES, po.status)}>{po.status}</StatusBadge>,
+                  },
+                  {
+                    key: "lines",
+                    align: "right",
+                    className: "text-xs text-[var(--ink-muted)]",
+                    cell: (po) => `${po._count.items} lines`,
+                  },
+                ]}
+              />
             </ActivitySection>
 
             <ActivitySection
@@ -347,82 +345,102 @@ export default async function SupplierDetailPage({
               count={supplier._count.supplierBills}
               action={<Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New Bill</Link>}
             >
-              {supplier.supplierBills.length === 0 ? (
-                <EmptyText>No supplier bills yet.</EmptyText>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-sm">
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {supplier.supplierBills.map((bill) => {
-                        const balance = Math.max(0, bill.totalAmount - bill.paidAmount);
-                        return (
-                          <tr key={bill.id} className="hover:bg-[var(--gold)]/5">
-                            <td className="px-4 py-3">
-                              <Link href={`/inventory/supplier-bills/${bill.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
-                              <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}</p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BILL_STATUS_COLORS[bill.status] ?? BILL_STATUS_COLORS.POSTED}`}>{bill.status}</span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <p className="text-xs font-bold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</p>
-                              <p className="text-xs text-[var(--ink-muted)]">bal {formatMoney(balance, bill.currency)}</p>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                frameless
+                hideHeader
+                rows={supplier.supplierBills}
+                getRowKey={(bill) => bill.id}
+                empty="No supplier bills yet."
+                columns={[
+                  {
+                    key: "bill",
+                    cell: (bill) => (
+                      <>
+                        <Link href={`/inventory/supplier-bills/${bill.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
+                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}</p>
+                      </>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    cell: (bill) => <StatusBadge tone={toneFor(BILL_STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>,
+                  },
+                  {
+                    key: "amount",
+                    align: "right",
+                    cell: (bill) => (
+                      <>
+                        <p className="text-xs font-bold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">bal {formatMoney(Math.max(0, bill.totalAmount - bill.paidAmount), bill.currency)}</p>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </ActivitySection>
           </div>
 
           <div className="grid gap-4 2xl:grid-cols-2">
             <ActivitySection title="Purchase Requests" count={supplier._count.purchaseRequests}>
-              {supplier.purchaseRequests.length === 0 ? (
-                <EmptyText>No requests for this supplier.</EmptyText>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] text-sm">
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {supplier.purchaseRequests.map((request) => (
-                        <tr key={request.id} className="hover:bg-[var(--gold)]/5">
-                          <td className="px-4 py-3">
-                            <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                            <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{request.priority} · needed {fmt(request.neededBy)}</p>
-                          </td>
-                          <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${REQUEST_STATUS_COLORS[request.status] ?? REQUEST_STATUS_COLORS.SUBMITTED}`}>{request.status}</span></td>
-                          <td className="px-4 py-3 text-right text-xs text-[var(--ink-muted)]">{request._count.items} lines</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                frameless
+                hideHeader
+                rows={supplier.purchaseRequests}
+                getRowKey={(request) => request.id}
+                empty="No requests for this supplier."
+                columns={[
+                  {
+                    key: "request",
+                    cell: (request) => (
+                      <>
+                        <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
+                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{request.priority} · needed {fmt(request.neededBy)}</p>
+                      </>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    cell: (request) => <StatusBadge tone={toneFor(REQUEST_STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>,
+                  },
+                  {
+                    key: "lines",
+                    align: "right",
+                    className: "text-xs text-[var(--ink-muted)]",
+                    cell: (request) => `${request._count.items} lines`,
+                  },
+                ]}
+              />
             </ActivitySection>
 
             <ActivitySection title="Goods Received" count={supplier._count.goodsReceivedNotes}>
-              {supplier.goodsReceivedNotes.length === 0 ? (
-                <EmptyText>No goods received records yet.</EmptyText>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] text-sm">
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {supplier.goodsReceivedNotes.map((grn) => (
-                        <tr key={grn.id} className="hover:bg-[var(--gold)]/5">
-                          <td className="px-4 py-3">
-                            <Link href={`/inventory/goods-received/${grn.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{grn.grnNumber}</Link>
-                            <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</p>
-                          </td>
-                          <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${GRN_STATUS_COLORS[grn.status] ?? GRN_STATUS_COLORS.POSTED}`}>{grn.status}</span></td>
-                          <td className="px-4 py-3 text-right text-xs text-[var(--ink-muted)]">{grn._count.items} lines</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable
+                frameless
+                hideHeader
+                rows={supplier.goodsReceivedNotes}
+                getRowKey={(grn) => grn.id}
+                empty="No goods received records yet."
+                columns={[
+                  {
+                    key: "grn",
+                    cell: (grn) => (
+                      <>
+                        <Link href={`/inventory/goods-received/${grn.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{grn.grnNumber}</Link>
+                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</p>
+                      </>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    cell: (grn) => <StatusBadge tone={toneFor(GRN_STATUS_TONES, grn.status, "success")}>{grn.status}</StatusBadge>,
+                  },
+                  {
+                    key: "lines",
+                    align: "right",
+                    className: "text-xs text-[var(--ink-muted)]",
+                    cell: (grn) => `${grn._count.items} lines`,
+                  },
+                ]}
+              />
             </ActivitySection>
           </div>
         </div>
@@ -461,8 +479,4 @@ function ActivitySection({ title, count, action, children }: { title: string; co
       {children}
     </section>
   );
-}
-
-function EmptyText({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">{children}</p>;
 }

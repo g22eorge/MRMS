@@ -18,6 +18,8 @@ import {
 import { getSmsUsage, SMS_PLAN_QUOTAS } from "@/lib/notifications/sms-quota";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -262,39 +264,47 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div className="border-b border-[var(--line)] px-5 py-3">
           <SectionTitle>Users ({orgUsers.length})</SectionTitle>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-              <th className="px-4 py-2.5 text-left">Name</th>
-              <th className="px-4 py-2.5 text-left">Email</th>
-              <th className="px-4 py-2.5 text-left">Role</th>
-              <th className="px-4 py-2.5 text-left">Status</th>
-              <th className="px-4 py-2.5 text-left hidden sm:table-cell">Joined</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {orgUsers.map((u) => (
-              <tr key={u.id} className="hover:bg-[var(--gold)]/5">
-                <td className="px-4 py-2.5 font-medium text-[var(--ink)]">{u.name}</td>
-                <td className="px-4 py-2.5 text-[var(--ink-muted)]">{u.email}</td>
-                <td className="px-4 py-2.5">
-                  <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${u.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-                    {u.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="hidden px-4 py-2.5 text-[var(--ink-muted)] sm:table-cell">{fmt(u.createdAt)}</td>
-              </tr>
-            ))}
-            {orgUsers.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No users.</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          frameless
+          rows={orgUsers}
+          getRowKey={(u) => u.id}
+          empty="No users."
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              className: "font-medium text-[var(--ink)]",
+              cell: (u) => u.name,
+            },
+            {
+              key: "email",
+              header: "Email",
+              className: "text-[var(--ink-muted)]",
+              cell: (u) => u.email,
+            },
+            {
+              key: "role",
+              header: "Role",
+              cell: (u) => <StatusBadge tone="neutral">{u.role}</StatusBadge>,
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (u) => (
+                <StatusBadge tone={u.isActive ? "success" : "neutral"}>
+                  {u.isActive ? "Active" : "Inactive"}
+                </StatusBadge>
+              ),
+            },
+            {
+              key: "joined",
+              header: "Joined",
+              headerClassName: "hidden sm:table-cell",
+              className: "hidden text-[var(--ink-muted)] sm:table-cell",
+              cell: (u) => fmt(u.createdAt),
+            },
+          ]}
+        />
       </div>
 
       {/* Payment history */}
@@ -302,39 +312,47 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div className="border-b border-[var(--line)] px-5 py-3">
           <SectionTitle>Payment History ({billingHistory.length})</SectionTitle>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--line)] text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                <th className="px-4 py-2.5 text-left">Date</th>
-                <th className="px-4 py-2.5 text-left">Event</th>
-                <th className="px-4 py-2.5 text-left">Status</th>
-                <th className="px-4 py-2.5 text-right">Amount</th>
-                <th className="px-4 py-2.5 text-left hidden md:table-cell">Reference</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {billingHistory.map((e) => (
-                <tr key={e.id} className="hover:bg-[var(--gold)]/5">
-                  <td className="px-4 py-2 text-[var(--ink-muted)]">{fmt(e.createdAt)}</td>
-                  <td className="px-4 py-2 text-[var(--ink)]">{e.event}</td>
-                  <td className="px-4 py-2">
-                    <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${e.status === "successful" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400"}`}>
-                      {e.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-[var(--ink)]">
-                    {e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"}
-                  </td>
-                  <td className="hidden px-4 py-2 font-mono text-xs text-[var(--ink-muted)] md:table-cell">{e.txRef ?? "—"}</td>
-                </tr>
-              ))}
-              {billingHistory.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No payment records yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          rows={billingHistory}
+          getRowKey={(e) => e.id}
+          empty="No payment records yet."
+          columns={[
+            {
+              key: "date",
+              header: "Date",
+              className: "text-[var(--ink-muted)]",
+              cell: (e) => fmt(e.createdAt),
+            },
+            {
+              key: "event",
+              header: "Event",
+              className: "text-[var(--ink)]",
+              cell: (e) => e.event,
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (e) => (
+                <StatusBadge tone={e.status === "successful" ? "success" : "danger"}>{e.status}</StatusBadge>
+              ),
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              align: "right",
+              className: "font-mono text-[var(--ink)]",
+              cell: (e) => (e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"),
+            },
+            {
+              key: "reference",
+              header: "Reference",
+              headerClassName: "hidden md:table-cell",
+              className: "hidden font-mono text-xs text-[var(--ink-muted)] md:table-cell",
+              cell: (e) => e.txRef ?? "—",
+            },
+          ]}
+        />
       </div>
 
       {/* Module access */}

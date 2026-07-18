@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { CommercialLineItemsEditor } from "@/components/forms";
+import { CommercialLineItemsEditor, LineItemTotals, TaxToggleField } from "@/components/forms";
 import { FormTextarea } from "@/components/ui/form-field";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
@@ -373,23 +373,26 @@ export function NewQuotationForm({
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
               <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--gold)] hover:underline">Tax rates</Link>
             </div>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Lines ready</dt><dd className="font-bold text-[var(--ink)]">{validItems.length}/{lines.length}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Product lines</dt><dd className="font-bold text-[var(--ink)]">{productLines}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Subtotal</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(subtotal)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">{taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(taxAmount)}</dd></div>
-              <div className="flex justify-between gap-3 border-t border-[var(--line)] pt-2"><dt className="font-semibold text-[var(--ink)]">Total</dt><dd className="text-[15px] font-black tabular-nums text-[var(--ink)]">{formatAmount(totalAmount)}</dd></div>
-            </dl>
+            <LineItemTotals
+              className="mt-3"
+              currency={currency}
+              formatMoney={formatAmount}
+              leadingRows={[
+                { label: "Lines ready", value: <>{validItems.length}/{lines.length}</> },
+                { label: "Product lines", value: productLines },
+              ]}
+              subtotal={subtotal}
+              taxLabel={taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}
+              taxAmount={taxAmount}
+              total={totalAmount}
+            />
             <div className="mt-3 space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <label className="flex items-center justify-between gap-3 text-xs font-semibold text-[var(--ink)]">
-                <span>Tax applicable</span>
-                <input
-                  type="checkbox"
-                  checked={taxEnabled}
-                  onChange={(event) => setTaxEnabled(event.target.checked)}
-                  className="h-4 w-4 rounded border-[var(--line)]"
-                />
-              </label>
+              <TaxToggleField
+                enabled={taxEnabled}
+                onChange={setTaxEnabled}
+                label="Tax applicable"
+                className="flex items-center justify-between gap-3 text-xs font-semibold text-[var(--ink)]"
+              />
               {taxEnabled ? (
                 <select
                   value={selectedTaxKey}

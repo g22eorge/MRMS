@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { Prisma, JobStatus, InvoiceStatus, SupplierBillStatus, type PaymentMethod } from "@prisma/client";
+import { Prisma, JobStatus, InvoiceStatus, SupplierBillStatus } from "@prisma/client";
 
 import { resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
@@ -13,6 +13,10 @@ import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { DataTable } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatStrip } from "@/components/ui/StatStrip";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type SearchParams = {
   q?: string;
@@ -378,68 +382,65 @@ export default async function PayoutFollowupsPage({
   const prevPage = Math.max(1, page - 1);
   const nextPage = Math.min(totalPages, page + 1);
 
-  const thClass = "px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]";
-  const tdClass = "px-4 py-2.5";
-
   const totalReceivable = repairReceivable + invoiceReceivable;
   const totalPayable    = billPayable + _techPayoutDue;
 
   return (
-    <div className="space-y-4">
-      {/* Cash position header */}
-      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="px-4 pt-3 pb-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance · Collections &amp; Payouts</p>
-        </div>
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
-          {canSeeRepairs && (
-            <div className="px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Repair Collections</p>
-              <p className="mt-1 text-[20px] font-black tabular-nums leading-tight text-amber-500">{formatMoneyCompact(repairReceivable, currency)}</p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{repairSummary._count.id} job{repairSummary._count.id !== 1 ? "s" : ""} pending</p>
-            </div>
-          )}
-          {canSeeInvoices && (
-            <div className="px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Invoice Receivables</p>
-              <p className="mt-1 text-[20px] font-black tabular-nums leading-tight text-violet-500">{formatMoneyCompact(invoiceReceivable, currency)}</p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{invoiceSummary._count.id} invoice{invoiceSummary._count.id !== 1 ? "s" : ""} outstanding</p>
-            </div>
-          )}
-          {canSeeBills && (
-            <div className="px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier Bills Due</p>
-              <p className="mt-1 text-[20px] font-black tabular-nums leading-tight text-rose-500">{formatMoneyCompact(billPayable, currency)}</p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{billSummary._count.id} bill{billSummary._count.id !== 1 ? "s" : ""} payable</p>
-            </div>
-          )}
-          {canSeeRepairs && (
-            <div className="px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Tech Payouts Pending</p>
-              <p className="mt-1 text-[20px] font-black tabular-nums leading-tight text-sky-500">{formatMoneyCompact(_techPayoutDue, currency)}</p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{techSummary._count.id} payout{techSummary._count.id !== 1 ? "s" : ""}</p>
-            </div>
-          )}
-        </div>
-        {/* Net position bar */}
-        {(totalReceivable > 0 || totalPayable > 0) && (
-          <div className="border-t border-[var(--line)] px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <span className="text-[12px] text-[var(--ink-muted)]">
-                <span className="font-bold text-emerald-500">{formatMoneyCompact(totalReceivable, currency)}</span> owed to you
-              </span>
-              <span className="text-[12px] text-[var(--ink-muted)]">
-                <span className="font-bold text-rose-500">{formatMoneyCompact(totalPayable, currency)}</span> you owe
-              </span>
-            </div>
-            <span className={`text-[12px] font-bold ${totalReceivable >= totalPayable ? "text-emerald-500" : "text-rose-500"}`}>
-              Net {totalReceivable >= totalPayable ? "+" : "−"}{formatMoneyCompact(Math.abs(totalReceivable - totalPayable), currency)}
-            </span>
+    <ListPageLayout
+      headerNode={
+        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance · Collections &amp; Payouts</p>
           </div>
-        )}
-      </div>
-
+          {/* KPI strip */}
+          <StatStrip
+            variant="embedded"
+            tiles={[
+              ...(canSeeRepairs ? [{
+                label: "Repair Collections",
+                value: formatMoneyCompact(repairReceivable, currency),
+                valueClass: "text-amber-500",
+                sub: `${repairSummary._count.id} job${repairSummary._count.id !== 1 ? "s" : ""} pending`,
+              }] : []),
+              ...(canSeeInvoices ? [{
+                label: "Invoice Receivables",
+                value: formatMoneyCompact(invoiceReceivable, currency),
+                valueClass: "text-violet-500",
+                sub: `${invoiceSummary._count.id} invoice${invoiceSummary._count.id !== 1 ? "s" : ""} outstanding`,
+              }] : []),
+              ...(canSeeBills ? [{
+                label: "Supplier Bills Due",
+                value: formatMoneyCompact(billPayable, currency),
+                valueClass: "text-rose-500",
+                sub: `${billSummary._count.id} bill${billSummary._count.id !== 1 ? "s" : ""} payable`,
+              }] : []),
+              ...(canSeeRepairs ? [{
+                label: "Tech Payouts Pending",
+                value: formatMoneyCompact(_techPayoutDue, currency),
+                valueClass: "text-sky-500",
+                sub: `${techSummary._count.id} payout${techSummary._count.id !== 1 ? "s" : ""}`,
+              }] : []),
+            ]}
+          />
+          {/* Net position bar */}
+          {(totalReceivable > 0 || totalPayable > 0) && (
+            <div className="border-t border-[var(--line)] px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <span className="text-[12px] text-[var(--ink-muted)]">
+                  <span className="font-bold text-emerald-500">{formatMoneyCompact(totalReceivable, currency)}</span> owed to you
+                </span>
+                <span className="text-[12px] text-[var(--ink-muted)]">
+                  <span className="font-bold text-rose-500">{formatMoneyCompact(totalPayable, currency)}</span> you owe
+                </span>
+              </div>
+              <span className={`text-[12px] font-bold ${totalReceivable >= totalPayable ? "text-emerald-500" : "text-rose-500"}`}>
+                Net {totalReceivable >= totalPayable ? "+" : "−"}{formatMoneyCompact(Math.abs(totalReceivable - totalPayable), currency)}
+              </span>
+            </div>
+          )}
+        </div>
+      }
+    >
       {/* Quick links */}
       <div className="flex flex-wrap gap-2 text-xs">
         {canSeeInvoices && (
@@ -518,84 +519,89 @@ export default async function PayoutFollowupsPage({
               {invoiceTotal}
             </span>
           </div>
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            {invoiceRows.length === 0 ? (
-              <p className="p-4 text-sm text-[var(--ink-muted)]">
-                {filters.q ? "No results for this search." : "No outstanding invoices — all settled."}
-              </p>
-            ) : (<>
-              {/* Mobile */}
-              <div className="divide-y divide-[var(--line)] lg:hidden">
-                {invoiceRows.map((inv) => {
-                  const balance = inv.totalAmount - inv.paidAmount;
+          <DataTable
+            rows={invoiceRows}
+            getRowKey={(inv) => inv.id}
+            className="panel-shadow"
+            empty={filters.q ? "No results for this search." : "No outstanding invoices — all settled."}
+            renderMobileCard={(inv) => {
+              const balance = inv.totalAmount - inv.paidAmount;
+              const overdueDays = daysOverdue(inv.dueDate);
+              return (
+                <div className="px-4 py-3">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <Link href={`/documents/invoices/${inv.id}`} className="font-mono text-[13px] font-bold text-[var(--ink)] hover:text-[var(--accent)]">{inv.invoiceNumber}</Link>
+                    {overdueDays != null ? <StatusBadge tone="danger" className="shrink-0">{overdueDays}d overdue</StatusBadge> : <span className="text-[13px] text-emerald-600">On time</span>}
+                  </div>
+                  <p className="text-[13px] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
+                  <div className="mt-1 flex items-center gap-3 text-[12px]">
+                    <span className="font-semibold text-violet-700 dark:text-violet-400">{formatMoneyCompact(balance, currency)} due</span>
+                    <span className="text-[var(--ink-muted)]">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "No due date"}</span>
+                  </div>
+                  {/* Inline payment form */}
+                  <form action={receiveInvoicePaymentAction} className="mt-2 flex items-center gap-2">
+                    <input type="hidden" name="invoiceId" value={inv.id} />
+                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
+                      {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
+                    </select>
+                    <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
+                  </form>
+                </div>
+              );
+            }}
+            columns={[
+              {
+                key: "invoice",
+                header: "Invoice #",
+                className: "font-semibold",
+                cell: (inv) => <Link href={`/documents/invoices/${inv.id}`} className="hover:text-[var(--accent)] transition-colors">{inv.invoiceNumber}</Link>,
+              },
+              {
+                key: "client",
+                header: "Client",
+                cell: (inv) => <><p className="font-medium">{inv.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></>,
+              },
+              {
+                key: "type",
+                header: "Type",
+                cell: (inv) => <StatusBadge tone="violet" className="capitalize">{inv.invoiceType.toLowerCase()}</StatusBadge>,
+              },
+              { key: "subject", header: "Subject", className: "max-w-[180px] truncate text-[var(--ink-muted)]", cell: (inv) => inv.subject ?? "—" },
+              { key: "total", header: "Total", cell: (inv) => formatMoneyCompact(inv.totalAmount, currency) },
+              {
+                key: "paid",
+                header: "Paid",
+                cell: (inv) => inv.paidAmount > 0 ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(inv.paidAmount, currency)}</span> : <span className="text-[var(--ink-muted)]">—</span>,
+              },
+              { key: "balance", header: "Balance", className: "font-semibold text-violet-700 dark:text-violet-400", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
+              { key: "due", header: "Due Date", className: "text-xs text-[var(--ink-muted)]", cell: (inv) => inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—" },
+              {
+                key: "overdue",
+                header: "Overdue",
+                cell: (inv) => {
                   const overdueDays = daysOverdue(inv.dueDate);
-                  return (
-                    <div key={`m-${inv.id}`} className="px-4 py-3">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <Link href={`/documents/invoices/${inv.id}`} className="font-mono text-[13px] font-bold text-[var(--ink)] hover:text-[var(--accent)]">{inv.invoiceNumber}</Link>
-                        {overdueDays != null ? <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">{overdueDays}d overdue</span> : <span className="text-[13px] text-emerald-600">On time</span>}
-                      </div>
-                      <p className="text-[13px] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
-                      <div className="mt-1 flex items-center gap-3 text-[12px]">
-                        <span className="font-semibold text-violet-700 dark:text-violet-400">{formatMoneyCompact(balance, currency)} due</span>
-                        <span className="text-[var(--ink-muted)]">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "No due date"}</span>
-                      </div>
-                      {/* Inline payment form */}
-                      <form action={receiveInvoicePaymentAction} className="mt-2 flex items-center gap-2">
-                        <input type="hidden" name="invoiceId" value={inv.id} />
-                        <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                        <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
-                          {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
-                        </select>
-                        <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
-                      </form>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Desktop */}
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[860px] text-sm">
-                  <thead className="bg-[var(--panel-strong)]/50"><tr>
-                    {["Invoice #","Client","Type","Subject","Total","Paid","Balance","Due Date","Overdue","Action"].map(h => <th key={h} className={thClass}>{h}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {invoiceRows.map((inv) => {
-                      const balance = inv.totalAmount - inv.paidAmount;
-                      const overdueDays = daysOverdue(inv.dueDate);
-                      return (
-                        <tr key={`d-${inv.id}`} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/30">
-                          <td className={`${tdClass} font-semibold`}><Link href={`/documents/invoices/${inv.id}`} className="hover:text-[var(--accent)] transition-colors">{inv.invoiceNumber}</Link></td>
-                          <td className={tdClass}><p className="font-medium">{inv.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></td>
-                          <td className={tdClass}><span className="inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[12px] font-semibold capitalize text-violet-700 dark:bg-violet-950/40 dark:text-violet-400">{inv.invoiceType.toLowerCase()}</span></td>
-                          <td className={`${tdClass} max-w-[180px] truncate text-[var(--ink-muted)]`}>{inv.subject ?? "—"}</td>
-                          <td className={tdClass}>{formatMoneyCompact(inv.totalAmount, currency)}</td>
-                          <td className={tdClass}>{inv.paidAmount > 0 ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(inv.paidAmount, currency)}</span> : <span className="text-[var(--ink-muted)]">—</span>}</td>
-                          <td className={`${tdClass} font-semibold text-violet-700 dark:text-violet-400`}>{formatMoneyCompact(balance, currency)}</td>
-                          <td className={`${tdClass} text-xs text-[var(--ink-muted)]`}>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—"}</td>
-                          <td className={tdClass}>{overdueDays != null ? <span className="inline-block rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">{overdueDays}d overdue</span> : <span className="text-[var(--ink-muted)] text-xs">On time</span>}</td>
-                          <td className={tdClass}>
-                            <div className="flex items-center gap-1.5">
-                              <form action={receiveInvoicePaymentAction} className="flex items-center gap-1.5">
-                                <input type="hidden" name="invoiceId" value={inv.id} />
-                                <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
-                                <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
-                                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
-                                </select>
-                                <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
-                              </form>
-                              <Link href={`/documents/invoices/${inv.id}`} className="h-8 inline-flex items-center rounded-lg border border-[var(--line)] px-2 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">View</Link>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-            )}
-          </div>
+                  return overdueDays != null ? <StatusBadge tone="danger">{overdueDays}d overdue</StatusBadge> : <span className="text-[var(--ink-muted)] text-xs">On time</span>;
+                },
+              },
+            ]}
+            actions={(inv) => {
+              const balance = inv.totalAmount - inv.paidAmount;
+              return (
+                <>
+                  <form action={receiveInvoicePaymentAction} className="flex items-center gap-1.5">
+                    <input type="hidden" name="invoiceId" value={inv.id} />
+                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
+                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
+                      {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
+                    </select>
+                    <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
+                  </form>
+                  <Link href={`/documents/invoices/${inv.id}`} className="h-8 inline-flex items-center rounded-lg border border-[var(--line)] px-2 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">View</Link>
+                </>
+              );
+            }}
+          />
         </section>
       )}
 
@@ -609,57 +615,67 @@ export default async function PayoutFollowupsPage({
               {clientTotal}
             </span>
           </div>
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            {clientRows.length === 0 ? (
-              <p className="p-4 text-sm text-[var(--ink-muted)]">
-                {filters.q || filters.tech ? "No results for these filters." : "All repair client payments are settled."}
-              </p>
-            ) : (<>
-              {/* Mobile */}
-              <div className="divide-y divide-[var(--line)] lg:hidden">
-                {clientRows.map((job) => {
+          <DataTable
+            rows={clientRows}
+            getRowKey={(job) => job.id}
+            className="panel-shadow"
+            empty={filters.q || filters.tech ? "No results for these filters." : "All repair client payments are settled."}
+            renderMobileCard={(job) => {
+              const doneAt = job.deliveredAt ?? job.completedAt;
+              return (
+                <div className="px-4 py-3">
+                  <div className="mb-0.5 flex items-center justify-between gap-2">
+                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="font-mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
+                    <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">{formatMoneyCompact(job.clientBill ?? 0, currency)}</span>
+                  </div>
+                  <p className="text-[13px] font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
+                  <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}</p>
+                </div>
+              );
+            }}
+            columns={[
+              {
+                key: "job",
+                header: "Job",
+                className: "font-semibold",
+                cell: (job) => <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="hover:text-[var(--accent)] transition-colors">{job.jobNumber}</Link>,
+              },
+              {
+                key: "client",
+                header: "Client",
+                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+              },
+              { key: "assigned", header: "Assigned To", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
+              {
+                key: "type",
+                header: "Type",
+                cell: (job) => job.repairPath === "EXTERNAL"
+                  ? <StatusBadge tone="info">External</StatusBadge>
+                  : <StatusBadge tone="accent">In-house</StatusBadge>,
+              },
+              {
+                key: "repairCost",
+                header: "Repair Cost",
+                cell: (job) => {
+                  const repairCost = resolveTechCost(job.externalTechFee, job.externalTechBill);
+                  return repairCost > 0 ? formatMoneyCompact(repairCost, currency) : <span className="text-[var(--ink-muted)]">—</span>;
+                },
+              },
+              { key: "clientBill", header: "Client Bill", className: "font-semibold text-amber-700 dark:text-amber-400", cell: (job) => formatMoneyCompact(job.clientBill ?? 0, currency) },
+              {
+                key: "doneAt",
+                header: "Done At",
+                className: "text-xs text-[var(--ink-muted)]",
+                cell: (job) => {
                   const doneAt = job.deliveredAt ?? job.completedAt;
-                  return (
-                    <div key={`m-${job.id}`} className="px-4 py-3">
-                      <div className="mb-0.5 flex items-center justify-between gap-2">
-                        <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="font-mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
-                        <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">{formatMoneyCompact(job.clientBill ?? 0, currency)}</span>
-                      </div>
-                      <p className="text-[13px] font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
-                      <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}</p>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Desktop */}
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[820px] text-sm">
-                  <thead className="bg-[var(--panel-strong)]/50"><tr>
-                    {["Job","Client","Assigned To","Type","Repair Cost","Client Bill","Done At","Action"].map(h => <th key={h} className={thClass}>{h}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {clientRows.map((job) => {
-                      const doneAt = job.deliveredAt ?? job.completedAt;
-                      const repairCost = resolveTechCost(job.externalTechFee, job.externalTechBill);
-                      return (
-                        <tr key={`d-${job.id}`} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/30">
-                          <td className={`${tdClass} font-semibold`}><Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="hover:text-[var(--accent)] transition-colors">{job.jobNumber}</Link></td>
-                          <td className={tdClass}><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></td>
-                          <td className={tdClass}>{job.assignedTo?.name ?? "Unassigned"}</td>
-                          <td className={tdClass}><span className={`inline-block rounded-full px-2 py-0.5 text-[12px] font-semibold ${job.repairPath === "EXTERNAL" ? "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" : "bg-[var(--accent)]/10 text-[var(--accent)]"}`}>{job.repairPath === "EXTERNAL" ? "External" : "In-house"}</span></td>
-                          <td className={tdClass}>{repairCost > 0 ? formatMoneyCompact(repairCost, currency) : <span className="text-[var(--ink-muted)]">—</span>}</td>
-                          <td className={`${tdClass} font-semibold text-amber-700 dark:text-amber-400`}>{formatMoneyCompact(job.clientBill ?? 0, currency)}</td>
-                          <td className={`${tdClass} text-xs text-[var(--ink-muted)]`}>{doneAt ? new Date(doneAt).toLocaleDateString() : "—"}</td>
-                          <td className={tdClass}><Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Open</Link></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  return doneAt ? new Date(doneAt).toLocaleDateString() : "—";
+                },
+              },
+            ]}
+            actions={(job) => (
+              <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Open</Link>
             )}
-          </div>
+          />
         </section>
       )}
 
@@ -673,94 +689,76 @@ export default async function PayoutFollowupsPage({
               {billTotal}
             </span>
           </div>
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            {billRows.length === 0 ? (
-              <p className="p-4 text-sm text-[var(--ink-muted)]">
-                {filters.q ? "No results for this search." : "No outstanding supplier bills — all settled."}
-              </p>
-            ) : (<>
-              {/* Mobile */}
-              <div className="divide-y divide-[var(--line)] lg:hidden">
-                {billRows.map((bill) => {
-                  const balance = bill.totalAmount - bill.paidAmount;
+          <DataTable
+            rows={billRows}
+            getRowKey={(bill) => bill.id}
+            className="panel-shadow"
+            empty={filters.q ? "No results for this search." : "No outstanding supplier bills — all settled."}
+            renderMobileCard={(bill) => {
+              const balance = bill.totalAmount - bill.paidAmount;
+              const overdueDays = daysOverdue(bill.dueAt);
+              return (
+                <div className="px-4 py-3">
+                  <div className="mb-0.5 flex items-center justify-between gap-2">
+                    <Link href={`/inventory/supplier-bills/${bill.id}`} className="font-mono text-[13px] font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
+                    {overdueDays != null ? <StatusBadge tone="danger" className="shrink-0">{overdueDays}d overdue</StatusBadge> : <span className="text-[13px] text-emerald-600">On time</span>}
+                  </div>
+                  <p className="text-[13px] font-medium text-[var(--ink)]">{bill.supplier.name}</p>
+                  <div className="mt-0.5 flex items-center gap-3 text-[12px]">
+                    <span className="font-semibold text-rose-700 dark:text-rose-400">{formatMoneyCompact(balance, currency)} due</span>
+                    {bill.dueAt && <span className="text-[var(--ink-muted)]">{new Date(bill.dueAt).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+              );
+            }}
+            columns={[
+              {
+                key: "bill",
+                header: "Bill #",
+                className: "font-semibold",
+                cell: (bill) => (
+                  <Link href={`/inventory/supplier-bills/${bill.id}`} className="hover:text-[var(--accent)] transition-colors">
+                    {bill.billNumber}
+                  </Link>
+                ),
+              },
+              { key: "supplier", header: "Supplier", cell: (bill) => bill.supplier.name },
+              {
+                key: "status",
+                header: "Status",
+                cell: (bill) => (
+                  <StatusBadge tone={bill.status === "PART_PAID" ? "warning" : "neutral"}>
+                    {bill.status === "PART_PAID" ? "Part paid" : "Posted"}
+                  </StatusBadge>
+                ),
+              },
+              { key: "total", header: "Total", cell: (bill) => formatMoneyCompact(bill.totalAmount, currency) },
+              {
+                key: "paid",
+                header: "Paid",
+                cell: (bill) => bill.paidAmount > 0
+                  ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(bill.paidAmount, currency)}</span>
+                  : <span className="text-[var(--ink-muted)]">—</span>,
+              },
+              { key: "balance", header: "Balance", className: "font-semibold text-rose-700 dark:text-rose-400", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
+              { key: "due", header: "Due", className: "text-xs text-[var(--ink-muted)]", cell: (bill) => bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—" },
+              {
+                key: "overdue",
+                header: "Overdue",
+                cell: (bill) => {
                   const overdueDays = daysOverdue(bill.dueAt);
-                  return (
-                    <div key={`m-${bill.id}`} className="px-4 py-3">
-                      <div className="mb-0.5 flex items-center justify-between gap-2">
-                        <Link href={`/inventory/supplier-bills/${bill.id}`} className="font-mono text-[13px] font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
-                        {overdueDays != null ? <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">{overdueDays}d overdue</span> : <span className="text-[13px] text-emerald-600">On time</span>}
-                      </div>
-                      <p className="text-[13px] font-medium text-[var(--ink)]">{bill.supplier.name}</p>
-                      <div className="mt-0.5 flex items-center gap-3 text-[12px]">
-                        <span className="font-semibold text-rose-700 dark:text-rose-400">{formatMoneyCompact(balance, currency)} due</span>
-                        {bill.dueAt && <span className="text-[var(--ink-muted)]">{new Date(bill.dueAt).toLocaleDateString()}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Desktop */}
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[800px] text-sm">
-                  <thead className="bg-[var(--panel-strong)]/50"><tr>
-                    {["Bill #","Supplier","Status","Total","Paid","Balance","Due","Overdue","Action"].map(h => <th key={h} className={thClass}>{h}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {billRows.map((bill) => {
-                      const balance = bill.totalAmount - bill.paidAmount;
-                      const overdueDays = daysOverdue(bill.dueAt);
-                      return (
-                        <tr key={`d-${bill.id}`} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/30">
-                          <td className={`${tdClass} font-semibold`}>
-                            <Link href={`/inventory/supplier-bills/${bill.id}`} className="hover:text-[var(--accent)] transition-colors">
-                              {bill.billNumber}
-                            </Link>
-                          </td>
-                          <td className={tdClass}>{bill.supplier.name}</td>
-                          <td className={tdClass}>
-                            <span className={`inline-block rounded-full px-2 py-0.5 text-[12px] font-semibold ${
-                              bill.status === "PART_PAID"
-                                ? "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-                            }`}>
-                              {bill.status === "PART_PAID" ? "Part paid" : "Posted"}
-                            </span>
-                          </td>
-                          <td className={tdClass}>{formatMoneyCompact(bill.totalAmount, currency)}</td>
-                          <td className={tdClass}>
-                            {bill.paidAmount > 0 ? (
-                              <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(bill.paidAmount, currency)}</span>
-                            ) : <span className="text-[var(--ink-muted)]">—</span>}
-                          </td>
-                          <td className={`${tdClass} font-semibold text-rose-700 dark:text-rose-400`}>
-                            {formatMoneyCompact(balance, currency)}
-                          </td>
-                          <td className={`${tdClass} text-xs text-[var(--ink-muted)]`}>
-                            {bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—"}
-                          </td>
-                          <td className={tdClass}>
-                            {overdueDays != null ? (
-                              <span className="inline-block rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                                {overdueDays}d overdue
-                              </span>
-                            ) : (
-                              <span className="text-[var(--ink-muted)] text-xs">On time</span>
-                            )}
-                          </td>
-                          <td className={tdClass}>
-                            <Link href={`/inventory/supplier-bills/${bill.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
-                              Open
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  return overdueDays != null
+                    ? <StatusBadge tone="danger">{overdueDays}d overdue</StatusBadge>
+                    : <span className="text-[var(--ink-muted)] text-xs">On time</span>;
+                },
+              },
+            ]}
+            actions={(bill) => (
+              <Link href={`/inventory/supplier-bills/${bill.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
+                Open
+              </Link>
             )}
-          </div>
+          />
         </section>
       )}
 
@@ -774,90 +772,95 @@ export default async function PayoutFollowupsPage({
               {techTotal}
             </span>
           </div>
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            {techRows.length === 0 ? (
-              <p className="p-4 text-sm text-[var(--ink-muted)]">
-                {filters.q || filters.tech ? "No results for these filters." : "No pending external tech payouts — all settled."}
-              </p>
-            ) : (<>
-              {/* Mobile */}
-              <div className="divide-y divide-[var(--line)] lg:hidden">
-                {techRows.map((job) => {
+          <DataTable
+            rows={techRows}
+            getRowKey={(job) => job.id}
+            className="panel-shadow"
+            empty={filters.q || filters.tech ? "No results for these filters." : "No pending external tech payouts — all settled."}
+            renderMobileCard={(job) => {
+              const payoutDue = resolveTechCost(job.externalTechFee, job.externalTechBill);
+              const alreadyPaid = paidToTechnician(job.id);
+              const remaining = remainingTechnicianPayout(job);
+              const doneAt = job.deliveredAt ?? job.completedAt;
+              return (
+                <div className="px-4 py-3">
+                  <div className="mb-0.5 flex items-center justify-between gap-2">
+                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="font-mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
+                    <span className="text-[12px] font-semibold text-blue-700 dark:text-blue-400">{formatMoneyCompact(remaining, currency)} due</span>
+                  </div>
+                  <p className="text-[13px] font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
+                  <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+                    {job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}
+                    {alreadyPaid > 0 ? ` · Paid ${formatMoneyCompact(alreadyPaid, currency)} of ${formatMoneyCompact(payoutDue, currency)}` : ""}
+                  </p>
+                  {/* Mark Paid action */}
+                  <form action={markExternalTechPaid} className="mt-2">
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <button type="submit"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                      Mark Paid — {formatMoneyCompact(remaining, currency)}
+                    </button>
+                  </form>
+                </div>
+              );
+            }}
+            columns={[
+              {
+                key: "job",
+                header: "Job",
+                className: "font-semibold",
+                cell: (job) => <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="hover:text-[var(--accent)] transition-colors">{job.jobNumber}</Link>,
+              },
+              {
+                key: "client",
+                header: "Client",
+                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+              },
+              { key: "technician", header: "Technician", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
+              { key: "status", header: "Status", cell: (job) => job.status },
+              { key: "clientBill", header: "Client Bill", cell: (job) => (typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "—") },
+              {
+                key: "payoutDue",
+                header: "Payout Due",
+                className: "font-semibold text-blue-700 dark:text-blue-400",
+                cell: (job) => {
                   const payoutDue = resolveTechCost(job.externalTechFee, job.externalTechBill);
                   const alreadyPaid = paidToTechnician(job.id);
                   const remaining = remainingTechnicianPayout(job);
-                  const doneAt = job.deliveredAt ?? job.completedAt;
                   return (
-                    <div key={`m-${job.id}`} className="px-4 py-3">
-                      <div className="mb-0.5 flex items-center justify-between gap-2">
-                        <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="font-mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
-                        <span className="text-[12px] font-semibold text-blue-700 dark:text-blue-400">{formatMoneyCompact(remaining, currency)} due</span>
-                      </div>
-                      <p className="text-[13px] font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
-                      <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-                        {job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}
-                        {alreadyPaid > 0 ? ` · Paid ${formatMoneyCompact(alreadyPaid, currency)} of ${formatMoneyCompact(payoutDue, currency)}` : ""}
-                      </p>
-                      {/* Mark Paid action */}
-                      <form action={markExternalTechPaid} className="mt-2">
-                        <input type="hidden" name="jobId" value={job.id} />
-                        <button type="submit"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                          Mark Paid — {formatMoneyCompact(remaining, currency)}
-                        </button>
-                      </form>
-                    </div>
+                    <>
+                      <p>{formatMoneyCompact(remaining, currency)}</p>
+                      {alreadyPaid > 0 ? <p className="text-xs font-medium text-[var(--ink-muted)]">Paid {formatMoneyCompact(alreadyPaid, currency)} / {formatMoneyCompact(payoutDue, currency)}</p> : null}
+                    </>
                   );
-                })}
-              </div>
-              {/* Desktop */}
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[880px] text-sm">
-                  <thead className="bg-[var(--panel-strong)]/50"><tr>
-                    {["Job","Client","Technician","Status","Client Bill","Payout Due","Done At","Action"].map(h => <th key={h} className={thClass}>{h}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {techRows.map((job) => {
-                      const payoutDue = resolveTechCost(job.externalTechFee, job.externalTechBill);
-                      const alreadyPaid = paidToTechnician(job.id);
-                      const remaining = remainingTechnicianPayout(job);
-                      const doneAt = job.deliveredAt ?? job.completedAt;
-                      return (
-                        <tr key={`d-${job.id}`} className="border-t border-[var(--line)] transition-colors hover:bg-[var(--panel-strong)]/30">
-                          <td className={`${tdClass} font-semibold`}><Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="hover:text-[var(--accent)] transition-colors">{job.jobNumber}</Link></td>
-                          <td className={tdClass}><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-xs text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></td>
-                          <td className={tdClass}>{job.assignedTo?.name ?? "Unassigned"}</td>
-                          <td className={tdClass}>{job.status}</td>
-                          <td className={tdClass}>{typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "—"}</td>
-                          <td className={`${tdClass} font-semibold text-blue-700 dark:text-blue-400`}>
-                            <p>{formatMoneyCompact(remaining, currency)}</p>
-                            {alreadyPaid > 0 ? <p className="text-xs font-medium text-[var(--ink-muted)]">Paid {formatMoneyCompact(alreadyPaid, currency)} / {formatMoneyCompact(payoutDue, currency)}</p> : null}
-                          </td>
-                          <td className={`${tdClass} text-xs text-[var(--ink-muted)]`}>{doneAt ? new Date(doneAt).toLocaleDateString() : "—"}</td>
-                          <td className={tdClass}>
-                            <div className="flex items-center gap-1.5">
-                              {/* Mark Paid directly on this page */}
-                              <form action={markExternalTechPaid}>
-                                <input type="hidden" name="jobId" value={job.id} />
-                                <button type="submit"
-                                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                                  Mark Paid
-                                </button>
-                              </form>
-                              <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5 text-xs">Open</Link>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                },
+              },
+              {
+                key: "doneAt",
+                header: "Done At",
+                className: "text-xs text-[var(--ink-muted)]",
+                cell: (job) => {
+                  const doneAt = job.deliveredAt ?? job.completedAt;
+                  return doneAt ? new Date(doneAt).toLocaleDateString() : "—";
+                },
+              },
+            ]}
+            actions={(job) => (
+              <>
+                {/* Mark Paid directly on this page */}
+                <form action={markExternalTechPaid}>
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <button type="submit"
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                    Mark Paid
+                  </button>
+                </form>
+                <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5 text-xs">Open</Link>
+              </>
             )}
-          </div>
+          />
         </section>
       )}
 
@@ -881,6 +884,6 @@ export default async function PayoutFollowupsPage({
           </Link>
         </div>
       )}
-    </div>
+    </ListPageLayout>
   );
 }

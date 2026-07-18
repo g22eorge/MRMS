@@ -171,6 +171,11 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
 
   const subtitle = resolvedSubtitle?.path === pathname ? resolvedSubtitle.text : meta.subtitle;
 
+  // Communications and Documents routes render their own section header
+  // (title + tabs) via their shells, so the app-wide page header would just
+  // duplicate it.
+  if (pathname.startsWith("/communications") || pathname.startsWith("/documents")) return null;
+
   return (
     <>
       {/* Mobile: hidden on primary-tab pages (own native headers).
@@ -202,7 +207,7 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
               <span className="text-[13px] text-[var(--ink-muted)]">{meta.description}</span>
             ) : null}
           </div>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[13px] font-bold uppercase tracking-[0.1em] ${roleTagStyle(role)}`}>
+          <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleTagStyle(role)}`}>
             {roleTag(role)}
           </span>
         </div>

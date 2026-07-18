@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { DataTable } from "@/components/ui/DataTable";
 
 type SearchParams = { groupId?: string; new?: string };
 
@@ -274,36 +275,36 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 </form>
 
                 <div className="mt-3 overflow-hidden rounded-lg border border-[var(--line)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-                      <tr>
-                        <th className="px-3 py-2">User</th>
-                        <th className="px-3 py-2">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedMembers.map((m) => (
-                        <tr key={m.id} className="border-t border-[var(--line)]">
-                          <td className="px-3 py-2">
+                  <DataTable
+                    frameless
+                    dense
+                    rows={selectedMembers}
+                    getRowKey={(m) => m.id}
+                    empty="No members yet."
+                    columns={[
+                      {
+                        key: "user",
+                        header: "User",
+                        cell: (m) => (
+                          <>
                             <p className="font-medium">{m.user.name}</p>
                             <p className="text-xs text-[var(--ink-muted)]">{m.user.email}</p>
-                          </td>
-                          <td className="px-3 py-2">
-                            <form action={removeMemberAction}>
-                              <input type="hidden" name="id" value={selected.id} />
-                              <input type="hidden" name="memberId" value={m.id} />
-                              <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold hover:border-[var(--accent)]/40">Remove</button>
-                            </form>
-                          </td>
-                        </tr>
-                      ))}
-                      {selectedMembers.length === 0 ? (
-                        <tr className="border-t border-[var(--line)]">
-                          <td colSpan={2} className="px-3 py-6 text-sm text-[var(--ink-muted)]">No members yet.</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
+                          </>
+                        ),
+                      },
+                      {
+                        key: "action",
+                        header: "Action",
+                        cell: (m) => (
+                          <form action={removeMemberAction}>
+                            <input type="hidden" name="id" value={selected.id} />
+                            <input type="hidden" name="memberId" value={m.id} />
+                            <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold hover:border-[var(--accent)]/40">Remove</button>
+                          </form>
+                        ),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
 

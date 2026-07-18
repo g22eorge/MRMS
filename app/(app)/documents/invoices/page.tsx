@@ -34,6 +34,10 @@ import {
   InvoiceOverdueReminderBulkButton,
   InvoiceOverdueReminderButton,
 } from "@/components/documents/InvoiceOverdueReminderForms";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
@@ -44,7 +48,7 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; page?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   const db = orgDb(user.orgId);
@@ -68,6 +72,7 @@ export default async function InvoicesPage({
   const statusFilter = params.status ?? "all";
   const agingFilter = params.aging ?? "all";
   const q = (params.q ?? "").trim();
+  const page = parsePage(params.page);
   const errorParam = params.error ?? "";
   const remindedParam = params.reminded ?? "";
   const remindedBulkParam = params.remindedBulk ?? "";
@@ -597,6 +602,17 @@ export default async function InvoicesPage({
     return base;
   })();
 
+  // KPIs/aging/summaries stay computed from the full `filtered` array; only the
+  // rendered list rows are paginated.
+  const pageView = paginationView(page, filtered.length);
+  const pageRows = filtered.slice(pageView.skip, pageView.skip + pageView.take);
+  const invoicesHref = pageHrefBuilder("/documents/invoices", {
+    type: typeFilter !== "all" ? typeFilter : "",
+    status: statusFilter !== "all" ? statusFilter : "",
+    aging: agingFilter !== "all" ? agingFilter : "",
+    q,
+  });
+
   const readyJobs = await db.job
     .findMany({
       where: {
@@ -714,12 +730,19 @@ export default async function InvoicesPage({
       : null;
   const overdueInView = filtered.filter((i) => !i.isPaid && !i.isVoid && i.daysOverdue > 0);
 
-  const typeBadgeCls: Record<string, string> = {
-    REPAIR:       "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-    SERVICE:      "border border-violet-400/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
-    MERCHANDISE:  "border border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-    CONTRACT:     "border border-teal-400/30 bg-teal-500/10 text-teal-700 dark:text-teal-400",
-    OTHER:        "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  const invoiceTypeTones: Record<string, BadgeTone> = {
+    REPAIR: "info",
+    SERVICE: "violet",
+    MERCHANDISE: "orange",
+    CONTRACT: "teal",
+    OTHER: "neutral",
+  };
+  const invoiceStatusTones: Record<string, BadgeTone> = {
+    Paid: "success",
+    Void: "danger",
+    Draft: "neutral",
+    Overdue: "danger",
+    Outstanding: "warning",
   };
 
   return (
@@ -962,61 +985,33 @@ export default async function InvoicesPage({
       </div>
       {/* ══════════════════════════════════════════════════════════════════════ */}
 
-      {/* ── DESKTOP ONLY: full header panel ──────────────────────────────── */}
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
-        {/* Desktop title + actions */}
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Documents</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Invoices</p>
-          </div>
-          <div className="flex gap-2">
-            {canManageInvoicePayments ? (
-              <Link href={`/api/reports/export?type=invoices&month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
-                className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">
-                ↓ Export CSV
-              </Link>
-            ) : null}
-            <a href="#create-invoice" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">+ New Invoice</a>
-          </div>
-        </div>
-
-        {/* Receivables summary (desktop only) */}
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
-          <div className="px-4 py-3">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Total Billed</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">
-              {formatMoneyCompact(totalBilled, "UGX")}
-            </p>
-            <p className="text-[12px] text-[var(--ink-muted)]">{invoices.filter((i) => i.status !== "VOID").length} invoices</p>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Collected</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-emerald-600">
-              {formatMoneyCompact(totalCollected, "UGX")}
-            </p>
-            <p className="text-[12px] text-emerald-700">{collectionRate}% collection rate</p>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Outstanding</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-amber-600">
-              {formatMoneyCompact(totalOutstanding, "UGX")}
-            </p>
-            <p className="text-[12px] text-[var(--ink-muted)]">{outstanding.length} invoices</p>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Ready to Invoice</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--accent)]">
-              {readyJobs.length}
-            </p>
-            <p className="text-[12px] text-[var(--ink-muted)]">jobs awaiting invoice</p>
-          </div>
-        </div>
-
+      {/* ── DESKTOP ONLY: page header + receivables KPIs ─────────────────── */}
+      <div className="hidden space-y-4 lg:block">
+        <PageHeader
+          eyebrow="Documents"
+          title="Invoices"
+          actions={
+            <>
+              {canManageInvoicePayments ? (
+                <Link href={`/api/reports/export?type=invoices&month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
+                  className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">
+                  ↓ Export CSV
+                </Link>
+              ) : null}
+              <a href="#create-invoice" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">+ New Invoice</a>
+            </>
+          }
+          kpis={[
+            { label: "Total Billed", value: formatMoneyCompact(totalBilled, "UGX"), sub: `${invoices.filter((i) => i.status !== "VOID").length} invoices` },
+            { label: "Collected", value: formatMoneyCompact(totalCollected, "UGX"), sub: `${collectionRate}% collection rate`, valueClass: "text-emerald-600" },
+            { label: "Outstanding", value: formatMoneyCompact(totalOutstanding, "UGX"), sub: `${outstanding.length} invoices`, valueClass: "text-amber-600" },
+            { label: "Ready to Invoice", value: readyJobs.length, sub: "jobs awaiting invoice", accent: true },
+          ]}
+        />
 
         {/* By-type breakdown */}
         {byType.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-2">
+          <div className="flex flex-wrap gap-2">
             {byType.map((b) => (
               <Link
                 key={b.type}
@@ -1278,7 +1273,7 @@ export default async function InvoicesPage({
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-[var(--line)] divide-y divide-[var(--line)]">
-            {filtered.map((inv) => {
+            {pageRows.map((inv) => {
               const clientName = inv.job?.client.fullName ?? inv.client?.fullName ?? inv.subject ?? "No client";
               const isPaid = inv.isPaid;
               const isOverdue = !isPaid && inv.daysOverdue > 0 && inv.status !== "VOID";
@@ -1458,84 +1453,71 @@ export default async function InvoicesPage({
       </div>
 
       {/* ── INVOICE TABLE (desktop only) ──────────────────────────────────── */}
-      <div className="hidden lg:block doc-list overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-            <tr>
-              <th className="px-3 py-2.5">Invoice</th>
-              <th className="hidden px-3 py-2.5 md:table-cell">Client · Source</th>
-              <th className="px-3 py-2.5">Status</th>
-              <th className="px-3 py-2.5">Total</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Balance</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Overdue</th>
-              <th className="px-3 py-2.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((inv) => {
-              const invoiceCurrency = normalizeCurrency(inv.currency, "UGX");
-              const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
-              const statusCls = inv.isPaid
-                ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
-                : inv.status === "VOID"
-                  ? "bg-red-500/10 text-red-600 border-red-500/20"
-                  : inv.status === "DRAFT"
-                    ? "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]"
-                    : isOverdue
-                      ? "bg-red-400/15 text-red-700 border-red-400/30"
-                      : "bg-amber-400/15 text-amber-700 border-amber-400/30";
-              const statusLabel = inv.isPaid
-                ? "Paid"
-                : inv.status === "VOID"
-                  ? "Void"
-                  : inv.status === "DRAFT"
-                    ? "Draft"
-                    : isOverdue
-                      ? "Overdue"
-                      : "Outstanding";
-              const clientName = inv.job?.client.fullName ?? inv.client?.fullName ?? "—";
-              const isRepair = inv.invoiceType === "REPAIR";
-
-              return (
-                <tr
-                  key={inv.id}
-                  className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40"
-                >
-                  <td className="px-3 py-2.5">
-                    <p className="mono text-sm font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
-                    <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-                      {formatEATDate(inv.issuedAt)}
-                      {inv.dueDate ? ` · due ${formatEATDate(inv.dueDate)}` : ""}
-                    </p>
-                    <span
-                      className={`mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[12px] font-semibold ${typeBadgeCls[inv.invoiceType] ?? typeBadgeCls.OTHER}`}
+      <div className="hidden space-y-3 lg:block">
+        <DataTable
+          rows={pageRows}
+          getRowKey={(inv) => inv.id}
+          empty="No invoices found."
+          columns={[
+            {
+              key: "invoice",
+              header: "Invoice",
+              cell: (inv) => (
+                <>
+                  <p className="mono text-sm font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
+                  <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+                    {formatEATDate(inv.issuedAt)}
+                    {inv.dueDate ? ` · due ${formatEATDate(inv.dueDate)}` : ""}
+                  </p>
+                  <StatusBadge tone={toneFor(invoiceTypeTones, inv.invoiceType)} className="mt-0.5">
+                    {inv.invoiceType.charAt(0) + inv.invoiceType.slice(1).toLowerCase()}
+                  </StatusBadge>
+                </>
+              ),
+            },
+            {
+              key: "client",
+              header: "Client · Source",
+              cell: (inv) => (
+                <>
+                  <p className="font-medium text-[var(--ink)]">{inv.job?.client.fullName ?? inv.client?.fullName ?? "—"}</p>
+                  {inv.invoiceType === "REPAIR" && inv.job ? (
+                    <Link
+                      className="mono text-[13px] text-[var(--ink-muted)] hover:text-[var(--accent)]"
+                      href={`/jobs/${inv.job.id}`}
                     >
-                      {inv.invoiceType.charAt(0) + inv.invoiceType.slice(1).toLowerCase()}
-                    </span>
-                    {/* Client name visible on mobile (only when not empty) */}
-                    {clientName && clientName !== "—" && (
-                      <p className="mt-1 text-[12px] font-medium text-[var(--ink)] md:hidden">{clientName}</p>
-                    )}
-                  </td>
-                  <td className="doc-list-hide hidden px-3 py-2.5 md:table-cell">
-                    <p className="font-medium text-[var(--ink)]">{clientName}</p>
-                    {isRepair && inv.job ? (
-                      <Link
-                        className="mono text-[13px] text-[var(--ink-muted)] hover:text-[var(--accent)]"
-                        href={`/jobs/${inv.job.id}`}
-                      >
-                        {inv.job.jobNumber}
-                      </Link>
-                    ) : inv.subject ? (
-                      <p className="text-[13px] text-[var(--ink-muted)]">{inv.subject}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${statusCls}`}>
-                      {statusLabel}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5">
+                      {inv.job.jobNumber}
+                    </Link>
+                  ) : inv.subject ? (
+                    <p className="text-[13px] text-[var(--ink-muted)]">{inv.subject}</p>
+                  ) : null}
+                </>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (inv) => {
+                const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
+                const statusLabel = inv.isPaid
+                  ? "Paid"
+                  : inv.status === "VOID"
+                    ? "Void"
+                    : inv.status === "DRAFT"
+                      ? "Draft"
+                      : isOverdue
+                        ? "Overdue"
+                        : "Outstanding";
+                return <StatusBadge tone={toneFor(invoiceStatusTones, statusLabel)}>{statusLabel}</StatusBadge>;
+              },
+            },
+            {
+              key: "total",
+              header: "Total",
+              cell: (inv) => {
+                const invoiceCurrency = normalizeCurrency(inv.currency, "UGX");
+                return (
+                  <>
                     <p className="font-bold text-[var(--ink)]">
                       {formatMoney(inv.totalAmount, invoiceCurrency)}
                     </p>
@@ -1544,41 +1526,49 @@ export default async function InvoicesPage({
                         {formatMoney(inv.paidAmount, invoiceCurrency)} paid
                       </p>
                     ) : null}
-                  </td>
-                  <td className="doc-list-hide hidden px-3 py-2.5 lg:table-cell">
-                    {inv.isPaid ? (
-                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[13px] font-semibold text-emerald-700">
-                        Cleared
-                      </span>
-                    ) : inv.status !== "VOID" ? (
-                      <span className={`font-semibold ${isOverdue ? "text-red-600" : "text-amber-700"}`}>
-                        {formatMoney(inv.balance, invoiceCurrency)}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">—</span>
-                    )}
-                  </td>
-                  <td className="doc-list-hide hidden px-3 py-2.5 lg:table-cell">
-                    {isOverdue ? (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[12px] font-bold ${
-                          inv.daysOverdue >= 61
-                            ? "bg-red-500/15 text-red-700"
-                            : inv.daysOverdue >= 31
-                              ? "bg-orange-500/15 text-orange-700"
-                              : "bg-amber-500/15 text-amber-700"
-                        }`}
-                      >
-                        {inv.daysOverdue}d
-                      </span>
-                    ) : inv.isPaid ? (
-                      <span className="text-[13px] text-[var(--ink-muted)]">—</span>
-                    ) : (
-                      <span className="text-[13px] text-emerald-600">On time</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center justify-end gap-1.5">
+                  </>
+                );
+              },
+            },
+            {
+              key: "balance",
+              header: "Balance",
+              cell: (inv) => {
+                const invoiceCurrency = normalizeCurrency(inv.currency, "UGX");
+                const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
+                return inv.isPaid ? (
+                  <StatusBadge tone="success">Cleared</StatusBadge>
+                ) : inv.status !== "VOID" ? (
+                  <span className={`font-semibold ${isOverdue ? "text-red-600" : "text-amber-700"}`}>
+                    {formatMoney(inv.balance, invoiceCurrency)}
+                  </span>
+                ) : (
+                  <span className="text-[var(--ink-muted)]">—</span>
+                );
+              },
+            },
+            {
+              key: "overdue",
+              header: "Overdue",
+              cell: (inv) => {
+                const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
+                return isOverdue ? (
+                  <StatusBadge tone={inv.daysOverdue >= 61 ? "danger" : inv.daysOverdue >= 31 ? "orange" : "warning"}>
+                    {inv.daysOverdue}d
+                  </StatusBadge>
+                ) : inv.isPaid ? (
+                  <span className="text-[13px] text-[var(--ink-muted)]">—</span>
+                ) : (
+                  <span className="text-[13px] text-emerald-600">On time</span>
+                );
+              },
+            },
+          ]}
+          actions={(inv) => {
+            const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
+            const isRepair = inv.invoiceType === "REPAIR";
+            return (
+              <>
                       {isOverdue && canManageInvoicePayments ? (
                         <InvoiceOverdueReminderButton invoiceId={inv.id} context={reminderContext} compact />
                       ) : null}
@@ -1730,31 +1720,28 @@ export default async function InvoicesPage({
                         ) : null}
                         </RowActionsMenu>
                       ) : null}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 ? (
-              <tr className="border-t border-[var(--line)]">
-                <td className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]" colSpan={7}>
-                  No invoices found.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+              </>
+            );
+          }}
+        />
         {filtered.length > 0 && (
-          <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5">
-            <p className="text-[13px] text-[var(--ink-muted)]">
-              Showing {filtered.length} of {invoices.length} invoices
-            </p>
+          <div className="flex items-center justify-end px-1">
             <p className="text-[12px] font-bold text-[var(--ink)]">
               Balance due: {formatMoneyCompact(filtered.filter((i) => !i.isPaid && !i.isVoid).reduce((s, i) => s + i.balance, 0), "UGX")}
             </p>
           </div>
         )}
       </div>
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="invoices"
+        hrefForPage={invoicesHref}
+      />
     </section>
   );
 }

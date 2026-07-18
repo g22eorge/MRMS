@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -62,10 +63,26 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-x-auto">
         <div className="px-5 py-3 border-b border-[var(--line)]"><p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Items</p></div>
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-4 py-2.5 text-left">Description</th><th className="px-4 py-2.5 text-left hidden sm:table-cell">Item</th><th className="px-4 py-2.5 text-right">Qty</th><th className="px-4 py-2.5 text-right">Est. Cost</th><th className="px-4 py-2.5 text-right">Total</th></tr></thead>
-          <tbody className="divide-y divide-[var(--line)]">{request.items.map((item) => <tr key={item.id}><td className="px-4 py-2 text-[var(--ink)]">{item.description}</td><td className="px-4 py-2 hidden sm:table-cell text-xs text-[var(--ink-muted)]">{item.part ? `${item.part.sku} · ${item.part.name}` : "-"}</td><td className="px-4 py-2 text-right tabular-nums text-[var(--ink-muted)]">{item.quantity}</td><td className="px-4 py-2 text-right tabular-nums text-[var(--ink-muted)]">{(item.estimatedUnitCost ?? 0).toLocaleString()}</td><td className="px-4 py-2 text-right tabular-nums font-semibold text-[var(--ink)]">{(item.quantity * (item.estimatedUnitCost ?? 0)).toLocaleString()}</td></tr>)}</tbody>
-        </table>
+        <DataTable
+          frameless
+          dense
+          rows={request.items}
+          getRowKey={(item) => item.id}
+          empty="No items on this request."
+          columns={[
+            { key: "description", header: "Description", className: "text-[var(--ink)]", cell: (item) => item.description },
+            {
+              key: "item",
+              header: "Item",
+              className: "hidden sm:table-cell text-xs text-[var(--ink-muted)]",
+              headerClassName: "hidden sm:table-cell",
+              cell: (item) => (item.part ? `${item.part.sku} · ${item.part.name}` : "-"),
+            },
+            { key: "qty", header: "Qty", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.quantity },
+            { key: "estCost", header: "Est. Cost", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => (item.estimatedUnitCost ?? 0).toLocaleString() },
+            { key: "total", header: "Total", align: "right", className: "tabular-nums font-semibold text-[var(--ink)]", cell: (item) => (item.quantity * (item.estimatedUnitCost ?? 0)).toLocaleString() },
+          ]}
+        />
       </div>
 
       {request.reason || request.notes || request.reviewNote ? <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 text-sm text-[var(--ink)]"><p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] mb-2">Notes</p>{request.reason ? <p><strong>Reason:</strong> {request.reason}</p> : null}{request.notes ? <p className="mt-2 whitespace-pre-wrap">{request.notes}</p> : null}{request.reviewNote ? <p className="mt-2"><strong>Review:</strong> {request.reviewNote}</p> : null}</div> : null}

@@ -11,6 +11,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -679,15 +681,9 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
             <p className="mt-0.5 font-mono text-[13px] font-bold text-[var(--ink)]">{sale.saleNumber}</p>
             {sale.client ? <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{sale.client.fullName}</p> : null}
           </div>
-          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-            sale.status === "PAID"
-              ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-700"
-              : sale.status === "VOID"
-                ? "border-red-500/20 bg-red-500/10 text-red-600"
-                : "border-amber-400/30 bg-amber-400/15 text-amber-700"
-          }`}>
+          <StatusBadge tone={sale.status === "PAID" ? "success" : sale.status === "VOID" ? "danger" : "warning"}>
             {sale.status}
-          </span>
+          </StatusBadge>
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
@@ -835,62 +831,62 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           </form>
         ) : null}
 
-        <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--line)]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-3 py-2">Item</th>
-                <th className="px-3 py-2">Qty</th>
-                <th className="px-3 py-2">Price</th>
-                <th className="px-3 py-2">Total</th>
-                {sale.status === "OPEN" ? <th className="px-3 py-2">Action</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {sale.items.map((it) => (
-                <tr key={it.id} className="border-t border-[var(--line)]">
-                  <td className="px-3 py-2">
-                    {sale.status === "OPEN" ? (
-                      <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : it.description}
-                  </td>
-                  <td className="px-3 py-2">
-                    {sale.status === "OPEN" ? (
-                      <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" className="w-20 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : it.quantity}
-                  </td>
-                  <td className="px-3 py-2">
-                    {sale.status === "OPEN" ? (
-                      <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : formatMoney(it.unitPrice, saleCurrency)}
-                  </td>
-                  <td className="px-3 py-2">{formatMoney(it.lineTotal, saleCurrency)}</td>
-                  {sale.status === "OPEN" ? (
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <form id={`edit-item-${it.id}`} action={updateItemAction}>
-                          <input type="hidden" name="saleId" value={sale.id} />
-                          <input type="hidden" name="itemId" value={it.id} />
-                          <button type="submit" className="btn-premium-secondary rounded-md px-2.5 py-1.5 text-xs">Save</button>
-                        </form>
-                        <form action={deleteItemAction}>
-                          <input type="hidden" name="saleId" value={sale.id} />
-                          <input type="hidden" name="itemId" value={it.id} />
-                          <ConfirmSubmitButton message="Delete this POS line item? Stock will be restored if linked to inventory." className="rounded-md border border-red-400/30 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton>
-                        </form>
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-              {sale.items.length === 0 ? (
-                <tr className="border-t border-[var(--line)]">
-                  <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={sale.status === "OPEN" ? 5 : 4}>No items yet.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          dense
+          className="mt-3"
+          rows={sale.items}
+          getRowKey={(it) => it.id}
+          empty="No items yet."
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              cell: (it) =>
+                sale.status === "OPEN" ? (
+                  <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : it.description,
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              cell: (it) =>
+                sale.status === "OPEN" ? (
+                  <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" className="w-20 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : it.quantity,
+            },
+            {
+              key: "price",
+              header: "Price",
+              cell: (it) =>
+                sale.status === "OPEN" ? (
+                  <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : formatMoney(it.unitPrice, saleCurrency),
+            },
+            {
+              key: "total",
+              header: "Total",
+              cell: (it) => formatMoney(it.lineTotal, saleCurrency),
+            },
+          ]}
+          actions={
+            sale.status === "OPEN"
+              ? (it) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form id={`edit-item-${it.id}`} action={updateItemAction}>
+                      <input type="hidden" name="saleId" value={sale.id} />
+                      <input type="hidden" name="itemId" value={it.id} />
+                      <button type="submit" className="btn-premium-secondary rounded-md px-2.5 py-1.5 text-xs">Save</button>
+                    </form>
+                    <form action={deleteItemAction}>
+                      <input type="hidden" name="saleId" value={sale.id} />
+                      <input type="hidden" name="itemId" value={it.id} />
+                      <ConfirmSubmitButton message="Delete this POS line item? Stock will be restored if linked to inventory." className="rounded-md border border-red-400/30 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton>
+                    </form>
+                  </div>
+                )
+              : undefined
+          }
+        />
       </section>
 
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
@@ -924,33 +920,19 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           </form>
         ) : null}
 
-        <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--line)]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Method</th>
-                <th className="px-3 py-2">Ref</th>
-                <th className="px-3 py-2">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sale.payments.map((p) => (
-                <tr key={p.id} className="border-t border-[var(--line)]">
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{p.receivedAt.toLocaleString()}</td>
-                  <td className="px-3 py-2">{p.method.replaceAll("_", " ")}</td>
-                  <td className="px-3 py-2 text-[var(--ink-muted)]">{p.reference ?? "-"}</td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney(p.amount, normalizeCurrency(p.currency, saleCurrency))}</td>
-                </tr>
-              ))}
-              {sale.payments.length === 0 ? (
-                <tr className="border-t border-[var(--line)]">
-                  <td className="px-3 py-6 text-sm text-[var(--ink-muted)]" colSpan={4}>No payments yet.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          dense
+          className="mt-3"
+          rows={sale.payments}
+          getRowKey={(p) => p.id}
+          empty="No payments yet."
+          columns={[
+            { key: "date", header: "Date", className: "text-[var(--ink-muted)]", cell: (p) => p.receivedAt.toLocaleString() },
+            { key: "method", header: "Method", cell: (p) => p.method.replaceAll("_", " ") },
+            { key: "ref", header: "Ref", className: "text-[var(--ink-muted)]", cell: (p) => p.reference ?? "-" },
+            { key: "amount", header: "Amount", className: "font-semibold", cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, saleCurrency)) },
+          ]}
+        />
       </section>
 
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
@@ -971,33 +953,28 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
                 />
 
-                <div className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                      <tr>
-                        <th className="px-3 py-2">Item</th>
-                        <th className="px-3 py-2">Sold</th>
-                        <th className="px-3 py-2">Return Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sale.items.map((it) => (
-                        <tr key={it.id} className="border-t border-[var(--line)]">
-                          <td className="px-3 py-2">{it.description}</td>
-                          <td className="px-3 py-2 text-[var(--ink-muted)]">{it.quantity}</td>
-                          <td className="px-3 py-2">
-                            <input
-                              name={`returnQty:${it.id}`}
-                              defaultValue={0}
-                              inputMode="numeric"
-                              className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm outline-none focus:border-[var(--accent)]/50"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  dense
+                  rows={sale.items}
+                  getRowKey={(it) => it.id}
+                  empty="No items on this sale."
+                  columns={[
+                    { key: "item", header: "Item", cell: (it) => it.description },
+                    { key: "sold", header: "Sold", className: "text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                    {
+                      key: "returnQty",
+                      header: "Return Qty",
+                      cell: (it) => (
+                        <input
+                          name={`returnQty:${it.id}`}
+                          defaultValue={0}
+                          inputMode="numeric"
+                          className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm outline-none focus:border-[var(--accent)]/50"
+                        />
+                      ),
+                    },
+                  ]}
+                />
 
                 <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Create Credit Note</button>
               </form>
@@ -1066,26 +1043,17 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                     </div>
 
                     {cn.items.length ? (
-                      <div className="mt-2 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-                        <table className="w-full text-left text-sm">
-                          <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                            <tr>
-                              <th className="px-3 py-2">Item</th>
-                              <th className="px-3 py-2">Qty</th>
-                              <th className="px-3 py-2">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {cn.items.map((it) => (
-                              <tr key={it.id} className="border-t border-[var(--line)]">
-                                <td className="px-3 py-2">{it.description}</td>
-                                <td className="px-3 py-2 text-[var(--ink-muted)]">{it.quantity}</td>
-                                <td className="px-3 py-2">{formatMoney(it.lineTotal, normalizeCurrency(cn.currency, saleCurrency))}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <DataTable
+                        dense
+                        className="mt-2"
+                        rows={cn.items}
+                        getRowKey={(it) => it.id}
+                        columns={[
+                          { key: "item", header: "Item", cell: (it) => it.description },
+                          { key: "qty", header: "Qty", className: "text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                          { key: "total", header: "Total", cell: (it) => formatMoney(it.lineTotal, normalizeCurrency(cn.currency, saleCurrency)) },
+                        ]}
+                      />
                     ) : null}
 
                     {!cn.itemsReceivedBackAt ? (
@@ -1112,36 +1080,24 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refunds</p>
               </div>
               <div className="bg-[var(--panel)] p-3">
-                {refunds.length === 0 ? (
-                  <p className="text-sm text-[var(--ink-muted)]">No refunds yet.</p>
-                ) : (
-                  <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        <tr>
-                          <th className="px-3 py-2">Date</th>
-                          <th className="px-3 py-2">Credit Note</th>
-                          <th className="px-3 py-2">Method</th>
-                          <th className="px-3 py-2">Ref</th>
-                          <th className="px-3 py-2">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {refunds.map((r) => (
-                          <tr key={r.id} className="border-t border-[var(--line)]">
-                            <td className="px-3 py-2 text-[var(--ink-muted)]">{r.refundedAt.toLocaleString()}</td>
-                            <td className="px-3 py-2 mono text-[var(--ink-muted)]">
-                              {r.creditNoteId ? (creditNotes.find((c) => c.id === r.creditNoteId)?.creditNoteNumber ?? "-") : "-"}
-                            </td>
-                            <td className="px-3 py-2">{r.method.replaceAll("_", " ")}</td>
-                            <td className="px-3 py-2 text-[var(--ink-muted)]">{r.reference ?? "-"}</td>
-                            <td className="px-3 py-2 font-semibold">{formatMoney(r.amount, normalizeCurrency(r.currency, saleCurrency))}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <DataTable
+                  dense
+                  rows={refunds}
+                  getRowKey={(r) => r.id}
+                  empty="No refunds yet."
+                  columns={[
+                    { key: "date", header: "Date", className: "text-[var(--ink-muted)]", cell: (r) => r.refundedAt.toLocaleString() },
+                    {
+                      key: "creditNote",
+                      header: "Credit Note",
+                      className: "mono text-[var(--ink-muted)]",
+                      cell: (r) => (r.creditNoteId ? (creditNotes.find((c) => c.id === r.creditNoteId)?.creditNoteNumber ?? "-") : "-"),
+                    },
+                    { key: "method", header: "Method", cell: (r) => r.method.replaceAll("_", " ") },
+                    { key: "ref", header: "Ref", className: "text-[var(--ink-muted)]", cell: (r) => r.reference ?? "-" },
+                    { key: "amount", header: "Amount", className: "font-semibold", cell: (r) => formatMoney(r.amount, normalizeCurrency(r.currency, saleCurrency)) },
+                  ]}
+                />
               </div>
             </div>
           </div>

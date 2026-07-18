@@ -3,272 +3,21 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 
-import { can } from "@/lib/permissions";
-import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { AppLogo } from "@/components/ui/AppLogo";
+import {
+  NAV,
+  type NavItem,
+  type SuperGroup,
+  activeHrefForPath,
+  activeSuperGroup,
+  buildSidebarModel,
+  isVisible,
+} from "@/lib/nav/sidebar-model";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 
-type NavGroup = "overview" | "service" | "stock" | "customers" | "documents" | "communications" | "finance" | "personal";
-
-// ── nav items ─────────────────────────────────────────────────────────────────
-
-const nav = [
-  // Overview
-  { href: "/dashboard",   label: "Dashboard",      group: "overview"   as NavGroup, roles: "all" as const },
-
-  // Service — daily items + hub for management
-  { href: "/jobs",    label: "Jobs",   group: "service" as NavGroup, roles: "all" as const },
-  { href: "/intake",  label: "Intake", group: "service" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL", "SALES_MANAGER"] as const },
-  { href: "/service", label: "Service Hub", group: "service" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK"] as const },
-
-  // Stock & Supply — daily items + ops hub for less-frequent tasks
-  { href: "/inventory",                   label: "Inventory Items",     group: "stock" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "TECHNICIAN_INTERNAL"] as const },
-  { href: "/procurement",                 label: "Procurement Desk",    group: "stock" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] as const },
-  { href: "/inventory/purchase-requests", label: "Purchase Requests", group: "stock" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] as const },
-  { href: "/inventory/purchase-orders",   label: "Purchase Orders",   group: "stock" as NavGroup, roles: ["ADMIN", "MANAGER", "OPS"] as const },
-  { href: "/inventory/ops",               label: "Stock Hub",         group: "stock" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] as const },
-
-  // Customers
-  { href: "/clients",          label: "Clients",         group: "customers"  as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "FINANCE"] as const },
-  { href: "/sales",            label: "Sales CRM",       group: "customers"  as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "TECH_MANAGER"] as const },
-  { href: "/sales/campaigns",  label: "Campaigns",       group: "customers"  as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "SALES", "SALES_MANAGER"] as const },
-  { href: "/pos",              label: "Point of Sale",   group: "customers"  as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_RETAIL", "SALES_POS"] as const },
-
-  // Documents — daily items + hub for post-sale and config
-  { href: "/documents/job-cards",  label: "Job Cards",   group: "documents" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"] as const },
-  { href: "/documents/quotations", label: "Quotations",  group: "documents" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "SALES", "TECHNICIAN_INTERNAL", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"] as const },
-  { href: "/documents/invoices",   label: "Invoices",    group: "documents" as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER", "SALES_CORPORATE", "TECH_MANAGER"] as const },
-  { href: "/documents/receipts",   label: "Receipts",    group: "documents" as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_RETAIL"] as const },
-  { href: "/documents",            label: "Documents Hub", group: "documents" as NavGroup, roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "FINANCE", "TECHNICIAN_INTERNAL"] as const },
-
-  // Communications — operational messaging (not personal prefs)
-  { href: COMMUNICATIONS_ROUTES.outbox, label: "Outbox", group: "communications" as NavGroup, roles: ["ADMIN", "OPS"] as const },
-  { href: COMMUNICATIONS_ROUTES.templates, label: "Templates", group: "communications" as NavGroup, roles: ["ADMIN", "OPS"] as const },
-  { href: COMMUNICATIONS_ROUTES.policies, label: "Policies", group: "communications" as NavGroup, roles: ["ADMIN", "OPS"] as const },
-  { href: COMMUNICATIONS_ROUTES.whatsapp, label: "WhatsApp", group: "communications" as NavGroup, roles: ["ADMIN"] as const },
-
-  // Finance
-  { href: "/finance",               label: "Finance Hub", group: "finance" as NavGroup, roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"] as const },
-  { href: "/technicians/payouts",   label: "My Payouts",  group: "finance" as NavGroup, roles: ["TECHNICIAN_EXTERNAL"] as const },
-
-  // Account
-  { href: "/settings", label: "Settings", group: "personal" as NavGroup, roles: "all" as const },
-
-] as const;
-
-// ── group labels ──────────────────────────────────────────────────────────────
-
-const groupLabel: Record<NavGroup, string> = {
-  overview:   "Overview",
-  service:    "Service",
-  stock:      "Stock & Supply",
-  customers:  "Customers",
-  documents:  "Documents",
-  communications: "Communications",
-  finance:    "Finance",
-  personal:   "Account",
-};
-
-// ── role-based ordering ───────────────────────────────────────────────────────
-
-const roleOrder: Partial<Record<Role, readonly string[]>> = {
-  ADMIN: [
-    "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
-    "/settings",
-  ],
-  MANAGER: [
-    "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
-    "/settings",
-  ],
-  TECH_MANAGER: [
-    "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups",
-    "/settings",
-  ],
-  OPS: [
-    "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
-    "/finance/expenses", "/finance/recurring", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
-    "/settings",
-  ],
-  FINANCE: [
-    "/dashboard",
-    "/clients",
-    "/documents/invoices", "/documents/credit-notes", "/documents/refunds",
-    "/finance/expenses", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
-    "/settings",
-  ],
-  SALES: [
-    "/dashboard",
-    "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/quotations", "/documents/receipts",
-    "/settings",
-  ],
-  FRONT_DESK: [
-    "/dashboard",
-    "/jobs", "/intake", "/technicians",
-    "/clients", "/pos",
-    "/documents/job-cards", "/documents/receipts", "/documents/delivery-notes",
-    "/settings",
-  ],
-  TECHNICIAN_INTERNAL: [
-    "/dashboard",
-    "/jobs", "/intake", "/technicians",
-    "/inventory",
-    "/documents/job-cards", "/documents/quotations",
-    "/settings",
-  ],
-  TECHNICIAN_EXTERNAL: [
-    "/dashboard",
-    "/jobs", "/technicians",
-    "/technicians/payouts",
-    "/settings",
-  ],
-  INTAKE: ["/dashboard", "/jobs", "/intake", "/technicians", "/clients", "/documents/job-cards", "/settings"],
-  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/field", "/technicians", "/clients", "/sales", "/sales/campaigns", "/pos", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/reports", "/ai-insights", "/payout-followups", "/settings"],
-  SALES_CORPORATE: ["/dashboard", "/jobs", "/clients", "/sales", "/documents/quotations", "/documents/invoices", "/settings"],
-  SALES_RETAIL: ["/dashboard", "/jobs", "/clients", "/sales", "/pos", "/documents/quotations", "/documents/receipts", "/settings"],
-  SALES_POS: ["/dashboard", "/pos", "/settings"],
-  TECH_FIELD: ["/dashboard", "/jobs", "/field", "/settings"],
-};
-
-const roleGroupOrder: Partial<Record<Role, readonly NavGroup[]>> = {
-  ADMIN:               ["overview", "service", "stock", "customers", "communications", "documents", "finance", "personal"],
-  MANAGER:             ["overview", "service", "stock", "customers", "communications", "documents", "finance", "personal"],
-  TECH_MANAGER:        ["overview", "service", "stock", "documents", "personal"],
-  OPS:                 ["overview", "service", "stock", "customers", "communications", "documents", "finance", "personal"],
-  FINANCE:             ["overview", "customers", "documents", "finance", "personal"],
-  SALES:               ["overview", "customers", "documents", "personal"],
-  FRONT_DESK:          ["overview", "service", "customers", "documents", "personal"],
-  TECHNICIAN_INTERNAL: ["overview", "service", "stock", "documents", "personal"],
-  TECHNICIAN_EXTERNAL: ["overview", "service", "finance", "personal"],
-  INTAKE:              ["overview", "service", "customers", "documents", "personal"],
-  SALES_MANAGER:       ["overview", "service", "customers", "documents", "finance", "personal"],
-  SALES_CORPORATE:     ["overview", "customers", "documents", "personal"],
-  SALES_RETAIL:        ["overview", "customers", "documents", "personal"],
-  SALES_POS:           ["overview", "customers", "personal"],
-  TECH_FIELD:          ["overview", "service", "personal"],
-};
-
-// ── module guard ──────────────────────────────────────────────────────────────
-
-const hrefModule: Record<string, string> = {
-  "/jobs":                           "JOBS",
-  "/intake":                         "JOBS",
-  "/technicians":                    "JOBS",
-  "/clients":                        "JOBS",
-  "/payout-followups":               "JOBS",
-  "/complaints":                     "COMPLAINTS",
-  "/field":                          "FIELD",
-  "/inventory":                      "INVENTORY",
-  "/procurement":                    "PURCHASE_ORDERS",
-  "/inventory/locations":            "INVENTORY",
-  "/inventory/transfers":            "INVENTORY",
-  "/inventory/stock-counts":         "INVENTORY",
-  "/pos":                            "POS",
-  "/inventory/purchase-requests":    "PURCHASE_ORDERS",
-  "/inventory/purchase-orders":      "PURCHASE_ORDERS",
-  "/inventory/goods-received":       "PURCHASE_ORDERS",
-  "/inventory/supplier-bills":       "PURCHASE_ORDERS",
-  "/inventory/suppliers":            "PURCHASE_ORDERS",
-  "/documents/job-cards":            "INVOICING",
-  "/documents/quotations":           "INVOICING",
-  "/documents/invoices":             "INVOICING",
-  "/documents/receipts":             "INVOICING",
-  "/documents/delivery-notes":       "INVOICING",
-  "/documents/credit-notes":         "INVOICING",
-  "/documents/refunds":              "INVOICING",
-  "/pos/shifts":                     "POS",
-  "/reports":                        "REPORTS",
-  "/ai-insights":                    "REPORTS",
-  "/sales":                          "SALES",
-  "/targets":                        "TARGETS",
-};
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function isVisible(role: Role, rule: "all" | readonly string[]) {
-  return rule === "all" ? true : (rule as readonly string[]).includes(role);
-}
-
-function isActive(pathname: string, href: string) {
-  return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
-}
-
-function activeHrefForPath(pathname: string, hrefs: readonly string[]) {
-  let best: string | null = null;
-  for (const href of hrefs) {
-    if (!isActive(pathname, href)) continue;
-    if (!best || href.length > best.length) best = href;
-  }
-  return best;
-}
-
-function orderedNavForRole(role: Role, permissions: string[], enabledModules?: Set<string>) {
-  const moduleAllowed = (href: string) =>
-    !enabledModules || !hrefModule[href] || enabledModules.has(hrefModule[href]);
-
-  const visible = nav.filter(
-    (item) => isVisible(role, item.roles) && moduleAllowed(item.href),
-  );
-  const permissionUser = { role, permissions };
-
-  function ensureItem(href: string) {
-    if (!moduleAllowed(href)) return;
-    if (!visible.some((i) => i.href === href)) {
-      const found = nav.find((i) => i.href === href);
-      if (found) visible.push(found);
-    }
-  }
-  if (can.viewClientInfo(permissionUser))    { ensureItem("/intake"); ensureItem("/clients"); }
-  if (can.viewAccountsSummary(permissionUser)) ensureItem("/reports");
-  if (can.viewFinancials(permissionUser))    { ensureItem("/documents/invoices"); ensureItem("/documents/quotations"); }
-  if (can.reviewExternalBills(permissionUser) || can.approveInvoices(permissionUser)) ensureItem("/payout-followups");
-  if (can.generateJobCards(permissionUser))  ensureItem("/documents/job-cards");
-
-  const ordered = roleOrder[role] ?? visible.map((item) => item.href);
-  const ranking = new Map(ordered.map((href, index) => [href, index]));
-  return [...visible].sort((a, b) => (ranking.get(a.href) ?? 99) - (ranking.get(b.href) ?? 99));
-}
-
-function groupedNavForRole(role: Role, permissions: string[], enabledModules?: Set<string>) {
-  const ordered = orderedNavForRole(role, permissions, enabledModules);
-  const canonicalOrder: NavGroup[] = ["overview", "service", "stock", "customers", "communications", "documents", "finance", "personal"];
-  const baseGroups: readonly NavGroup[] = roleGroupOrder[role] ?? ["overview"];
-  const missingGroups = canonicalOrder.filter(
-    (group) => ordered.some((item) => item.group === group) && !baseGroups.includes(group),
-  );
-  const groups = [...baseGroups, ...missingGroups];
-  return groups
-    .map((group) => ({
-      group,
-      label: groupLabel[group],
-      items: ordered.filter((item) => item.group === group),
-    }))
-    .filter((section) => section.items.length > 0);
-}
+const STORAGE_KEY = "sidebar:open-groups";
 
 // ── icons ─────────────────────────────────────────────────────────────────────
 
@@ -295,17 +44,8 @@ function navIcon(href: string) {
     case "/inventory":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2 3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2Z" /><path fillRule="evenodd" d="M2 7.5h16l-.811 7.71a2 2 0 0 1-1.99 1.79H4.802a2 2 0 0 1-1.99-1.79L2 7.5ZM7.75 11a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z" clipRule="evenodd" /></svg>;
 
-    case "/inventory/locations":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M4 16.5v-13h-.25a.75.75 0 0 1 0-1.5h12.5a.75.75 0 0 1 0 1.5H16v13h.25a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 0-.75-.75h-2.5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 1-.75.75h-3.5a.75.75 0 0 1 0-1.5H4Zm3-13a.75.75 0 0 0-.75.75v.5c0 .414.336.75.75.75h1a.75.75 0 0 0 .75-.75v-.5A.75.75 0 0 0 8 3.5H7ZM6.25 7a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75H7a.75.75 0 0 1-.75-.75V7ZM7 9.75A.75.75 0 0 0 6.25 10.5v.5c0 .414.336.75.75.75h1a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75H7ZM12 3.5a.75.75 0 0 0-.75.75v.5c0 .414.336.75.75.75h1a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75h-1Zm-.75 3.75c0-.414.336-.75.75-.75h1a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-1a.75.75 0 0 1-.75-.75V7Zm.75 2.25a.75.75 0 0 0-.75.75v.5c0 .414.336.75.75.75h1a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75h-1Z" clipRule="evenodd" /></svg>;
-
-    case "/inventory/transfers":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M12.97 3.97a.75.75 0 0 1 1.06 0l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 1 1-1.06-1.06l2.22-2.22H2.75a.75.75 0 0 1 0-1.5h12.44l-2.22-2.22a.75.75 0 0 1 0-1.06ZM7.03 12.97a.75.75 0 0 1 0 1.06l-2.22 2.22H17.25a.75.75 0 0 1 0 1.5H4.81l2.22 2.22a.75.75 0 1 1-1.06 1.06l-3.5-3.5a.75.75 0 0 1 0-1.06l3.5-3.5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>;
-
-    case "/inventory/stock-counts":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M9 3.5a.5.5 0 0 0-.5.5H6A2.5 2.5 0 0 0 3.5 6.5v9A2.5 2.5 0 0 0 6 18h8a2.5 2.5 0 0 0 2.5-2.5v-9A2.5 2.5 0 0 0 14 4h-2.5a.5.5 0 0 0-.5-.5H9ZM8 4v.5A1.5 1.5 0 0 0 9.5 6h1A1.5 1.5 0 0 0 12 4.5V4h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h2Zm4.78 4.03a.75.75 0 0 0-1.06-1.06L9 10.69 7.28 8.97a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l3.25-3.25Z" clipRule="evenodd" /></svg>;
-
-    case "/inventory/suppliers":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M3.505 2.365A41.369 41.369 0 0 1 9 2c1.863 0 3.697.124 5.495.365 1.247.167 2.255 1.08 2.4 2.268.214 1.763.325 3.57.325 5.407 0 1.838-.11 3.645-.325 5.408-.144 1.187-1.152 2.1-2.4 2.267A41.37 41.37 0 0 1 9 18a41.37 41.37 0 0 1-5.495-.285c-1.247-.167-2.255-1.08-2.4-2.267A41.458 41.458 0 0 1 .78 10c0-1.838.11-3.644.325-5.407.145-1.187 1.153-2.1 2.4-2.268ZM7.25 7.5a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" /></svg>;
+    case "/procurement":
+      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M6 5v1H4.667a1.75 1.75 0 0 0-1.743 1.598l-.826 9.5A1.75 1.75 0 0 0 3.84 19H16.16a1.75 1.75 0 0 0 1.743-1.902l-.826-9.5A1.75 1.75 0 0 0 15.333 6H14V5a4 4 0 0 0-8 0Zm4-2.5A2.5 2.5 0 0 0 7.5 5v1h5V5A2.5 2.5 0 0 0 10 2.5ZM7.5 10a2.5 2.5 0 0 0 5 0V8.75a.75.75 0 0 1 1.5 0V10a4 4 0 0 1-8 0V8.75a.75.75 0 0 1 1.5 0V10Z" clipRule="evenodd" /></svg>;
 
     case "/inventory/purchase-requests":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg>;
@@ -313,17 +53,14 @@ function navIcon(href: string) {
     case "/inventory/purchase-orders":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M6 5v1H4.667a1.75 1.75 0 0 0-1.743 1.598l-.826 9.5A1.75 1.75 0 0 0 3.84 19H16.16a1.75 1.75 0 0 0 1.743-1.902l-.826-9.5A1.75 1.75 0 0 0 15.333 6H14V5a4 4 0 0 0-8 0Zm4-2.5A2.5 2.5 0 0 0 7.5 5v1h5V5A2.5 2.5 0 0 0 10 2.5ZM7.5 10a2.5 2.5 0 0 0 5 0V8.75a.75.75 0 0 1 1.5 0V10a4 4 0 0 1-8 0V8.75a.75.75 0 0 1 1.5 0V10Z" clipRule="evenodd" /></svg>;
 
-    case "/inventory/goods-received":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.5 3c-1.051 0-2.093.04-3.125.117A1.49 1.49 0 0 0 2 4.607V10.5h9V3H6.5Z" /><path d="M12 3v7.5h6V4.606c0-.771-.59-1.43-1.375-1.489A41.035 41.035 0 0 0 12 3Z" /><path d="M11 14.25a2.25 2.25 0 1 0-4.5 0 2.25 2.25 0 0 0 4.5 0ZM15.25 12a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5ZM2 12h2a3 3 0 0 0 2.83 2H2v-2ZM12.17 14a3 3 0 0 0 .83-2h5v2a1 1 0 0 1-1 1h-4.83Z" /></svg>;
-
-    case "/inventory/supplier-bills":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M4 2a2 2 0 0 0-2 2v11a3 3 0 1 0 6 0V4a2 2 0 0 0-2-2H4Zm1 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm-1-4h2V5H4v7Zm7-8a2 2 0 0 0-2 2v1h6V6a2 2 0 0 0-2-2h-2Zm2 9.5V10H9v3.5a3.5 3.5 0 1 0 7 0V10h-3v3.5ZM12 17a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" clipRule="evenodd" /></svg>;
-
     case "/clients":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.153c.176.463-.039.964-.51 1.16A8.46 8.46 0 0 1 14.5 16Z" /></svg>;
 
     case "/sales":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm-1-5a7 7 0 1 0 0 14A7 7 0 0 0 11 2Zm0 1.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM9.5 10.5v3a.75.75 0 0 0 1.5 0v-3a.75.75 0 0 0-1.5 0Z" clipRule="evenodd" /></svg>;
+
+    case "/sales/campaigns":
+      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.92 3.845a19.362 19.362 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0-.504 7.969 15.97 15.97 0 0 0 1.271 3.34c.397.771 1.342 1.05 2.108.632l.542-.295a2.06 2.06 0 0 0 .858-2.708 13.963 13.963 0 0 1-.681-1.71 19.364 19.364 0 0 1 6.328 1.987c.657.346 1.446-.107 1.567-.844A16.293 16.293 0 0 0 18 10c0-1.078-.104-2.132-.303-3.153-.144-.737-.933-1.19-1.59-.844a19.34 19.34 0 0 1-2.187.842Z" /></svg>;
 
     case "/pos":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M2.5 4A1.5 1.5 0 0 0 1 5.5V6h18v-.5A1.5 1.5 0 0 0 17.5 4h-15ZM19 8.5H1v6A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-6ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clipRule="evenodd" /></svg>;
@@ -332,12 +69,9 @@ function navIcon(href: string) {
     case "/documents/quotations":
     case "/documents/invoices":
     case "/documents/receipts":
-    case "/documents/delivery-notes":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.25 2A2.25 2.25 0 0 0 3 4.25v11.5A2.25 2.25 0 0 0 5.25 18h9.5A2.25 2.25 0 0 0 17 15.75V6.56a2.25 2.25 0 0 0-.659-1.591L14.03 2.66A2.25 2.25 0 0 0 12.44 2H5.25Zm6.5 1.5v2.75c0 .414.336.75.75.75h2.75v8.75a.75.75 0 0 1-.75.75h-9.5a.75.75 0 0 1-.75-.75V4.25a.75.75 0 0 1 .75-.75h6.75Zm-5.5 6.25a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5H7a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>;
 
-    case "/documents/credit-notes":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.25 2A2.25 2.25 0 0 0 3 4.25v11.5A2.25 2.25 0 0 0 5.25 18h9.5A2.25 2.25 0 0 0 17 15.75V6.56a2.25 2.25 0 0 0-.659-1.591L14.03 2.66A2.25 2.25 0 0 0 12.44 2H5.25Zm6.5 1.5v2.75c0 .414.336.75.75.75h2.75v8.75a.75.75 0 0 1-.75.75h-9.5a.75.75 0 0 1-.75-.75V4.25a.75.75 0 0 1 .75-.75h6.75ZM7 10.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>;
-
+    case COMMUNICATIONS_ROUTES.home:
     case COMMUNICATIONS_ROUTES.outbox:
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.5 6.5A2.5 2.5 0 0 1 5 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 15 17H5a2.5 2.5 0 0 1-2.5-2.5v-7Zm2.1-.5 5.4 3.6 5.4-3.6H4.6Z" /></svg>;
 
@@ -348,29 +82,8 @@ function navIcon(href: string) {
     case COMMUNICATIONS_ROUTES.whatsapp:
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 1 0-6.32-12.906L2 18l6.553-1.717A7.957 7.957 0 0 0 10 18Zm-.995-2.322a6.553 6.553 0 0 1-3.453-.981l-.248-.148-2.557.67.682-2.492-.162-.257a6.557 6.557 0 0 1-1.01-3.496c0-3.634 2.966-6.6 6.6-6.6a6.557 6.557 0 0 1 4.657 1.93 6.557 6.557 0 0 1 1.93 4.657c0 3.634-2.966 6.6-6.6 6.6Zm3.58-4.858c-.197-.099-1.17-.578-1.352-.644-.182-.066-.315-.099-.448.099-.133.198-.515.644-.632.777-.116.133-.232.149-.43.05-.197-.1-.832-.307-1.585-.98-.586-.522-.982-1.166-1.098-1.364-.116-.198-.012-.305.087-.404.09-.089.197-.232.296-.347.099-.116.132-.198.198-.331.066-.133.033-.248-.017-.347-.05-.099-.448-1.08-.614-1.48-.162-.397-.326-.344-.448-.35-.116-.007-.248-.008-.381-.008s-.347.05-.529.248c-.182.198-.694.678-.694 1.653 0 .975.714 1.916.814 2.049.099.133 1.405 2.145 3.404 3.008.476.205.847.327 1.136.419.477.152.911.13 1.254.079.383-.057 1.17-.478 1.335-.94.165-.463.165-.86.116-.94-.05-.082-.182-.133-.38-.232Z" clipRule="evenodd" /></svg>;
 
-    case "/documents/refunds":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M7.793 2.232a.75.75 0 0 1-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 0 1 0 10.75H10.75a.75.75 0 0 1 0-1.5h2.875a3.875 3.875 0 0 0 0-7.75H3.622l4.146 3.957a.75.75 0 0 1-1.036 1.085l-5.5-5.25a.75.75 0 0 1 0-1.085l5.5-5.25a.75.75 0 0 1 1.061.025Z" clipRule="evenodd" /></svg>;
-
-    case "/finance/expenses":
+    case "/finance":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.33.576Z" /><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-6a.75.75 0 0 1 .75.75v.316a3.78 3.78 0 0 1 1.653.713c.426.33.744.74.925 1.2a.75.75 0 0 1-1.395.55 1.35 1.35 0 0 0-.428-.507 2.276 2.276 0 0 0-.755-.36V8.5c.558.157 1.072.443 1.482.8.542.47.87 1.096.87 1.7 0 .604-.328 1.23-.87 1.7a4.841 4.841 0 0 1-1.482.8V14a.75.75 0 0 1-1.5 0v-.311a4.5 4.5 0 0 1-1.681-.845.75.75 0 1 1 .914-1.198c.382.29.813.487 1.267.551V9.5a3.702 3.702 0 0 1-1.29-.645 2.193 2.193 0 0 1-.798-1.678c0-.845.467-1.58 1.129-2.066A3.947 3.947 0 0 1 9.25 4.81V4.75A.75.75 0 0 1 10 4Z" clipRule="evenodd" /></svg>;
-
-    case "/finance/tax-rates":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.012.8.944 2.523.655 3.322-.208 1.831-1.977.19-5.59 2.046-6.975.317-.231.74.163.744.567v.292c.05 3.025 2.1 5.403 5.105 5.403.78 0 1.42-.1 1.946-.314.508-.205.913.469.786.963-.55 2.12-2.56 3.634-4.93 3.523a5.5 5.5 0 0 1-5.49-5.493c0-.473.063-.931.18-1.37a.75.75 0 0 0-1.44-.422A7 7 0 1 0 17 10.938Z" clipRule="evenodd" /></svg>;
-
-    case "/finance/recurring":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.05 2.126l-1.091 1.092A1 1 0 0 1 3.5 14H2a1 1 0 0 1-1-1v-1.5a1 1 0 0 1 1-1h1.5a1 1 0 0 1 .707 1.707l-.765.765a4 4 0 0 0 6.867-1.548 1 1 0 1 1 1.94.487ZM4.688 8.576a5.5 5.5 0 0 1 9.05-2.126l1.091-1.092A1 1 0 0 1 16.5 6H18a1 1 0 0 1 1 1v1.5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-.707-1.707l.765-.765a4 4 0 0 0-6.867 1.548 1 1 0 1 1-1.94-.487Z" clipRule="evenodd" /></svg>;
-
-    case "/pos/shifts":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" /></svg>;
-
-    case "/targets":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path fillRule="evenodd" d="M18.905 10.75a.75.75 0 0 0 0-1.5h-1.277A7.002 7.002 0 0 0 10.75 3.372V2.095a.75.75 0 0 0-1.5 0v1.277A7.002 7.002 0 0 0 3.372 9.25H2.095a.75.75 0 0 0 0 1.5h1.277a7.002 7.002 0 0 0 6.378 6.378v1.277a.75.75 0 0 0 1.5 0v-1.277a7.002 7.002 0 0 0 6.378-6.378h1.277ZM10 15.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Z" clipRule="evenodd" /></svg>;
-
-    case "/reports":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 3 0v-13A1.5 1.5 0 0 0 15.5 2ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 9.5 6ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10Z" /></svg>;
-
-    case "/payout-followups":
-      return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M1 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4Zm12 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM4 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm13-1a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM1.75 14.5a.75.75 0 0 0 0 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 0 0-1.5 0v.784a.272.272 0 0 1-.35.25A49.043 49.043 0 0 0 1.75 14.5Z" clipRule="evenodd" /></svg>;
 
     case "/technicians/payouts":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.33.576Z" /><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-6a.75.75 0 0 1 .75.75v.316a3.78 3.78 0 0 1 1.653.713c.426.33.744.74.925 1.2a.75.75 0 0 1-1.395.55 1.35 1.35 0 0 0-.428-.507 2.276 2.276 0 0 0-.755-.36V8.5c.558.157 1.072.443 1.482.8.542.47.87 1.096.87 1.7 0 .604-.328 1.23-.87 1.7a4.841 4.841 0 0 1-1.482.8V14a.75.75 0 0 1-1.5 0v-.311a4.5 4.5 0 0 1-1.681-.845.75.75 0 1 1 .914-1.198c.382.29.813.487 1.267.551V9.5a3.702 3.702 0 0 1-1.29-.645 2.193 2.193 0 0 1-.798-1.678c0-.845.467-1.58 1.129-2.066A3.947 3.947 0 0 1 9.25 4.81V4.75A.75.75 0 0 1 10 4Z" clipRule="evenodd" /></svg>;
@@ -382,34 +95,10 @@ function navIcon(href: string) {
     case "/service":
     case "/inventory/ops":
     case "/documents":
-    case "/finance":
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M4.25 2A2.25 2.25 0 0 0 2 4.25v2.5A2.25 2.25 0 0 0 4.25 9h2.5A2.25 2.25 0 0 0 9 6.75v-2.5A2.25 2.25 0 0 0 6.75 2h-2.5Zm0 9A2.25 2.25 0 0 0 2 13.25v2.5A2.25 2.25 0 0 0 4.25 18h2.5A2.25 2.25 0 0 0 9 15.75v-2.5A2.25 2.25 0 0 0 6.75 11h-2.5Zm6.5-9A2.25 2.25 0 0 0 8.5 4.25v2.5A2.25 2.25 0 0 0 10.75 9h2.5A2.25 2.25 0 0 0 15.5 6.75v-2.5A2.25 2.25 0 0 0 13.25 2h-2.5Zm0 9A2.25 2.25 0 0 0 8.5 13.25v2.5A2.25 2.25 0 0 0 10.75 18h2.5A2.25 2.25 0 0 0 15.5 15.75v-2.5A2.25 2.25 0 0 0 13.25 11h-2.5Z" clipRule="evenodd" /></svg>;
 
     default:
       return <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12Z" clipRule="evenodd" /></svg>;
-  }
-}
-
-// ── group icon chips ──────────────────────────────────────────────────────────
-
-function groupIcon(group: NavGroup) {
-  switch (group) {
-    case "overview":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="2.5" /></svg>;
-    case "service":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M9.5 2a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5ZM6 4a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0v-5A.5.5 0 0 1 6 4Zm-3.5 2a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 1 .5-.5Z" /></svg>;
-    case "stock":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="1" y="4" width="10" height="7" rx="1" /><rect x="3" y="2" width="6" height="3" rx="0.5" /></svg>;
-    case "customers":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.5" /><path d="M1 9.5a3.5 3.5 0 0 1 7 0" /><circle cx="9" cy="4" r="1.25" /><path d="M7 9.5a2.5 2.5 0 0 1 4.5 0" /></svg>;
-    case "documents":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M2.5 1A1.5 1.5 0 0 0 1 2.5v7A1.5 1.5 0 0 0 2.5 11h7A1.5 1.5 0 0 0 11 9.5v-5L7 1H2.5ZM7 1.5V4h2.5L7 1.5ZM3.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5Zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3Z" clipRule="evenodd" /></svg>;
-    case "communications":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 3.5A1 1 0 0 1 2.5 2.5h7A1 1 0 0 1 10.5 3.5v4A1 1 0 0 1 9.5 8.5H4.7L2.5 10V8.5H2.5A1 1 0 0 1 1.5 7.5v-4Z" /></svg>;
-    case "finance":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1Zm.5 2.5a.5.5 0 0 0-1 0v.27a1.5 1.5 0 0 0 .5 2.91v1.5a.75.75 0 0 1-.553-.242.5.5 0 1 0-.735.676A1.75 1.75 0 0 0 5.5 8.73V9a.5.5 0 0 0 1 0v-.27a1.5 1.5 0 0 0-.5-2.91V4.32c.21.08.388.217.5.38a.5.5 0 1 0 .832-.555A1.75 1.75 0 0 0 6.5 3.77V3.5Z" clipRule="evenodd" /></svg>;
-    case "personal":
-      return <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M6 1.5a1 1 0 0 1 .98.8l.1.49c.22.08.43.17.63.29l.42-.27a1 1 0 0 1 1.25.14l.67.67a1 1 0 0 1 .14 1.25l-.27.42c.12.2.21.41.29.63l.49.1a1 1 0 0 1 .8.98v1a1 1 0 0 1-.8.98l-.49.1c-.08.22-.17.43-.29.63l.27.42a1 1 0 0 1-.14 1.25l-.67.67a1 1 0 0 1-1.25.14l-.42-.27c-.2.12-.41.21-.63.29l-.1.49a1 1 0 0 1-.98.8H5a1 1 0 0 1-.98-.8l-.1-.49a3.75 3.75 0 0 1-.63-.29l-.42.27a1 1 0 0 1-1.25-.14l-.67-.67a1 1 0 0 1-.14-1.25l.27-.42a3.75 3.75 0 0 1-.29-.63l-.49-.1A1 1 0 0 1-.5 8V7a1 1 0 0 1 .8-.98l.49-.1c.08-.22.17-.43.29-.63l-.27-.42a1 1 0 0 1 .14-1.25l.67-.67a1 1 0 0 1 1.25-.14l.42.27c.2-.12.41-.21.63-.29l.1-.49A1 1 0 0 1 5 1.5h1Zm-.5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" clipRule="evenodd" /></svg>;
   }
 }
 
@@ -440,102 +129,160 @@ export function AppSidebar({
   };
 }) {
   const pathname = usePathname();
-  const visibleHrefs = nav
-    .filter((item) => isVisible(role, item.roles === "all" ? "all" : item.roles))
-    .map((item) => item.href);
+
+  const model = useMemo(
+    () => buildSidebarModel(role, permissions, enabledModules),
+    [role, permissions, enabledModules],
+  );
+  const visibleHrefs = useMemo(
+    () => NAV.filter((item) => isVisible(role, item.roles)).map((item) => item.href),
+    [role],
+  );
   const activeHref = activeHrefForPath(pathname, visibleHrefs);
-  const groupedNav = groupedNavForRole(role, permissions, enabledModules);
+  const activeGroup = activeSuperGroup(model, activeHref);
+
+  // Collapsible group state — persisted; defaults to the active group open.
+  const [openGroups, setOpenGroups] = useState<Set<SuperGroup>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) return new Set(JSON.parse(raw) as SuperGroup[]);
+      } catch {
+        /* ignore malformed storage */
+      }
+    }
+    return new Set(activeGroup ? [activeGroup] : []);
+  });
+
+  const toggleGroup = useCallback((group: SuperGroup) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+      } catch {
+        /* ignore quota/availability errors */
+      }
+      return next;
+    });
+  }, []);
+
+  const countBadge = useCallback(
+    (href: string): number | undefined => {
+      switch (href) {
+        case "/inventory": return badges?.inventory;
+        case "/procurement": return badges?.procurement;
+        case "/inventory/purchase-requests": return badges?.purchaseRequests;
+        case "/inventory/purchase-orders": return badges?.purchaseOrders;
+        case "/intake": return badges?.pendingRequests;
+        default: return undefined;
+      }
+    },
+    [badges],
+  );
+  const newBadge = useCallback(
+    (href: string): number | undefined => (href === "/jobs" ? badges?.receivedJobs : undefined),
+    [badges],
+  );
+
+  const groupAttention = useCallback(
+    (items: NavItem[]) =>
+      items.reduce((sum, item) => sum + (countBadge(item.href) ?? 0) + (newBadge(item.href) ?? 0), 0),
+    [countBadge, newBadge],
+  );
+
+  const renderRow = (item: NavItem) => {
+    const active = activeHref === item.href;
+    const nb = newBadge(item.href);
+    const cb = countBadge(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-1 ${
+          active
+            ? "bg-[var(--accent-muted)] font-semibold text-[var(--ink)]"
+            : "font-medium text-[var(--ink)]/85 hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+        }`}
+      >
+        <span
+          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px] ${
+            active ? "text-[var(--accent)]" : "text-[var(--ink)]/55 group-hover:text-[var(--ink)]"
+          }`}
+        >
+          {navIcon(item.href)}
+        </span>
+        <span className="flex-1 truncate">{item.label}</span>
+        <span className="flex items-center gap-1">
+          {typeof nb === "number" && nb > 0 && (
+            <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[11px] font-bold text-black">
+              {nb > 99 ? "99+" : nb} new
+            </span>
+          )}
+          {typeof cb === "number" && cb > 0 && (
+            <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
+              {cb > 99 ? "99+" : cb}
+            </span>
+          )}
+        </span>
+      </Link>
+    );
+  };
 
   return (
     <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col bg-[var(--sidebar-bg)] border-r border-[var(--line)]">
 
-      {/* ── Brand ── */}
+      {/* ── Brand — exactly h-14 so its border-b lines up with the top header ── */}
       <Link
         href="/"
-        className="flex items-center px-5 py-4 border-b border-[var(--line)] hover:opacity-80 transition-opacity"
+        className="flex h-14 shrink-0 items-center border-b border-[var(--line)] px-5 hover:opacity-80 transition-opacity"
       >
-        <AppLogo height={48} priority />
+        <AppLogo height={36} priority />
       </Link>
 
       {/* ── Navigation ── */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
-        {groupedNav.map((section, si) => (
-          <div key={section.group} className={si > 0 ? "mt-2" : ""}>
 
-            {/* Section header */}
-            <div className="mb-1 flex items-center gap-1.5 px-2">
-              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--ink-muted)]/40 [&_svg]:h-2.5 [&_svg]:w-2.5">
-                {groupIcon(section.group)}
-              </span>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/60" aria-hidden="true">
-                {section.label}
-              </p>
-              <div className="ml-1 h-px flex-1 bg-[var(--line)]/60" />
+        {/* Pinned daily items */}
+        {model.pinned.length > 0 && (
+          <div className="space-y-0.5">{model.pinned.map(renderRow)}</div>
+        )}
+
+        {/* Collapsible super-groups */}
+        {model.sections.map((section) => {
+          // The group owning the current page stays open; others follow the persisted toggle.
+          const open = section.group === activeGroup || openGroups.has(section.group);
+          const attention = groupAttention(section.items);
+          return (
+            <div key={section.group} className="mt-2">
+              <button
+                type="button"
+                onClick={() => toggleGroup(section.group)}
+                aria-expanded={open}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink)]/60 transition-colors hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+              >
+                <span>{section.label}</span>
+                <span className="h-px flex-1 bg-[var(--line)]/60" />
+                {!open && attention > 0 && (
+                  <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-black">
+                    {attention > 99 ? "99+" : attention}
+                  </span>
+                )}
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`}
+                >
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {open && <div className="mt-0.5 space-y-0.5">{section.items.map(renderRow)}</div>}
             </div>
-
-            {/* Items */}
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = activeHref === item.href;
-                const isHub = ["/service", "/inventory/ops", "/documents", "/finance"].includes(item.href);
-                const badge =
-                  item.href === "/inventory"          ? badges?.inventory
-                  : item.href === "/procurement"      ? badges?.procurement
-                  : item.href === "/inventory/purchase-requests" ? badges?.purchaseRequests
-                  : item.href === "/inventory/purchase-orders" ? badges?.purchaseOrders
-                  : item.href === "/intake"           ? badges?.pendingRequests
-                  : undefined;
-                const newBadge = item.href === "/jobs" ? badges?.receivedJobs : undefined;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-1 ${
-                      isHub
-                        ? active
-                          ? "border border-[var(--accent)]/40 bg-[var(--accent-muted)] text-[var(--ink)]"
-                          : "border border-dashed border-[var(--line)] text-[var(--ink-muted)]/70 hover:border-[var(--accent)]/30 hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
-                        : active
-                          ? "bg-[var(--accent-muted)] text-[var(--ink)]"
-                          : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-4 w-0.5 shrink-0 rounded-full transition-all ${
-                        active ? "bg-[var(--accent)]" : "bg-transparent group-hover:bg-[var(--line)]"
-                      }`}
-                    />
-                    <span
-                      className={`flex h-[1.375rem] w-[1.375rem] shrink-0 items-center justify-center rounded-md transition-colors [&_svg]:h-3.5 [&_svg]:w-3.5 ${
-                        active
-                          ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                          : isHub
-                            ? "bg-transparent text-[var(--ink-muted)]/50 group-hover:bg-[var(--line)] group-hover:text-[var(--ink)]"
-                            : "bg-[var(--panel-strong)] text-[var(--ink-muted)] group-hover:bg-[var(--line)] group-hover:text-[var(--ink)]"
-                      }`}
-                    >
-                      {navIcon(item.href)}
-                    </span>
-                    <span className={`truncate ${isHub ? "text-[12px]" : ""}`}>{item.label}</span>
-                    <span className="ml-auto flex items-center gap-1">
-                      {typeof newBadge === "number" && newBadge > 0 && (
-                        <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[12px] font-bold text-black">
-                          {newBadge > 99 ? "99+" : newBadge} new
-                        </span>
-                      )}
-                      {typeof badge === "number" && badge > 0 && (
-                        <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">
-                          {badge > 99 ? "99+" : badge}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* ── Platform admin section ── */}
@@ -552,8 +299,8 @@ export function AppSidebar({
                 : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
             }`}
           >
-            <span className="flex h-[1.375rem] w-[1.375rem] shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-500">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+            <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center text-amber-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M8 7a5 5 0 1 1 10 0A5 5 0 0 1 8 7ZM2.293 9.707a1 1 0 0 1 1.414-1.414l4.586 4.586a1 1 0 0 1-1.414 1.414L2.293 9.707Z" clipRule="evenodd" />
               </svg>
             </span>

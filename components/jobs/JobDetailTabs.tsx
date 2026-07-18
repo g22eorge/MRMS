@@ -7,6 +7,8 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
+import { CheckboxField, LineItemTotals } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
 import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
 import { JobDocumentTimeline } from "@/components/jobs/JobDocumentTimeline";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
@@ -1818,27 +1820,24 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 ) : null}
               </div>
               {canManageFinancials ? (
-                <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
-                  <input type="checkbox" name="vatApplicable" value="true" defaultChecked={vatApplicable} />
-                  <input type="hidden" name="vatApplicable" value="false" />
-                  VAT applicable (18%)
-                </label>
+                <CheckboxField
+                  name="vatApplicable"
+                  defaultChecked={vatApplicable}
+                  withHiddenFalse
+                  label="VAT applicable (18%)"
+                  className="flex items-center gap-2 text-sm text-[var(--ink)]"
+                />
               ) : null}
               {canManageFinancials ? (
-                <div className="divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <p className="text-xs text-[var(--ink-muted)]">Subtotal</p>
-                    <p className="text-xs font-bold tabular-nums text-[var(--ink)]">{formatBillAmount(repairCostBeforeVat)}</p>
-                  </div>
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <p className="text-xs text-[var(--ink-muted)]">VAT (18%)</p>
-                    <p className="text-xs font-bold tabular-nums text-[var(--ink)]">{formatBillAmount(vatAmount)}</p>
-                  </div>
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <p className="text-xs font-semibold text-[var(--ink)]">Total</p>
-                    <p className="text-sm font-black tabular-nums text-[var(--accent)]">{formatBillAmount(clientBillValue)}</p>
-                  </div>
-                </div>
+                <LineItemTotals
+                  variant="card"
+                  currency="UGX"
+                  formatMoney={formatBillAmount}
+                  subtotal={repairCostBeforeVat}
+                  taxLabel="VAT (18%)"
+                  taxAmount={vatAmount}
+                  total={clientBillValue}
+                />
               ) : null}
               {canManageFinancials && existingMargin !== null ? (
                 <p className={`text-xs font-medium ${existingMargin >= 0 ? "text-emerald-600" : "text-red-500"}`}>
@@ -2009,42 +2008,52 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   })()}
                 </div>
                 {/* Desktop: payment table */}
-                <div className="hidden lg:block overflow-x-auto rounded-lg border border-[var(--line)]">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-[var(--panel-strong)] text-[var(--ink-muted)]">
-                      <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Method</th><th className="px-3 py-2">Amount</th><th className="px-3 py-2">Balance</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Notes</th><th className="px-3 py-2">Recorded by</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {(() => {
-                        if (clientPayments.length === 0) {
-                          return <tr><td className="px-3 py-4 text-[var(--ink-muted)]" colSpan={8}>No payments recorded yet.</td></tr>;
-                        }
-                        const billAmount = typeof job.clientBill === "number" ? job.clientBill : 0;
-                        const sorted = [...clientPayments].sort(
-                          (a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime(),
-                        );
-                        let runningPaid = 0;
-                        return sorted.map((payment) => {
-                          runningPaid += payment.kind === "REFUND" ? -payment.amount : payment.amount;
-                          const balance = billAmount - runningPaid;
-                          return (
-                            <tr key={payment.id}>
-                              <td className="px-3 py-2">{formatUtcDateTime(payment.receivedAt)}</td>
-                              <td className="px-3 py-2">{prettyEnum(payment.kind)}</td>
-                              <td className="px-3 py-2">{prettyEnum(payment.method)}</td>
-                              <td className="px-3 py-2 font-semibold tabular-nums">{payment.kind === "REFUND" ? "-" : ""}{formatBillAmount(payment.amount)}</td>
-                              <td className={`px-3 py-2 font-semibold tabular-nums ${balance < 0 ? "text-blue-600 dark:text-blue-400" : balance === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"}`}>
+                <div className="hidden lg:block">
+                  {(() => {
+                    const billAmount = typeof job.clientBill === "number" ? job.clientBill : 0;
+                    const sorted = [...clientPayments].sort(
+                      (a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime(),
+                    );
+                    let runningPaid = 0;
+                    const paymentRows = sorted.map((payment) => {
+                      runningPaid += payment.kind === "REFUND" ? -payment.amount : payment.amount;
+                      return { ...payment, balance: billAmount - runningPaid };
+                    });
+                    return (
+                      <DataTable
+                        frameless
+                        dense
+                        className="overflow-hidden rounded-lg border border-[var(--line)]"
+                        rows={paymentRows}
+                        getRowKey={(payment) => payment.id}
+                        empty="No payments recorded yet."
+                        columns={[
+                          { key: "date", header: "Date", cell: (payment) => formatUtcDateTime(payment.receivedAt) },
+                          { key: "type", header: "Type", cell: (payment) => prettyEnum(payment.kind) },
+                          { key: "method", header: "Method", cell: (payment) => prettyEnum(payment.method) },
+                          {
+                            key: "amount",
+                            header: "Amount",
+                            className: "font-semibold tabular-nums",
+                            cell: (payment) => <>{payment.kind === "REFUND" ? "-" : ""}{formatBillAmount(payment.amount)}</>,
+                          },
+                          {
+                            key: "balance",
+                            header: "Balance",
+                            className: "font-semibold tabular-nums",
+                            cell: ({ balance }) => (
+                              <span className={balance < 0 ? "text-blue-600 dark:text-blue-400" : balance === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"}>
                                 {balance < 0 ? `${formatBillAmount(Math.abs(balance))} over` : balance === 0 ? `${formatBillAmount(0)} ✓` : formatBillAmount(balance)}
-                              </td>
-                              <td className="px-3 py-2">{payment.reference ?? "-"}</td>
-                              <td className="px-3 py-2">{payment.note ?? "-"}</td>
-                              <td className="px-3 py-2">{payment.createdBy?.name ?? "-"}</td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
+                              </span>
+                            ),
+                          },
+                          { key: "reference", header: "Reference", cell: (payment) => payment.reference ?? "-" },
+                          { key: "notes", header: "Notes", cell: (payment) => payment.note ?? "-" },
+                          { key: "recordedBy", header: "Recorded by", cell: (payment) => payment.createdBy?.name ?? "-" },
+                        ]}
+                      />
+                    );
+                  })()}
                 </div>
                 {/* end desktop table */}
               </div>
@@ -2153,26 +2162,22 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     </div>
                   </div>
                 ) : null}
-                <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-[var(--panel-strong)] text-[var(--ink-muted)]">
-                      <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Method</th><th className="px-3 py-2">Amount</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Notes</th><th className="px-3 py-2">Recorded by</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {technicianPayouts.length === 0 ? <tr><td className="px-3 py-4 text-[var(--ink-muted)]" colSpan={6}>No technician payouts recorded yet.</td></tr> : null}
-                      {technicianPayouts.map((payout) => (
-                        <tr key={payout.id}>
-                          <td className="px-3 py-2">{formatUtcDateTime(payout.paidAt)}</td>
-                          <td className="px-3 py-2">{prettyEnum(payout.method)}</td>
-                          <td className="px-3 py-2 font-semibold">{formatBillAmount(payout.amount)}</td>
-                          <td className="px-3 py-2">{payout.reference ?? "-"}</td>
-                          <td className="px-3 py-2">{payout.note ?? "-"}</td>
-                          <td className="px-3 py-2">{payout.recordedBy?.name ?? "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  frameless
+                  dense
+                  className="overflow-hidden rounded-lg border border-[var(--line)]"
+                  rows={technicianPayouts}
+                  getRowKey={(payout) => payout.id}
+                  empty="No technician payouts recorded yet."
+                  columns={[
+                    { key: "date", header: "Date", cell: (payout) => formatUtcDateTime(payout.paidAt) },
+                    { key: "method", header: "Method", cell: (payout) => prettyEnum(payout.method) },
+                    { key: "amount", header: "Amount", className: "font-semibold", cell: (payout) => formatBillAmount(payout.amount) },
+                    { key: "reference", header: "Reference", cell: (payout) => payout.reference ?? "-" },
+                    { key: "notes", header: "Notes", cell: (payout) => payout.note ?? "-" },
+                    { key: "recordedBy", header: "Recorded by", cell: (payout) => payout.recordedBy?.name ?? "-" },
+                  ]}
+                />
               </div>
             </div>
           ) : null}

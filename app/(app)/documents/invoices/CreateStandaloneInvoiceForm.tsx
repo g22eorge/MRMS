@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
-import { CommercialLineItemsEditor, CustomerPicker, useCustomerPicker } from "@/components/forms";
+import { CommercialLineItemsEditor, CustomerPicker, LineItemTotals, TaxToggleField, useCustomerPicker } from "@/components/forms";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
 
@@ -189,23 +189,26 @@ export function CreateStandaloneInvoiceForm({
             <section className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Totals</p>
-                <label className="flex items-center gap-2 text-xs font-semibold text-[var(--ink)]">
-                  Tax
-                  <input type="checkbox" checked={taxEnabled} onChange={(event) => setTaxEnabled(event.target.checked)} className="h-4 w-4 rounded border-[var(--line)]" />
-                </label>
+                <TaxToggleField enabled={taxEnabled} onChange={setTaxEnabled} label="Tax" />
               </div>
               {taxEnabled ? (
                 <select value={selectedTaxKey} onChange={(event) => setSelectedTaxKey(event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm">
                   {taxOptions.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
                 </select>
               ) : null}
-              <dl className="mt-3 space-y-1.5 text-sm">
-                <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Lines</dt><dd className="font-bold text-[var(--ink)]">{validItems.length}/{lines.length}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Products</dt><dd className="font-bold text-[var(--ink)]">{productLines}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Subtotal</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(subtotal)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">{taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(taxAmount)}</dd></div>
-                <div className="flex justify-between gap-3 border-t border-[var(--line)] pt-2"><dt className="font-semibold text-[var(--ink)]">Total</dt><dd className="font-black tabular-nums text-[var(--ink)]">{formatAmount(totalAmount)}</dd></div>
-              </dl>
+              <LineItemTotals
+                className="mt-3"
+                currency={currency}
+                formatMoney={formatAmount}
+                leadingRows={[
+                  { label: "Lines", value: <>{validItems.length}/{lines.length}</> },
+                  { label: "Products", value: productLines },
+                ]}
+                subtotal={subtotal}
+                taxLabel={taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}
+                taxAmount={taxAmount}
+                total={totalAmount}
+              />
             </section>
           </div>
 

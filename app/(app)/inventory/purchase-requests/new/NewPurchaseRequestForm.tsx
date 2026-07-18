@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { LineItemsPanel, PartSelect, lineItemInputClass } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { createPurchaseRequestAction } from "../actions";
 
@@ -109,22 +110,63 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
       </div>
 
       <LineItemsPanel title="Requested Items" onAddLine={addLine}>
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-3 py-2 text-left w-48">Item</th><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-right w-20">Qty</th><th className="px-3 py-2 text-right w-32">Est. Cost</th><th className="px-3 py-2 text-right w-32">Total</th><th className="px-3 py-2 w-8" /></tr></thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {lines.map((line) => (
-              <tr key={line.key}>
-                <td className="px-3 py-2"><PartSelect value={line.partId} parts={parts} onChange={(partId) => selectPart(line.key, partId)} /></td>
-                <td className="px-3 py-2"><input required value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} className={lineItemInputClass} /></td>
-                <td className="px-3 py-2"><input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className={`${lineItemInputClass} text-right`} /></td>
-                <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={line.estimatedUnitCost} onChange={(e) => updateLine(line.key, { estimatedUnitCost: parseFloat(e.target.value) || 0 })} className={`${lineItemInputClass} text-right`} /></td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--ink-muted)]">{(line.quantity * line.estimatedUnitCost).toLocaleString()}</td>
-                <td className="px-3 py-2 text-center">{lines.length > 1 ? <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button> : null}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot><tr className="border-t border-[var(--line)] bg-[var(--gold)]/5"><td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Estimated Total</td><td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td><td /></tr></tfoot>
-        </table>
+        <DataTable
+          frameless
+          dense
+          rows={lines}
+          getRowKey={(line) => String(line.key)}
+          empty="No requested items yet."
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              headerClassName: "w-48",
+              className: "w-48",
+              cell: (line) => <PartSelect value={line.partId} parts={parts} onChange={(partId) => selectPart(line.key, partId)} />,
+            },
+            {
+              key: "description",
+              header: "Description",
+              cell: (line) => <input required value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} className={lineItemInputClass} />,
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              align: "right",
+              headerClassName: "w-20",
+              className: "w-20",
+              cell: (line) => <input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className={`${lineItemInputClass} text-right`} />,
+            },
+            {
+              key: "estCost",
+              header: "Est. Cost",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32",
+              cell: (line) => <input type="number" min={0} step={0.01} value={line.estimatedUnitCost} onChange={(e) => updateLine(line.key, { estimatedUnitCost: parseFloat(e.target.value) || 0 })} className={`${lineItemInputClass} text-right`} />,
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 text-xs tabular-nums text-[var(--ink-muted)]",
+              cell: (line) => (line.quantity * line.estimatedUnitCost).toLocaleString(),
+            },
+          ]}
+          actions={(line) =>
+            lines.length > 1 ? (
+              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+            ) : null
+          }
+          tableFooter={
+            <tr className="bg-[var(--gold)]/5">
+              <td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Estimated Total</td>
+              <td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td>
+              <td />
+            </tr>
+          }
+        />
       </LineItemsPanel>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

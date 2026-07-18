@@ -1,3 +1,5 @@
+import type { BadgeTone } from "@/components/ui/StatusBadge";
+
 export const PLATFORM_ROUTES = {
   home: "/platform",
   payments: "/platform/payments",
@@ -10,6 +12,22 @@ export const PLATFORM_ROUTES = {
 } as const;
 
 export const PLATFORM_ADMIN_PERMISSION = "platform_admin";
+
+/** StatusBadge tones for plan / billing-status pills (DataTable pages). */
+export const PLATFORM_PLAN_TONE: Record<string, BadgeTone> = {
+  STARTER: "neutral",
+  STANDARD: "sky",
+  GROWTH: "warning",
+  PREMIUM: "violet",
+  ENTERPRISE: "purple",
+};
+
+export const PLATFORM_STATUS_TONE: Record<string, BadgeTone> = {
+  TRIALING: "info",
+  ACTIVE: "success",
+  PAST_DUE: "danger",
+  CANCELLED: "neutral",
+};
 
 export const PLATFORM_PLAN_CHIP: Record<string, string> = {
   STARTER: "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",

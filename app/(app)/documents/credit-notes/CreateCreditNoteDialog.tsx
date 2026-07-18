@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { CheckboxField } from "@/components/forms";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 
 type SaleLine = {
@@ -87,12 +88,11 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
             <div className="max-h-[360px] overflow-y-auto rounded-xl border border-[var(--line)]">
               {selectedSale.items.map((item) => (
                 <label key={item.id} className="grid gap-3 border-b border-[var(--line)] px-3 py-2.5 last:border-0 sm:grid-cols-[auto_1fr_90px_110px] sm:items-center">
-                  <input
-                    type="checkbox"
+                  <CheckboxField
                     name="itemId"
                     value={item.id}
                     defaultChecked
-                    className="mt-1 h-4 w-4 rounded border-[var(--line)] text-[var(--accent)] sm:mt-0"
+                    inputClassName="mt-1 sm:mt-0"
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-[var(--ink)]">{item.description}</span>

@@ -5,11 +5,21 @@ import { formatEATMediumDate } from "@/lib/date-eat";
 import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requirePlatformAdmin();
+
+  const params = await searchParams;
+  const page = parsePage(params.page);
 
   const [events, totalRevenue, monthRevenue] = await Promise.all([
     getRecentBillingEvents(100),
@@ -17,9 +27,14 @@ export default async function PaymentsPage() {
     getMonthlyRevenue(),
   ]);
 
+  // KPI is computed from the whole fetched dataset before slicing for display.
   const successfulCount = events.filter(
     (e) => e.status === "successful" && e.event === "charge.completed",
   ).length;
+
+  const pageView = paginationView(page, events.length);
+  const pageRows = events.slice(pageView.skip, pageView.skip + pageView.take);
+  const paymentsHref = pageHrefBuilder("/platform/payments", {});
 
   const fmt = (d: Date) => formatEATMediumDate(d);
 
@@ -47,61 +62,72 @@ export default async function PaymentsPage() {
       </div>
 
       {/* Event log */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-left text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Organisation</th>
-              <th className="px-4 py-3">Event</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Amount</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Reference</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {events.map((e) => (
-              <tr key={e.id} className="hover:bg-[var(--gold)]/5">
-                <td className="px-4 py-2 text-[var(--ink-muted)] whitespace-nowrap">{fmt(e.createdAt)}</td>
-                <td className="px-4 py-2">
-                  <Link href={PLATFORM_ROUTES.org(e.orgId)} className="font-medium text-[var(--ink)] hover:underline">
-                    {e.orgName ?? e.orgId}
-                  </Link>
-                </td>
-                <td className="px-4 py-2 text-[var(--ink)]">{e.event}</td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                      e.status === "successful"
-                        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                        : e.status === "cancelled"
-                        ? "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-                        : "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400"
-                    }`}
-                  >
-                    {e.status}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right font-mono">
-                  {e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"}
-                </td>
-                <td className="px-4 py-2 text-[var(--ink-muted)]">{e.plan ? planLabel(e.plan) : "—"}</td>
-                <td className="px-4 py-2 font-mono text-xs text-[var(--ink-muted)] max-w-[160px] truncate">
-                  {e.txRef ?? "—"}
-                </td>
-              </tr>
-            ))}
-            {events.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-[var(--ink-muted)]">
-                  No payment events recorded yet. Events are logged when Pesapal IPN callbacks fire.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rows={pageRows}
+        getRowKey={(e) => e.id}
+        empty="No payment events recorded yet. Events are logged when Pesapal IPN callbacks fire."
+        columns={[
+          {
+            key: "date",
+            header: "Date",
+            className: "text-[var(--ink-muted)] whitespace-nowrap",
+            cell: (e) => fmt(e.createdAt),
+          },
+          {
+            key: "org",
+            header: "Organisation",
+            cell: (e) => (
+              <Link href={PLATFORM_ROUTES.org(e.orgId)} className="font-medium text-[var(--ink)] hover:underline">
+                {e.orgName ?? e.orgId}
+              </Link>
+            ),
+          },
+          {
+            key: "event",
+            header: "Event",
+            className: "text-[var(--ink)]",
+            cell: (e) => e.event,
+          },
+          {
+            key: "status",
+            header: "Status",
+            cell: (e) => (
+              <StatusBadge tone={e.status === "successful" ? "success" : e.status === "cancelled" ? "neutral" : "danger"}>
+                {e.status}
+              </StatusBadge>
+            ),
+          },
+          {
+            key: "amount",
+            header: "Amount",
+            align: "right",
+            className: "font-mono",
+            cell: (e) => (e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"),
+          },
+          {
+            key: "plan",
+            header: "Plan",
+            className: "text-[var(--ink-muted)]",
+            cell: (e) => (e.plan ? planLabel(e.plan) : "—"),
+          },
+          {
+            key: "reference",
+            header: "Reference",
+            className: "font-mono text-xs text-[var(--ink-muted)] max-w-[160px] truncate",
+            cell: (e) => e.txRef ?? "—",
+          },
+        ]}
+      />
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="events"
+        hrefForPage={paymentsHref}
+      />
     </div>
   );
 }

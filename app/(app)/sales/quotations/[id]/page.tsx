@@ -5,6 +5,8 @@ import { Prisma, QuotationStatus } from "@prisma/client";
 
 import { CopyButton } from "@/components/shared/CopyButton";
 import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { can } from "@/lib/permissions";
@@ -21,12 +23,12 @@ import {
   updateQuotationStatus,
 } from "../../actions";
 
-const QUOTATION_STATUS_COLORS: Record<QuotationStatus, string> = {
-  DRAFT:    "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  SENT:     "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  ACCEPTED: "border-green-400/30 bg-green-500/10 text-green-700 dark:text-green-400",
-  REJECTED: "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  EXPIRED:  "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  SENT: "info",
+  ACCEPTED: "success",
+  REJECTED: "danger",
+  EXPIRED: "neutral",
 };
 
 export default async function QuotationDetailPage({
@@ -245,9 +247,7 @@ export default async function QuotationDetailPage({
               <span>By {quotation.createdBy?.name ?? "Unknown"}</span>
             </div>
           </div>
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[13px] font-semibold ${QUOTATION_STATUS_COLORS[quotation.status]}`}>
-            {quotation.status}
-          </span>
+          <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, quotation.status)}>{quotation.status}</StatusBadge>
         </div>
       </div>
 
@@ -392,65 +392,81 @@ export default async function QuotationDetailPage({
         <div className="border-b border-[var(--line)] px-4 py-3">
           <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Line Items</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px]">
-            <thead className="bg-[var(--panel-strong)]/50 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-              <tr className="border-b border-[var(--line)]">
-                <th className="px-4 py-2.5">Description</th>
-                <th className="w-16 px-4 py-2.5 text-right">Qty</th>
-                <th className="w-28 px-4 py-2.5 text-right">Unit Price</th>
-                <th className="w-16 px-4 py-2.5 text-right">Disc %</th>
-                <th className="w-28 px-4 py-2.5 text-right">Total</th>
-                {canEditDraft ? <th className="w-28 px-4 py-2.5 text-right">Actions</th> : null}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {quotation.items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3 text-[var(--ink)]">
-                    {canEditDraft ? (
-                      <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : item.description}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[var(--ink-muted)]">
-                    {canEditDraft ? (
-                      <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : item.quantity}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[var(--ink-muted)]">
-                    {canEditDraft ? (
-                      <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="w-28 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : formatMoney(item.unitPrice, currency)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[var(--ink-muted)]">
-                    {canEditDraft && canOverrideDiscount ? (
-                      <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
-                    ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-40">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-[var(--ink)]">{formatMoney(item.lineTotal, currency)}</td>
-                  {canEditDraft ? (
-                    <td className="px-4 py-3 text-right">
-                      <form id={`quote-item-${item.id}`} action={updateItemAction} className="inline">
-                        <input type="hidden" name="itemId" value={item.id} />
-                        {!canOverrideDiscount ? <input type="hidden" name="discount" value="0" /> : null}
-                        <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--ink)]">Save</button>
-                      </form>
-                      <form action={removeItemAction} className="ml-1 inline">
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <button type="submit" className="rounded-lg border border-red-400/30 px-2.5 py-1 text-[12px] font-semibold text-red-600">Remove</button>
-                      </form>
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-              {quotation.items.length === 0 ? (
-                <tr>
-                  <td colSpan={canEditDraft ? 6 : 5} className="px-4 py-6 text-center text-sm text-[var(--ink-muted)]">No items</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          rows={quotation.items}
+          getRowKey={(item) => item.id}
+          empty="No items"
+          columns={[
+            {
+              key: "description",
+              header: "Description",
+              className: "text-[var(--ink)]",
+              cell: (item) =>
+                canEditDraft ? (
+                  <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : item.description,
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              align: "right",
+              headerClassName: "w-16",
+              className: "text-[var(--ink-muted)]",
+              cell: (item) =>
+                canEditDraft ? (
+                  <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : item.quantity,
+            },
+            {
+              key: "unitPrice",
+              header: "Unit Price",
+              align: "right",
+              headerClassName: "w-28",
+              className: "text-[var(--ink-muted)]",
+              cell: (item) =>
+                canEditDraft ? (
+                  <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="w-28 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : formatMoney(item.unitPrice, currency),
+            },
+            {
+              key: "discount",
+              header: "Disc %",
+              align: "right",
+              headerClassName: "w-16",
+              className: "text-[var(--ink-muted)]",
+              cell: (item) =>
+                canEditDraft && canOverrideDiscount ? (
+                  <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
+                ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-40">—</span>,
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              headerClassName: "w-28",
+              className: "font-medium text-[var(--ink)]",
+              cell: (item) => formatMoney(item.lineTotal, currency),
+            },
+          ]}
+          actions={
+            canEditDraft
+              ? (item) => (
+                  <>
+                    <form id={`quote-item-${item.id}`} action={updateItemAction} className="inline">
+                      <input type="hidden" name="itemId" value={item.id} />
+                      {!canOverrideDiscount ? <input type="hidden" name="discount" value="0" /> : null}
+                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--ink)]">Save</button>
+                    </form>
+                    <form action={removeItemAction} className="ml-1 inline">
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <button type="submit" className="rounded-lg border border-red-400/30 px-2.5 py-1 text-[12px] font-semibold text-red-600">Remove</button>
+                    </form>
+                  </>
+                )
+              : undefined
+          }
+        />
         {canEditDraft ? (
           <form action={addItemAction} className="grid gap-2 border-t border-[var(--line)] px-4 py-3 md:grid-cols-[1fr_80px_120px_90px_auto]">
             <input name="description" placeholder="New item description" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />

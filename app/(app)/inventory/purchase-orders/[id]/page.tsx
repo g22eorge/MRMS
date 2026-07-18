@@ -4,18 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { ReceiveStockForm } from "./ReceiveStockForm";
 import { POMetaForm } from "./POMetaForm";
 import { deletePurchaseOrderAction, setPurchaseOrderStatusAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_STYLES: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  ORDERED: "border border-sky-400/30 bg-sky-500/10 text-sky-700",
-  PARTIAL: "border border-amber-400/30 bg-amber-500/10 text-amber-700",
-  RECEIVED: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700",
+const STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  ORDERED: "sky",
+  PARTIAL: "warning",
+  RECEIVED: "success",
+  CANCELLED: "danger",
 };
 
 function fmtDate(d: Date | null) {
@@ -78,7 +80,7 @@ export default async function PurchaseOrderDetailPage({
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Purchase Order</p>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-mono text-base font-bold text-[var(--ink)]">{poNumber(po)}</h1>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLES[po.status] ?? STATUS_STYLES.DRAFT}`}>{po.status}</span>
+              <StatusBadge tone={toneFor(STATUS_TONES, po.status)}>{po.status}</StatusBadge>
               {isOverdue ? <span className="rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold text-red-600">Late</span> : null}
             </div>
           </div>
@@ -137,40 +139,68 @@ export default async function PurchaseOrderDetailPage({
           <p className="text-sm font-bold text-[var(--ink)]">Line items</p>
           <p className="text-xs font-semibold text-[var(--ink-muted)]">{po.items.length} lines</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="px-3 py-2 text-left">Item</th>
-                <th className="px-3 py-2 text-right">Ordered</th>
-                <th className="px-3 py-2 text-right">Received</th>
-                <th className="px-3 py-2 text-right">Balance</th>
-                <th className="px-3 py-2 text-right">Unit cost</th>
-                <th className="px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {po.items.map((item) => (
-                <tr key={item.id} className="hover:bg-[var(--panel-strong)]/35">
-                  <td className="px-3 py-2 font-medium text-[var(--ink)]">{item.description}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-[var(--ink-muted)]">{item.part ? item.part.sku : "-"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{item.qtyOrdered}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{item.qtyReceived}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{Math.max(0, item.qtyOrdered - item.qtyReceived)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{formatMoney(item.unitCost)}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{formatMoney(item.qtyOrdered * item.unitCost)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]">
-              <tr>
-                <td colSpan={6} className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
-                <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{formatMoney(totalOrdered)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          dense
+          rows={po.items}
+          getRowKey={(item) => item.id}
+          empty="No line items."
+          columns={[
+            {
+              key: "description",
+              header: "Description",
+              className: "font-medium text-[var(--ink)]",
+              cell: (item) => item.description,
+            },
+            {
+              key: "item",
+              header: "Item",
+              className: "font-mono text-xs text-[var(--ink-muted)]",
+              cell: (item) => (item.part ? item.part.sku : "-"),
+            },
+            {
+              key: "ordered",
+              header: "Ordered",
+              align: "right",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (item) => item.qtyOrdered,
+            },
+            {
+              key: "received",
+              header: "Received",
+              align: "right",
+              className: "font-semibold tabular-nums text-[var(--ink)]",
+              cell: (item) => item.qtyReceived,
+            },
+            {
+              key: "balance",
+              header: "Balance",
+              align: "right",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (item) => Math.max(0, item.qtyOrdered - item.qtyReceived),
+            },
+            {
+              key: "unitCost",
+              header: "Unit cost",
+              align: "right",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (item) => formatMoney(item.unitCost),
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              className: "font-semibold tabular-nums text-[var(--ink)]",
+              cell: (item) => formatMoney(item.qtyOrdered * item.unitCost),
+            },
+          ]}
+          tableFooter={
+            <tr>
+              <td colSpan={6} className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{formatMoney(totalOrdered)}</td>
+            </tr>
+          }
+        />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">

@@ -10,6 +10,7 @@ import { SpeedDialFAB } from "@/components/layout/SpeedDialFAB";
 import type { SpeedDialAction } from "@/components/layout/SpeedDialFAB";
 import { JobStatus, Prisma, PurchaseOrderStatus, PurchaseRequestStatus } from "@prisma/client";
 import { can } from "@/lib/permissions";
+import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { sendTrialExpiryWarning } from "@/lib/email";
@@ -258,7 +259,7 @@ function buildFabActions(user: { role: string; permissions?: string[] }): FabAct
   const u = user as Parameters<typeof can.createJob>[0];
   if (!can.createJob(u)) return [];
   return [{
-    label: "New Job",
+    label: routeLabel("/jobs/new"),
     href: "/jobs/new",
     color: "bg-[var(--accent)]",
     icon: (
@@ -280,7 +281,7 @@ function buildSpeedDialActions(
   const actions: SpeedDialAction[] = [];
   if (can.viewAccountsSummary(u) && (!enabledModules || enabledModules.has("REPORTS"))) {
     actions.push({
-      label: "AI Guide",
+      label: routeLabel("/ai-insights"),
       href: "/ai-insights",
       color: "bg-[var(--panel)] border border-[var(--line)] text-[var(--accent)]",
       icon: (
@@ -294,7 +295,7 @@ function buildSpeedDialActions(
   }
   if (can.createJob(u)) {
     actions.push({
-      label: "New Job",
+      label: routeLabel("/jobs/new"),
       href: "/jobs/new",
       color: "bg-[var(--accent)]",
       icon: (

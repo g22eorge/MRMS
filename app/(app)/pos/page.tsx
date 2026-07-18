@@ -10,6 +10,18 @@ import { orgDb } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
+
+function saleStatusTone(status: string): BadgeTone {
+  if (status === "PAID") return "success";
+  if (status === "VOID") return "danger";
+  return "warning";
+}
 
 function monthKey(d: Date) {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -28,14 +40,15 @@ async function nextSaleNumber(db: ReturnType<typeof orgDb>) {
   return `${prefix}${String(next).padStart(4, "0")}`;
 }
 
-export default async function PosPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function PosPage({ searchParams }: { searchParams: Promise<{ period?: string; page?: string }> }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
 
-  const { period } = await searchParams;
+  const { period, page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
   const currency = org.baseCurrency;
 
   const now = new Date();
@@ -158,11 +171,15 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
+  const salesWhere = filterStart ? { createdAt: { gte: filterStart } } : {};
+  let salesTotal = 0;
   try {
+    salesTotal = await db.sale.count({ where: salesWhere });
     sales = await db.sale.findMany({
-      where: filterStart ? { createdAt: { gte: filterStart } } : {},
+      where: salesWhere,
       orderBy: { createdAt: "desc" },
-      take: 60,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         saleNumber: true,
@@ -183,36 +200,33 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     sales = [];
   }
 
-  return (
-    <div className="space-y-4">
-      {dbNeedsFix ? (
-        <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-          <p className="font-semibold text-amber-50">POS database tables are missing.</p>
-          <p className="mt-1 text-amber-100/90">
-            Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
-          </p>
-          <a
-            className="mt-3 inline-flex rounded-lg border border-amber-500/30 bg-black/20 px-3 py-2 text-xs font-semibold text-amber-50 hover:bg-black/30"
-            href="/api/admin/db-fix"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open DB Fix
-          </a>
-        </section>
-      ) : null}
-      {/* ── Page header ── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Point of Sale</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Sales</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">Walk-in and retail transactions</p>
-          </div>
-          <Link href="/pos/shifts" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px]">Shifts →</Link>
-        </div>
-      </div>
+  const salesPage = paginationView(page, salesTotal);
+  const salesHref = pageHrefBuilder("/pos", { period });
 
+  return (
+    <ListPageLayout
+      headerNode={
+        <>
+          {dbNeedsFix ? (
+            <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+              <p className="font-semibold text-amber-50">POS database tables are missing.</p>
+              <p className="mt-1 text-amber-100/90">
+                Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
+              </p>
+              <Button href="/api/admin/db-fix" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
+                Open DB Fix
+              </Button>
+            </section>
+          ) : null}
+          <PageHeader
+            eyebrow="Point of Sale"
+            title="Sales"
+            description="Walk-in and retail transactions"
+            actions={<Button href="/pos/shifts" variant="secondary" size="sm">Shifts →</Button>}
+          />
+        </>
+      }
+    >
       {/* ── No-shift warning ── */}
       {!hasOpenShift && (
         <div className="flex items-center gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
@@ -221,7 +235,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
             <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">No open shift</p>
             <p className="text-[12px] text-amber-600 dark:text-amber-500">You don&apos;t have an active shift. Open one before processing sales.</p>
           </div>
-          <Link href="/pos/shifts" className="shrink-0 rounded-lg border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-500/25 dark:text-amber-400">Open Shift →</Link>
+          <Button href="/pos/shifts" variant="secondary" size="sm">Open Shift →</Button>
         </div>
       )}
 
@@ -271,12 +285,10 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Sale</button>
+            <Button type="submit" size="sm">New Sale</Button>
           </form>
         ) : (
-          <Link href="/pos/shifts" className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
-            Open a shift first →
-          </Link>
+          <Button href="/pos/shifts" variant="secondary" size="sm">Open a shift first →</Button>
         )}
       </div>
 
@@ -284,111 +296,85 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2.5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Recent</p>
         </div>
-        {sales.length === 0 ? (
-          <div className="px-4 py-10 text-sm text-[var(--ink-muted)]">No sales yet.</div>
-        ) : (
-          <>
-            {/* ── Mobile cards ── */}
-            <div className="divide-y divide-[var(--line)] lg:hidden">
-              {sales.map((s) => {
-                const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
-                const statusCls = s.status === "PAID"
-                  ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                  : s.status === "VOID"
-                    ? "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
-                    : "border-amber-400/30 bg-amber-400/15 text-amber-700 dark:text-amber-400";
-                return (
-                  <div key={`m-${s.id}`} className="px-4 py-3">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="mono text-[13px] font-bold text-[var(--ink)]">{s.saleNumber}</span>
-                      <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${statusCls}`}>{s.status}</span>
-                    </div>
-                    <div className="mb-1 flex items-center gap-2">
-                      {s.client
-                        ? <p className="text-[13px] font-medium text-[var(--ink)]">{s.client.fullName}</p>
-                        : <p className="text-[13px] text-[var(--ink-muted)]">Walk-in</p>
-                      }
-                    </div>
-                    {s.createdBy && (
-                      <p className="mb-1 text-[12px] text-[var(--ink-muted)]">by {s.createdBy.name}</p>
-                    )}
-                    <div className="mb-2 flex items-baseline gap-3 text-sm">
-                      <span className="font-semibold text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX"))}</span>
-                      <span className="text-[13px] text-[var(--ink-muted)]">paid {formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX"))}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link href={`/pos/${s.id}`} className="btn-premium-secondary rounded-md px-2.5 py-1.5 text-xs">Open/Edit</Link>
-                      {canDeleteSale ? (
-                        <form action={deleteSaleAction}>
-                          <input type="hidden" name="saleId" value={s.id} />
-                          <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className="rounded-md border border-red-400/30 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton>
-                        </form>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {/* ── Desktop table ── */}
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="border-b border-[var(--line)]">
-                  <tr className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                    <th className="px-4 py-2.5">Sale</th>
-                    <th className="px-4 py-2.5">Client</th>
-                    <th className="px-4 py-2.5">Created By</th>
-                    <th className="px-4 py-2.5">Total</th>
-                    <th className="px-4 py-2.5">Paid</th>
-                    <th className="px-4 py-2.5">Status</th>
-                    <th className="px-4 py-2.5">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]">
-                  {sales.map((s) => {
-                    const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
-                    return (
-                      <tr key={`d-${s.id}`} className="hover:bg-[var(--panel-strong)]/40">
-                        <td className="px-4 py-3 mono font-semibold">{s.saleNumber}</td>
-                        <td className="px-4 py-3">
-                          {s.client
-                            ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
-                            : <span className="text-[var(--ink-muted)]">Walk-in</span>
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-[var(--ink-muted)]">{s.createdBy?.name ?? "—"}</td>
-                        <td className="px-4 py-3">{formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX"))}</td>
-                        <td className="px-4 py-3">{formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX"))}</td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${
-                            s.status === "PAID"
-                              ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                              : s.status === "VOID"
-                                ? "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
-                                : "border-amber-400/30 bg-amber-400/15 text-amber-700 dark:text-amber-400"
-                          }`}>
-                            {s.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Link href={`/pos/${s.id}`} className="btn-premium-secondary rounded-md px-2.5 py-1.5 text-xs">Open/Edit</Link>
-                            {canDeleteSale ? (
-                              <form action={deleteSaleAction}>
-                                <input type="hidden" name="saleId" value={s.id} />
-                                <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className="rounded-md border border-red-400/30 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton>
-                              </form>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <DataTable
+          frameless
+          rows={sales}
+          getRowKey={(s) => s.id}
+          empty="No sales yet."
+          renderMobileCard={(s) => {
+            const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
+            return (
+              <div className="px-4 py-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="mono text-[13px] font-bold text-[var(--ink)]">{s.saleNumber}</span>
+                  <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
+                </div>
+                <div className="mb-1 flex items-center gap-2">
+                  {s.client
+                    ? <p className="text-[13px] font-medium text-[var(--ink)]">{s.client.fullName}</p>
+                    : <p className="text-[13px] text-[var(--ink-muted)]">Walk-in</p>
+                  }
+                </div>
+                {s.createdBy && (
+                  <p className="mb-1 text-[12px] text-[var(--ink-muted)]">by {s.createdBy.name}</p>
+                )}
+                <div className="mb-2 flex items-baseline gap-3 text-sm">
+                  <span className="font-semibold text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX"))}</span>
+                  <span className="text-[13px] text-[var(--ink-muted)]">paid {formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX"))}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button href={`/pos/${s.id}`} variant="secondary" size="sm">Open/Edit</Button>
+                  {canDeleteSale ? (
+                    <form action={deleteSaleAction}>
+                      <input type="hidden" name="saleId" value={s.id} />
+                      <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className={buttonClasses("danger", "sm")}>Delete</ConfirmSubmitButton>
+                    </form>
+                  ) : null}
+                </div>
+              </div>
+            );
+          }}
+          columns={[
+            { key: "sale", header: "Sale", className: "mono font-semibold", cell: (s) => s.saleNumber },
+            {
+              key: "client",
+              header: "Client",
+              cell: (s) =>
+                s.client
+                  ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
+                  : <span className="text-[var(--ink-muted)]">Walk-in</span>,
+            },
+            { key: "createdBy", header: "Created By", className: "text-[var(--ink-muted)]", cell: (s) => s.createdBy?.name ?? "—" },
+            { key: "total", header: "Total", cell: (s) => formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX")) },
+            { key: "paid", header: "Paid", cell: (s) => formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX")) },
+            { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },
+          ]}
+          actions={(s) => {
+            const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
+            return (
+              <>
+                <Button href={`/pos/${s.id}`} variant="secondary" size="sm">Open/Edit</Button>
+                {canDeleteSale ? (
+                  <form action={deleteSaleAction}>
+                    <input type="hidden" name="saleId" value={s.id} />
+                    <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className={buttonClasses("danger", "sm")}>Delete</ConfirmSubmitButton>
+                  </form>
+                ) : null}
+              </>
+            );
+          }}
+        />
       </section>
-    </div>
+
+      <TablePagination
+        page={salesPage.page}
+        totalPages={salesPage.totalPages}
+        rangeStart={salesPage.rangeStart}
+        rangeEnd={salesPage.rangeEnd}
+        total={salesPage.total}
+        unit="sales"
+        hrefForPage={salesHref}
+      />
+    </ListPageLayout>
   );
 }

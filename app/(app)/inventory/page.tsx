@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -51,6 +53,7 @@ export default async function InventoryPage({
   const requestedStatus = String(params.status ?? "active");
   const statusFilter: StockStatusFilter = requestedStatus === "inactive" || requestedStatus === "all" ? requestedStatus : "active";
   const q = typeof params.q === "string" ? params.q.trim() : "";
+  const page = parsePage(params.page);
 
   const canManage = can.manageInventory(user);
 
@@ -119,6 +122,16 @@ export default async function InventoryPage({
     statusFilter === "active" && stockFilter === "low" ? lowStock
     : statusFilter === "active" && stockFilter === "out" ? outOfStock
     : parts;
+
+  // KPIs above are computed from the whole (in-memory filtered) dataset; only the
+  // displayed rows are paginated here.
+  const pageView = paginationView(page, filteredParts.length);
+  const pageRows = filteredParts.slice(pageView.skip, pageView.skip + pageView.take);
+  const hrefForPage = pageHrefBuilder("/inventory", {
+    status: statusFilter,
+    stock: stockFilter !== "all" ? stockFilter : "",
+    q,
+  });
 
   return (
     <div className="space-y-4">
@@ -414,67 +427,117 @@ export default async function InventoryPage({
           )}
         </div>
 
-        {filteredParts.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-[var(--ink-muted)]">
-            {q
+        <DataTable
+          frameless
+          rows={pageRows}
+          getRowKey={(part) => part.id}
+          rowClassName={(part) =>
+            part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel ? "bg-amber-500/5" : undefined
+          }
+          empty={
+            q
               ? <>No items match &ldquo;{q}&rdquo;. <Link href={`/inventory?status=${statusFilter}`} className="text-[var(--accent)] hover:underline">Clear search</Link></>
               : statusFilter === "inactive" ? "No inactive items."
               : stockFilter === "low" ? "No items at or below reorder level."
               : stockFilter === "out" ? "No items out of stock."
               : <>No inventory items yet.{canManage ? <> <Link href="/inventory?add=1" className="text-[var(--accent)] hover:underline">Add your first item.</Link></> : null}</>
-            }
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-2.5 text-left">Item</th>
-                  <th className="hidden px-4 py-2.5 text-left md:table-cell">Maker</th>
-                  <th className="hidden px-4 py-2.5 text-right lg:table-cell">Unit Cost</th>
-                  <th className="px-4 py-2.5 text-right">On Hand</th>
-                  <th className="hidden px-4 py-2.5 text-right sm:table-cell">Reserved</th>
-                  <th className="px-4 py-2.5 text-right">Available</th>
-                  <th className="hidden px-4 py-2.5 text-right xl:table-cell">Value</th>
-                  <th className="hidden px-4 py-2.5 text-right sm:table-cell">Reorder</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredParts.map((part) => {
-                  const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
-                  const isOut = part.qtyOnHand === 0;
-                  const available = part.qtyOnHand - part.qtyReserved;
-                  const stockValue = (part.unitCost ?? 0) * part.qtyOnHand;
-                  return (
-                    <tr
-                      key={part.id}
-                      className={"border-t border-[var(--line)] " + (isLow ? "bg-amber-500/5" : "hover:bg-[var(--panel-strong)]/40")}
-                    >
-                      <td className="px-4 py-3">
-                        <Link href={`/inventory/${part.id}`} className="group flex flex-col gap-0.5">
-                          <span className="font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{part.name}</span>
-                          <span className="text-[11px] font-mono text-[var(--ink-muted)]">{part.sku}</span>
-                          <span className="text-[11px] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
-                          {!part.isActive && <span className="text-[11px] font-semibold text-amber-600">Inactive</span>}
-                          {isOut && part.isActive && <span className="text-[11px] font-semibold text-red-600">Out of stock</span>}
-                          {isLow && !isOut && <span className="text-[11px] font-semibold text-amber-600">Low stock</span>}
-                        </Link>
-                      </td>
-                      <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] md:table-cell">{part.manufacturer ?? "—"}</td>
-                      <td className="hidden px-4 py-3 text-right tabular-nums text-[12px] text-[var(--ink-muted)] lg:table-cell">{part.unitCost != null ? formatMoney(part.unitCost) : "—"}</td>
-                      <td className={`px-4 py-3 text-right font-semibold tabular-nums ${isOut ? "text-red-500" : isLow ? "text-amber-600" : "text-[var(--ink)]"}`}>{part.qtyOnHand}</td>
-                      <td className="hidden px-4 py-3 text-right tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell">{part.qtyReserved}</td>
-                      <td className={`px-4 py-3 text-right font-semibold tabular-nums ${available <= 0 ? "text-red-500" : "text-[var(--ink)]"}`}>{available}</td>
-                      <td className="hidden px-4 py-3 text-right tabular-nums text-[12px] text-[var(--ink)] xl:table-cell">{formatMoney(stockValue)}</td>
-                      <td className="hidden px-4 py-3 text-right tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell">{part.reorderLevel || "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+          }
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              cell: (part) => {
+                const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
+                const isOut = part.qtyOnHand === 0;
+                return (
+                  <Link href={`/inventory/${part.id}`} className="group flex flex-col gap-0.5">
+                    <span className="font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{part.name}</span>
+                    <span className="text-[11px] font-mono text-[var(--ink-muted)]">{part.sku}</span>
+                    <span className="text-[11px] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
+                    {!part.isActive && <span className="text-[11px] font-semibold text-amber-600">Inactive</span>}
+                    {isOut && part.isActive && <span className="text-[11px] font-semibold text-red-600">Out of stock</span>}
+                    {isLow && !isOut && <span className="text-[11px] font-semibold text-amber-600">Low stock</span>}
+                  </Link>
+                );
+              },
+            },
+            {
+              key: "maker",
+              header: "Maker",
+              className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+              headerClassName: "hidden md:table-cell",
+              cell: (part) => part.manufacturer ?? "—",
+            },
+            {
+              key: "unitCost",
+              header: "Unit Cost",
+              align: "right",
+              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              headerClassName: "hidden lg:table-cell",
+              cell: (part) => (part.unitCost != null ? formatMoney(part.unitCost) : "—"),
+            },
+            {
+              key: "onHand",
+              header: "On Hand",
+              align: "right",
+              className: "font-semibold tabular-nums",
+              cell: (part) => {
+                const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
+                const isOut = part.qtyOnHand === 0;
+                return (
+                  <span className={isOut ? "text-red-500" : isLow ? "text-amber-600" : "text-[var(--ink)]"}>
+                    {part.qtyOnHand}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "reserved",
+              header: "Reserved",
+              align: "right",
+              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              headerClassName: "hidden sm:table-cell",
+              cell: (part) => part.qtyReserved,
+            },
+            {
+              key: "available",
+              header: "Available",
+              align: "right",
+              className: "font-semibold tabular-nums",
+              cell: (part) => {
+                const available = part.qtyOnHand - part.qtyReserved;
+                return <span className={available <= 0 ? "text-red-500" : "text-[var(--ink)]"}>{available}</span>;
+              },
+            },
+            {
+              key: "value",
+              header: "Value",
+              align: "right",
+              className: "hidden tabular-nums text-[12px] text-[var(--ink)] xl:table-cell",
+              headerClassName: "hidden xl:table-cell",
+              cell: (part) => formatMoney((part.unitCost ?? 0) * part.qtyOnHand),
+            },
+            {
+              key: "reorder",
+              header: "Reorder",
+              align: "right",
+              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              headerClassName: "hidden sm:table-cell",
+              cell: (part) => part.reorderLevel || "—",
+            },
+          ]}
+        />
       </div>
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="items"
+        hrefForPage={hrefForPage}
+      />
     </div>
   );
 }

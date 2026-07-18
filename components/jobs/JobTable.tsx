@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 
 function deviceName(brand?: string | null, model?: string | null) {
   const b = brand && brand !== "Unknown" ? brand : "";
@@ -199,9 +200,9 @@ export function JobTable({
   pageEnd,
   total,
   page,
+  pageSize,
   totalPages,
-  isPrevDisabled,
-  isNextDisabled,
+  hrefForPage,
   prevPageHref,
   nextPageHref,
 }: {
@@ -216,9 +217,13 @@ export function JobTable({
   pageEnd?: number;
   total?: number;
   page?: number;
+  pageSize?: number;
   totalPages?: number;
   isPrevDisabled?: boolean;
   isNextDisabled?: boolean;
+  /** Preferred: full page-href builder (supports arbitrary page jumps). */
+  hrefForPage?: (page: number) => string;
+  /** Legacy fallback when only prev/next hrefs are available. */
   prevPageHref?: string;
   nextPageHref?: string;
 }) {
@@ -240,392 +245,329 @@ export function JobTable({
 
   const hasPagination = typeof total === "number" && typeof page === "number" && typeof totalPages === "number";
 
-  const paginationBar = hasPagination && (totalPages ?? 0) > 1 ? (
-    <div className="flex items-center gap-1.5">
-      {isPrevDisabled || !prevPageHref ? (
-        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink-muted)]" aria-disabled="true">
-          ← Prev
-        </span>
-      ) : (
-        <Link
-          href={prevPageHref}
-          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        >
-          ← Prev
-        </Link>
-      )}
-      <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
-      {isNextDisabled || !nextPageHref ? (
-        <span className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink-muted)]" aria-disabled="true">
-          Next →
-        </span>
-      ) : (
-        <Link
-          href={nextPageHref}
-          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        >
-          Next →
-        </Link>
-      )}
-    </div>
-  ) : null;
+  // Derive the page size from the range the caller computed so the shared
+  // pagination footer reproduces identical "start–end of total" numbers.
+  const derivedPageSize = hasPagination
+    ? (pageSize ??
+        Math.max(
+          1,
+          page! > 1 ? Math.round(((pageStart ?? 1) - 1) / (page! - 1)) : (pageEnd ?? total ?? 1),
+        ))
+    : 0;
 
-  return (
-    <div className="panel-shadow overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-
-      {/* ── Header bar (desktop only — mobile has its own header in page) ── */}
-      <div className="hidden lg:flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
-        <p className="text-[13px] text-[var(--ink-muted)]">
-          {hasPagination ? (
-            <>
-              <span className="font-bold text-[var(--ink)]">{pageStart}–{pageEnd}</span>
-              {" of "}
-              <span className="font-bold text-[var(--ink)]">{total}</span>
-              <span className="hidden sm:inline"> jobs</span>
-            </>
+  /** Shared row-actions dropdown (desktop + mobile). */
+  function jobActionsMenu(job: JobRow) {
+    const canDownloadQuotation = canUseQuotations && quotationStatuses.has(job.status);
+    const canDownloadInvoice = canUseInvoices && invoiceStatuses.has(job.status);
+    return (
+      <RowActionsMenu label={`More actions for ${job.jobNumber}`}>
+        <div className="py-1 text-left">
+          {canEditPage ? (
+            <MenuActionLink href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} icon="edit">
+              Edit Job
+            </MenuActionLink>
+          ) : null}
+          {canUseJobCards ? (
+            <MenuActionLink href={`/api/jobs/${job.id}/job-card`} external icon="job" tone="accent">
+              Download Job Card
+            </MenuActionLink>
+          ) : null}
+          {canDownloadQuotation ? (
+            <MenuActionLink href={`/api/jobs/${job.id}/quotation`} external icon="quote" tone="accent">
+              Download Quotation
+            </MenuActionLink>
           ) : (
-            <><span className="font-bold text-[var(--ink)]">{jobs.length}</span> jobs</>
+            canUseQuotations ? <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Quotation unavailable</span> : null
           )}
-        </p>
-        {paginationBar}
-      </div>
+          {canDownloadInvoice ? (
+            <MenuActionLink href={`/api/jobs/${job.id}/invoice`} external icon="invoice" tone="accent">
+              Download Invoice
+            </MenuActionLink>
+          ) : (
+            canUseInvoices ? <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Invoice unavailable</span> : null
+          )}
+          {canDelete && deleteAction ? (
+            <form action={deleteAction} className="border-t border-[var(--line)] px-3 py-2">
+              <input type="hidden" name="id" value={job.id} />
+              <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" />
+                </svg>
+                Delete Job
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </RowActionsMenu>
+    );
+  }
 
-      {/* ── Mobile list — borderless card stack ── */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)]/60 bg-[var(--panel)] lg:hidden">
-        {jobs.map((job) => {
-            const flagCfg = getJobListFlag(job, canManagePricing);
-
-            // Compute cost value once
-            const costValue = canSeeCost
-              ? showClientFacingCostOnly
-                ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
+  const columns: DataTableColumn<JobRow>[] = [
+    {
+      key: "strip",
+      headerClassName: "w-[3px] !p-0",
+      className: "w-[3px] !p-0",
+      cell: (job) => <div className={`h-full min-h-[3rem] w-[3px] ${statusStripClass(job.status)}`} aria-hidden="true" />,
+    },
+    {
+      key: "jobNumber",
+      header: "Job #",
+      cell: (job) => (
+        <Link
+          href={`/jobs/${job.id}`}
+          className="mono block font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]"
+        >
+          {job.jobNumber}
+        </Link>
+      ),
+    },
+    {
+      key: "device",
+      header: "Device",
+      cell: (job) => (
+        <>
+          <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">
+            {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
+          </p>
+          <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--ink-muted)]">
+            <DeviceIcon type={job.deviceType} />
+            {deviceLabel[job.deviceType] ?? job.deviceType}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (job) => <JobStatusBadge status={job.status} />,
+    },
+    ...(canSeeClient
+      ? [{
+          key: "client",
+          header: "Client",
+          cell: (job: JobRow) => (
+            <p className="max-w-[13rem] truncate text-[var(--ink)]">{job.clientName ?? <span className="text-[var(--ink-muted)]">—</span>}</p>
+          ),
+        }]
+      : []),
+    ...(canSeeAssignment
+      ? [{
+          key: "assigned",
+          header: "Assigned",
+          headerClassName: "hidden 2xl:table-cell",
+          className: "hidden 2xl:table-cell",
+          cell: (job: JobRow) => (
+            <p className="max-w-[11rem] truncate text-[var(--ink-muted)]">{job.assignedTo ?? "—"}</p>
+          ),
+        }]
+      : []),
+    {
+      key: "received",
+      header: "Received",
+      className: "whitespace-nowrap text-[var(--ink-muted)]",
+      cell: (job) => formatEATDate(job.receivedAt),
+    },
+    {
+      key: "age",
+      header: "Age",
+      className: "whitespace-nowrap",
+      cell: (job) => <AgeBadge receivedAt={job.receivedAt} status={job.status} />,
+    },
+    {
+      key: "flag",
+      header: "Flag",
+      cell: (job) => {
+        const flagCfg = getJobListFlag(job, canManagePricing);
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            {flagCfg && (
+              <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold ${flagCfg.badge}`}>
+                {flagCfg.label}
+              </span>
+            )}
+            {!flagCfg && <span className="text-[var(--ink-muted)]">—</span>}
+          </div>
+        );
+      },
+    },
+    ...(canSeeCost
+      ? [{
+          key: "cost",
+          header: showClientFacingCostOnly ? "Cost" : "Ext. Bill",
+          align: "right" as const,
+          headerClassName: "hidden 2xl:table-cell",
+          className: "hidden whitespace-nowrap 2xl:table-cell",
+          cell: (job: JobRow) => (
+            <span className="font-semibold text-[var(--ink)]">
+              {showClientFacingCostOnly
+                ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
                   ? formatMoney(job.clientBill)
-                  : null
+                  : <span className="font-normal text-[var(--ink-muted)]">—</span>
                 : job.externalTechBill
                   ? formatMoney(job.externalTechBill)
-                  : null
-              : null;
+                  : <span className="font-normal text-[var(--ink-muted)]">—</span>}
+            </span>
+          ),
+        }]
+      : []),
+  ];
 
-            const canDownloadQuotation = canUseQuotations && quotationStatuses.has(job.status);
-            const canDownloadInvoice = canUseInvoices && invoiceStatuses.has(job.status);
+  return (
+    <div className="space-y-2">
+      <DataTable
+        className="panel-shadow"
+        rows={jobs}
+        getRowKey={(job) => job.id}
+        columns={columns}
+        empty="No repairs found"
+        pagination={
+          hasPagination
+            ? {
+                page: page!,
+                pageSize: derivedPageSize,
+                total: total!,
+                unit: "jobs",
+                hrefForPage:
+                  hrefForPage ?? ((p) => (p < page! ? (prevPageHref ?? "#") : (nextPageHref ?? "#"))),
+              }
+            : undefined
+        }
+        actions={(job) => (
+          <>
+            <Link
+              href={`/jobs/${job.id}`}
+              className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+            >
+              Open
+            </Link>
+            {jobActionsMenu(job)}
+          </>
+        )}
+        renderMobileCard={(job) => {
+          const flagCfg = getJobListFlag(job, canManagePricing);
 
-            // Compute age days for "X days remaining" badge
-            const ageDays = Math.floor((Date.now() - job.receivedAt.getTime()) / 86_400_000);
-            const isActive = !["COMPLETED", "CLOSED", "DELIVERED"].includes(job.status);
+          // Compute cost value once
+          const costValue = canSeeCost
+            ? showClientFacingCostOnly
+              ? job.clientBill && ["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"].includes(job.status)
+                ? formatMoney(job.clientBill)
+                : null
+              : job.externalTechBill
+                ? formatMoney(job.externalTechBill)
+                : null
+            : null;
 
-            const name = deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType] ?? job.deviceType;
-            const initial = (name[0] ?? "?").toUpperCase();
-            const avatarCls = statusAvatarClass(job.status);
-            const ageCls = ageDays <= 2 ? "text-emerald-500" : ageDays <= 5 ? "text-amber-500" : "text-red-500";
-            const metaParts = [
-              canSeeClient && job.clientName ? job.clientName : null,
-              job.jobNumber,
-              deviceLabel[job.deviceType] ?? job.deviceType,
-            ].filter(Boolean);
+          const canDownloadQuotation = canUseQuotations && quotationStatuses.has(job.status);
+          const canDownloadInvoice = canUseInvoices && invoiceStatuses.has(job.status);
 
-            // Enhancement 2: red left border for overdue (≥7 days active)
-            const isOverdue = isActive && ageDays >= 7;
-            // Enhancement 6: last-updated staleness (show when not updated in 48h+)
-            const updatedAgo = job.updatedAt
-              ? Math.floor((Date.now() - new Date(job.updatedAt).getTime()) / 3600000)
-              : null;
-            const showStale = updatedAgo !== null && updatedAgo >= 48 && isActive;
+          // Compute age days for "X days remaining" badge
+          const ageDays = Math.floor((Date.now() - job.receivedAt.getTime()) / 86_400_000);
+          const isActive = !["COMPLETED", "CLOSED", "DELIVERED"].includes(job.status);
 
-            return (
-              <div
-                key={job.id}
-                className={`relative border-b border-[var(--line)]/70 last:border-b-0 ${isOverdue ? "border-l-2 border-l-red-500" : ""}`}
+          const name = deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType] ?? job.deviceType;
+          const initial = (name[0] ?? "?").toUpperCase();
+          const avatarCls = statusAvatarClass(job.status);
+          const ageCls = ageDays <= 2 ? "text-emerald-500" : ageDays <= 5 ? "text-amber-500" : "text-red-500";
+          const metaParts = [
+            canSeeClient && job.clientName ? job.clientName : null,
+            job.jobNumber,
+            deviceLabel[job.deviceType] ?? job.deviceType,
+          ].filter(Boolean);
+
+          // Enhancement 2: red left border for overdue (≥7 days active)
+          const isOverdue = isActive && ageDays >= 7;
+          // Enhancement 6: last-updated staleness (show when not updated in 48h+)
+          const updatedAgo = job.updatedAt
+            ? Math.floor((Date.now() - new Date(job.updatedAt).getTime()) / 3600000)
+            : null;
+          const showStale = updatedAgo !== null && updatedAgo >= 48 && isActive;
+
+          return (
+            <div className={`relative ${isOverdue ? "border-l-2 border-l-red-500" : ""}`}>
+              {/* Link WRAPS the content so taps always fire navigation */}
+              <Link
+                href={`/jobs/${job.id}`}
+                className="flex items-center gap-3 px-4 py-3 pr-16 active:bg-[var(--panel-strong)]/60 lg:pr-32"
+                aria-label={`Open job ${job.jobNumber}`}
               >
-                {/* Link WRAPS the content so taps always fire navigation */}
-                <Link
-                  href={`/jobs/${job.id}`}
-                  className="flex items-center gap-3 px-4 py-3 pr-16 active:bg-[var(--panel-strong)]/60 lg:pr-32"
-                  aria-label={`Open job ${job.jobNumber}`}
-                >
-                  {/* Status-colored avatar */}
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${avatarCls}`}>
-                    {initial}
-                  </div>
+                {/* Status-colored avatar */}
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${avatarCls}`}>
+                  {initial}
+                </div>
 
-                  <div className="min-w-0 flex-1">
-                    {/* Row 1: device name + age */}
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-[14px] font-bold text-[var(--ink)]">{name}</p>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {costValue ? (
-                          <span className="text-[12px] font-black tabular-nums text-[var(--ink)]">{costValue}</span>
-                        ) : null}
-                        {isActive ? (
-                          <span className={`text-[12px] font-bold ${ageCls}`}>
-                            {job.repairTimeline ?? `${ageDays}d`}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {/* Row 2: meta + status badge */}
-                    <div className="mt-0.5 flex items-center justify-between gap-2">
-                      <p className="truncate text-[13px] text-[var(--ink-muted)]">
-                        {metaParts.join(" · ")}
-                        {/* Enhancement 6: show stale indicator */}
-                        {showStale && (
-                          <span className="ml-1 text-amber-600">· no update {updatedAgo}h</span>
-                        )}
-                      </p>
-                      <div className="flex shrink-0 items-center gap-1">
-                        {flagCfg ? (
-                          <span className={`rounded px-1.5 py-0.5 text-[13px] font-semibold ${flagCfg.badge}`}>
-                            {flagCfg.label}
-                          </span>
-                        ) : null}
-                        <JobStatusBadge status={job.status} />
-                      </div>
+                <div className="min-w-0 flex-1">
+                  {/* Row 1: device name + age */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-[14px] font-bold text-[var(--ink)]">{name}</p>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {costValue ? (
+                        <span className="text-[12px] font-black tabular-nums text-[var(--ink)]">{costValue}</span>
+                      ) : null}
+                      {isActive ? (
+                        <span className={`text-[12px] font-bold ${ageCls}`}>
+                          {job.repairTimeline ?? `${ageDays}d`}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                </Link>
 
-                {/* Enhancement 1: Quick advance button for RECEIVED → DIAGNOSING */}
-                {job.status === "RECEIVED" && quickAdvanceAction ? (
-                  <form action={quickAdvanceAction} className="flex border-t border-[var(--line)]/50 lg:hidden">
-                    <input type="hidden" name="jobId" value={job.id} />
-                    <input type="hidden" name="toStatus" value="DIAGNOSING" />
-                    <button type="submit"
-                      className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[12px] font-semibold text-sky-600 transition active:bg-sky-500/10">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                      Start diagnosis
-                    </button>
-                  </form>
-                ) : null}
-
-                {/* Mobile row action menu */}
-                {(canUseJobCards || canDownloadQuotation || canDownloadInvoice || canEditPage || (canDelete && deleteAction)) ? (
-                  <div className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 lg:hidden">
-                    <RowActionsMenu label={`More actions for ${job.jobNumber}`}>
-                      <div className="py-1 text-left">
-                        {canEditPage ? (
-                          <MenuActionLink href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} icon="edit">
-                            Edit Job
-                          </MenuActionLink>
-                        ) : null}
-                        {canUseJobCards ? (
-                          <MenuActionLink href={`/api/jobs/${job.id}/job-card`} external icon="job" tone="accent">
-                            Download Job Card
-                          </MenuActionLink>
-                        ) : null}
-                        {canDownloadQuotation ? (
-                          <MenuActionLink href={`/api/jobs/${job.id}/quotation`} external icon="quote" tone="accent">
-                            Download Quotation
-                          </MenuActionLink>
-                        ) : canUseQuotations ? (
-                          <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Quotation unavailable</span>
-                        ) : null}
-                        {canDownloadInvoice ? (
-                          <MenuActionLink href={`/api/jobs/${job.id}/invoice`} external icon="invoice" tone="accent">
-                            Download Invoice
-                          </MenuActionLink>
-                        ) : canUseInvoices ? (
-                          <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Invoice unavailable</span>
-                        ) : null}
-                        {canDelete && deleteAction ? (
-                          <form action={deleteAction} className="border-t border-[var(--line)] px-3 py-2">
-                            <input type="hidden" name="id" value={job.id} />
-                            <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" />
-                              </svg>
-                              Delete Job
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </RowActionsMenu>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-
-        {/* Mobile footer */}
-        <div className="border-t border-[var(--line)] px-4 py-3 text-center">
-          {jobs.length === 0 ? (
-            <p className="text-sm text-[var(--ink-muted)]">No repairs found</p>
-          ) : (
-            <p className="text-[13px] text-[var(--ink-muted)]">
-              {total != null ? `${total} repair${total !== 1 ? "s" : ""}` : `${jobs.length} shown`}
-              {" · "}All caught up ✓
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Desktop table ── */}
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[900px] border-collapse text-[13px]">
-          <thead>
-            <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50">
-              {/* narrow strip col */}
-              <th className="w-[3px] p-0" aria-hidden="true" />
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Job #</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Device</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Status</th>
-              {canSeeClient ? <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Client</th> : null}
-              {canSeeAssignment ? <th className="hidden px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">Assigned</th> : null}
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Received</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Age</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Flag</th>
-              {canSeeCost ? <th className="hidden px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)] 2xl:table-cell">{showClientFacingCostOnly ? "Cost" : "Ext. Bill"}</th> : null}
-              <th className="px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {jobs.map((job) => {
-              const strip = statusStripClass(job.status);
-              const flagCfg = getJobListFlag(job, canManagePricing);
-              const canDownloadQuotation = canUseQuotations && quotationStatuses.has(job.status);
-              const canDownloadInvoice = canUseInvoices && invoiceStatuses.has(job.status);
-              return (
-                <tr
-                  key={job.id}
-                  className="group transition-colors hover:bg-[var(--panel-strong)]/40"
-                >
-                  {/* Status color strip */}
-                  <td className="p-0 w-[3px]" aria-hidden="true">
-                    <div className={`h-full min-h-[3rem] w-[3px] ${strip}`} />
-                  </td>
-
-                  {/* Job # */}
-                  <td className="px-4 py-3 align-middle">
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      className="mono block font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]"
-                    >
-                      {job.jobNumber}
-                    </Link>
-                  </td>
-
-                  {/* Device */}
-                  <td className="px-4 py-3 align-middle">
-                    <p className="max-w-[16rem] truncate font-semibold text-[var(--ink)]">
-                      {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
+                  {/* Row 2: meta + status badge */}
+                  <div className="mt-0.5 flex items-center justify-between gap-2">
+                    <p className="truncate text-[13px] text-[var(--ink-muted)]">
+                      {metaParts.join(" · ")}
+                      {/* Enhancement 6: show stale indicator */}
+                      {showStale && (
+                        <span className="ml-1 text-amber-600">· no update {updatedAgo}h</span>
+                      )}
                     </p>
-                    <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--ink-muted)]">
-                      <DeviceIcon type={job.deviceType} />
-                      {deviceLabel[job.deviceType] ?? job.deviceType}
-                    </span>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3 align-middle">
-                    <JobStatusBadge status={job.status} />
-                  </td>
-
-                  {/* Client */}
-                  {canSeeClient ? (
-                    <td className="px-4 py-3 align-middle">
-                      <p className="max-w-[13rem] truncate text-[var(--ink)]">{job.clientName ?? <span className="text-[var(--ink-muted)]">—</span>}</p>
-                    </td>
-                  ) : null}
-
-                  {/* Assigned (2xl) */}
-                  {canSeeAssignment ? (
-                    <td className="hidden px-4 py-3 align-middle 2xl:table-cell">
-                      <p className="max-w-[11rem] truncate text-[var(--ink-muted)]">{job.assignedTo ?? "—"}</p>
-                    </td>
-                  ) : null}
-
-                  {/* Received */}
-                  <td className="whitespace-nowrap px-4 py-3 align-middle text-[var(--ink-muted)]">
-                    {formatEATDate(job.receivedAt)}
-                  </td>
-
-                  {/* Age */}
-                  <td className="whitespace-nowrap px-4 py-3 align-middle">
-                    <AgeBadge receivedAt={job.receivedAt} status={job.status} />
-                  </td>
-
-                  {/* Flag */}
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap items-center gap-1">
-                      {flagCfg && (
-                        <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold ${flagCfg.badge}`}>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {flagCfg ? (
+                        <span className={`rounded px-1.5 py-0.5 text-[13px] font-semibold ${flagCfg.badge}`}>
                           {flagCfg.label}
                         </span>
-                      )}
-                      {!flagCfg && <span className="text-[var(--ink-muted)]">—</span>}
+                      ) : null}
+                      <JobStatusBadge status={job.status} />
                     </div>
-                  </td>
+                  </div>
+                </div>
+              </Link>
 
-                  {/* Cost (2xl) */}
-                  {canSeeCost ? (
-                    <td className="hidden whitespace-nowrap px-4 py-3 text-right align-middle 2xl:table-cell">
-                      <span className="font-semibold text-[var(--ink)]">
-                        {showClientFacingCostOnly
-                          ? job.clientBill && ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"].includes(job.status)
-                            ? formatMoney(job.clientBill)
-                            : <span className="font-normal text-[var(--ink-muted)]">—</span>
-                          : job.externalTechBill
-                            ? formatMoney(job.externalTechBill)
-                            : <span className="font-normal text-[var(--ink-muted)]">—</span>}
-                      </span>
-                    </td>
-                  ) : null}
+              {/* Enhancement 1: Quick advance button for RECEIVED → DIAGNOSING */}
+              {job.status === "RECEIVED" && quickAdvanceAction ? (
+                <form action={quickAdvanceAction} className="flex border-t border-[var(--line)]/50 lg:hidden">
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <input type="hidden" name="toStatus" value="DIAGNOSING" />
+                  <button type="submit"
+                    className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[12px] font-semibold text-sky-600 transition active:bg-sky-500/10">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Start diagnosis
+                  </button>
+                </form>
+              ) : null}
 
-                  {/* Actions */}
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
-                      >
-                        Open
-                      </Link>
-                      <RowActionsMenu label={`More actions for ${job.jobNumber}`}>
-                        <div className="py-1 text-left">
-                          {canEditPage ? (
-                            <MenuActionLink href={`/jobs/${job.id}/edit${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} icon="edit">
-                              Edit Job
-                            </MenuActionLink>
-                          ) : null}
-                          {canUseJobCards ? (
-                            <MenuActionLink href={`/api/jobs/${job.id}/job-card`} external icon="job" tone="accent">
-                              Download Job Card
-                            </MenuActionLink>
-                          ) : null}
-                          {canDownloadQuotation ? (
-                            <MenuActionLink href={`/api/jobs/${job.id}/quotation`} external icon="quote" tone="accent">
-                              Download Quotation
-                            </MenuActionLink>
-                          ) : (
-                            canUseQuotations ? <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Quotation unavailable</span> : null
-                          )}
-                          {canDownloadInvoice ? (
-                            <MenuActionLink href={`/api/jobs/${job.id}/invoice`} external icon="invoice" tone="accent">
-                              Download Invoice
-                            </MenuActionLink>
-                          ) : (
-                            canUseInvoices ? <span className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--ink-muted)]">Invoice unavailable</span> : null
-                          )}
-                          {canDelete && deleteAction ? (
-                            <form action={deleteAction} className="border-t border-[var(--line)] px-3 py-2">
-                              <input type="hidden" name="id" value={job.id} />
-                              <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                  <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" />
-                                </svg>
-                                Delete Job
-                              </button>
-                            </form>
-                          ) : null}
-                        </div>
-                      </RowActionsMenu>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              {/* Mobile row action menu */}
+              {(canUseJobCards || canDownloadQuotation || canDownloadInvoice || canEditPage || (canDelete && deleteAction)) ? (
+                <div className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 lg:hidden">
+                  {jobActionsMenu(job)}
+                </div>
+              ) : null}
+            </div>
+          );
+        }}
+      />
+
+      {/* Footer counts (previously the header bar / mobile footer) */}
+      {jobs.length > 0 && !hasPagination ? (
+        <p className="hidden px-1 text-[13px] text-[var(--ink-muted)] lg:block">
+          <span className="font-bold text-[var(--ink)]">{jobs.length}</span> jobs
+        </p>
+      ) : null}
+      {jobs.length > 0 ? (
+        <p className="px-1 text-center text-[13px] text-[var(--ink-muted)] lg:hidden">
+          {total != null ? `${total} repair${total !== 1 ? "s" : ""}` : `${jobs.length} shown`}
+          {" · "}All caught up ✓
+        </p>
+      ) : null}
     </div>
   );
 }

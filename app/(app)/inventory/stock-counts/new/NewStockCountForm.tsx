@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { LineItemsPanel, PartSelect, lineItemInputClass } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { createStockCountAction } from "../actions";
 
@@ -61,21 +62,50 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
       </div>
 
       <LineItemsPanel title="Items" onAddLine={addLine}>
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-3 py-2 text-left">Item</th><th className="px-3 py-2 text-right">System</th><th className="px-3 py-2 text-right">Counted</th><th className="px-3 py-2 text-right">Variance</th><th className="px-3 py-2 text-left">Note</th><th /></tr></thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {lines.map((line) => (
-              <tr key={line.key}>
-                <td className="px-3 py-2"><PartSelect value={line.partId} parts={parts.map((p) => ({ ...p, unitCost: null }))} onChange={(partId) => selectPart(line.key, partId)} allowCustom={false} customLabel="Select item" /></td>
-                <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{line.systemQty}</td>
-                <td className="px-3 py-2"><input type="number" min={0} value={line.countedQty} onChange={(e) => updateLine(line.key, { countedQty: parseInt(e.target.value, 10) || 0 })} className={`${lineItemInputClass} w-24 text-right`} /></td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{line.countedQty - line.systemQty}</td>
-                <td className="px-3 py-2"><input value={line.note} onChange={(e) => updateLine(line.key, { note: e.target.value })} className={lineItemInputClass} /></td>
-                <td className="px-3 py-2 text-center">{lines.length > 1 ? <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button> : null}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          frameless
+          dense
+          rows={lines}
+          getRowKey={(line) => String(line.key)}
+          empty="No items yet."
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              cell: (line) => <PartSelect value={line.partId} parts={parts.map((p) => ({ ...p, unitCost: null }))} onChange={(partId) => selectPart(line.key, partId)} allowCustom={false} customLabel="Select item" />,
+            },
+            {
+              key: "system",
+              header: "System",
+              align: "right",
+              className: "tabular-nums text-[var(--ink-muted)]",
+              cell: (line) => line.systemQty,
+            },
+            {
+              key: "counted",
+              header: "Counted",
+              align: "right",
+              cell: (line) => <input type="number" min={0} value={line.countedQty} onChange={(e) => updateLine(line.key, { countedQty: parseInt(e.target.value, 10) || 0 })} className={`${lineItemInputClass} w-24 text-right`} />,
+            },
+            {
+              key: "variance",
+              header: "Variance",
+              align: "right",
+              className: "font-semibold tabular-nums text-[var(--ink)]",
+              cell: (line) => line.countedQty - line.systemQty,
+            },
+            {
+              key: "note",
+              header: "Note",
+              cell: (line) => <input value={line.note} onChange={(e) => updateLine(line.key, { note: e.target.value })} className={lineItemInputClass} />,
+            },
+          ]}
+          actions={(line) =>
+            lines.length > 1 ? (
+              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+            ) : null
+          }
+        />
       </LineItemsPanel>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="flex gap-2"><button disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving..." : "Submit Count"}</button><Link href="/inventory/stock-counts" className="rounded-lg border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</Link></div>

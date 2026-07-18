@@ -29,6 +29,21 @@ import {
   QuoteFollowUpButton,
 } from "@/components/documents/QuotationFollowUpForms";
 import { shouldExpireQuotationDraft } from "@/lib/commercial/quote-followups";
+import { DocumentFilterBar } from "@/components/documents";
+import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatStrip } from "@/components/ui/StatStrip";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+
+const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
+  ACCEPTED: "success",
+  REJECTED: "danger",
+  EXPIRED: "danger",
+  SENT: "sky",
+  DRAFT: "warning",
+};
 
 type SearchParams = {
   q?: string;
@@ -40,6 +55,7 @@ type SearchParams = {
   followupFailed?: string;
   followupError?: string;
   expiredDrafts?: string;
+  page?: string;
 };
 
 export default async function QuotationsPage({
@@ -55,6 +71,7 @@ export default async function QuotationsPage({
 
   const params = await searchParams;
   const { q, approval: approvalFilter, period: periodFilter = "all" } = params;
+  const page = parsePage(params.page);
   const followupSentParam = params.followupSent ?? "";
   const followupBulkParam = params.followupBulk ?? "";
   const followupSkippedParam = params.followupSkipped ?? "";
@@ -422,6 +439,25 @@ export default async function QuotationsPage({
   });
   const nowMs = Date.now();
 
+  // KPIs stay whole-dataset (computed from jobs/standaloneQuotations); paginate the
+  // Repair Job Quotation Queue for display only.
+  const pageView = paginationView(page, sorted.length);
+  const pageRows = sorted.slice(pageView.skip, pageView.skip + pageView.take);
+  const quotationsHref = pageHrefBuilder("/documents/quotations", {
+    q: q ?? "",
+    approval: approvalFilter ?? "",
+    period: periodFilter !== "all" ? periodFilter : "",
+  });
+
+  const approvalBadgeFor = (job: (typeof sorted)[number]) =>
+    job.clientApproved === true ? (
+      <StatusBadge tone="success">Approved</StatusBadge>
+    ) : job.clientApproved === false ? (
+      <StatusBadge tone="danger">Declined</StatusBadge>
+    ) : job.status === "AWAITING_APPROVAL" ? (
+      <StatusBadge tone="warning" className="animate-pulse">Awaiting</StatusBadge>
+    ) : null;
+
   return (
     <section className="space-y-4">
 
@@ -477,29 +513,24 @@ export default async function QuotationsPage({
       </div>
 
       {/* Header */}
-      <div className="panel-shadow hidden sm:flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Documents</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">
-              Quotations{" "}
-              <span className="font-normal text-[var(--ink-muted)]">
-                · {totalQuoteCount}
-              </span>
-            </p>
-          </div>
-          {pendingCount + standalonePendingCount > 0 && (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[12px] font-bold text-amber-600">
-              {pendingCount + standalonePendingCount} awaiting client
-            </span>
-          )}
-          {canSendQuoteFollowUps && followUpAwaitingCount > 0 ? (
-            <QuoteFollowUpBulkButton count={followUpAwaitingCount} context={followUpContext} />
-          ) : null}
-        </div>
-        <Link href="/sales/quotations/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
-          + New Quote
-        </Link>
+      <div className="hidden sm:block">
+        <PageHeader
+          eyebrow="Documents"
+          title={`Quotations · ${totalQuoteCount}`}
+          actions={
+            <>
+              {pendingCount + standalonePendingCount > 0 && (
+                <StatusBadge tone="warning">{pendingCount + standalonePendingCount} awaiting client</StatusBadge>
+              )}
+              {canSendQuoteFollowUps && followUpAwaitingCount > 0 ? (
+                <QuoteFollowUpBulkButton count={followUpAwaitingCount} context={followUpContext} />
+              ) : null}
+              <Link href="/sales/quotations/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
+                + New Quote
+              </Link>
+            </>
+          }
+        />
       </div>
 
       {canExpireStaleDrafts && staleDraftCount > 0 ? (
@@ -515,70 +546,47 @@ export default async function QuotationsPage({
       ) : null}
 
       {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
+      <StatStrip
+        variant="cards"
+        columns={4}
+        tiles={[
           { label: "Total Quotes", value: totalQuoteCount, sub: "repairs + sales" },
-          { label: "Awaiting Client", value: pendingCount + standalonePendingCount, sub: "need decision", tone: pendingCount + standalonePendingCount > 0 ? "text-amber-600" : "text-[var(--ink)]" },
-          { label: "Approved", value: jobs.filter(j => j.clientApproved === true).length + standaloneQuotations.filter(quotation => quotation.status === "ACCEPTED").length, sub: "accepted", tone: "text-emerald-600" },
-          { label: "Declined", value: jobs.filter(j => j.clientApproved === false).length + standaloneQuotations.filter(quotation => quotation.status === "REJECTED").length, sub: "rejected", tone: "text-red-500" },
-        ].map(({ label, value, sub, tone = "text-[var(--ink)]" }) => (
-          <div key={label} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
-            <p className={`mt-1 text-lg font-bold tabular-nums ${tone}`}>{value}</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{sub}</p>
-          </div>
-        ))}
-      </div>
+          { label: "Awaiting Client", value: pendingCount + standalonePendingCount, sub: "need decision", valueClass: pendingCount + standalonePendingCount > 0 ? "text-amber-600" : undefined },
+          { label: "Approved", value: jobs.filter(j => j.clientApproved === true).length + standaloneQuotations.filter(quotation => quotation.status === "ACCEPTED").length, sub: "accepted", valueClass: "text-emerald-600" },
+          { label: "Declined", value: jobs.filter(j => j.clientApproved === false).length + standaloneQuotations.filter(quotation => quotation.status === "REJECTED").length, sub: "rejected", valueClass: "text-red-500" },
+        ]}
+      />
 
-      {/* Period chips */}
-      <div className="flex gap-2">
-        {([
-          { label: "All time", value: "all" },
-          { label: "This month", value: "this_month" },
-          { label: "Last month", value: "last_month" },
-        ] as const).map(({ label, value }) => (
-          <Link key={value}
-            href={`/documents/quotations?${new URLSearchParams({ ...(q ? { q } : {}), ...(approvalFilter ? { approval: approvalFilter } : {}), period: value === "all" ? "" : value }).toString()}`}
-            className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${(periodFilter ?? "all") === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
-            {label}
-          </Link>
-        ))}
-      </div>
-
-      {/* Search + filter */}
-      <form method="GET" className="hidden lg:flex flex-wrap gap-2">
-        <input type="hidden" name="period" value={periodFilter === "all" ? "" : periodFilter} />
-        <input
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Search quote #, client, job, product..."
-          className="flex-1 min-w-[180px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50"
-        />
-        <select
-          name="approval"
-          defaultValue={approvalFilter ?? ""}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
-        >
-          <option value="">All quotes</option>
-          <option value="pending">Awaiting approval</option>
-          <option value="approved">Approved</option>
-          <option value="declined">Declined</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40"
-        >
-          Filter
-        </button>
-        {(q || approvalFilter) && (
-          <Link
-            href="/documents/quotations"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+      {/* Filters: period chips + search + approval */}
+      <DocumentFilterBar
+        basePath="/documents/quotations"
+        q={q ?? ""}
+        period={periodFilter || "all"}
+        periodOptions={DOCUMENT_PERIOD_OPTIONS_SHORT}
+        extraQuery={{ approval: approvalFilter ?? "" }}
+        searchPlaceholder="Search quote #, client, job, product..."
+      >
+        <form method="GET" className="flex gap-2">
+          <input type="hidden" name="period" value={periodFilter === "all" ? "" : periodFilter} />
+          {q ? <input type="hidden" name="q" value={q} /> : null}
+          <select
+            name="approval"
+            defaultValue={approvalFilter ?? ""}
+            className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
           >
-            Clear
-          </Link>
-        )}
-      </form>
+            <option value="">All quotes</option>
+            <option value="pending">Awaiting approval</option>
+            <option value="approved">Approved</option>
+            <option value="declined">Declined</option>
+          </select>
+          <button
+            type="submit"
+            className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]"
+          >
+            Filter
+          </button>
+        </form>
+      </DocumentFilterBar>
 
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
@@ -590,65 +598,64 @@ export default async function QuotationsPage({
             New Quotation
           </Link>
         </div>
-        {standaloneQuotations.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">
-            No client/product quotations yet. Create one from a client and inventory products without opening a repair job.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-3 py-2.5">Quote</th>
-                  <th className="px-3 py-2.5">Client / Lead</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="px-3 py-2.5 text-right">Value</th>
-                  <th className="px-3 py-2.5 text-right">Lines</th>
-                  <th className="px-3 py-2.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {standaloneQuotations.map((quotation) => {
-                  const recipientName = quotation.client?.fullName ?? quotation.lead?.fullName ?? "Client";
-                  const recipientMeta = quotation.client?.phone ?? quotation.lead?.phone ?? quotation.lead?.interest ?? "No contact captured";
-                  const statusClass = quotation.status === "ACCEPTED"
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
-                    : quotation.status === "REJECTED" || quotation.status === "EXPIRED"
-                    ? "border-red-500/30 bg-red-500/10 text-red-500"
-                    : quotation.status === "SENT"
-                    ? "border-sky-500/30 bg-sky-500/10 text-sky-600"
-                    : "border-amber-500/30 bg-amber-500/10 text-amber-600";
-                  return (
-                    <tr key={quotation.id} className="transition hover:bg-[var(--panel-strong)]/40">
-                      <td className="px-3 py-2.5">
-                        <Link href={`/sales/quotations/${quotation.id}`} className="font-mono text-xs font-bold text-[var(--accent)] hover:underline">{quotation.quoteNumber}</Link>
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{formatEATDate(quotation.createdAt)}</p>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <p className="text-xs font-medium text-[var(--ink)]">{recipientName}</p>
-                        <p className="text-[12px] text-[var(--ink-muted)]">{recipientMeta}</p>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className={`rounded-full border px-2 py-0.5 text-[12px] font-bold ${statusClass}`}>{quotation.status}</span>
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums text-[var(--ink)]">{formatMoney(quotation.totalAmount, quotation.currency)}</td>
-                      <td className="px-3 py-2.5 text-right text-xs text-[var(--ink-muted)]">{quotation._count.items}</td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex justify-end gap-1.5">
-                          {canSendQuoteFollowUps && quotation.status === "SENT" ? (
-                            <QuoteFollowUpButton quotationId={quotation.id} context={followUpContext} compact />
-                          ) : null}
-                          <a href={`/api/quotations/${quotation.id}`} target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</a>
-                          <Link href={`/sales/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5 text-xs font-semibold">Open</Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          frameless
+          rows={standaloneQuotations}
+          getRowKey={(quotation) => quotation.id}
+          empty="No client/product quotations yet. Create one from a client and inventory products without opening a repair job."
+          columns={[
+            {
+              key: "quote",
+              header: "Quote",
+              cell: (quotation) => (
+                <>
+                  <Link href={`/sales/quotations/${quotation.id}`} className="font-mono text-xs font-bold text-[var(--accent)] hover:underline">{quotation.quoteNumber}</Link>
+                  <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{formatEATDate(quotation.createdAt)}</p>
+                </>
+              ),
+            },
+            {
+              key: "recipient",
+              header: "Client / Lead",
+              cell: (quotation) => (
+                <>
+                  <p className="text-xs font-medium text-[var(--ink)]">{quotation.client?.fullName ?? quotation.lead?.fullName ?? "Client"}</p>
+                  <p className="text-[12px] text-[var(--ink-muted)]">{quotation.client?.phone ?? quotation.lead?.phone ?? quotation.lead?.interest ?? "No contact captured"}</p>
+                </>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (quotation) => (
+                <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, quotation.status)}>{quotation.status}</StatusBadge>
+              ),
+            },
+            {
+              key: "value",
+              header: "Value",
+              align: "right",
+              className: "text-xs font-semibold tabular-nums text-[var(--ink)]",
+              cell: (quotation) => formatMoney(quotation.totalAmount, quotation.currency),
+            },
+            {
+              key: "lines",
+              header: "Lines",
+              align: "right",
+              className: "text-xs text-[var(--ink-muted)]",
+              cell: (quotation) => quotation._count.items,
+            },
+          ]}
+          actions={(quotation) => (
+            <>
+              {canSendQuoteFollowUps && quotation.status === "SENT" ? (
+                <QuoteFollowUpButton quotationId={quotation.id} context={followUpContext} compact />
+              ) : null}
+              <a href={`/api/quotations/${quotation.id}`} target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</a>
+              <Link href={`/sales/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5 text-xs font-semibold">Open</Link>
+            </>
+          )}
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -662,191 +669,174 @@ export default async function QuotationsPage({
       </div>
 
       {/* Table */}
-      <div className="doc-list overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-            <tr>
-              <th className="px-3 py-2.5">Job</th>
-              <th className="hidden px-3 py-2.5 sm:table-cell">Client</th>
-              <th className="hidden px-3 py-2.5 md:table-cell">Device</th>
-              <th className="px-3 py-2.5">Status</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Estimate</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Sent</th>
-              <th className="px-3 py-2.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]"
-                >
-                  {q || approvalFilter
-                    ? "No quotes match your filter."
-                    : "No repair quote-ready jobs yet. Use New Quotation for client or product quotes."}
-                </td>
-              </tr>
-            ) : (
-              sorted.map((job) => {
-                const issuedAt = job.quotedAt ?? job.updatedAt;
-                const quoteNumber = formatQuotationNumber(
-                  job.jobNumber,
-                  issuedAt,
-                  branding.quotePrefix,
-                  branding.quoteFormat,
-                  branding.sequencePadLength,
-                );
-                const canGenerate = canGenerateQuotationForStatus(job.status);
-                const persistedQuotation = job.quotations[0] ?? null;
-                const estimate = getClientBill(job);
-                const pdfUrl = `${appUrl}/api/jobs/${job.id}/quotation`;
-                const pdfHref = `/api/jobs/${job.id}/quotation`;
-                const clientPhone = (job.client.phone ?? "").replace(/\D/g, "");
-                const waPhone = clientPhone.startsWith("0")
-                  ? "256" + clientPhone.slice(1)
-                  : clientPhone;
-
-                const approvalBadge =
-                  job.clientApproved === true ? (
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[12px] font-bold text-emerald-600">
-                      Approved
-                    </span>
-                  ) : job.clientApproved === false ? (
-                    <span className="rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[12px] font-bold text-red-500">
-                      Declined
-                    </span>
-                  ) : job.status === "AWAITING_APPROVAL" ? (
-                    <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-1.5 py-0.5 text-[12px] font-bold text-amber-600 animate-pulse">
-                      Awaiting
-                    </span>
-                  ) : null;
-
-                const daysPending =
-                  job.status === "AWAITING_APPROVAL"
-                    ? Math.floor(
-                        (nowMs - job.updatedAt.getTime()) / 86400000,
-                      )
-                    : null;
-
-                const waQuoteText = encodeURIComponent(
-                  `Hi ${job.client.fullName}, your repair quote is ready.\n\nQuote #: ${quoteNumber}\nDevice: ${job.brand} ${job.model}\nEstimate: ${typeof estimate === "number" ? formatMoney(estimate, currency) : "TBD"}\n\nReply YES to approve and we'll begin the repair immediately.`,
-                );
-
-                const normalStatus = normalizeJobStatus(job.status as never);
-                const canOpenPersistedQuote = Boolean(persistedQuotation);
-                const canEditDraftQuote = Boolean(
-                  persistedQuotation &&
-                  persistedQuotation.status === "DRAFT" &&
-                  !persistedQuotation.convertedToInvoiceId &&
-                  can.createQuotations(user),
-                );
-                const canSendPersistedQuote = Boolean(
-                  persistedQuotation &&
-                  persistedQuotation.status === "DRAFT" &&
-                  can.createQuotations(user),
-                );
-                const canAcceptPersistedQuote = Boolean(
-                  persistedQuotation &&
-                  persistedQuotation.status === "SENT" &&
-                  can.approveQuotations(user),
-                );
-                const canRejectPersistedQuote = Boolean(
-                  persistedQuotation &&
-                  persistedQuotation.status === "SENT" &&
-                  can.createQuotations(user),
-                );
-                const canConvertPersistedQuote = Boolean(
-                  persistedQuotation &&
-                  persistedQuotation.status === "ACCEPTED" &&
-                  !persistedQuotation.convertedToInvoiceId &&
-                  (can.createInvoices(user) || can.approveInvoices(user)),
-                );
-
-                return (
-                  <tr
-                    key={job.id}
-                    className={`border-t border-[var(--line)] transition hover:bg-[var(--panel-strong)]/40 ${job.status === "AWAITING_APPROVAL" ? "bg-amber-500/[0.03]" : ""}`}
+      <DataTable
+        rows={pageRows}
+        getRowKey={(job) => job.id}
+        empty={
+          q || approvalFilter
+            ? "No quotes match your filter."
+            : "No repair quote-ready jobs yet. Use New Quotation for client or product quotes."
+        }
+        columns={[
+          {
+            key: "job",
+            header: "Job",
+            cell: (job) => {
+              const canGenerate = canGenerateQuotationForStatus(job.status);
+              const quoteNumber = formatQuotationNumber(
+                job.jobNumber,
+                job.quotedAt ?? job.updatedAt,
+                branding.quotePrefix,
+                branding.quoteFormat,
+                branding.sequencePadLength,
+              );
+              return (
+                <>
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="mono text-xs font-bold text-[var(--accent)] hover:underline"
                   >
-                    {/* Job # */}
-                    <td className="px-3 py-2.5">
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="mono text-xs font-bold text-[var(--accent)] hover:underline"
-                      >
-                        {job.jobNumber}
-                      </Link>
-                      {canGenerate && (
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">
-                          {quoteNumber}
-                        </p>
-                      )}
-                      {/* Mobile: show client + approval inline */}
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] sm:hidden">
-                        {job.client.fullName}
-                      </p>
-                      <div className="mt-1 sm:hidden">{approvalBadge}</div>
-                    </td>
+                    {job.jobNumber}
+                  </Link>
+                  {canGenerate && (
+                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{quoteNumber}</p>
+                  )}
+                  {/* Mobile: show client + approval inline */}
+                  <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] sm:hidden">
+                    {job.client.fullName}
+                  </p>
+                  <div className="mt-1 sm:hidden">{approvalBadgeFor(job)}</div>
+                </>
+              );
+            },
+          },
+          {
+            key: "client",
+            header: "Client",
+            headerClassName: "hidden sm:table-cell",
+            className: "hidden sm:table-cell",
+            cell: (job) => (
+              <>
+                <p className="text-xs font-medium text-[var(--ink)]">{job.client.fullName}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{job.client.phone}</p>
+              </>
+            ),
+          },
+          {
+            key: "device",
+            header: "Device",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden md:table-cell",
+            cell: (job) => (
+              <p className="text-xs text-[var(--ink)]">
+                {job.brand} {job.model}
+              </p>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            cell: (job) => {
+              const daysPending =
+                job.status === "AWAITING_APPROVAL"
+                  ? Math.floor((nowMs - job.updatedAt.getTime()) / 86400000)
+                  : null;
+              return (
+                <div className="flex flex-col gap-1">
+                  <JobStatusBadge status={normalizeJobStatus(job.status as never)} />
+                  {approvalBadgeFor(job)}
+                  {daysPending !== null && daysPending > 0 && (
+                    <span
+                      className={`text-[12px] font-medium ${daysPending >= 3 ? "text-red-400" : "text-amber-600"}`}
+                    >
+                      {daysPending}d pending
+                    </span>
+                  )}
+                </div>
+              );
+            },
+          },
+          {
+            key: "estimate",
+            header: "Estimate",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden lg:table-cell",
+            cell: (job) => {
+              const estimate = getClientBill(job);
+              return typeof estimate === "number" ? (
+                <span className="text-xs font-semibold text-[var(--ink)]">
+                  {formatMoney(estimate, currency)}
+                </span>
+              ) : (
+                <span className="text-xs text-[var(--ink-muted)]">Not set</span>
+              );
+            },
+          },
+          {
+            key: "sent",
+            header: "Sent",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden lg:table-cell text-[12px] text-[var(--ink-muted)]",
+            cell: (job) =>
+              job.quotedAt ? (
+                <span className="text-emerald-600">✓ {formatEATDate(job.quotedAt)}</span>
+              ) : (
+                <span className="italic">Not sent</span>
+              ),
+          },
+        ]}
+        actions={(job) => {
+          const issuedAt = job.quotedAt ?? job.updatedAt;
+          const quoteNumber = formatQuotationNumber(
+            job.jobNumber,
+            issuedAt,
+            branding.quotePrefix,
+            branding.quoteFormat,
+            branding.sequencePadLength,
+          );
+          const canGenerate = canGenerateQuotationForStatus(job.status);
+          const persistedQuotation = job.quotations[0] ?? null;
+          const estimate = getClientBill(job);
+          const pdfUrl = `${appUrl}/api/jobs/${job.id}/quotation`;
+          const pdfHref = `/api/jobs/${job.id}/quotation`;
+          const clientPhone = (job.client.phone ?? "").replace(/\D/g, "");
+          const waPhone = clientPhone.startsWith("0")
+            ? "256" + clientPhone.slice(1)
+            : clientPhone;
+          const waQuoteText = encodeURIComponent(
+            `Hi ${job.client.fullName}, your repair quote is ready.\n\nQuote #: ${quoteNumber}\nDevice: ${job.brand} ${job.model}\nEstimate: ${typeof estimate === "number" ? formatMoney(estimate, currency) : "TBD"}\n\nReply YES to approve and we'll begin the repair immediately.`,
+          );
+          const canOpenPersistedQuote = Boolean(persistedQuotation);
+          const canEditDraftQuote = Boolean(
+            persistedQuotation &&
+            persistedQuotation.status === "DRAFT" &&
+            !persistedQuotation.convertedToInvoiceId &&
+            can.createQuotations(user),
+          );
+          const canSendPersistedQuote = Boolean(
+            persistedQuotation &&
+            persistedQuotation.status === "DRAFT" &&
+            can.createQuotations(user),
+          );
+          const canAcceptPersistedQuote = Boolean(
+            persistedQuotation &&
+            persistedQuotation.status === "SENT" &&
+            can.approveQuotations(user),
+          );
+          const canRejectPersistedQuote = Boolean(
+            persistedQuotation &&
+            persistedQuotation.status === "SENT" &&
+            can.createQuotations(user),
+          );
+          const canConvertPersistedQuote = Boolean(
+            persistedQuotation &&
+            persistedQuotation.status === "ACCEPTED" &&
+            !persistedQuotation.convertedToInvoiceId &&
+            (can.createInvoices(user) || can.approveInvoices(user)),
+          );
 
-                    {/* Client */}
-                    <td className="hidden px-3 py-2.5 sm:table-cell">
-                      <p className="text-xs font-medium text-[var(--ink)]">
-                        {job.client.fullName}
-                      </p>
-                      <p className="text-[12px] text-[var(--ink-muted)]">
-                        {job.client.phone}
-                      </p>
-                    </td>
-
-                    {/* Device */}
-                    <td className="hidden px-3 py-2.5 md:table-cell">
-                      <p className="text-xs text-[var(--ink)]">
-                        {job.brand} {job.model}
-                      </p>
-                    </td>
-
-                    {/* Status + approval badge */}
-                    <td className="px-3 py-2.5">
-                      <div className="flex flex-col gap-1">
-                        <JobStatusBadge status={normalStatus} />
-                        {approvalBadge}
-                        {daysPending !== null && daysPending > 0 && (
-                          <span
-                            className={`text-[12px] font-medium ${daysPending >= 3 ? "text-red-400" : "text-amber-600"}`}
-                          >
-                            {daysPending}d pending
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Estimate */}
-                    <td className="hidden px-3 py-2.5 lg:table-cell">
-                      {typeof estimate === "number" ? (
-                        <span className="text-xs font-semibold text-[var(--ink)]">
-                          {formatMoney(estimate, currency)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-[var(--ink-muted)]">
-                          Not set
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Sent date */}
-                    <td className="hidden px-3 py-2.5 text-[12px] text-[var(--ink-muted)] lg:table-cell">
-                      {job.quotedAt ? (
-                        <span className="text-emerald-600">
-                          ✓ {formatEATDate(job.quotedAt)}
-                        </span>
-                      ) : (
-                        <span className="italic">Not sent</span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-end gap-1.5">
+          return (
+            <>
                         {canSendQuoteFollowUps &&
                         job.status === "AWAITING_APPROVAL" &&
                         job.clientApproved === null ? (
@@ -1020,21 +1010,20 @@ export default async function QuotationsPage({
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                         </Link>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+            </>
+          );
+        }}
+      />
 
-      {sorted.length >= 100 && (
-        <p className="text-center text-xs text-[var(--ink-muted)]">
-          Showing first 100 — use filter to narrow down.
-        </p>
-      )}
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="quotations"
+        hrefForPage={quotationsHref}
+      />
     </section>
   );
 }

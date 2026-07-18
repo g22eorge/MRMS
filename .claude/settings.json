@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); Object.entries\\(p.scripts\\).filter\\(\\([k]\\)=>/test|qa|lint|check|tsc/i.test\\(k\\)\\).forEach\\(\\([k,v]\\)=>console.log\\(k+': '+v\\)\\)\")",
+      "Bash(bun test *)",
+      "Bash(bunx tsc *)",
+      "Bash(./node_modules/.bin/eslint components/layout/AppSidebar.tsx lib/nav/sidebar-model.ts tests/unit/sidebar-model.test.ts)",
+      "Bash(echo \"eslint exit: $?\")",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npx --yes bun@1 test tests/unit/01-role-access.test.ts)",
+      "Bash(npx --yes bun@1 test tests/unit/sidebar-model.test.ts)",
+      "Bash(npx --yes bun@1 test tests/unit/command-palette.test.ts tests/unit/page-state.test.ts)",
+      "Bash(npx --yes bun@1 test tests/unit/02-role-access.test.ts tests/unit/06-permissions-matrix.test.ts)",
+      "Bash(./node_modules/.bin/eslint components/layout/AppSidebar.tsx)",
+      "Bash(rm -f .git/index.lock && git add -A && git reset -q -- package-lock.json prisma/dev.db.bak-before-date-fix && echo \"=== staged ===\" && git diff --cached --stat | tail -2 && echo \"=== excluded ===\" && git status --short | grep -E \"package-lock|dev.db.bak\")"
+    ],
+    "additionalDirectories": [
+      "/Users/obiaw/Desktop/apps/hive/MRMS/.git"
+    ]
+  }
+}

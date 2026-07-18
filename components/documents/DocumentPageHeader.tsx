@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
 
-import { DocumentKpiStrip, type DocumentKpiTile } from "./DocumentKpiStrip";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatStrip } from "@/components/ui/StatStrip";
+import type { DocumentKpiTile } from "./DocumentKpiStrip";
+
+/** @deprecated Thin wrapper around the app-wide PageHeader — import
+ *  `components/ui/PageHeader` directly in new code. */
 
 type DocumentPageHeaderProps = {
   title: string;
@@ -20,20 +25,14 @@ export function DocumentPageHeader({
 }: DocumentPageHeaderProps) {
   return (
     <>
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">{eyebrow}</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">{title}</p>
-          </div>
-          {action ? <div className="shrink-0">{action}</div> : null}
-        </div>
-        {kpis && kpis.length > 0 && kpiLayout === "embedded" ? (
-          <DocumentKpiStrip tiles={kpis} variant="embedded" />
-        ) : null}
-      </div>
+      <PageHeader
+        title={title}
+        eyebrow={eyebrow}
+        actions={action}
+        kpis={kpiLayout === "embedded" ? kpis : undefined}
+      />
       {kpis && kpis.length > 0 && kpiLayout === "cards" ? (
-        <DocumentKpiStrip tiles={kpis} variant="cards" />
+        <StatStrip tiles={kpis} variant="cards" columns={4} />
       ) : null}
     </>
   );

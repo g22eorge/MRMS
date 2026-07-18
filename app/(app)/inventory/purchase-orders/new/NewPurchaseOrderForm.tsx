@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { PartSelect, lineItemInputClass } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { parseFormNumber } from "@/lib/forms/line-items";
 
@@ -136,66 +137,88 @@ export function NewPurchaseOrderForm({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="w-10 px-3 py-2 text-left">#</th>
-                <th className="px-3 py-2 text-left">Inventory item</th>
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="w-24 px-3 py-2 text-right">Qty</th>
-                <th className="w-32 px-3 py-2 text-right">Unit cost</th>
-                <th className="w-32 px-3 py-2 text-right">Total</th>
-                <th className="w-20 px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {lines.map((line, index) => {
-                const lineTotal = line.qtyOrdered * line.unitCost;
-                return (
-                  <tr key={line.key} className="align-top">
-                    <td className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">{index + 1}</td>
-                    <td className="px-3 py-2">
-                      <PartSelect
-                        value={line.partId}
-                        parts={parts}
-                        onChange={(partId) => onPartSelect(line.key, partId)}
-                        customLabel="Custom item"
-                        className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass} text-sm`} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{lineTotal.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right">
-                      <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]">
-              <tr>
-                <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">
-                  Supplier: {selectedSupplier?.name ?? "Not selected"}
-                </td>
-                <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
-                <td className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
-                <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          dense
+          rows={lines}
+          getRowKey={(line) => String(line.key)}
+          empty="No order lines yet."
+          columns={[
+            {
+              key: "index",
+              header: "#",
+              headerClassName: "w-10",
+              className: "w-10 align-top text-xs font-semibold text-[var(--ink-muted)]",
+              cell: (_line, index) => index + 1,
+            },
+            {
+              key: "item",
+              header: "Inventory item",
+              className: "align-top",
+              cell: (line) => (
+                <PartSelect
+                  value={line.partId}
+                  parts={parts}
+                  onChange={(partId) => onPartSelect(line.key, partId)}
+                  customLabel="Custom item"
+                  className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none"
+                />
+              ),
+            },
+            {
+              key: "description",
+              header: "Description",
+              className: "align-top",
+              cell: (line) => (
+                <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass} text-sm`} />
+              ),
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              align: "right",
+              headerClassName: "w-24",
+              className: "w-24 align-top",
+              cell: (line) => (
+                <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
+              ),
+            },
+            {
+              key: "unitCost",
+              header: "Unit cost",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 align-top",
+              cell: (line) => (
+                <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
+              ),
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 align-top font-semibold tabular-nums text-[var(--ink)]",
+              cell: (line) => (line.qtyOrdered * line.unitCost).toLocaleString(),
+            },
+          ]}
+          actions={(line) => (
+            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
+              Remove
+            </button>
+          )}
+          tableFooter={
+            <tr className="bg-[var(--panel-strong)]">
+              <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">
+                Supplier: {selectedSupplier?.name ?? "Not selected"}
+              </td>
+              <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
+              <td className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
+              <td />
+            </tr>
+          }
+        />
       </div>
 
       {error ? <p className="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}

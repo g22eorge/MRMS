@@ -9,16 +9,21 @@ import { orgDb } from "@/lib/db";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SendCampaignButton } from "@/components/shared/SendCampaignButton";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatStrip } from "@/components/ui/StatStrip";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
 
-const STATUS_STYLE: Record<CampaignStatus, string> = {
-  DRAFT:     "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  ACTIVE:    "bg-green-500/10 text-green-700 dark:text-green-400",
-  PAUSED:    "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  COMPLETED: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  CANCELLED: "bg-red-500/10 text-red-700 dark:text-red-400",
+const STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT:     "neutral",
+  ACTIVE:    "success",
+  PAUSED:    "warning",
+  COMPLETED: "info",
+  CANCELLED: "danger",
 };
 
 function CampaignTypeIcon({ type, className = "h-4 w-4" }: { type: CampaignType; className?: string }) {
@@ -51,12 +56,12 @@ function CampaignTypeIcon({ type, className = "h-4 w-4" }: { type: CampaignType;
   }
 }
 
-const CONTACT_STATUS_STYLE: Record<CampaignContactStatus, string> = {
-  PENDING:   "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  SENT:      "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  OPENED:    "bg-green-500/10 text-green-700 dark:text-green-400",
-  RESPONDED: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
-  OPTED_OUT: "bg-red-500/10 text-red-700 dark:text-red-400",
+const CONTACT_STATUS_TONES: Record<string, BadgeTone> = {
+  PENDING:   "neutral",
+  SENT:      "info",
+  OPENED:    "success",
+  RESPONDED: "purple",
+  OPTED_OUT: "danger",
 };
 
 export const dynamic = "force-dynamic";
@@ -68,6 +73,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   const sp = await searchParams;
   const selectedId = sp.id ?? null;
+  const page = parsePage(sp.page);
 
   async function createCampaign(fd: FormData) {
     "use server";
@@ -193,43 +199,30 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const _overallOpenRate     = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
   const _overallResponseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
 
+  // KPIs and the selected-campaign lookup stay whole-dataset; only the sidebar
+  // list of campaigns is paginated.
+  const pageView = paginationView(page, campaigns.length);
+  const pageCampaigns = campaigns.slice(pageView.skip, pageView.skip + pageView.take);
+  const campaignsHref = pageHrefBuilder("/sales/campaigns", { id: selectedId ?? "" });
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Campaigns</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">Outreach campaigns for leads and clients</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Sales"
+        title="Campaigns"
+        description="Outreach campaigns for leads and clients"
+      />
 
       {/* KPI */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Total Campaigns</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{campaigns.length}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all time</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Active</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-green-600 dark:text-green-400">{totalActive}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">currently running</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Contacts Reached</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{totalSent}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">of {totalContacts} total</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Avg Contacts / Campaign</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">
-            {campaigns.length > 0 ? Math.round(totalContacts / campaigns.length) : 0}
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">per campaign</p>
-        </div>
-      </div>
+      <StatStrip
+        variant="cards"
+        tiles={[
+          { label: "Total Campaigns", value: campaigns.length, sub: "all time" },
+          { label: "Active", value: totalActive, sub: "currently running", valueClass: "text-green-600 dark:text-green-400" },
+          { label: "Contacts Reached", value: totalSent, sub: `of ${totalContacts} total` },
+          { label: "Avg Contacts / Campaign", value: campaigns.length > 0 ? Math.round(totalContacts / campaigns.length) : 0, sub: "per campaign" },
+        ]}
+      />
 
       {/* Create campaign */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -270,7 +263,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         <div className="grid grid-cols-12 gap-6">
           {/* Campaign list */}
           <div className="col-span-5 space-y-2">
-            {campaigns.map((c) => {
+            {pageCampaigns.map((c) => {
               const sentCount     = c.contacts.filter((cc) => ["SENT","OPENED","RESPONDED"].includes(cc.status)).length;
               const respondedCount = c.contacts.filter((cc) => cc.status === "RESPONDED").length;
               const responseRate  = sentCount > 0 ? Math.round((respondedCount / sentCount) * 100) : 0;
@@ -284,7 +277,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         <p className="font-semibold text-sm text-[var(--ink)] truncate">{c.name}</p>
                       </div>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[12px] font-bold uppercase ${STATUS_STYLE[c.status]}`}>{c.status}</span>
+                        <StatusBadge tone={toneFor(STATUS_TONES, c.status)} className="uppercase">{c.status}</StatusBadge>
                         <span className="text-xs text-[var(--ink-muted)]">{c._count.contacts} contacts</span>
                       </div>
                     </div>
@@ -302,6 +295,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 </a>
               );
             })}
+
+            <TablePagination
+              page={pageView.page}
+              totalPages={pageView.totalPages}
+              rangeStart={pageView.rangeStart}
+              rangeEnd={pageView.rangeEnd}
+              total={pageView.total}
+              unit="campaigns"
+              hrefForPage={campaignsHref}
+            />
           </div>
 
           {/* Campaign detail */}
@@ -374,109 +377,104 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 </details>
 
                 {/* Contact list */}
-                {contacts.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center text-sm text-[var(--ink-muted)]">
-                    No contacts added yet.
-                  </div>
-                ) : (
-                  <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-                    {/* Mobile contact cards */}
-                    <div className="divide-y divide-[var(--line)] bg-[var(--bg)] lg:hidden">
-                      {contacts.map((cc) => {
+                <DataTable
+                  rows={contacts}
+                  getRowKey={(cc) => cc.id}
+                  empty="No contacts added yet."
+                  renderMobileCard={(cc) => {
+                    const person = cc.lead ?? cc.client;
+                    if (!person) return null;
+                    const latestMsg = cc.outboundMessages?.[0];
+                    return (
+                      <div className="px-4 py-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
+                            <p className="text-[13px] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-0.5">
+                            <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)} className="uppercase">{cc.status}</StatusBadge>
+                            {latestMsg?.providerDeliveryStatus && <span className="text-[13px] uppercase text-[var(--ink-muted)]">{latestMsg.providerDeliveryStatus}</span>}
+                          </div>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
+                          {cc.sentAt && <span>Sent: {new Date(cc.sentAt).toLocaleDateString("en-GB")}</span>}
+                          {cc.openedAt && <span>Opened: {new Date(cc.openedAt).toLocaleDateString("en-GB")}</span>}
+                          {cc.repliedAt && <span className="text-purple-700 dark:text-purple-400">Replied: {new Date(cc.repliedAt).toLocaleDateString("en-GB")}</span>}
+                        </div>
+                        <form action={updateContactStatus} className="mt-2 flex gap-1">
+                          <input type="hidden" name="id" value={cc.id} />
+                          <select name="status" defaultValue={cc.status} className="flex-1 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
+                            {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]">→</button>
+                        </form>
+                      </div>
+                    );
+                  }}
+                  columns={[
+                    {
+                      key: "contact",
+                      header: "Contact",
+                      cell: (cc) => {
                         const person = cc.lead ?? cc.client;
                         if (!person) return null;
+                        return (
+                          <>
+                            <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
+                            <p className="text-xs text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
+                          </>
+                        );
+                      },
+                    },
+                    {
+                      key: "status",
+                      header: "Status",
+                      cell: (cc) => {
                         const latestMsg = cc.outboundMessages?.[0];
                         return (
-                          <div key={`m-${cc.id}`} className="px-4 py-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
-                                <p className="text-[13px] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
-                              </div>
-                              <div className="flex shrink-0 flex-col items-end gap-0.5">
-                                <span className={`rounded-full px-2 py-0.5 text-[12px] font-bold uppercase ${CONTACT_STATUS_STYLE[cc.status]}`}>{cc.status}</span>
-                                {latestMsg?.providerDeliveryStatus && <span className="text-[13px] uppercase text-[var(--ink-muted)]">{latestMsg.providerDeliveryStatus}</span>}
-                              </div>
-                            </div>
-                            <div className="mt-1 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
-                              {cc.sentAt && <span>Sent: {new Date(cc.sentAt).toLocaleDateString("en-GB")}</span>}
-                              {cc.openedAt && <span>Opened: {new Date(cc.openedAt).toLocaleDateString("en-GB")}</span>}
-                              {cc.repliedAt && <span className="text-purple-700 dark:text-purple-400">Replied: {new Date(cc.repliedAt).toLocaleDateString("en-GB")}</span>}
-                            </div>
-                            <form action={updateContactStatus} className="mt-2 flex gap-1">
-                              <input type="hidden" name="id" value={cc.id} />
-                              <select name="status" defaultValue={cc.status} className="flex-1 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
-                                {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
-                                  <option key={s} value={s}>{s}</option>
-                                ))}
-                              </select>
-                              <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]">→</button>
-                            </form>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Desktop table */}
-                    <div className="hidden overflow-x-auto lg:block">
-                      <table className="w-full text-sm">
-                        <thead className="border-b border-[var(--line)] bg-[var(--panel)]">
-                          <tr>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Contact</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Status</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Sent</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Opened</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Replied</th>
-                            <th className="px-4 py-2.5" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--line)] bg-[var(--bg)]">
-                          {contacts.map((cc) => {
-                            const person = cc.lead ?? cc.client;
-                            if (!person) return null;
-                            const latestMsg = cc.outboundMessages?.[0];
-                            const deliveryBadge = latestMsg?.providerDeliveryStatus
+                          <>
+                            <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)} className="uppercase">{cc.status}</StatusBadge>
+                            {latestMsg?.providerDeliveryStatus
                               ? <span className="text-[13px] uppercase text-[var(--ink-muted)] ml-1">({latestMsg.providerDeliveryStatus})</span>
-                              : null;
-                            return (
-                              <tr key={cc.id} className="hover:bg-[var(--panel)]">
-                                <td className="px-4 py-2.5">
-                                  <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
-                                  <p className="text-xs text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
-                                </td>
-                                <td className="px-4 py-2.5">
-                                  <span className={`rounded-full px-2 py-0.5 text-[12px] font-bold uppercase ${CONTACT_STATUS_STYLE[cc.status]}`}>
-                                    {cc.status}
-                                  </span>
-                                  {deliveryBadge}
-                                </td>
-                                <td className="px-4 py-2.5 text-xs text-[var(--ink-muted)]">
-                                  {cc.sentAt ? new Date(cc.sentAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>}
-                                </td>
-                                <td className="px-4 py-2.5 text-xs text-[var(--ink-muted)]">
-                                  {cc.openedAt ? new Date(cc.openedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>}
-                                </td>
-                                <td className="px-4 py-2.5 text-xs text-[var(--ink-muted)]">
-                                  {cc.repliedAt ? <span className="font-medium text-purple-700 dark:text-purple-400">{new Date(cc.repliedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}</span> : <span className="text-[var(--line)]">—</span>}
-                                </td>
-                                <td className="px-3 py-2.5">
-                                  <form action={updateContactStatus} className="flex gap-1">
-                                    <input type="hidden" name="id" value={cc.id} />
-                                    <select name="status" defaultValue={cc.status} className="rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
-                                      {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
-                                        <option key={s} value={s}>{s}</option>
-                                      ))}
-                                    </select>
-                                    <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]" title="Override status">→</button>
-                                  </form>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                              : null}
+                          </>
+                        );
+                      },
+                    },
+                    {
+                      key: "sent",
+                      header: "Sent",
+                      className: "text-xs text-[var(--ink-muted)]",
+                      cell: (cc) => cc.sentAt ? new Date(cc.sentAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>,
+                    },
+                    {
+                      key: "opened",
+                      header: "Opened",
+                      className: "text-xs text-[var(--ink-muted)]",
+                      cell: (cc) => cc.openedAt ? new Date(cc.openedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>,
+                    },
+                    {
+                      key: "replied",
+                      header: "Replied",
+                      className: "text-xs text-[var(--ink-muted)]",
+                      cell: (cc) => cc.repliedAt ? <span className="font-medium text-purple-700 dark:text-purple-400">{new Date(cc.repliedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}</span> : <span className="text-[var(--line)]">—</span>,
+                    },
+                  ]}
+                  actions={(cc) => (
+                    <form action={updateContactStatus} className="flex gap-1">
+                      <input type="hidden" name="id" value={cc.id} />
+                      <select name="status" defaultValue={cc.status} className="rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
+                        {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]" title="Override status">→</button>
+                    </form>
+                  )}
+                />
               </div>
             )}
           </div>

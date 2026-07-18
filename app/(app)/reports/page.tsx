@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
+import { DataTable } from "@/components/ui/DataTable";
 import { TechnicianBarChart } from "@/components/reports/ReportsCharts";
 import { MobileActivityFeed } from "@/components/reports/MobileActivityFeed";
 import { getClientBill, getExternalTechBill, resolveTechCost } from "@/lib/billing";
@@ -1210,32 +1211,22 @@ export default async function ReportsPage({
           <div className="grid gap-3 lg:grid-cols-2">
             <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
               <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Device Breakdown</p>
-              {deviceRows.length === 0 ? (
-                <p className="mt-4 text-center text-xs text-[var(--ink-muted)]">No jobs in this period</p>
-              ) : (
-                <table className="mt-3 w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line)]">
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Device</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Total</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Done</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Rate</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deviceRows.map((row) => (
-                      <tr key={row.device} className="border-b border-[var(--line)] last:border-b-0">
-                        <td className="px-3 py-2.5 text-sm font-medium text-[var(--ink)]">{row.device}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{row.total}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{row.completed}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink-muted)]">{Math.round(row.completionRate)}%</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <div className="mt-3">
+                <DataTable
+                  frameless
+                  dense
+                  rows={deviceRows}
+                  getRowKey={(row) => row.device}
+                  empty="No jobs in this period"
+                  columns={[
+                    { key: "device", header: "Device", className: "text-sm font-medium text-[var(--ink)]", cell: (row) => row.device },
+                    { key: "total", header: "Total", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => row.total },
+                    { key: "done", header: "Done", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => row.completed },
+                    { key: "rate", header: "Rate", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => `${Math.round(row.completionRate)}%` },
+                    { key: "revenue", header: "Revenue", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => (row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—") },
+                  ]}
+                />
+              </div>
             </section>
             <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
               <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Common Fault Keywords</p>
@@ -1261,30 +1252,39 @@ export default async function ReportsPage({
                 <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Aging Jobs (3+ days open)</p>
                 <Link href="/jobs" className="text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]">View all</Link>
               </div>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--line)]">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Job</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Status</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Age</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {delayedJobs.map((job) => (
-                    <tr key={job.jobNumber} className="border-b border-[var(--line)] last:border-b-0">
-                      <td className="px-3 py-2.5">
+              <div className="mt-3">
+                <DataTable
+                  frameless
+                  dense
+                  rows={delayedJobs}
+                  getRowKey={(job) => job.jobNumber}
+                  columns={[
+                    {
+                      key: "job",
+                      header: "Job",
+                      cell: (job) => (
                         <Link href={`/jobs/${job.jobNumber}`} className="text-sm font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-[var(--ink-muted)]">{statusLabel[normalizeJobStatus(job.status as JobStatus)]}</td>
-                      <td className="px-3 py-2.5 text-right">
+                      ),
+                    },
+                    {
+                      key: "status",
+                      header: "Status",
+                      className: "text-sm text-[var(--ink-muted)]",
+                      cell: (job) => statusLabel[normalizeJobStatus(job.status as JobStatus)],
+                    },
+                    {
+                      key: "age",
+                      header: "Age",
+                      align: "right",
+                      cell: (job) => (
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${job.ageDays >= 8 ? "bg-red-500/15 text-red-600" : "bg-amber-500/15 text-amber-600"}`}>
                           {job.ageDays}d
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
             </section>
           )}
 
@@ -1300,32 +1300,29 @@ export default async function ReportsPage({
                 </div>
                 <Link href="/inventory" className="text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]">Manage →</Link>
               </div>
-              {lowStockItems.length === 0 ? (
-                <p className="mt-3 text-center text-xs text-[var(--ink-muted)]">All inventory items stocked above reorder level</p>
-              ) : (
-                <table className="mt-3 w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line)]">
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Item</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">On Hand</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowStockItems.slice(0, 6).map((part) => (
-                      <tr key={part.sku ?? part.name} className="border-b border-[var(--line)] last:border-b-0">
-                        <td className="px-3 py-2.5 text-sm font-medium text-[var(--ink)]">{part.name}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{part.qtyOnHand}</td>
-                        <td className="px-3 py-2.5 text-right">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${part.qtyOnHand === 0 ? "bg-red-500/15 text-red-600" : "bg-amber-500/15 text-amber-600"}`}>
-                            {part.qtyOnHand === 0 ? "Out of stock" : "Low"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <div className="mt-3">
+                <DataTable
+                  frameless
+                  dense
+                  rows={lowStockItems.slice(0, 6)}
+                  getRowKey={(part) => part.sku ?? part.name}
+                  empty="All inventory items stocked above reorder level"
+                  columns={[
+                    { key: "item", header: "Item", className: "text-sm font-medium text-[var(--ink)]", cell: (part) => part.name },
+                    { key: "onHand", header: "On Hand", align: "right", className: "text-sm text-[var(--ink)]", cell: (part) => part.qtyOnHand },
+                    {
+                      key: "status",
+                      header: "Status",
+                      align: "right",
+                      cell: (part) => (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${part.qtyOnHand === 0 ? "bg-red-500/15 text-red-600" : "bg-amber-500/15 text-amber-600"}`}>
+                          {part.qtyOnHand === 0 ? "Out of stock" : "Low"}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
             </section>
             <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3.5">
               <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Stock &amp; Payables</p>
@@ -1465,37 +1462,34 @@ export default async function ReportsPage({
                   <span className="text-xs text-[var(--ink-muted)]">Team target: {formatMoneyCompact(teamTargetRevenue, currency)}</span>
                 )}
               </div>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--line)]">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Name</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Repairs</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">POS</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Total</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Target</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffRevRows.map((row) => {
-                    const pct = row.target > 0 ? Math.round((row.total / row.target) * 100) : null;
-                    return (
-                      <tr key={row.name} className="border-b border-[var(--line)] last:border-b-0">
-                        <td className="px-3 py-2.5 text-sm font-medium text-[var(--ink)]">{row.name}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink-muted)]">{formatMoneyCompact(row.repairRev, currency)}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink-muted)]">{formatMoneyCompact(row.posRev, currency)}</td>
-                        <td className="px-3 py-2.5 text-right text-sm font-semibold text-[var(--ink)]">{formatMoneyCompact(row.total, currency)}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink-muted)]">{row.target > 0 ? formatMoneyCompact(row.target, currency) : "—"}</td>
-                        <td className="px-3 py-2.5 text-right">
-                          {pct !== null ? (
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>{pct}%</span>
-                          ) : <span className="text-xs text-[var(--ink-muted)]">—</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="mt-3">
+                <DataTable
+                  frameless
+                  dense
+                  rows={staffRevRows}
+                  getRowKey={(row) => row.name}
+                  columns={[
+                    { key: "name", header: "Name", className: "text-sm font-medium text-[var(--ink)]", cell: (row) => row.name },
+                    { key: "repairs", header: "Repairs", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.repairRev, currency) },
+                    { key: "pos", header: "POS", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.posRev, currency) },
+                    { key: "total", header: "Total", align: "right", className: "text-sm font-semibold text-[var(--ink)]", cell: (row) => formatMoneyCompact(row.total, currency) },
+                    { key: "target", header: "Target", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => (row.target > 0 ? formatMoneyCompact(row.target, currency) : "—") },
+                    {
+                      key: "pct",
+                      header: "%",
+                      align: "right",
+                      cell: (row) => {
+                        const pct = row.target > 0 ? Math.round((row.total / row.target) * 100) : null;
+                        return pct !== null ? (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>{pct}%</span>
+                        ) : (
+                          <span className="text-xs text-[var(--ink-muted)]">—</span>
+                        );
+                      },
+                    },
+                  ]}
+                />
+              </div>
             </section>
           )}
 
@@ -1529,36 +1523,32 @@ export default async function ReportsPage({
                 <div className="mt-4 h-40">
                   <TechnicianBarChart data={techPerf.map((t) => ({ name: t.name, completed: t.completed, total: t.total }))} />
                 </div>
-                <table className="mt-4 w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line)]">
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Role</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Total</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Done</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Rate</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Avg Time</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {techPerf.map((t) => (
-                      <tr key={t.name} className="border-b border-[var(--line)] last:border-b-0">
-                        <td className="px-3 py-2.5 text-sm font-medium text-[var(--ink)]">{t.name}</td>
-                        <td className="px-3 py-2.5 text-xs text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{t.total}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{t.completed}</td>
-                        <td className="px-3 py-2.5 text-right">
+                <div className="mt-4">
+                  <DataTable
+                    frameless
+                    dense
+                    rows={techPerf}
+                    getRowKey={(t) => t.name}
+                    columns={[
+                      { key: "name", header: "Name", className: "text-sm font-medium text-[var(--ink)]", cell: (t) => t.name },
+                      { key: "role", header: "Role", className: "text-xs text-[var(--ink-muted)]", cell: (t) => (t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal") },
+                      { key: "total", header: "Total", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => t.total },
+                      { key: "done", header: "Done", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => t.completed },
+                      {
+                        key: "rate",
+                        header: "Rate",
+                        align: "right",
+                        cell: (t) => (
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${t.completionRate >= 80 ? "bg-emerald-500/15 text-emerald-600" : t.completionRate >= 50 ? "bg-amber-500/15 text-amber-600" : "bg-red-500/15 text-red-600"}`}>
                             {Math.round(t.completionRate)}%
                           </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink-muted)]">{t.avgTurnaround > 0 ? turnaroundLabel(t.avgTurnaround) : "—"}</td>
-                        <td className="px-3 py-2.5 text-right text-sm text-[var(--ink)]">{t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        ),
+                      },
+                      { key: "avgTime", header: "Avg Time", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (t) => (t.avgTurnaround > 0 ? turnaroundLabel(t.avgTurnaround) : "—") },
+                      { key: "revenue", header: "Revenue", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => (t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—") },
+                    ]}
+                  />
+                </div>
               </>
             )}
           </section>
@@ -1570,30 +1560,39 @@ export default async function ReportsPage({
                 <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Awaiting Client Approval</p>
                 <Link href="/jobs?status=AWAITING_APPROVAL" className="text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]">View all</Link>
               </div>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--line)]">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Job</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--ink-muted)]">Device</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Pending</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {approvalDelays.map((job) => (
-                    <tr key={job.id} className="border-b border-[var(--line)] last:border-b-0">
-                      <td className="px-3 py-2.5">
+              <div className="mt-3">
+                <DataTable
+                  frameless
+                  dense
+                  rows={approvalDelays}
+                  getRowKey={(job) => job.id}
+                  columns={[
+                    {
+                      key: "job",
+                      header: "Job",
+                      cell: (job) => (
                         <Link href={`/jobs/${job.jobNumber}`} className="text-sm font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-[var(--ink-muted)]">{deviceLabel[job.deviceType] ?? job.deviceType} · {job.brand} {job.model}</td>
-                      <td className="px-3 py-2.5 text-right">
+                      ),
+                    },
+                    {
+                      key: "device",
+                      header: "Device",
+                      className: "text-sm text-[var(--ink-muted)]",
+                      cell: (job) => `${deviceLabel[job.deviceType] ?? job.deviceType} · ${job.brand} ${job.model}`,
+                    },
+                    {
+                      key: "pending",
+                      header: "Pending",
+                      align: "right",
+                      cell: (job) => (
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${job.daysPending >= 3 ? "bg-red-500/15 text-red-600" : "bg-amber-500/15 text-amber-600"}`}>
                           {job.daysPending}d
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
             </section>
           )}
 

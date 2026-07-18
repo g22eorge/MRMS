@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { PLTrendChart } from "@/components/reports/FinanceCharts";
+import { DataTable } from "@/components/ui/DataTable";
 
 export const dynamic = "force-dynamic";
 
@@ -357,174 +358,173 @@ export default async function PLPage({
       ) : (
         <>
           {/* ── P&L TABLE ──────────────────────────────────────────────────── */}
-          <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-            {/* Column headers */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-0 border-b border-[var(--line)] bg-[var(--panel-strong)] px-5 py-2.5">
-              <span className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Account</span>
-              <span className="w-28 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                {periodLabel}
-              </span>
-              <span className="w-28 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                {priorLabel}
-              </span>
-              <span className="w-16 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                Change
-              </span>
-            </div>
-
-            {/* Revenue */}
-            <div className="border-b border-[var(--line)]">
-              <div className="bg-green-500/5 px-5 py-2.5">
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Revenue</p>
-              </div>
-              {revenues.length === 0 ? (
-                <p className="px-5 py-3 text-sm text-[var(--ink-muted)]">No revenue accounts with activity</p>
-              ) : (
-                revenues.map((r) => (
-                  <div
-                    key={r.code}
-                    className="grid grid-cols-[1fr_auto_auto_auto] items-center px-5 py-2.5 odd:bg-[var(--bg)] even:bg-[var(--panel)]/40"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-[var(--accent)]">{r.code}</span>
-                      <span className="text-sm text-[var(--ink)]">{r.name}</span>
-                    </div>
-                    <span className="w-28 text-right text-sm font-medium tabular-nums">
-                      {formatMoney(r.amount, currency)}
-                    </span>
-                    <span className="w-28 text-right text-sm tabular-nums text-[var(--ink-muted)]">
-                      {formatMoney(r.priorAmount, currency)}
-                    </span>
-                    <span
-                      className={`w-16 text-right text-[13px] font-semibold tabular-nums ${
-                        r.amount >= r.priorAmount ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
-                      {changePct(r.amount, r.priorAmount) ?? "—"}
-                    </span>
-                  </div>
-                ))
-              )}
-              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center bg-green-500/10 px-5 py-3">
-                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-200">Total Revenue</span>
-                <span className="w-28 text-right text-sm font-bold tabular-nums text-emerald-800 dark:text-emerald-200">
-                  {formatMoney(totalRevenue, currency)}
-                </span>
-                <span className="w-28 text-right text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300/70">
-                  {formatMoney(priorRevenue, currency)}
-                </span>
-                <span
-                  className={`w-16 text-right text-[13px] font-semibold tabular-nums ${
-                    totalRevenue >= priorRevenue ? "text-emerald-600" : "text-red-500"
-                  }`}
-                >
-                  {changePct(totalRevenue, priorRevenue) ?? "—"}
-                </span>
-              </div>
-            </div>
-
-            {/* Expenses */}
-            <div className="border-b border-[var(--line)]">
-              <div className="bg-red-500/5 px-5 py-2.5">
-                <p className="text-xs font-bold uppercase tracking-wide text-red-700">Expenses</p>
-              </div>
-              {expenses.length === 0 ? (
-                <p className="px-5 py-3 text-sm text-[var(--ink-muted)]">No expense accounts with activity</p>
-              ) : (
-                expenses.map((e) => {
-                  const pct = pctOfRevenue(e.amount, totalRevenue);
-                  return (
-                    <div
-                      key={e.code}
-                      className="grid grid-cols-[1fr_auto_auto_auto] items-center px-5 py-2.5 odd:bg-[var(--bg)] even:bg-[var(--panel)]/40"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs text-[var(--accent)]">{e.code}</span>
-                        <span className="text-sm text-[var(--ink)]">{e.name}</span>
-                        {pct !== null && (
-                          <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">
-                            {pct}%
-                          </span>
-                        )}
-                      </div>
-                      <span className="w-28 text-right text-sm font-medium tabular-nums">
-                        {formatMoney(e.amount, currency)}
-                      </span>
-                      <span className="w-28 text-right text-sm tabular-nums text-[var(--ink-muted)]">
-                        {formatMoney(e.priorAmount, currency)}
-                      </span>
+          <DataTable
+            dense
+            rows={[
+              ...(revenues.length === 0
+                ? [{ id: "rev-empty", kind: "empty", section: "REVENUE", label: "No revenue accounts with activity" }]
+                : revenues.map((r) => ({ id: `rev-${r.code}`, kind: "account", section: "REVENUE", ...r }))),
+              { id: "rev-total", kind: "total", section: "REVENUE", label: "Total Revenue", amount: totalRevenue, priorAmount: priorRevenue },
+              ...(expenses.length === 0
+                ? [{ id: "exp-empty", kind: "empty", section: "EXPENSE", label: "No expense accounts with activity" }]
+                : expenses.map((e) => ({ id: `exp-${e.code}`, kind: "account", section: "EXPENSE", ...e }))),
+              { id: "exp-total", kind: "total", section: "EXPENSE", label: "Total Expenses", amount: totalExpense, priorAmount: priorExpense },
+            ]}
+            getRowKey={(row) => row.id}
+            renderSectionRow={(row, i) => {
+              if (i === 0)
+                return <span className="text-emerald-700 dark:text-emerald-300">Revenue</span>;
+              if (row.section === "EXPENSE" && (row.id === "exp-empty" || row.id === `exp-${expenses[0]?.code}`))
+                return <span className="text-red-700">Expenses</span>;
+              return null;
+            }}
+            rowClassName={(row) =>
+              row.kind === "total"
+                ? row.section === "REVENUE"
+                  ? "bg-green-500/10"
+                  : "bg-red-500/10"
+                : undefined
+            }
+            columns={[
+              {
+                key: "account",
+                header: "Account",
+                cell: (row) => {
+                  if (row.kind === "empty")
+                    return <span className="text-sm text-[var(--ink-muted)]">{row.label}</span>;
+                  if (row.kind === "total")
+                    return (
                       <span
-                        className={`w-16 text-right text-[13px] font-semibold tabular-nums ${
-                          e.amount <= e.priorAmount ? "text-emerald-600" : "text-red-500"
+                        className={`text-sm font-bold ${
+                          row.section === "REVENUE"
+                            ? "text-emerald-800 dark:text-emerald-200"
+                            : "text-red-700 dark:text-red-300"
                         }`}
                       >
-                        {changePct(e.amount, e.priorAmount) ?? "—"}
+                        {row.label}
                       </span>
-                    </div>
+                    );
+                  const pct = row.section === "EXPENSE" ? pctOfRevenue(row.amount, totalRevenue) : null;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-[var(--accent)]">{row.code}</span>
+                      <span className="text-sm text-[var(--ink)]">{row.name}</span>
+                      {pct !== null && (
+                        <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">
+                          {pct}%
+                        </span>
+                      )}
+                    </span>
                   );
-                })
-              )}
-              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center bg-red-500/10 px-5 py-3">
-                <span className="text-sm font-bold text-red-700 dark:text-red-300">Total Expenses</span>
-                <span className="w-28 text-right text-sm font-bold tabular-nums text-red-700 dark:text-red-300">
-                  {formatMoney(totalExpense, currency)}
-                </span>
-                <span className="w-28 text-right text-sm font-semibold tabular-nums text-red-700/70">
-                  {formatMoney(priorExpense, currency)}
-                </span>
-                <span
-                  className={`w-16 text-right text-[13px] font-semibold tabular-nums ${
-                    totalExpense <= priorExpense ? "text-emerald-600" : "text-red-500"
+                },
+              },
+              {
+                key: "current",
+                header: periodLabel,
+                align: "right",
+                className: "w-28 whitespace-nowrap",
+                cell: (row) => {
+                  if (row.kind === "empty") return null;
+                  if (row.kind === "total")
+                    return (
+                      <span
+                        className={`text-sm font-bold tabular-nums ${
+                          row.section === "REVENUE"
+                            ? "text-emerald-800 dark:text-emerald-200"
+                            : "text-red-700 dark:text-red-300"
+                        }`}
+                      >
+                        {formatMoney(row.amount, currency)}
+                      </span>
+                    );
+                  return <span className="text-sm font-medium tabular-nums">{formatMoney(row.amount, currency)}</span>;
+                },
+              },
+              {
+                key: "prior",
+                header: priorLabel,
+                align: "right",
+                className: "w-28 whitespace-nowrap",
+                cell: (row) => {
+                  if (row.kind === "empty") return null;
+                  if (row.kind === "total")
+                    return (
+                      <span
+                        className={`text-sm font-semibold tabular-nums ${
+                          row.section === "REVENUE"
+                            ? "text-emerald-700 dark:text-emerald-300/70"
+                            : "text-red-700/70"
+                        }`}
+                      >
+                        {formatMoney(row.priorAmount, currency)}
+                      </span>
+                    );
+                  return (
+                    <span className="text-sm tabular-nums text-[var(--ink-muted)]">
+                      {formatMoney(row.priorAmount, currency)}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "change",
+                header: "Change",
+                align: "right",
+                className: "w-16 whitespace-nowrap",
+                cell: (row) => {
+                  if (row.kind === "empty") return null;
+                  const improved =
+                    row.section === "REVENUE" ? row.amount >= row.priorAmount : row.amount <= row.priorAmount;
+                  return (
+                    <span
+                      className={`text-[13px] font-semibold tabular-nums ${improved ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      {changePct(row.amount, row.priorAmount) ?? "—"}
+                    </span>
+                  );
+                },
+              },
+            ]}
+            tableFooter={
+              <tr className={netIncome >= 0 ? "bg-green-500/15" : "bg-red-500/15"}>
+                <td className="px-3 py-4">
+                  <span className="text-base font-bold text-[var(--ink)]">
+                    Net {netIncome >= 0 ? "Income" : "Loss"}
+                  </span>
+                  {totalRevenue > 0 && (
+                    <span
+                      className={`ml-2 text-[13px] font-semibold ${
+                        netMargin >= 0 ? "text-emerald-600" : "text-red-500"
+                      }`}
+                    >
+                      ({netMargin.toFixed(1)}% margin)
+                    </span>
+                  )}
+                </td>
+                <td
+                  className={`px-3 py-4 text-right text-lg font-bold tabular-nums ${
+                    netIncome >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700"
                   }`}
                 >
-                  {changePct(totalExpense, priorExpense) ?? "—"}
-                </span>
-              </div>
-            </div>
-
-            {/* Net Income */}
-            <div
-              className={`grid grid-cols-[1fr_auto_auto_auto] items-center px-5 py-4 ${
-                netIncome >= 0 ? "bg-green-500/15" : "bg-red-500/15"
-              }`}
-            >
-              <div>
-                <span className="text-base font-bold text-[var(--ink)]">
-                  Net {netIncome >= 0 ? "Income" : "Loss"}
-                </span>
-                {totalRevenue > 0 && (
-                  <span
-                    className={`ml-2 text-[13px] font-semibold ${
-                      netMargin >= 0 ? "text-emerald-600" : "text-red-500"
-                    }`}
-                  >
-                    ({netMargin.toFixed(1)}% margin)
-                  </span>
-                )}
-              </div>
-              <span
-                className={`w-28 text-right text-lg font-bold tabular-nums ${
-                  netIncome >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700"
-                }`}
-              >
-                {formatMoney(Math.abs(netIncome), currency)}
-              </span>
-              <span
-                className={`w-28 text-right text-sm font-semibold tabular-nums ${
-                  priorNetIncome >= 0 ? "text-emerald-700 dark:text-emerald-300/60" : "text-red-700/60"
-                }`}
-              >
-                {formatMoney(Math.abs(priorNetIncome), currency)}
-              </span>
-              <span
-                className={`w-16 text-right text-[13px] font-semibold tabular-nums ${
-                  netIncome >= priorNetIncome ? "text-emerald-600" : "text-red-500"
-                }`}
-              >
-                {changePct(netIncome, priorNetIncome) ?? "—"}
-              </span>
-            </div>
-          </div>
+                  {formatMoney(Math.abs(netIncome), currency)}
+                </td>
+                <td
+                  className={`px-3 py-4 text-right text-sm font-semibold tabular-nums ${
+                    priorNetIncome >= 0 ? "text-emerald-700 dark:text-emerald-300/60" : "text-red-700/60"
+                  }`}
+                >
+                  {formatMoney(Math.abs(priorNetIncome), currency)}
+                </td>
+                <td
+                  className={`px-3 py-4 text-right text-[13px] font-semibold tabular-nums ${
+                    netIncome >= priorNetIncome ? "text-emerald-600" : "text-red-500"
+                  }`}
+                >
+                  {changePct(netIncome, priorNetIncome) ?? "—"}
+                </td>
+              </tr>
+            }
+          />
 
           {/* ── 6-MONTH TREND ────────────────────────────────────────────────── */}
           {hasTrend && (
@@ -536,48 +536,64 @@ export default async function PLPage({
                 <p className="text-[13px] text-[var(--ink-muted)]">Revenue · Expenses · Net</p>
               </div>
               <PLTrendChart data={trendData} currency={currency} />
-              <div className="mt-4 doc-list overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[var(--line)]">
-                      <th className="px-3 py-2 text-left text-[13px] font-semibold text-[var(--ink-muted)]">Month</th>
-                      <th className="px-3 py-2 text-right text-[13px] font-semibold text-[var(--ink-muted)]">Revenue</th>
-                      <th className="px-3 py-2 text-right text-[13px] font-semibold text-[var(--ink-muted)]">Expenses</th>
-                      <th className="px-3 py-2 text-right text-[13px] font-semibold text-[var(--ink-muted)]">Net</th>
-                      <th className="px-3 py-2 text-right text-[13px] font-semibold text-[var(--ink-muted)]">Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trendData.map((row) => (
-                      <tr key={row.key} className="border-b border-[var(--line)] last:border-b-0">
-                        <td className="px-3 py-2.5 text-sm font-medium text-[var(--ink)]">{row.key}</td>
-                        <td className="px-3 py-2.5 text-right text-sm tabular-nums text-emerald-600">
-                          {formatMoneyCompact(row.revenue, currency)}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-sm tabular-nums text-[var(--ink-muted)]">
-                          {formatMoneyCompact(row.expenses, currency)}
-                        </td>
-                        <td
-                          className={`px-3 py-2.5 text-right text-sm font-semibold tabular-nums ${
+              <div className="mt-4 doc-list">
+                <DataTable
+                  frameless
+                  dense
+                  rows={trendData}
+                  getRowKey={(row) => row.key}
+                  columns={[
+                    {
+                      key: "month",
+                      header: "Month",
+                      className: "text-sm font-medium text-[var(--ink)]",
+                      cell: (row) => row.key,
+                    },
+                    {
+                      key: "revenue",
+                      header: "Revenue",
+                      align: "right",
+                      className: "text-sm tabular-nums text-emerald-600",
+                      cell: (row) => formatMoneyCompact(row.revenue, currency),
+                    },
+                    {
+                      key: "expenses",
+                      header: "Expenses",
+                      align: "right",
+                      className: "text-sm tabular-nums text-[var(--ink-muted)]",
+                      cell: (row) => formatMoneyCompact(row.expenses, currency),
+                    },
+                    {
+                      key: "net",
+                      header: "Net",
+                      align: "right",
+                      cell: (row) => (
+                        <span
+                          className={`text-sm font-semibold tabular-nums ${
                             row.net >= 0 ? "text-emerald-600" : "text-red-500"
                           }`}
                         >
                           {row.net < 0 ? "−" : ""}
                           {formatMoneyCompact(Math.abs(row.net), currency)}
-                        </td>
-                        <td
-                          className={`px-3 py-2.5 text-right text-[13px] tabular-nums ${
-                            row.revenue > 0 && row.net / row.revenue >= 0
-                              ? "text-emerald-600"
-                              : "text-red-500"
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "margin",
+                      header: "Margin",
+                      align: "right",
+                      cell: (row) => (
+                        <span
+                          className={`text-[13px] tabular-nums ${
+                            row.revenue > 0 && row.net / row.revenue >= 0 ? "text-emerald-600" : "text-red-500"
                           }`}
                         >
                           {row.revenue > 0 ? ((row.net / row.revenue) * 100).toFixed(1) + "%" : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
               </div>
             </section>
           )}

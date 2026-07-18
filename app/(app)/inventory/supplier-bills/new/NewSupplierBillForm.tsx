@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
-import { LineItemsPanel, lineItemInputClass } from "@/components/forms";
+import { LineItemsPanel, LineItemTotals, lineItemInputClass } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 
 import { createSupplierBillAction } from "../actions";
@@ -164,12 +165,17 @@ export function NewSupplierBillForm({
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
           <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Posting Check</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Lines ready</dt><dd className="font-bold text-[var(--ink)]">{readyLines}/{lines.length}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Supplier POs</dt><dd className="font-bold text-[var(--ink)]">{supplierPOs.length}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Supplier GRNs</dt><dd className="font-bold text-[var(--ink)]">{supplierGRNs.length}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Subtotal</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{subtotal.toLocaleString()}</dd></div>
-          </dl>
+          <LineItemTotals
+            className="mt-3"
+            currency={baseCurrency}
+            formatMoney={(value) => value.toLocaleString()}
+            leadingRows={[
+              { label: "Lines ready", value: <>{readyLines}/{lines.length}</> },
+              { label: "Supplier POs", value: supplierPOs.length },
+              { label: "Supplier GRNs", value: supplierGRNs.length },
+            ]}
+            subtotal={subtotal}
+          />
         </div>
       </div>
 
@@ -249,21 +255,56 @@ export function NewSupplierBillForm({
         }
         onAddLine={addLine}
       >
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]"><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-right w-24">Qty</th><th className="px-3 py-2 text-right w-32">Unit Cost</th><th className="px-3 py-2 text-right w-32">Total</th><th className="px-3 py-2 w-8" /></tr></thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {lines.map((line) => (
-              <tr key={line.key}>
-                <td className="px-3 py-2"><input value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} required className={lineItemInputClass} /></td>
-                <td className="px-3 py-2"><input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className={`${lineItemInputClass} text-right`} /></td>
-                <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={line.unitCost} onChange={(e) => updateLine(line.key, { unitCost: parseFloat(e.target.value) || 0 })} className={`${lineItemInputClass} text-right`} /></td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums text-[var(--ink-muted)]">{(line.quantity * line.unitCost).toLocaleString()}</td>
-                <td className="px-3 py-2 text-center">{lines.length > 1 ? <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button> : null}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot><tr className="border-t border-[var(--line)] bg-[var(--gold)]/5"><td colSpan={3} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td><td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td><td /></tr></tfoot>
-        </table>
+        <DataTable
+          frameless
+          dense
+          rows={lines}
+          getRowKey={(line) => String(line.key)}
+          empty="No invoice lines yet."
+          columns={[
+            {
+              key: "description",
+              header: "Description",
+              cell: (line) => <input value={line.description} onChange={(e) => updateLine(line.key, { description: e.target.value })} required className={lineItemInputClass} />,
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              align: "right",
+              headerClassName: "w-24",
+              className: "w-24",
+              cell: (line) => <input type="number" min={1} value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: parseInt(e.target.value, 10) || 1 })} className={`${lineItemInputClass} text-right`} />,
+            },
+            {
+              key: "unitCost",
+              header: "Unit Cost",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32",
+              cell: (line) => <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(e) => updateLine(line.key, { unitCost: parseFloat(e.target.value) || 0 })} className={`${lineItemInputClass} text-right`} />,
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 text-xs tabular-nums text-[var(--ink-muted)]",
+              cell: (line) => (line.quantity * line.unitCost).toLocaleString(),
+            },
+          ]}
+          actions={(line) =>
+            lines.length > 1 ? (
+              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+            ) : null
+          }
+          tableFooter={
+            <tr className="bg-[var(--gold)]/5">
+              <td colSpan={3} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td>
+              <td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td>
+              <td />
+            </tr>
+          }
+        />
       </LineItemsPanel>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

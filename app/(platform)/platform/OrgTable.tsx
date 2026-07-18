@@ -3,10 +3,9 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { setPlanAction, setBillingStatusAction } from "./actions";
-import { PLATFORM_PLAN_CHIP, PLATFORM_ROUTES, PLATFORM_STATUS_CHIP } from "@/lib/platform/routes";
-
-const STATUS_CHIP = PLATFORM_STATUS_CHIP;
-const PLAN_CHIP = PLATFORM_PLAN_CHIP;
+import { PLATFORM_PLAN_TONE, PLATFORM_ROUTES, PLATFORM_STATUS_TONE } from "@/lib/platform/routes";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor } from "@/components/ui/StatusBadge";
 
 export type OrgRow = {
   id: string;
@@ -24,9 +23,9 @@ export type OrgRow = {
 function TrialBadge({ trialEndsAt }: { trialEndsAt: Date | null }) {
   if (!trialEndsAt) return <span className="text-[var(--ink-muted)]">—</span>;
   const days = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86_400_000);
-  if (days < 0) return <span className="font-semibold text-red-600">Expired</span>;
-  if (days <= 3) return <span className="font-semibold text-red-500">{days}d left</span>;
-  if (days <= 7) return <span className="font-semibold text-amber-500">{days}d left</span>;
+  if (days < 0) return <StatusBadge tone="danger">Expired</StatusBadge>;
+  if (days <= 3) return <StatusBadge tone="danger">{days}d left</StatusBadge>;
+  if (days <= 7) return <StatusBadge tone="warning">{days}d left</StatusBadge>;
   return <span className="text-[var(--ink-muted)]">{days}d left</span>;
 }
 
@@ -105,120 +104,122 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
       </div>
 
       {/* ── Table ── */}
-      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--line)] text-left text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                <th className="px-4 py-3">Organisation</th>
-                <th className="px-4 py-3">Plan</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-center">Users</th>
-                <th className="px-4 py-3 text-center">Jobs</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Trial / Renews</th>
-                <th className="px-4 py-3 hidden md:table-cell">Joined</th>
-                <th className="px-4 py-3">Quick change</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {filtered.map((org) => (
-                <tr
-                  key={org.id}
-                  className={`transition-colors hover:bg-[var(--gold)]/5 ${!org.isActive ? "opacity-40" : ""}`}
+      <DataTable
+        rows={filtered}
+        getRowKey={(org) => org.id}
+        rowClassName={(org) => (!org.isActive ? "opacity-40" : undefined)}
+        empty={hasFilter ? "No organisations match the current filter." : "No organisations yet."}
+        columns={[
+          {
+            key: "org",
+            header: "Organisation",
+            cell: (org) => (
+              <Link href={PLATFORM_ROUTES.org(org.id)} className="group block">
+                <p className="font-semibold text-[var(--ink)] group-hover:underline">{org.name}</p>
+                <p className="text-[13px] text-[var(--ink-muted)]">/{org.slug}</p>
+              </Link>
+            ),
+          },
+          {
+            key: "plan",
+            header: "Plan",
+            cell: (org) => (
+              <StatusBadge tone={toneFor(PLATFORM_PLAN_TONE, org.plan)}>{org.plan}</StatusBadge>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            cell: (org) => (
+              <StatusBadge tone={toneFor(PLATFORM_STATUS_TONE, org.billingStatus)}>{org.billingStatus}</StatusBadge>
+            ),
+          },
+          {
+            key: "users",
+            header: "Users",
+            align: "center",
+            className: "font-mono text-[var(--ink-muted)]",
+            cell: (org) => org._count.users,
+          },
+          {
+            key: "jobs",
+            header: "Jobs",
+            align: "center",
+            className: "font-mono text-[var(--ink-muted)]",
+            cell: (org) => org._count.jobs,
+          },
+          {
+            key: "trial",
+            header: "Trial / Renews",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden lg:table-cell",
+            cell: (org) =>
+              org.billingStatus === "TRIALING" ? (
+                <TrialBadge trialEndsAt={org.trialEndsAt} />
+              ) : (
+                <span className="text-[var(--ink-muted)]">{fmt(org.planRenewsAt)}</span>
+              ),
+          },
+          {
+            key: "joined",
+            header: "Joined",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-[var(--ink-muted)] md:table-cell",
+            cell: (org) => fmt(org.createdAt),
+          },
+          {
+            key: "quick",
+            header: "Quick change",
+            cell: (org) => (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {/* Plan */}
+                <form action={setPlanAction} className="flex items-center gap-1">
+                  <input type="hidden" name="orgId" value={org.id} />
+                  <select
+                    name="plan"
+                    defaultValue={org.plan}
+                    className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                  >
+                    <option value="STARTER">Starter</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="GROWTH">Growth</option>
+                    <option value="PREMIUM">Premium</option>
+                    <option value="ENTERPRISE">Enterprise</option>
+                  </select>
+                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-[var(--gold)]/60 hover:text-[var(--gold)]">
+                    Plan
+                  </button>
+                </form>
+
+                {/* Status */}
+                <form action={setBillingStatusAction} className="flex items-center gap-1">
+                  <input type="hidden" name="orgId" value={org.id} />
+                  <select
+                    name="status"
+                    defaultValue={org.billingStatus}
+                    className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                  >
+                    <option value="TRIALING">Trialing</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="PAST_DUE">Past Due</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
+                    Status
+                  </button>
+                </form>
+
+                <Link
+                  href={PLATFORM_ROUTES.org(org.id)}
+                  className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]"
                 >
-                  <td className="px-4 py-3">
-                    <Link href={PLATFORM_ROUTES.org(org.id)} className="group block">
-                      <p className="font-semibold text-[var(--ink)] group-hover:underline">{org.name}</p>
-                      <p className="text-[13px] text-[var(--ink-muted)]">/{org.slug}</p>
-                    </Link>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${PLAN_CHIP[org.plan] ?? ""}`}>
-                      {org.plan}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${STATUS_CHIP[org.billingStatus] ?? ""}`}>
-                      {org.billingStatus}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3 text-center font-mono text-sm text-[var(--ink-muted)]">{org._count.users}</td>
-                  <td className="px-4 py-3 text-center font-mono text-sm text-[var(--ink-muted)]">{org._count.jobs}</td>
-
-                  <td className="hidden px-4 py-3 text-sm lg:table-cell">
-                    {org.billingStatus === "TRIALING"
-                      ? <TrialBadge trialEndsAt={org.trialEndsAt} />
-                      : <span className="text-[var(--ink-muted)]">{fmt(org.planRenewsAt)}</span>
-                    }
-                  </td>
-
-                  <td className="hidden px-4 py-3 text-sm text-[var(--ink-muted)] md:table-cell">{fmt(org.createdAt)}</td>
-
-                  {/* ── Inline quick actions ── */}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {/* Plan */}
-                      <form action={setPlanAction} className="flex items-center gap-1">
-                        <input type="hidden" name="orgId" value={org.id} />
-                        <select
-                          name="plan"
-                          defaultValue={org.plan}
-                          className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
-                        >
-                          <option value="STARTER">Starter</option>
-                          <option value="STANDARD">Standard</option>
-                          <option value="GROWTH">Growth</option>
-                          <option value="PREMIUM">Premium</option>
-                          <option value="ENTERPRISE">Enterprise</option>
-                        </select>
-                        <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-[var(--gold)]/60 hover:text-[var(--gold)]">
-                          Plan
-                        </button>
-                      </form>
-
-                      {/* Status */}
-                      <form action={setBillingStatusAction} className="flex items-center gap-1">
-                        <input type="hidden" name="orgId" value={org.id} />
-                        <select
-                          name="status"
-                          defaultValue={org.billingStatus}
-                          className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
-                        >
-                          <option value="TRIALING">Trialing</option>
-                          <option value="ACTIVE">Active</option>
-                          <option value="PAST_DUE">Past Due</option>
-                          <option value="CANCELLED">Cancelled</option>
-                        </select>
-                        <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
-                          Status
-                        </button>
-                      </form>
-
-                      <Link
-                        href={PLATFORM_ROUTES.org(org.id)}
-                        className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]"
-                      >
-                        →
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-[var(--ink-muted)]">
-                    {hasFilter ? "No organisations match the current filter." : "No organisations yet."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  →
+                </Link>
+              </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

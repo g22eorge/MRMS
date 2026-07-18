@@ -3,8 +3,6 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { type PaymentMethod } from "@prisma/client";
-
 import { formatMoney, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -24,16 +22,15 @@ import {
   DocumentFilterBar,
   DocumentShareMenuSection,
   DocumentEmptyState,
-  DocumentEmptyTableRow,
-  DocumentListTable,
-  DocumentListTableHead,
 } from "@/components/documents";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { CreateReceiptDialog } from "./CreateReceiptDialog";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; new?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -45,6 +42,7 @@ export default async function ReceiptsPage({
   const params = await searchParams;
   const q = (params.q ?? "").trim();
   const period = params.period ?? "all";
+  const page = parsePage(params.page);
   const createMode = params.new === "1";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -228,32 +226,46 @@ export default async function ReceiptsPage({
       }
     : {};
 
-  const payments = await prisma.payment.findMany({
-    where: {
-      orgId,
-      ...(periodFilter ? { receivedAt: periodFilter } : {}),
-      ...(q ? searchWhere : {}),
-    },
-    orderBy: { receivedAt: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      amount: true,
-      currency: true,
-      exchangeRateToBase: true,
-      method: true,
-      reference: true,
-      note: true,
-      receivedAt: true,
-      sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
-      invoice: { select: { id: true, invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
-    },
-  });
+  const paymentsWhere = {
+    orgId,
+    ...(periodFilter ? { receivedAt: periodFilter } : {}),
+    ...(q ? searchWhere : {}),
+  };
+
+  // Whole-dataset KPIs need every matching row (currency-converted sums can't be
+  // SQL-aggregated); keep this slim (few columns) and paginate the display rows.
+  const [receiptsTotal, statsRows, pageRows] = await Promise.all([
+    prisma.payment.count({ where: paymentsWhere }),
+    prisma.payment.findMany({
+      where: paymentsWhere,
+      select: { amount: true, currency: true, exchangeRateToBase: true, receivedAt: true, method: true },
+    }),
+    prisma.payment.findMany({
+      where: paymentsWhere,
+      orderBy: { receivedAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        exchangeRateToBase: true,
+        method: true,
+        reference: true,
+        note: true,
+        receivedAt: true,
+        sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+        invoice: { select: { id: true, invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
+      },
+    }),
+  ]);
+  const payments = pageRows;
+  const pageView = paginationView(page, receiptsTotal);
+  const receiptsHref = pageHrefBuilder("/documents/receipts", { q, period: period !== "all" ? period : "" });
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const receiptsTotal = payments.length;
-  const totalAmountBase = payments.reduce(
+  const totalAmountBase = statsRows.reduce(
     (sum, p) =>
       sum +
         toBaseAmount({
@@ -264,7 +276,7 @@ export default async function ReceiptsPage({
         }),
     0,
   );
-  const thisMonth = payments.filter((p) => p.receivedAt >= monthStart);
+  const thisMonth = statsRows.filter((p) => p.receivedAt >= monthStart);
   const thisMonthAmountBase = thisMonth.reduce(
     (sum, p) =>
       sum +
@@ -276,7 +288,7 @@ export default async function ReceiptsPage({
         }),
     0,
   );
-  const cashPaymentsCount = payments.filter((p) => p.method === "CASH").length;
+  const cashPaymentsCount = statsRows.filter((p) => p.method === "CASH").length;
   type InvoiceOption = {
     id: string;
     invoiceNumber: string;
@@ -329,6 +341,22 @@ export default async function ReceiptsPage({
       case "BANK_TRANSFER": return "border-indigo-500/30 bg-indigo-500/15 text-indigo-700";
       default:              return "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]";
     }
+  }
+
+  type PaymentRow = (typeof payments)[number];
+
+  function paymentLabel(p: PaymentRow) {
+    return p.invoice?.job?.jobNumber
+      ? `Repair ${p.invoice.job.jobNumber}`
+      : p.sale?.saleNumber
+        ? `Sale ${p.sale.saleNumber}`
+        : p.invoice?.invoiceNumber
+          ? `Invoice ${p.invoice.invoiceNumber}`
+          : "Payment";
+  }
+
+  function paymentLinkHref(p: PaymentRow) {
+    return p.invoice?.job?.id ? `/jobs/${p.invoice.job.id}` : p.sale?.id ? `/pos/${p.sale.id}` : null;
   }
 
   return (
@@ -464,112 +492,132 @@ export default async function ReceiptsPage({
         {payments.length === 0 ? <DocumentEmptyState message="No payments yet." /> : null}
       </div>
 
-      <DocumentListTable className="hidden md:block">
-          <DocumentListTableHead>
-            <tr>
-              <th className="px-3 py-2.5">Date</th>
-              <th className="px-3 py-2.5">Amount</th>
-              <th className="hidden px-3 py-2.5 md:table-cell">Method</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Reference</th>
-              <th className="px-3 py-2.5">For</th>
-              <th className="px-3 py-2.5">Action</th>
-            </tr>
-          </DocumentListTableHead>
-          <tbody>
-            {payments.map((p) => {
-              const currency = normalizeCurrency(p.currency, baseCurrency);
-              const label = p.invoice?.job?.jobNumber
-                ? `Repair ${p.invoice.job.jobNumber}`
-                : p.sale?.saleNumber
-                  ? `Sale ${p.sale.saleNumber}`
-                  : p.invoice?.invoiceNumber
-                    ? `Invoice ${p.invoice.invoiceNumber}`
-                    : "Payment";
+      <div className="hidden md:block">
+        <DataTable
+          dense
+          rows={payments}
+          getRowKey={(p) => p.id}
+          empty="No payments yet."
+          columns={[
+            {
+              key: "date",
+              header: "Date",
+              className: "text-[var(--ink-muted)]",
+              cell: (p) => (
+                <>
+                  {formatEATDate(p.receivedAt)}<br /><span className="text-[12px]">{formatEATTime(p.receivedAt)}</span>
+                </>
+              ),
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              className: "mono font-bold text-[var(--ink)]",
+              cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, baseCurrency)),
+            },
+            {
+              key: "method",
+              header: "Method",
+              headerClassName: "hidden md:table-cell",
+              className: "hidden md:table-cell",
+              cell: (p) => (
+                <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${methodBadge(p.method)}`}>
+                  {p.method.replaceAll("_", " ")}
+                </span>
+              ),
+            },
+            {
+              key: "reference",
+              header: "Reference",
+              headerClassName: "hidden lg:table-cell",
+              className: "hidden text-[var(--ink-muted)] lg:table-cell",
+              cell: (p) => p.reference ?? "-",
+            },
+            {
+              key: "for",
+              header: "For",
+              cell: (p) => {
+                const label = paymentLabel(p);
+                const linkHref = paymentLinkHref(p);
+                return linkHref ? (
+                  <Link href={linkHref} className="font-medium text-[var(--ink)] transition hover:text-[var(--accent)]">
+                    {label}
+                  </Link>
+                ) : (
+                  <span className="text-[var(--ink-muted)]">{label}</span>
+                );
+              },
+            },
+          ]}
+          actions={(p) => {
+            const currency = normalizeCurrency(p.currency, baseCurrency);
+            const label = paymentLabel(p);
+            const linkHref = paymentLinkHref(p);
+            const recipientPhone = p.invoice?.job?.client?.phone ?? p.invoice?.client?.phone ?? p.sale?.client?.phone ?? null;
+            const recipientEmail = p.invoice?.job?.client?.email ?? p.invoice?.client?.email ?? p.sale?.client?.email ?? null;
+            const receiptUrl = `${appUrl}/api/payments/${p.id}/receipt`;
+            const receiptShareText = encodeURIComponent(`Your receipt is ready.\n\n${label}\nAmount: ${formatMoney(p.amount, currency)}\nPDF: ${receiptUrl}`);
+            const receiptWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
 
-              const linkHref = p.invoice?.job?.id
-                ? `/jobs/${p.invoice.job.id}`
-                : p.sale?.id
-                  ? `/pos/${p.sale.id}`
-                  : null;
-              const recipientPhone = p.invoice?.job?.client?.phone ?? p.invoice?.client?.phone ?? p.sale?.client?.phone ?? null;
-              const recipientEmail = p.invoice?.job?.client?.email ?? p.invoice?.client?.email ?? p.sale?.client?.email ?? null;
-              const receiptUrl = `${appUrl}/api/payments/${p.id}/receipt`;
-              const receiptShareText = encodeURIComponent(`Your receipt is ready.\n\n${label}\nAmount: ${formatMoney(p.amount, currency)}\nPDF: ${receiptUrl}`);
-              const receiptWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
+            return (
+              <>
+                {linkHref ? (
+                  <Link href={linkHref} title="View source" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  </Link>
+                ) : null}
+                <a href={`/api/payments/${p.id}/receipt`} target="_blank" rel="noreferrer" title="Open receipt PDF" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] transition hover:bg-[var(--accent)]/20">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 12h6M9 16h4"/></svg>
+                </a>
+                <RowActionsMenu label="Receipt actions">
+                  <div className="py-1 text-left">
+                    <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
+                      Download Receipt PDF
+                    </MenuActionLink>
+                  </div>
+                  <DocumentShareMenuSection
+                    hiddenFieldName="paymentId"
+                    hiddenFieldValue={p.id}
+                    recipientPhone={recipientPhone}
+                    recipientEmail={recipientEmail}
+                    whatsAppAction={shareReceiptWhatsAppAction}
+                    emailAction={shareReceiptEmailAction}
+                    emailLabel="Email receipt"
+                    waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
+                  />
+                  <MenuSection label="Edit Receipt" />
+                  <form action={updateReceiptAction} className="space-y-2 p-3">
+                    <input type="hidden" name="paymentId" value={p.id} />
+                    <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                    <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
+                      {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
+                    </select>
+                    <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                    <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                    <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
+                  </form>
+                  <MenuDestructiveRow>
+                    <form action={deleteReceiptAction}>
+                      <input type="hidden" name="paymentId" value={p.id} />
+                      <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
+                    </form>
+                  </MenuDestructiveRow>
+                </RowActionsMenu>
+              </>
+            );
+          }}
+        />
+      </div>
 
-              return (
-                <tr key={p.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                  <td className="px-3 py-2.5 text-[var(--ink-muted)]">{formatEATDate(p.receivedAt)}<br /><span className="text-[12px]">{formatEATTime(p.receivedAt)}</span></td>
-                  <td className="px-3 py-2.5 mono font-bold text-[var(--ink)]">{formatMoney(p.amount, currency)}</td>
-                  <td className="hidden px-3 py-2.5 md:table-cell">
-                    <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${methodBadge(p.method)}`}>
-                      {p.method.replaceAll("_", " ")}
-                    </span>
-                  </td>
-                  <td className="hidden px-3 py-2.5 text-[var(--ink-muted)] lg:table-cell">{p.reference ?? "-"}</td>
-                  <td className="px-3 py-2.5">
-                    {linkHref ? (
-                      <Link href={linkHref} className="font-medium text-[var(--ink)] transition hover:text-[var(--accent)]">
-                        {label}
-                      </Link>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">{label}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {linkHref ? (
-                        <Link href={linkHref} title="View source" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </Link>
-                      ) : null}
-                      <a href={`/api/payments/${p.id}/receipt`} target="_blank" rel="noreferrer" title="Open receipt PDF" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] transition hover:bg-[var(--accent)]/20">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 12h6M9 16h4"/></svg>
-                      </a>
-                      <RowActionsMenu label="Receipt actions">
-                        <div className="py-1 text-left">
-                          <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
-                            Download Receipt PDF
-                          </MenuActionLink>
-                        </div>
-                        <DocumentShareMenuSection
-                          hiddenFieldName="paymentId"
-                          hiddenFieldValue={p.id}
-                          recipientPhone={recipientPhone}
-                          recipientEmail={recipientEmail}
-                          whatsAppAction={shareReceiptWhatsAppAction}
-                          emailAction={shareReceiptEmailAction}
-                          emailLabel="Email receipt"
-                          waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
-                        />
-                        <MenuSection label="Edit Receipt" />
-                        <form action={updateReceiptAction} className="space-y-2 p-3">
-                          <input type="hidden" name="paymentId" value={p.id} />
-                          <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                          <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
-                            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
-                          </select>
-                          <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                          <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                          <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
-                        </form>
-                        <MenuDestructiveRow>
-                          <form action={deleteReceiptAction}>
-                            <input type="hidden" name="paymentId" value={p.id} />
-                            <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
-                          </form>
-                        </MenuDestructiveRow>
-                      </RowActionsMenu>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {payments.length === 0 ? (
-              <DocumentEmptyTableRow message="No payments yet." colSpan={6} />
-            ) : null}
-          </tbody>
-      </DocumentListTable>
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="receipts"
+        hrefForPage={receiptsHref}
+      />
     </section>
   );
 }

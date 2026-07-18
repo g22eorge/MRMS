@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -69,33 +70,34 @@ export default async function StockCountDetailPage({ params }: { params: Promise
       </div>
 
       {/* Items table */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-              <th className="px-4 py-2.5 text-left">Item</th>
-              <th className="px-4 py-2.5 text-right">System</th>
-              <th className="px-4 py-2.5 text-right">Counted</th>
-              <th className="px-4 py-2.5 text-right">Variance</th>
-              <th className="hidden px-4 py-2.5 text-left sm:table-cell">Note</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {count.items.map((item) => (
-              <tr key={item.id} className={item.varianceQty !== 0 ? "bg-amber-500/5" : ""}>
-                <td className="px-4 py-2">
-                  <p className="font-semibold text-[var(--ink)]">{item.part.sku}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">{item.part.name}</p>
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-[var(--ink-muted)]">{item.systemQty}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-[var(--ink)]">{item.countedQty}</td>
-                <td className="px-4 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{item.varianceQty}</td>
-                <td className="hidden px-4 py-2 text-xs text-[var(--ink-muted)] sm:table-cell">{item.note ?? "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rows={count.items}
+        getRowKey={(item) => item.id}
+        rowClassName={(item) => (item.varianceQty !== 0 ? "bg-amber-500/5" : undefined)}
+        empty="No items counted."
+        columns={[
+          {
+            key: "item",
+            header: "Item",
+            cell: (item) => (
+              <>
+                <p className="font-semibold text-[var(--ink)]">{item.part.sku}</p>
+                <p className="text-xs text-[var(--ink-muted)]">{item.part.name}</p>
+              </>
+            ),
+          },
+          { key: "system", header: "System", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.systemQty },
+          { key: "counted", header: "Counted", align: "right", className: "tabular-nums text-[var(--ink)]", cell: (item) => item.countedQty },
+          { key: "variance", header: "Variance", align: "right", className: "font-semibold tabular-nums text-[var(--ink)]", cell: (item) => item.varianceQty },
+          {
+            key: "note",
+            header: "Note",
+            className: "hidden text-xs text-[var(--ink-muted)] sm:table-cell",
+            headerClassName: "hidden sm:table-cell",
+            cell: (item) => item.note ?? "-",
+          },
+        ]}
+      />
 
       {/* Notes */}
       {count.note ? (

@@ -13,6 +13,10 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -35,17 +39,17 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   OTHER: "Other",
 };
 
-const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  RENT: "border-violet-400/30 bg-violet-400/10 text-violet-700",
-  UTILITIES: "border-sky-400/30 bg-sky-400/10 text-sky-700",
-  SALARIES: "border-emerald-400/30 bg-emerald-400/10 text-emerald-700",
-  SUPPLIES: "border-amber-400/30 bg-amber-400/10 text-amber-700",
-  MARKETING: "border-pink-400/30 bg-pink-400/10 text-pink-700",
-  TRAVEL: "border-orange-400/30 bg-orange-400/10 text-orange-700",
-  EQUIPMENT: "border-indigo-400/30 bg-indigo-400/10 text-indigo-700",
-  MAINTENANCE: "border-cyan-400/30 bg-cyan-400/10 text-cyan-700",
-  TAXES: "border-red-400/30 bg-red-400/10 text-red-700",
-  OTHER: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+const CATEGORY_TONES: Record<ExpenseCategory, BadgeTone> = {
+  RENT: "violet",
+  UTILITIES: "sky",
+  SALARIES: "success",
+  SUPPLIES: "warning",
+  MARKETING: "pink",
+  TRAVEL: "orange",
+  EQUIPMENT: "info",
+  MAINTENANCE: "teal",
+  TAXES: "danger",
+  OTHER: "neutral",
 };
 
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -68,6 +72,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     : undefined;
   const q = sp.q?.trim() ?? "";
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
+  const page = parsePage(sp.page);
 
   const now = new Date();
   const thisYear = now.getFullYear();
@@ -96,7 +101,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       : {}),
   };
 
-  const [expenses, suppliers, trendExpenses, prevMonthExpenses, ytdExpenses, prevYtdExpenses] =
+  const [expenses, statsRows, total, suppliers, trendExpenses, prevMonthExpenses, ytdExpenses, prevYtdExpenses] =
     await Promise.all([
       db.expense.findMany({
         where,
@@ -105,8 +110,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
           createdBy: { select: { name: true } },
         },
         orderBy: { createdAt: "desc" },
-        take: 200,
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
       }),
+      // Whole-dataset KPIs: totalAmount, thisMonthAmount (paidAt ?? createdAt
+      // fallback isn't SQL-aggregatable) and byCategory are computed in JS from
+      // this slim, filter-scoped fetch so they don't reflect only the page.
+      db.expense.findMany({
+        where,
+        select: { amount: true, paidAt: true, createdAt: true, category: true },
+      }),
+      db.expense.count({ where }),
       db.supplier
         .findMany({ where: {}, select: { id: true, name: true }, orderBy: { name: "asc" } })
         .catch(() => [] as { id: string; name: string }[]),
@@ -130,10 +144,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ]);
 
   const currency = "UGX";
+  const pageView = paginationView(page, total);
 
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalAmount = statsRows.reduce((sum, e) => sum + e.amount, 0);
 
-  const thisMonthAmount = expenses
+  const thisMonthAmount = statsRows
     .filter((e) => {
       const d = e.paidAt ?? e.createdAt;
       return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
@@ -163,9 +178,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
   }
   const trendData = trendMonths.map(({ key, amount }) => ({ key, amount }));
 
-  // Category breakdown (from filtered expenses)
+  // Category breakdown (from full filtered dataset, not just the current page)
   const byCategory = CATEGORIES.map((cat) => {
-    const items = expenses.filter((e) => e.category === cat);
+    const items = statsRows.filter((e) => e.category === cat);
     return {
       cat,
       total: items.reduce((s, e) => s + e.amount, 0),
@@ -275,34 +290,72 @@ export default async function ExpensesPage({ searchParams }: Props) {
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
 
+  const topCategory =
+    byCategory.length > 0 ? [...byCategory].sort((a, b) => b.total - a.total)[0] : null;
+
+  const expensesHref = pageHrefBuilder("/finance/expenses", {
+    category: catFilter ?? "",
+    q,
+    period: periodFilter !== "all" ? periodFilter : "",
+  });
+
   return (
     <div className="space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">
-            Expenses{" "}
-            <span className="font-normal text-[var(--ink-muted)]">
-              · {expenses.length} records
-            </span>
-          </p>
-          <div className="mt-0.5 flex items-center gap-3">
+      <PageHeader
+        eyebrow="Finance"
+        title="Expenses"
+        description={`${total} record${total !== 1 ? "s" : ""}`}
+        kpis={[
+          {
+            label: "This Month",
+            value: formatMoneyCompact(thisMonthAmount, currency),
+            sub:
+              prevMonthTotal > 0
+                ? `${momDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(momDelta), currency)} vs last month`
+                : undefined,
+          },
+          {
+            label: `YTD ${thisYear}`,
+            value: formatMoneyCompact(ytdTotal, currency),
+            sub:
+              prevYtdTotal > 0
+                ? `${ytdDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(ytdDelta), currency)} vs ${thisYear - 1} YTD`
+                : undefined,
+          },
+          {
+            label: "Avg / Month",
+            value:
+              trendData.filter((d) => d.amount > 0).length > 0
+                ? formatMoneyCompact(
+                    trendData.reduce((s, d) => s + d.amount, 0) /
+                      Math.max(1, trendData.filter((d) => d.amount > 0).length),
+                    currency,
+                  )
+                : "—",
+            sub: "Last 6 months",
+          },
+          {
+            label: "Top Category",
+            value: topCategory ? formatMoneyCompact(topCategory.total, currency) : "—",
+            sub: topCategory ? CATEGORY_LABELS[topCategory.cat] : undefined,
+          },
+        ]}
+        actions={
+          <>
             <Link
               href="/finance/reports/pl"
-              className="text-[13px] text-[var(--accent)] hover:underline"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
             >
-              P&L Statement →
+              P&L →
             </Link>
             <Link
               href={`/api/reports/export?type=expenses&month=${thisYear}-${String(thisMonth + 1).padStart(2, "0")}`}
-              className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
             >
-              ↓ Export CSV
+              ↓ CSV
             </Link>
-          </div>
-        </div>
-        {canWrite && (
+            {canWrite && (
           <details className="group relative">
             <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
               + Record Expense
@@ -421,80 +474,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
               </form>
             </div>
           </details>
-        )}
-      </div>
-
-      {/* ── KPI STRIP ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">This Month</p>
-          <p className="mt-1 text-lg font-bold text-[var(--ink)] tabular-nums">
-            {formatMoneyCompact(thisMonthAmount, currency)}
-          </p>
-          {prevMonthTotal > 0 && (
-            <p
-              className={`mt-1 text-[13px] font-semibold ${
-                momDelta <= 0 ? "text-emerald-500" : "text-red-500"
-              }`}
-            >
-              {momDelta > 0 ? "+" : "−"}
-              {formatMoneyCompact(Math.abs(momDelta), currency)} vs last month
-            </p>
-          )}
-        </div>
-
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            YTD {thisYear}
-          </p>
-          <p className="mt-1 text-lg font-bold text-[var(--ink)] tabular-nums">
-            {formatMoneyCompact(ytdTotal, currency)}
-          </p>
-          {prevYtdTotal > 0 && (
-            <p
-              className={`mt-1 text-[13px] font-semibold ${
-                ytdDelta <= 0 ? "text-emerald-500" : "text-red-500"
-              }`}
-            >
-              {ytdDelta > 0 ? "+" : "−"}
-              {formatMoneyCompact(Math.abs(ytdDelta), currency)} vs {thisYear - 1} YTD
-            </p>
-          )}
-        </div>
-
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Avg / Month</p>
-          <p className="mt-1 text-lg font-bold text-[var(--ink)] tabular-nums">
-            {trendData.filter((d) => d.amount > 0).length > 0
-              ? formatMoneyCompact(
-                  trendData.reduce((s, d) => s + d.amount, 0) /
-                    Math.max(1, trendData.filter((d) => d.amount > 0).length),
-                  currency,
-                )
-              : "—"}
-          </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">Last 6 months</p>
-        </div>
-
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            Top Category
-          </p>
-          {byCategory.length > 0 ? (
-            <>
-              <p className="mt-1 text-lg font-bold text-[var(--ink)] tabular-nums">
-                {formatMoneyCompact(byCategory.sort((a, b) => b.total - a.total)[0].total, currency)}
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-                {CATEGORY_LABELS[byCategory.sort((a, b) => b.total - a.total)[0].cat]}
-              </p>
-            </>
-          ) : (
-            <p className="mt-1.5 text-[var(--ink-muted)]">—</p>
-          )}
-        </div>
-      </div>
-
+            )}
+          </>
+        }
+      />
 
       {/* ── PERIOD CHIPS ─────────────────────────────────────────────────── */}
       <div className="flex gap-2">
@@ -555,99 +538,109 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
       {/* ── EXPENSE TABLE ────────────────────────────────────────────────── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="doc-list overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Expense #</th>
-                <th className="px-4 py-2.5 text-left">Description</th>
-                <th className="px-4 py-2.5 text-left">Category</th>
-                <th className="hidden px-4 py-2.5 text-left md:table-cell">Supplier</th>
-                <th className="hidden px-4 py-2.5 text-left lg:table-cell">Method</th>
-                <th className="hidden px-4 py-2.5 text-left lg:table-cell">Paid</th>
-                <th className="px-4 py-2.5 text-right">Amount</th>
-                <th className="hidden px-4 py-2.5 text-left sm:table-cell">By</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((expense) => (
-                <tr
-                  key={expense.id}
-                  className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40"
-                >
-                  <td className="px-4 py-3">
-                    <p className="mono text-[12px] font-bold text-[var(--ink)]">
-                      {expense.expenseNumber}
-                    </p>
-                    <p className="text-[13px] text-[var(--ink-muted)]">{fmt(expense.createdAt)}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-[13px] font-medium text-[var(--ink)]">{expense.description}</p>
-                    {expense.reference && (
-                      <p className="text-[13px] text-[var(--ink-muted)]">Ref: {expense.reference}</p>
-                    )}
-                    {expense.notes && (
-                      <p className="text-[13px] italic text-[var(--ink-muted)]">{expense.notes}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${CATEGORY_COLORS[expense.category]}`}
-                    >
-                      {CATEGORY_LABELS[expense.category]}
-                    </span>
-                  </td>
-                  <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] md:table-cell">
-                    {expense.supplier?.name ?? "—"}
-                  </td>
-                  <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] lg:table-cell">
-                    {expense.method ? expense.method.replace(/_/g, " ") : "—"}
-                  </td>
-                  <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] lg:table-cell">
-                    {fmt(expense.paidAt)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <p className="font-semibold tabular-nums text-[var(--ink)]">
-                      {expense.currency} {expense.amount.toLocaleString()}
-                    </p>
-                  </td>
-                  <td className="hidden px-4 py-3 text-[13px] text-[var(--ink-muted)] sm:table-cell">
-                    {expense.createdBy.name}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {canDelete && (
-                      <RowActionsMenu label="Expense actions">
-                        <MenuDestructiveRow>
-                          <form action={deleteExpenseAction}>
-                            <input type="hidden" name="expenseId" value={expense.id} />
-                            <ConfirmSubmitButton
-                              message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
-                              className="w-full text-left text-[12px] text-red-600"
-                            >
-                              Delete
-                            </ConfirmSubmitButton>
-                          </form>
-                        </MenuDestructiveRow>
-                      </RowActionsMenu>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {expenses.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">
-                    {q || catFilter ? "No expenses match your filters." : "No expenses recorded yet."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {expenses.length > 0 && (
+        <DataTable
+          frameless
+          rows={expenses}
+          getRowKey={(expense) => expense.id}
+          empty={q || catFilter ? "No expenses match your filters." : "No expenses recorded yet."}
+          columns={[
+            {
+              key: "number",
+              header: "Expense #",
+              cell: (expense) => (
+                <>
+                  <p className="mono text-[12px] font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
+                  <p className="text-[13px] text-[var(--ink-muted)]">{fmt(expense.createdAt)}</p>
+                </>
+              ),
+            },
+            {
+              key: "description",
+              header: "Description",
+              cell: (expense) => (
+                <>
+                  <p className="text-[13px] font-medium text-[var(--ink)]">{expense.description}</p>
+                  {expense.reference && (
+                    <p className="text-[13px] text-[var(--ink-muted)]">Ref: {expense.reference}</p>
+                  )}
+                  {expense.notes && (
+                    <p className="text-[13px] italic text-[var(--ink-muted)]">{expense.notes}</p>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: "category",
+              header: "Category",
+              cell: (expense) => (
+                <StatusBadge tone={toneFor(CATEGORY_TONES, expense.category)}>
+                  {CATEGORY_LABELS[expense.category]}
+                </StatusBadge>
+              ),
+            },
+            {
+              key: "supplier",
+              header: "Supplier",
+              headerClassName: "hidden md:table-cell",
+              className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+              cell: (expense) => expense.supplier?.name ?? "—",
+            },
+            {
+              key: "method",
+              header: "Method",
+              headerClassName: "hidden lg:table-cell",
+              className: "hidden text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              cell: (expense) => (expense.method ? expense.method.replace(/_/g, " ") : "—"),
+            },
+            {
+              key: "paid",
+              header: "Paid",
+              headerClassName: "hidden lg:table-cell",
+              className: "hidden text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              cell: (expense) => fmt(expense.paidAt),
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              align: "right",
+              cell: (expense) => (
+                <span className="font-semibold tabular-nums text-[var(--ink)]">
+                  {expense.currency} {expense.amount.toLocaleString()}
+                </span>
+              ),
+            },
+            {
+              key: "by",
+              header: "By",
+              headerClassName: "hidden sm:table-cell",
+              className: "hidden text-[13px] text-[var(--ink-muted)] sm:table-cell",
+              cell: (expense) => expense.createdBy.name,
+            },
+          ]}
+          actions={
+            canDelete
+              ? (expense) => (
+                  <RowActionsMenu label="Expense actions">
+                    <MenuDestructiveRow>
+                      <form action={deleteExpenseAction}>
+                        <input type="hidden" name="expenseId" value={expense.id} />
+                        <ConfirmSubmitButton
+                          message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
+                          className="w-full text-left text-[12px] text-red-600"
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
+                      </form>
+                    </MenuDestructiveRow>
+                  </RowActionsMenu>
+                )
+              : undefined
+          }
+        />
+        {total > 0 && (
           <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5">
             <p className="text-[13px] text-[var(--ink-muted)]">
-              {expenses.length} record{expenses.length !== 1 ? "s" : ""}
+              {total} record{total !== 1 ? "s" : ""}
               {catFilter ? ` · ${CATEGORY_LABELS[catFilter]}` : ""}
             </p>
             <p className="text-[12px] font-bold text-[var(--ink)]">
@@ -656,6 +649,16 @@ export default async function ExpensesPage({ searchParams }: Props) {
           </div>
         )}
       </div>
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="expenses"
+        hrefForPage={expensesHref}
+      />
     </div>
   );
 }

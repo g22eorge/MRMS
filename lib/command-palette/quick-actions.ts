@@ -2,6 +2,7 @@ import { type Role } from "@prisma/client";
 
 import { COMMUNICATIONS_ROUTES, canAccessCommunications } from "@/lib/communications/routes";
 import { DOCUMENTS_ROUTES } from "@/lib/documents/routes";
+import { routeLabel } from "@/lib/nav/registry";
 import { can } from "@/lib/permissions";
 
 import type { CommandPaletteAction } from "./types";
@@ -32,7 +33,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
   if (can.createJob(user)) {
     actions.push({
       id: "new-job",
-      label: "New Repair Job",
+      label: routeLabel("/jobs/new"),
       description: "Capture a new repair intake",
       href: "/jobs/new",
       group: "Quick actions",
@@ -62,7 +63,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
     });
     actions.push({
       id: "invoices",
-      label: "Open Invoices",
+      label: `Open ${routeLabel("/documents/invoices")}`,
       description: "Browse and collect receivables",
       href: DOCUMENTS_ROUTES.invoices,
       group: "Go to",
@@ -81,8 +82,8 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
   if (can.openPosSession(user)) {
     actions.push({
       id: "pos-sale",
-      label: "Product Sale",
-      description: "Open point of sale",
+      label: routeLabel("/pos"),
+      description: "Walk-in product sale and checkout",
       href: "/pos",
       group: "Quick actions",
       keywords: ["retail", "sale", "pos"],
@@ -103,7 +104,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
   if (can.searchJobs(user)) {
     actions.push({
       id: "jobs",
-      label: "Open Jobs",
+      label: `Open ${routeLabel("/jobs")}`,
       description: "Repair job queue",
       href: "/jobs",
       group: "Go to",
@@ -114,7 +115,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
   if (can.viewClientInfo(user)) {
     actions.push({
       id: "clients",
-      label: "Open Clients",
+      label: `Open ${routeLabel("/clients")}`,
       description: "Customer directory",
       href: "/clients",
       group: "Go to",
@@ -135,7 +136,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
 
   actions.push({
     id: "dashboard",
-    label: "Open Dashboard",
+    label: `Open ${routeLabel("/dashboard")}`,
     description: "Operations overview",
     href: "/dashboard",
     group: "Go to",

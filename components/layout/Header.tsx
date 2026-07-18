@@ -11,6 +11,7 @@ import { useTheme } from "@/components/layout/ThemeProvider";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { can } from "@/lib/permissions";
+import { getPrimaryHrefs } from "@/components/layout/BottomNav";
 
 type HeaderProps = {
   userName: string;
@@ -65,14 +66,11 @@ function initials(name: string) {
 }
 
 
-const PRIMARY_TABS = new Set<string>([
-  "/dashboard", "/jobs", "/documents/invoices", "/reports", "/more",
-]);
-
+// Derived from the bottom bar's actual primary items (single source of truth)
+// instead of a separately maintained hardcoded list.
 function isPrimaryMobileTab(pathname: string, role: string, permissions: string[]) {
-  if (PRIMARY_TABS.has(pathname)) return true;
-  if (pathname !== "/technicians") return false;
-  return role === "TECHNICIAN_EXTERNAL" || !can.viewIntake({ role: role as never, permissions });
+  if (pathname === "/more") return true;
+  return getPrimaryHrefs(role as never, permissions).has(pathname);
 }
 
 export function Header({
@@ -104,7 +102,7 @@ export function Header({
     <>
       {/* ── Top header ────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--panel)]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-[1360px] items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center gap-3 px-4 md:px-6 xl:max-w-[1360px]">
 
           {/* Mobile: ← back button on sub-pages, logo on primary tabs */}
           {showMobileBack ? (
@@ -112,7 +110,7 @@ export function Header({
               type="button"
               onClick={() => router.back()}
               aria-label="Go back"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--ink)] transition active:bg-[var(--panel-strong)] lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl p-0 text-[var(--ink)] transition active:bg-[var(--panel-strong)] lg:hidden"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -128,86 +126,79 @@ export function Header({
             </Link>
           )}
 
-          {/* Spacer */}
+          {/* Desktop search — thin, flat, anchors the left side */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+            className="hidden h-9 w-64 items-center gap-2 rounded-lg border border-[var(--line)] bg-transparent px-2.5 text-[13px] text-[var(--ink-muted)] transition hover:border-[var(--ink-muted)]/40 hover:text-[var(--ink)] md:flex lg:w-72"
+            aria-label="Open command palette"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+            </svg>
+            Search
+            <kbd className="ml-auto text-[11px] font-medium tracking-wide text-[var(--ink-muted)]/70">⌘K</kbd>
+          </button>
+
+          {/* Spacer pushes the action group to the right edge */}
           <div className="flex-1" />
 
-          {/* ── Action pill group ─────────────────────────────────────── */}
+          {/* ── Action group — flat ghost icons, one visual rhythm ── */}
           <div className="flex items-center gap-1">
+            {/* Mobile search */}
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] md:hidden"
               aria-label="Open search"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
               </svg>
             </button>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-              className="hidden items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] md:flex"
-              aria-label="Open command palette"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-              </svg>
-              Search
-              <kbd className="rounded border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-muted)]">⌘K</kbd>
-            </button>
+
             {/* Notifications */}
             {can.viewNotifications({ role: role as never, permissions }) ? (
               <NotificationBell />
             ) : null}
 
-            {/* Theme toggle — mobile only standalone button */}
-            <div className="flex sm:hidden items-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]">
-              <ThemeToggle />
-            </div>
+            {/* Theme toggle */}
+            <ThemeToggle />
 
-            {/* Desktop pill: Theme toggle + Settings gear side by side */}
-            <div className="hidden sm:flex items-center divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]">
-              <ThemeToggle />
-              <button
-                type="button"
-                onClick={() => openSettings("profile")}
-                title="Settings"
-                aria-label="Open settings"
-                className="flex h-9 w-9 items-center justify-center text-[var(--ink-muted)] transition hover:bg-[var(--panel)] hover:text-[var(--ink)]"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-            </div>
+            {/* Settings gear — desktop only */}
+            <button
+              type="button"
+              onClick={() => openSettings("profile")}
+              title="Settings"
+              aria-label="Open settings"
+              className="hidden h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] sm:flex"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
           </div>
 
-          {/* ── User menu ─────────────────────────────────────────────── */}
+          {/* Hairline divider between icons and identity */}
+          <div className="hidden h-5 w-px bg-[var(--line)] sm:block" aria-hidden="true" />
+
+          {/* ── User menu — minimal: avatar + first name + chevron ── */}
           <div className="relative">
-            {/* Mobile: 34px avatar circle only — acts as menu trigger */}
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] py-1.5 pl-1.5 pr-2.5 transition hover:border-[var(--accent)]/40 sm:pl-1.5 sm:pr-2.5"
+              className="flex h-9 items-center gap-2 rounded-lg py-0 pl-1 pr-1 transition hover:bg-[var(--panel-strong)] sm:pr-1.5"
               title="Account menu"
             >
-              {/* Avatar — 34px on mobile, 28px on desktop */}
-              <div className="flex h-[34px] w-[34px] sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[12px] sm:text-[13px] font-black text-black select-none">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-[12px] font-black text-black select-none">
                 {initials(userName)}
               </div>
-              {/* Name + role (desktop only) */}
-              <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
-                <span className="text-[12px] font-semibold text-[var(--ink)] leading-none truncate max-w-[100px]">
-                  {userName.split(" ")[0]}
-                </span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold leading-none ${roleAccent(role)}`}>
-                  {roleDisplay(role)}
-                </span>
-              </div>
-              {/* Chevron — desktop only */}
+              <span className="hidden truncate text-[13px] font-semibold leading-none text-[var(--ink)] sm:block max-w-[110px]">
+                {userName.split(" ")[0]}
+              </span>
               <svg className="hidden sm:block h-3.5 w-3.5 text-[var(--ink-muted)] transition-transform duration-150" style={{ transform: menuOpen ? "rotate(180deg)" : "none" }} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
               </svg>
@@ -229,7 +220,12 @@ export function Header({
                         {initials(userName)}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-bold text-[var(--ink)]">{userName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-[13px] font-bold text-[var(--ink)]">{userName}</p>
+                          <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleAccent(role)}`}>
+                            {roleDisplay(role)}
+                          </span>
+                        </div>
                         <p className="truncate text-[12px] text-[var(--ink-muted)]">{userEmail}</p>
                       </div>
                     </div>
@@ -369,16 +365,16 @@ function ThemeToggle() {
       title={isDark ? "Switch to light" : "Switch to dark"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-pressed={isDark}
-      className="flex h-9 w-9 items-center justify-center text-[var(--ink-muted)] transition hover:bg-[var(--panel)] hover:text-[var(--ink)]"
+      className="flex h-9 w-9 items-center justify-center rounded-lg p-0 text-[var(--ink)]/80 transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
     >
       {isDark ? (
         /* Moon — currently dark, click to go light */
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       ) : (
         /* Sun — currently light, click to go dark */
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/>
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
         </svg>

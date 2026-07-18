@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { runDataHeal } from "@/lib/data-heal";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { DataTable } from "@/components/ui/DataTable";
 
 export default async function DataHealPage({
   searchParams,
@@ -90,32 +91,35 @@ export default async function DataHealPage({
           <p className="text-sm font-semibold text-[var(--ink)]">Dry-run Preview</p>
           <p className="text-xs text-[var(--ink-muted)]">Showing up to 25 rows that can be healed right now.</p>
         </div>
-        {preview.changes.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-[var(--ink-muted)]">No healable placeholder rows found.</p>
-        ) : (
-          <div className="doc-list overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-[0.08em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-2.5 text-left font-medium">Job #</th>
-                  <th className="px-4 py-2.5 text-left font-medium">From</th>
-                  <th className="px-4 py-2.5 text-left font-medium">To</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.changes.map((change) => (
-                  <tr key={change.id} className="border-t border-[var(--line)]">
-                    <td className="px-4 py-2">
-                      <Link href={`/jobs/${change.id}`} className="mono font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">{change.jobNumber}</Link>
-                    </td>
-                    <td className="px-4 py-2 text-[var(--ink-muted)]">{change.from.brand} / {change.from.model} / {change.from.deviceType}</td>
-                    <td className="px-4 py-2 text-[var(--ink)]">{change.to.brand} / {change.to.model} / {change.to.deviceType}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          frameless
+          dense
+          className="doc-list"
+          rows={preview.changes}
+          getRowKey={(change) => change.id}
+          empty="No healable placeholder rows found."
+          columns={[
+            {
+              key: "job",
+              header: "Job #",
+              cell: (change) => (
+                <Link href={`/jobs/${change.id}`} className="mono font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">{change.jobNumber}</Link>
+              ),
+            },
+            {
+              key: "from",
+              header: "From",
+              className: "text-[var(--ink-muted)]",
+              cell: (change) => `${change.from.brand} / ${change.from.model} / ${change.from.deviceType}`,
+            },
+            {
+              key: "to",
+              header: "To",
+              className: "text-[var(--ink)]",
+              cell: (change) => `${change.to.brand} / ${change.to.model} / ${change.to.deviceType}`,
+            },
+          ]}
+        />
       </section>
     </div>
   );

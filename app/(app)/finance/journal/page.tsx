@@ -12,6 +12,11 @@ import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/sh
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { can } from "@/lib/permissions";
 import { NewJournalEntryForm } from "@/components/finance/NewJournalEntryForm";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PageEmptyState } from "@/components/page-state/PageEmptyState";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -20,10 +25,10 @@ const MONTHS = [
 
 const STATUSES: JournalEntryStatus[] = ["DRAFT", "POSTED", "VOID"];
 
-const STATUS_STYLE: Record<JournalEntryStatus, string> = {
-  DRAFT:  "bg-amber-500/10 text-amber-700",
-  POSTED: "bg-green-500/10 text-green-700",
-  VOID:   "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+const STATUS_TONES: Record<JournalEntryStatus, BadgeTone> = {
+  DRAFT:  "warning",
+  POSTED: "success",
+  VOID:   "neutral",
 };
 
 export const dynamic = "force-dynamic";
@@ -45,6 +50,7 @@ export default async function JournalPage({
   const statusFilter = sp.status ?? "all";
   const searchQ = (sp.q ?? "").trim();
   const currency = "UGX";
+  const page = parsePage(sp.page);
 
   // ── Date ranges ───────────────────────────────────────────────────────────
   const periodFilter =
@@ -157,8 +163,16 @@ export default async function JournalPage({
       }
     : {};
 
+  const entriesWhere = {
+    ...(statusFilter !== "all" ? { status: statusFilter as JournalEntryStatus } : {}),
+    date: periodFilter,
+    ...searchWhere,
+  };
+
   const [
     entries,
+    total,
+    filteredPostedStats,
     accounts,
     thisMonthStats,
     lastMonthStats,
@@ -167,19 +181,23 @@ export default async function JournalPage({
     voidCount,
   ] = await Promise.all([
     db.journalEntry.findMany({
-      where: {
-        ...(statusFilter !== "all" ? { status: statusFilter as JournalEntryStatus } : {}),
-        date: periodFilter,
-        ...searchWhere,
-      },
+      where: entriesWhere,
       orderBy: { date: "desc" },
-      take: 200,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       include: {
         lines: {
           include: { account: { select: { code: true, name: true } } },
           orderBy: { debit: "desc" },
         },
       },
+    }),
+    db.journalEntry.count({ where: entriesWhere }),
+    // Whole-dataset "posted total" for the filtered view (simple, non-converted
+    // sum → SQL aggregate); stays correct after the list is paginated.
+    db.journalEntry.aggregate({
+      where: { AND: [entriesWhere, { status: "POSTED" }] },
+      _sum: { totalAmount: true },
     }),
     db.chartOfAccount.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
     db.journalEntry.aggregate({
@@ -221,22 +239,54 @@ export default async function JournalPage({
 
   const availableYears = [now.getFullYear() - 1, now.getFullYear()];
 
-  // Filtered summary
-  const filteredPosted = entries.filter((e) => e.status === "POSTED");
-  const filteredTotal  = filteredPosted.reduce((s, e) => s + e.totalAmount, 0);
+  // Filtered summary — whole-dataset posted total (not just the current page)
+  const filteredTotal = filteredPostedStats._sum.totalAmount ?? 0;
+
+  const pageView = paginationView(page, total);
+  const journalHref = pageHrefBuilder("/finance/journal", {
+    month: month > 0 ? String(month) : "",
+    year: String(year),
+    status: statusFilter !== "all" ? statusFilter : "",
+    q: searchQ,
+  });
 
   return (
     <div className="space-y-4">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Journal Entries</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">Double-entry ledger — every entry&apos;s debits must equal its credits</p>
-          </div>
-          <div className="flex gap-2">
+      <PageHeader
+        eyebrow="Finance"
+        title="Journal Entries"
+        description="Double-entry ledger — every entry's debits must equal its credits"
+        kpis={[
+          {
+            label: "Posted This Month",
+            value: formatMoneyCompact(thisMonthAmt, currency),
+            sub: `${thisMonthStats._count} entr${thisMonthStats._count === 1 ? "y" : "ies"}${
+              momChange !== null
+                ? ` · ${momChange >= 0 ? "+" : ""}${momChange.toFixed(1)}% vs last mo.`
+                : ""
+            }`,
+          },
+          {
+            label: "YTD Posted",
+            value: formatMoneyCompact(ytdAmt, currency),
+            sub: `${ytdCount} posted entr${ytdCount === 1 ? "y" : "ies"} in ${now.getFullYear()}`,
+          },
+          {
+            label: "Drafts Pending",
+            value: draftCount,
+            valueClass: draftCount > 0 ? "text-amber-600" : undefined,
+            sub: draftCount > 0 ? "Need review & posting" : "All entries posted",
+          },
+          {
+            label: "Avg Entry (YTD)",
+            value: formatMoneyCompact(avgEntryAmt, currency),
+            sub: `${voidCount} voided entr${voidCount === 1 ? "y" : "ies"} this year`,
+          },
+        ]}
+        actions={
+          <>
             <Link
               href="/finance/accounts"
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
@@ -249,74 +299,9 @@ export default async function JournalPage({
             >
               P&amp;L →
             </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── KPI TILES ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-
-        {/* Posted this month */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            Posted This Month
-          </p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">
-            {formatMoneyCompact(thisMonthAmt, currency)}
-          </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-            {thisMonthStats._count} entr{thisMonthStats._count === 1 ? "y" : "ies"}
-            {momChange !== null && (
-              <span className={`ml-1.5 font-semibold ${momChange >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                {momChange >= 0 ? "+" : ""}{momChange.toFixed(1)}% vs last mo.
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* YTD posted */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            YTD Posted
-          </p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">
-            {formatMoneyCompact(ytdAmt, currency)}
-          </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-            {ytdCount} posted entr{ytdCount === 1 ? "y" : "ies"} in {now.getFullYear()}
-          </p>
-        </div>
-
-        {/* Drafts pending */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            Drafts Pending
-          </p>
-          <p
-            className={`mt-1 text-lg font-bold tabular-nums ${
-              draftCount > 0 ? "text-amber-600" : "text-[var(--ink)]"
-            }`}
-          >
-            {draftCount}
-          </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-            {draftCount > 0 ? "Need review & posting" : "All entries posted"}
-          </p>
-        </div>
-
-        {/* Average entry */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-            Avg Entry (YTD)
-          </p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">
-            {formatMoneyCompact(avgEntryAmt, currency)}
-          </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-            {voidCount} voided entr{voidCount === 1 ? "y" : "ies"} this year
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── NEW ENTRY FORM ─────────────────────────────────────────────────── */}
       {accounts.length === 0 ? (
@@ -390,10 +375,10 @@ export default async function JournalPage({
       </form>
 
       {/* Period summary bar */}
-      {entries.length > 0 && (
+      {total > 0 && (
         <div className="flex flex-wrap items-center gap-4 rounded-lg bg-[var(--panel-strong)]/50 px-4 py-2.5">
           <span className="text-xs text-[var(--ink-muted)]">
-            <span className="font-semibold text-[var(--ink)]">{entries.length}</span>{" "}
+            <span className="font-semibold text-[var(--ink)]">{total}</span>{" "}
             {statusFilter === "all" ? "entries" : statusFilter.toLowerCase() + " entries"}{" "}
             in <span className="font-semibold">{periodLabel}</span>
           </span>
@@ -415,15 +400,15 @@ export default async function JournalPage({
       )}
 
       {/* ── ENTRIES LIST ───────────────────────────────────────────────────── */}
-      {entries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-14 text-center">
-          <p className="text-sm text-[var(--ink-muted)]">No journal entries found for this period.</p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">
-            {searchQ
+      {total === 0 ? (
+        <PageEmptyState
+          title="No journal entries found for this period."
+          description={
+            searchQ
               ? "Try a different search term or clear the filter."
-              : "Adjust the filters above or create a new entry."}
-          </p>
-        </div>
+              : "Adjust the filters above or create a new entry."
+          }
+        />
       ) : (
         <div className="space-y-3">
           {entries.map((entry) => {
@@ -441,16 +426,11 @@ export default async function JournalPage({
                     <span className="font-mono text-xs font-bold text-[var(--accent)]">
                       {entry.entryNumber}
                     </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide ${STATUS_STYLE[entry.status]}`}
-                    >
+                    <StatusBadge tone={toneFor(STATUS_TONES, entry.status)} dot>
                       {entry.status}
-                    </span>
+                    </StatusBadge>
                     {!balanced && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[12px] font-bold text-red-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5 shrink-0" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        UNBALANCED
-                      </span>
+                      <StatusBadge tone="danger" dot>UNBALANCED</StatusBadge>
                     )}
                     <span className="text-xs text-[var(--ink-muted)]">
                       {new Date(entry.date).toLocaleDateString("en-UG", {
@@ -517,73 +497,83 @@ export default async function JournalPage({
                 </div>
 
                 {/* ── Lines table ──────────────────────────────── */}
-                <div className="overflow-x-auto px-4 pb-3.5">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr>
-                        <th className="pb-1 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                          Account
-                        </th>
-                        <th className="pb-1 pl-2 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                          Memo
-                        </th>
-                        <th className="pb-1 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                          Debit
-                        </th>
-                        <th className="pb-1 pl-4 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                          Credit
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]/40">
-                      {entry.lines.map((line) => (
-                        <tr key={line.id}>
-                          <td className="py-1">
+                <div className="px-4 pb-3.5">
+                  <DataTable
+                    frameless
+                    dense
+                    rows={entry.lines}
+                    getRowKey={(line) => line.id}
+                    columns={[
+                      {
+                        key: "account",
+                        header: "Account",
+                        cell: (line) => (
+                          <>
                             <span className="font-mono text-[var(--accent)]">{line.account.code}</span>
                             <span className="ml-1.5 text-[var(--ink-muted)]">{line.account.name}</span>
-                          </td>
-                          <td className="max-w-[200px] truncate py-1 pl-2 text-[var(--ink-muted)]">
-                            {line.description || "—"}
-                          </td>
-                          <td className="py-1 text-right font-medium text-[var(--ink)]">
-                            {line.debit > 0 ? formatMoney(line.debit, currency) : ""}
-                          </td>
-                          <td className="py-1 pl-4 text-right text-[var(--ink-muted)]">
-                            {line.credit > 0 ? formatMoney(line.credit, currency) : ""}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="border-t border-[var(--line)]">
-                      <tr>
-                        <td
-                          colSpan={2}
-                          className="pt-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]"
-                        >
-                          Totals
-                        </td>
-                        <td className="pt-1.5 text-right font-semibold text-[var(--ink)]">
-                          {formatMoney(lineDebit, currency)}
-                        </td>
-                        <td className="pt-1.5 pl-4 text-right font-semibold text-[var(--ink-muted)]">
-                          {formatMoney(lineCredit, currency)}
-                        </td>
-                      </tr>
-                      {!balanced && (
+                          </>
+                        ),
+                      },
+                      {
+                        key: "memo",
+                        header: "Memo",
+                        className: "max-w-[200px] truncate text-[var(--ink-muted)]",
+                        cell: (line) => line.description || "—",
+                      },
+                      {
+                        key: "debit",
+                        header: "Debit",
+                        align: "right",
+                        className: "font-medium text-[var(--ink)]",
+                        cell: (line) => (line.debit > 0 ? formatMoney(line.debit, currency) : ""),
+                      },
+                      {
+                        key: "credit",
+                        header: "Credit",
+                        align: "right",
+                        className: "text-[var(--ink-muted)]",
+                        cell: (line) => (line.credit > 0 ? formatMoney(line.credit, currency) : ""),
+                      },
+                    ]}
+                    tableFooter={
+                      <>
                         <tr>
-                          <td colSpan={4} className="pt-0.5 text-right text-[12px] font-semibold text-red-500">
-                            Imbalance: {formatMoney(Math.abs(lineDebit - lineCredit), currency)}
+                          <td colSpan={2} className="px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+                            Totals
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-[var(--ink)]">
+                            {formatMoney(lineDebit, currency)}
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-[var(--ink-muted)]">
+                            {formatMoney(lineCredit, currency)}
                           </td>
                         </tr>
-                      )}
-                    </tfoot>
-                  </table>
+                        {!balanced && (
+                          <tr>
+                            <td colSpan={4} className="px-3 pb-2 text-right text-[12px] font-semibold text-red-500">
+                              Imbalance: {formatMoney(Math.abs(lineDebit - lineCredit), currency)}
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    }
+                  />
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="entries"
+        hrefForPage={journalHref}
+      />
 
       {/* ── QUICK LINKS ────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 border-t border-[var(--line)] pt-4">

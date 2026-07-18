@@ -4,84 +4,139 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { DataTable } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  POSTED: "border-sky-500/30 bg-sky-500/15 text-sky-700",
-  PART_PAID: "border-amber-400/30 bg-amber-400/15 text-amber-700",
-  PAID: "border-emerald-500/30 bg-emerald-500/15 text-emerald-700",
-  CANCELLED: "border-red-500/20 bg-red-500/10 text-red-600",
+const STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "sky",
+  PART_PAID: "warning",
+  PAID: "success",
+  CANCELLED: "danger",
 };
 
-export default async function SupplierBillsPage() {
+export default async function SupplierBillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
-  const bills = await prisma.supplierBill.findMany({
-    where: { orgId },
-    include: {
-      supplier: { select: { name: true } },
-      po: { select: { id: true, reference: true } },
-      grn: { select: { id: true, grnNumber: true } },
-    },
-    orderBy: { issuedAt: "desc" },
-    take: 100,
-  }).catch(() => []);
+  const params = await searchParams;
+  const page = parsePage(params.page);
 
-  const totalOutstanding = bills
-    .filter((bill) => bill.status !== "CANCELLED")
+  const [total, bills, outstandingRows] = await Promise.all([
+    prisma.supplierBill.count({ where: { orgId } }).catch(() => 0),
+    prisma.supplierBill.findMany({
+      where: { orgId },
+      include: {
+        supplier: { select: { name: true } },
+        po: { select: { id: true, reference: true } },
+        grn: { select: { id: true, grnNumber: true } },
+      },
+      orderBy: { issuedAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }).catch(() => []),
+    // Outstanding is a per-row Math.max sum (not SQL-aggregatable); keep a slim
+    // whole-dataset fetch so the KPI stays correct after the list is paginated.
+    prisma.supplierBill.findMany({
+      where: { orgId, status: { not: "CANCELLED" } },
+      select: { totalAmount: true, paidAmount: true },
+    }).catch(() => [] as { totalAmount: number; paidAmount: number }[]),
+  ]);
+
+  const totalOutstanding = outstandingRows
     .reduce((sum, bill) => sum + Math.max(0, bill.totalAmount - bill.paidAmount), 0);
+
+  const pageView = paginationView(page, total);
+  const billsHref = pageHrefBuilder("/inventory/supplier-bills", {});
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
   return (
-    <div className="space-y-4">
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">Supplier Bills <span className="font-normal text-[var(--ink-muted)]">· {bills.length} · outstanding {totalOutstanding.toLocaleString()}</span></p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/api/procurement/export?type=supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
-          <Link href="/inventory/supplier-bills/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Bill</Link>
-        </div>
-      </div>
-
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Bill</th>
-                <th className="px-4 py-2.5 text-left">Supplier</th>
-                <th className="px-4 py-2.5 text-left">Status</th>
-                <th className="hidden px-4 py-2.5 text-left md:table-cell">Linked Doc</th>
-                <th className="px-4 py-2.5 text-right">Total</th>
-                <th className="hidden px-4 py-2.5 text-right sm:table-cell">Balance</th>
-                <th className="hidden px-4 py-2.5 text-right sm:table-cell">Due</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {bills.map((bill) => (
-                <tr key={bill.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                  <td className="px-4 py-3"><p className="mono text-sm font-bold text-[var(--ink)]">{bill.billNumber}</p><p className="text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p></td>
-                  <td className="px-4 py-3 font-medium text-[var(--ink)]">{bill.supplier.name}</td>
-                  <td className="px-4 py-3"><span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${STATUS_COLORS[bill.status] ?? STATUS_COLORS.POSTED}`}>{bill.status}</span></td>
-                  <td className="hidden px-4 py-3 text-xs text-[var(--ink-muted)] md:table-cell">{bill.grn ? bill.grn.grnNumber : bill.po ? bill.po.reference ?? `PO-${bill.po.id.slice(-6).toUpperCase()}` : "-"}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">{bill.currency} {bill.totalAmount.toLocaleString()}</td>
-                  <td className="hidden px-4 py-3 text-right tabular-nums text-[var(--ink-muted)] sm:table-cell">{(bill.totalAmount - bill.paidAmount).toLocaleString()}</td>
-                  <td className="hidden px-4 py-3 text-right text-[var(--ink-muted)] sm:table-cell">{fmt(bill.dueAt)}</td>
-                  <td className="px-4 py-3 text-right"><Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link></td>
-                </tr>
-              ))}
-              {bills.length === 0 ? <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">No supplier bills yet.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <ListPageLayout
+      header={{
+        eyebrow: "Inventory",
+        title: "Supplier Bills",
+        description: `${total} bills · outstanding ${totalOutstanding.toLocaleString()}`,
+        actions: (
+          <>
+            <Link href="/api/procurement/export?type=supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
+            <Link href="/inventory/supplier-bills/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Bill</Link>
+          </>
+        ),
+      }}
+    >
+      <DataTable
+        rows={bills}
+        getRowKey={(bill) => bill.id}
+        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: billsHref, unit: "bills" }}
+        empty="No supplier bills yet."
+        columns={[
+          {
+            key: "bill",
+            header: "Bill",
+            cell: (bill) => (
+              <>
+                <p className="mono text-sm font-bold text-[var(--ink)]">{bill.billNumber}</p>
+                <p className="text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p>
+              </>
+            ),
+          },
+          {
+            key: "supplier",
+            header: "Supplier",
+            className: "font-medium text-[var(--ink)]",
+            cell: (bill) => bill.supplier.name,
+          },
+          {
+            key: "status",
+            header: "Status",
+            cell: (bill) => (
+              <StatusBadge tone={toneFor(STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>
+            ),
+          },
+          {
+            key: "linked",
+            header: "Linked Doc",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-xs text-[var(--ink-muted)] md:table-cell",
+            cell: (bill) => bill.grn ? bill.grn.grnNumber : bill.po ? bill.po.reference ?? `PO-${bill.po.id.slice(-6).toUpperCase()}` : "-",
+          },
+          {
+            key: "total",
+            header: "Total",
+            align: "right",
+            className: "font-semibold tabular-nums text-[var(--ink)]",
+            cell: (bill) => `${bill.currency} ${bill.totalAmount.toLocaleString()}`,
+          },
+          {
+            key: "balance",
+            header: "Balance",
+            align: "right",
+            headerClassName: "hidden sm:table-cell",
+            className: "hidden tabular-nums text-[var(--ink-muted)] sm:table-cell",
+            cell: (bill) => (bill.totalAmount - bill.paidAmount).toLocaleString(),
+          },
+          {
+            key: "due",
+            header: "Due",
+            align: "right",
+            headerClassName: "hidden sm:table-cell",
+            className: "hidden whitespace-nowrap text-[var(--ink-muted)] sm:table-cell",
+            cell: (bill) => fmt(bill.dueAt),
+          },
+        ]}
+        actions={(bill) => (
+          <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+        )}
+      />
+    </ListPageLayout>
   );
 }

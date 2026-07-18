@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { formatMoney, formatMoneyCompact, toBaseAmount, normalizeCurrency, getAppCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
+import { DataTable } from "@/components/ui/DataTable";
 
 export const dynamic = "force-dynamic";
 
@@ -166,6 +167,138 @@ export default async function CashFlowPage({
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
   const monthOptions = MONTHS_SHORT.map((m, i) => ({ label: m, value: i + 1 }));
 
+  // ── Statement rows (for DataTable) ─────────────────────────────────────────
+  const priorInvoiceTotal = priorInvoicePayments.reduce((s, p) => s + toBase(p), 0);
+  const priorSaleTotal = priorSalePayments.reduce((s, p) => s + toBase(p), 0);
+  const priorExpensesTotal = priorExpenses.reduce((s, e) => s + toBase(e), 0);
+  const priorSupplierTotal = priorSupplierPayments.reduce((s, p) => s + p.amount, 0);
+
+  const changeCell = (c: string | null, good: boolean) =>
+    c ? (
+      <span className={good ? "text-emerald-600" : "text-red-500"}>{c}</span>
+    ) : (
+      <span className="text-[var(--ink-muted)]">—</span>
+    );
+
+  const statementRows = [
+    {
+      id: "invoice-receipts",
+      section: "Operating Activities",
+      label: <span className="block pl-4 text-sm text-[var(--ink)]">Repair invoice receipts</span>,
+      current: <span className="font-semibold tabular-nums text-emerald-700">{formatMoney(invoicePaymentsTotal, currency)}</span>,
+      prior: <span className="tabular-nums text-[var(--ink-muted)]">{formatMoney(priorInvoiceTotal, currency)}</span>,
+      change: (
+        <span className="text-[13px]">
+          {changeCell(pctChange(invoicePaymentsTotal, priorInvoiceTotal), invoicePaymentsTotal >= priorInvoiceTotal)}
+        </span>
+      ),
+    },
+    {
+      id: "sale-receipts",
+      label: <span className="block pl-4 text-sm text-[var(--ink)]">POS / sale receipts</span>,
+      current: <span className="font-semibold tabular-nums text-emerald-700">{formatMoney(salePaymentsTotal, currency)}</span>,
+      prior: <span className="tabular-nums text-[var(--ink-muted)]">{formatMoney(priorSaleTotal, currency)}</span>,
+      change: (
+        <span className="text-[13px]">
+          {changeCell(pctChange(salePaymentsTotal, priorSaleTotal), salePaymentsTotal >= priorSaleTotal)}
+        </span>
+      ),
+    },
+    {
+      id: "total-inflows",
+      className: "border-t border-[var(--line)] bg-emerald-50/30 font-medium hover:bg-emerald-50/50",
+      label: <span className="block pl-2 text-sm font-semibold text-[var(--ink)]">Total Cash Inflows</span>,
+      current: <span className="font-bold tabular-nums text-emerald-700">{formatMoney(totalInflow, currency)}</span>,
+      prior: <span className="font-semibold tabular-nums text-[var(--ink-muted)]">{formatMoney(priorInflow, currency)}</span>,
+      change: (
+        <span className="text-[13px] font-semibold">
+          {changeCell(pctChange(totalInflow, priorInflow), totalInflow >= priorInflow)}
+        </span>
+      ),
+    },
+    {
+      id: "expenses-paid",
+      label: <span className="block pl-4 text-sm text-[var(--ink)]">Operating expenses paid</span>,
+      current: <span className="font-semibold tabular-nums text-red-600">({formatMoney(expensesTotal, currency)})</span>,
+      prior: <span className="tabular-nums text-[var(--ink-muted)]">({formatMoney(priorExpensesTotal, currency)})</span>,
+      change: (
+        <span className="text-[13px]">
+          {changeCell(pctChange(expensesTotal, priorExpensesTotal), expensesTotal <= priorExpensesTotal)}
+        </span>
+      ),
+    },
+    {
+      id: "supplier-payments",
+      label: <span className="block pl-4 text-sm text-[var(--ink)]">Supplier payments</span>,
+      current: <span className="font-semibold tabular-nums text-red-600">({formatMoney(supplierPaymentsTotal, currency)})</span>,
+      prior: <span className="tabular-nums text-[var(--ink-muted)]">({formatMoney(priorSupplierTotal, currency)})</span>,
+      change: <span className="text-[13px]">—</span>,
+    },
+    {
+      id: "total-outflows",
+      className: "border-t border-[var(--line)] bg-red-500/5 font-medium hover:bg-red-500/10",
+      label: <span className="block pl-2 text-sm font-semibold text-[var(--ink)]">Total Cash Outflows</span>,
+      current: <span className="font-bold tabular-nums text-red-600">({formatMoney(totalOutflow, currency)})</span>,
+      prior: <span className="font-semibold tabular-nums text-[var(--ink-muted)]">({formatMoney(priorOutflow, currency)})</span>,
+      change: (
+        <span className="text-[13px] font-semibold">
+          {changeCell(pctChange(totalOutflow, priorOutflow), totalOutflow <= priorOutflow)}
+        </span>
+      ),
+    },
+    {
+      id: "net-operating",
+      className: `border-t-2 border-[var(--line)] ${netOperating >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`,
+      label: <span className="block text-sm font-bold text-[var(--ink)]">Net Operating Cash Flow</span>,
+      current: (
+        <span className={`text-base font-bold tabular-nums ${netOperating >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+          {netOperating >= 0 ? "+" : ""}{formatMoney(netOperating, currency)}
+        </span>
+      ),
+      prior: (
+        <span className="font-semibold tabular-nums text-[var(--ink-muted)]">
+          {priorNet >= 0 ? "+" : ""}{formatMoney(priorNet, currency)}
+        </span>
+      ),
+      change: (
+        <span className="text-[13px] font-bold">
+          {changeCell(pctChange(netOperating, priorNet), netOperating >= priorNet)}
+        </span>
+      ),
+    },
+    ...(bankAccountsCount > 0
+      ? [
+          {
+            id: "bank-credits",
+            section: "Bank Activity (Reconciliation Reference)",
+            label: <span className="block pl-4 text-sm text-[var(--ink)]">Bank deposits / credits</span>,
+            current: <span className="font-semibold tabular-nums text-emerald-700">{formatMoney(bankCreditTotal, currency)}</span>,
+            prior: <span className="text-[var(--ink-muted)]">—</span>,
+            change: <span>—</span>,
+          },
+          {
+            id: "bank-debits",
+            label: <span className="block pl-4 text-sm text-[var(--ink)]">Bank withdrawals / debits</span>,
+            current: <span className="font-semibold tabular-nums text-red-600">({formatMoney(bankDebitTotal, currency)})</span>,
+            prior: <span className="text-[var(--ink-muted)]">—</span>,
+            change: <span>—</span>,
+          },
+          {
+            id: "net-bank",
+            className: "border-t border-[var(--line)] bg-sky-50/30 font-medium",
+            label: <span className="block pl-2 text-sm font-semibold text-[var(--ink)]">Net Bank Movement</span>,
+            current: (
+              <span className={`font-bold tabular-nums ${netBank >= 0 ? "text-emerald-700" : "text-amber-600"}`}>
+                {netBank >= 0 ? "+" : ""}{formatMoney(netBank, currency)}
+              </span>
+            ),
+            prior: null,
+            change: null,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -240,116 +373,44 @@ export default async function CashFlowPage({
             Statement of Cash Flows — {periodLabel}
           </p>
         </div>
-        <div className="doc-list overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/40">
-              <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Line Item</th>
-              <th className="px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{periodLabel}</th>
-              <th className="hidden px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)] md:table-cell">{priorLabel}</th>
-              <th className="hidden px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)] md:table-cell">Change</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {/* ── Operating Activities ── */}
-            <tr className="bg-[var(--panel-strong)]/30">
-              <td colSpan={4} className="px-4 py-2 text-[13px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-                Operating Activities
-              </td>
-            </tr>
-            <tr className="hover:bg-[var(--panel-strong)]/20">
-              <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">Repair invoice receipts</td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-700">{formatMoney(invoicePaymentsTotal, currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right tabular-nums text-[var(--ink-muted)] md:table-cell">{formatMoney(priorInvoicePayments.reduce((s, p) => s + toBase(p), 0), currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] md:table-cell">
-                {(() => { const c = pctChange(invoicePaymentsTotal, priorInvoicePayments.reduce((s, p) => s + toBase(p), 0)); return c ? <span className={invoicePaymentsTotal >= priorInvoicePayments.reduce((s, p) => s + toBase(p), 0) ? "text-emerald-600" : "text-red-500"}>{c}</span> : <span className="text-[var(--ink-muted)]">—</span>; })()}
-              </td>
-            </tr>
-            <tr className="hover:bg-[var(--panel-strong)]/20">
-              <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">POS / sale receipts</td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-700">{formatMoney(salePaymentsTotal, currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right tabular-nums text-[var(--ink-muted)] md:table-cell">{formatMoney(priorSalePayments.reduce((s, p) => s + toBase(p), 0), currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] md:table-cell">
-                {(() => { const c = pctChange(salePaymentsTotal, priorSalePayments.reduce((s, p) => s + toBase(p), 0)); return c ? <span className={salePaymentsTotal >= priorSalePayments.reduce((s, p) => s + toBase(p), 0) ? "text-emerald-600" : "text-red-500"}>{c}</span> : <span className="text-[var(--ink-muted)]">—</span>; })()}
-              </td>
-            </tr>
-            <tr className="border-t border-[var(--line)] bg-emerald-50/30 font-medium hover:bg-emerald-50/50">
-              <td className="px-4 py-2.5 pl-6 text-sm font-semibold text-[var(--ink)]">Total Cash Inflows</td>
-              <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700">{formatMoney(totalInflow, currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right font-semibold tabular-nums text-[var(--ink-muted)] md:table-cell">{formatMoney(priorInflow, currency)}</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] font-semibold md:table-cell">
-                {pctChange(totalInflow, priorInflow) ? <span className={totalInflow >= priorInflow ? "text-emerald-600" : "text-red-500"}>{pctChange(totalInflow, priorInflow)}</span> : <span className="text-[var(--ink-muted)]">—</span>}
-              </td>
-            </tr>
-            <tr className="hover:bg-[var(--panel-strong)]/20">
-              <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">Operating expenses paid</td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-red-600">({formatMoney(expensesTotal, currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right tabular-nums text-[var(--ink-muted)] md:table-cell">({formatMoney(priorExpenses.reduce((s, e) => s + toBase(e), 0), currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] md:table-cell">
-                {(() => { const c = pctChange(expensesTotal, priorExpenses.reduce((s, e) => s + toBase(e), 0)); return c ? <span className={expensesTotal <= priorExpenses.reduce((s, e) => s + toBase(e), 0) ? "text-emerald-600" : "text-red-500"}>{c}</span> : <span className="text-[var(--ink-muted)]">—</span>; })()}
-              </td>
-            </tr>
-            <tr className="hover:bg-[var(--panel-strong)]/20">
-              <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">Supplier payments</td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-red-600">({formatMoney(supplierPaymentsTotal, currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right tabular-nums text-[var(--ink-muted)] md:table-cell">({formatMoney(priorSupplierPayments.reduce((s, p) => s + p.amount, 0), currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] md:table-cell">—</td>
-            </tr>
-            <tr className="border-t border-[var(--line)] bg-red-500/5 font-medium hover:bg-red-500/10">
-              <td className="px-4 py-2.5 pl-6 text-sm font-semibold text-[var(--ink)]">Total Cash Outflows</td>
-              <td className="px-4 py-2.5 text-right font-bold tabular-nums text-red-600">({formatMoney(totalOutflow, currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right font-semibold tabular-nums text-[var(--ink-muted)] md:table-cell">({formatMoney(priorOutflow, currency)})</td>
-              <td className="hidden px-4 py-2.5 text-right text-[13px] font-semibold md:table-cell">
-                {pctChange(totalOutflow, priorOutflow) ? <span className={totalOutflow <= priorOutflow ? "text-emerald-600" : "text-red-500"}>{pctChange(totalOutflow, priorOutflow)}</span> : <span className="text-[var(--ink-muted)]">—</span>}
-              </td>
-            </tr>
-
-            {/* ── Net Operating ── */}
-            <tr className={`border-t-2 border-[var(--line)] ${netOperating >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
-              <td className="px-4 py-3 pl-4 text-sm font-bold text-[var(--ink)]">Net Operating Cash Flow</td>
-              <td className={`px-4 py-3 text-right text-base font-bold tabular-nums ${netOperating >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                {netOperating >= 0 ? "+" : ""}{formatMoney(netOperating, currency)}
-              </td>
-              <td className="hidden px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink-muted)] md:table-cell">
-                {priorNet >= 0 ? "+" : ""}{formatMoney(priorNet, currency)}
-              </td>
-              <td className="hidden px-4 py-3 text-right text-[13px] font-bold md:table-cell">
-                {pctChange(netOperating, priorNet) ? <span className={netOperating >= priorNet ? "text-emerald-600" : "text-red-500"}>{pctChange(netOperating, priorNet)}</span> : <span className="text-[var(--ink-muted)]">—</span>}
-              </td>
-            </tr>
-
-            {/* ── Bank Activity ── */}
-            {bankAccountsCount > 0 && (
-              <>
-                <tr className="bg-[var(--panel-strong)]/30">
-                  <td colSpan={4} className="px-4 py-2 text-[13px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-                    Bank Activity (Reconciliation Reference)
-                  </td>
-                </tr>
-                <tr className="hover:bg-[var(--panel-strong)]/20">
-                  <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">Bank deposits / credits</td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-700">{formatMoney(bankCreditTotal, currency)}</td>
-                  <td className="hidden px-4 py-2.5 text-right text-[var(--ink-muted)] md:table-cell">—</td>
-                  <td className="hidden px-4 py-2.5 text-right md:table-cell">—</td>
-                </tr>
-                <tr className="hover:bg-[var(--panel-strong)]/20">
-                  <td className="px-4 py-2.5 pl-8 text-sm text-[var(--ink)]">Bank withdrawals / debits</td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-red-600">({formatMoney(bankDebitTotal, currency)})</td>
-                  <td className="hidden px-4 py-2.5 text-right text-[var(--ink-muted)] md:table-cell">—</td>
-                  <td className="hidden px-4 py-2.5 text-right md:table-cell">—</td>
-                </tr>
-                <tr className="border-t border-[var(--line)] bg-sky-50/30 font-medium">
-                  <td className="px-4 py-2.5 pl-6 text-sm font-semibold text-[var(--ink)]">Net Bank Movement</td>
-                  <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${netBank >= 0 ? "text-emerald-700" : "text-amber-600"}`}>
-                    {netBank >= 0 ? "+" : ""}{formatMoney(netBank, currency)}
-                  </td>
-                  <td className="hidden px-4 py-2.5 md:table-cell" />
-                  <td className="hidden px-4 py-2.5 md:table-cell" />
-                </tr>
-              </>
-            )}
-          </tbody>
-        </table>
+        <div className="doc-list">
+          <DataTable
+            frameless
+            dense
+            rows={statementRows}
+            getRowKey={(row) => row.id}
+            renderSectionRow={(row) => row.section ?? null}
+            rowClassName={(row) => row.className}
+            columns={[
+              {
+                key: "lineItem",
+                header: "Line Item",
+                cell: (row) => row.label,
+              },
+              {
+                key: "current",
+                header: periodLabel,
+                align: "right",
+                cell: (row) => row.current,
+              },
+              {
+                key: "prior",
+                header: priorLabel,
+                align: "right",
+                headerClassName: "hidden md:table-cell",
+                className: "hidden md:table-cell",
+                cell: (row) => row.prior,
+              },
+              {
+                key: "change",
+                header: "Change",
+                align: "right",
+                headerClassName: "hidden md:table-cell",
+                className: "hidden md:table-cell",
+                cell: (row) => row.change,
+              },
+            ]}
+          />
         </div>
       </div>
 

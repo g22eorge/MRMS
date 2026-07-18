@@ -6,6 +6,9 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { DataTable } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatStrip } from "@/components/ui/StatStrip";
 
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
@@ -129,21 +132,19 @@ export default async function ProcurementPage() {
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Procurement</p>
-            <h1 className="text-base font-bold text-[var(--ink)]">Control Desk</h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
+    <ListPageLayout
+      header={{
+        eyebrow: "Procurement",
+        title: "Control Desk",
+        actions: (
+          <>
             <Link href="/inventory/purchase-requests/new" className="btn-premium rounded-md px-2.5 py-1.5 text-xs font-semibold">New request</Link>
             <Link href="/inventory/purchase-orders/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New PO</Link>
             <Link href="/inventory/supplier-bills/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New bill</Link>
-          </div>
-        </div>
-      </div>
-
+          </>
+        ),
+      }}
+    >
       <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
         <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] md:grid-cols-5 md:divide-y-0">
           {stages.map((stage) => (
@@ -156,20 +157,15 @@ export default async function ProcurementPage() {
         </div>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Open PO Value</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoney(openOrderValue)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Supplier Balance</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoney(payableBalance)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Urgent</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{submittedRequests + dueOrders + dueBills}</p>
-        </div>
-      </div>
+      <StatStrip
+        variant="cards"
+        columns={3}
+        tiles={[
+          { label: "Open PO Value", value: formatMoney(openOrderValue) },
+          { label: "Supplier Balance", value: formatMoney(payableBalance) },
+          { label: "Urgent", value: submittedRequests + dueOrders + dueBills },
+        ]}
+      />
 
       <div className="grid gap-3 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
@@ -177,38 +173,38 @@ export default async function ProcurementPage() {
             <p className="text-sm font-bold text-[var(--ink)]">Review queue</p>
             <Link href="/inventory/purchase-requests" className="text-xs font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-3 py-2 text-left">Request</th>
-                  <th className="px-3 py-2 text-left">Owner</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-right">Items</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {reviewQueue.map((request) => (
-                  <tr key={request.id} className="hover:bg-[var(--panel-strong)]/40">
-                    <td className="px-3 py-2">
-                      <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                      <p className="text-xs text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
-                    </td>
-                    <td className="px-3 py-2 text-[var(--ink-muted)]">{request.requestedBy.name ?? request.requestedBy.email}</td>
-                    <td className="px-3 py-2 text-[var(--ink-muted)]">{request.supplier?.name ?? "No preference"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{request._count.items}</td>
-                    <td className="px-3 py-2 text-right">
-                      <Link href={`/inventory/purchase-requests/${request.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
-                        {request.status === "APPROVED" ? "Convert" : "Review"}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {reviewQueue.length === 0 ? <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No pending requests.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            frameless
+            dense
+            rows={reviewQueue}
+            getRowKey={(request) => request.id}
+            empty="No pending requests."
+            columns={[
+              {
+                key: "request",
+                header: "Request",
+                cell: (request) => (
+                  <>
+                    <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
+                    <p className="text-xs text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
+                  </>
+                ),
+              },
+              { key: "owner", header: "Owner", className: "text-[var(--ink-muted)]", cell: (request) => request.requestedBy.name ?? request.requestedBy.email },
+              { key: "supplier", header: "Supplier", className: "text-[var(--ink-muted)]", cell: (request) => request.supplier?.name ?? "No preference" },
+              { key: "items", header: "Items", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (request) => request._count.items },
+              {
+                key: "action",
+                header: "Action",
+                align: "right",
+                cell: (request) => (
+                  <Link href={`/inventory/purchase-requests/${request.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                    {request.status === "APPROVED" ? "Convert" : "Review"}
+                  </Link>
+                ),
+              },
+            ]}
+          />
         </section>
 
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
@@ -216,43 +212,51 @@ export default async function ProcurementPage() {
             <p className="text-sm font-bold text-[var(--ink)]">Receiving queue</p>
             <Link href="/inventory/purchase-orders" className="text-xs font-semibold text-[var(--accent)] hover:underline">All POs</Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-3 py-2 text-left">PO</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-right">Outstanding</th>
-                  <th className="px-3 py-2 text-left">Expected</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {receivingQueue.map((order) => {
+          <DataTable
+            frameless
+            dense
+            rows={receivingQueue}
+            getRowKey={(order) => order.id}
+            empty="No open receiving work."
+            columns={[
+              {
+                key: "po",
+                header: "PO",
+                cell: (order) => (
+                  <>
+                    <Link href={`/inventory/purchase-orders/${order.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
+                    <p className="text-xs text-[var(--ink-muted)]">{order.status}</p>
+                  </>
+                ),
+              },
+              { key: "supplier", header: "Supplier", className: "text-[var(--ink-muted)]", cell: (order) => order.supplier.name },
+              {
+                key: "outstanding",
+                header: "Outstanding",
+                align: "right",
+                className: "text-[var(--ink-muted)]",
+                cell: (order) => {
                   const outstandingQty = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived), 0);
                   const outstandingValue = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived) * item.unitCost, 0);
                   return (
-                    <tr key={order.id} className="hover:bg-[var(--panel-strong)]/40">
-                      <td className="px-3 py-2">
-                        <Link href={`/inventory/purchase-orders/${order.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
-                        <p className="text-xs text-[var(--ink-muted)]">{order.status}</p>
-                      </td>
-                      <td className="px-3 py-2 text-[var(--ink-muted)]">{order.supplier.name}</td>
-                      <td className="px-3 py-2 text-right text-[var(--ink-muted)]">
-                        <span className="font-semibold tabular-nums text-[var(--ink)]">{outstandingQty}</span>
-                        <p className="text-xs">{formatMoney(outstandingValue)}</p>
-                      </td>
-                      <td className="px-3 py-2 text-[var(--ink-muted)]">{fmt(order.expectedAt)}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Link href={`/inventory/purchase-orders/${order.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">Receive</Link>
-                      </td>
-                    </tr>
+                    <>
+                      <span className="font-semibold tabular-nums text-[var(--ink)]">{outstandingQty}</span>
+                      <p className="text-xs">{formatMoney(outstandingValue)}</p>
+                    </>
                   );
-                })}
-                {receivingQueue.length === 0 ? <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No open receiving work.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
+                },
+              },
+              { key: "expected", header: "Expected", className: "text-[var(--ink-muted)]", cell: (order) => fmt(order.expectedAt) },
+              {
+                key: "action",
+                header: "Action",
+                align: "right",
+                cell: (order) => (
+                  <Link href={`/inventory/purchase-orders/${order.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">Receive</Link>
+                ),
+              },
+            ]}
+          />
         </section>
 
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
@@ -320,6 +324,6 @@ export default async function ProcurementPage() {
           </div>
         </section>
       </div>
-    </div>
+    </ListPageLayout>
   );
 }

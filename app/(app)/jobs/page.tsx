@@ -14,6 +14,7 @@ import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
 
 type SearchParams = {
   status?: string;
@@ -116,7 +117,7 @@ export default async function JobsPage({
   const payoutFilter = filters.payout === "due" || filters.payout === "paid" ? filters.payout : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   // Mobile gets a large batch for continuous scroll; desktop uses pages
-  const pageSize = 60;
+  const pageSize = PAGE_SIZE;
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
   const orderBy = sort === "job_number_desc" ? { jobNumber: "desc" as const } : { receivedAt: "desc" as const };
   const internalCanSearchAll =
@@ -360,8 +361,6 @@ export default async function JobsPage({
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(page * pageSize, total);
-  const prevPage = Math.max(page - 1, 1);
-  const nextPage = Math.min(page + 1, totalPages);
   const isPrevDisabled = page <= 1;
   const isNextDisabled = page >= totalPages;
   const isExternalTech = user.role === "TECHNICIAN_EXTERNAL";
@@ -896,11 +895,11 @@ export default async function JobsPage({
           pageEnd={pageEnd}
           total={total}
           page={page}
+          pageSize={pageSize}
           totalPages={totalPages}
           isPrevDisabled={isPrevDisabled}
           isNextDisabled={isNextDisabled}
-          prevPageHref={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
-          nextPageHref={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
+          hrefForPage={pageHrefBuilder("/jobs", { ...preservedWithoutStatus, status: filters.status })}
         />
       )}
     </div>

@@ -41,36 +41,42 @@ export function CommunicationsShell({
     (pathname.startsWith(COMMUNICATIONS_ROUTES.home) ? items[0] : null);
 
   return (
-    <section className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--line)] px-4 py-4 sm:px-5">
-          <p className="text-lg font-black text-[var(--ink)]">Communications</p>
-          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-            Outbox delivery, templates, WhatsApp config, and status policies.
+    <section className="space-y-5">
+      {/* Single section header: active page title + description, then tab pills. */}
+      <header className="space-y-3">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2">
+            <h1 className="truncate text-xl font-bold tracking-tight text-[var(--ink)]">
+              {active?.label ?? "Communications"}
+            </h1>
+            <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]/60">
+              Comms
+            </span>
+          </div>
+          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+            {active?.description ?? "Outbox delivery, templates, WhatsApp config, and status policies."}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 border-b border-[var(--line)] px-3 py-3 sm:px-4">
+        <nav className="flex flex-wrap gap-1.5 border-b border-[var(--line)] pb-3">
           {items.map((item) => {
             const selected = active?.key === item.key;
             return (
               <Link
                 key={item.key}
                 href={item.href}
-                className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${
+                aria-current={selected ? "page" : undefined}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
                   selected
                     ? "bg-[var(--accent)] text-black"
-                    : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                    : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
                 }`}
               >
                 {item.label}
               </Link>
             );
           })}
-        </div>
-        <div className="hidden border-b border-[var(--line)] px-4 py-2 text-xs text-[var(--ink-muted)] sm:block sm:px-5">
-          {active?.description ?? "Manage customer messaging operations."}
-        </div>
-      </div>
+        </nav>
+      </header>
       {children}
     </section>
   );

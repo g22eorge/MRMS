@@ -10,6 +10,10 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +53,11 @@ function nextDueDateFromFrequency(from: Date, freq: Frequency): Date {
 export default async function RecurringInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.toLowerCase().trim() ?? "";
+  const page = parsePage(sp.page);
   const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
@@ -255,22 +260,19 @@ export default async function RecurringInvoicesPage({
     ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || r.client?.fullName?.toLowerCase().includes(q))
     : recurringInvoices;
 
+  // KPIs above stay whole-dataset; only the displayed rows are paginated.
+  const pageView = paginationView(page, filteredRecurring.length);
+  const pageRows = filteredRecurring.slice(pageView.skip, pageView.skip + pageView.take);
+  const recurringHref = pageHrefBuilder("/finance/recurring", { q: sp.q?.trim() ?? "" });
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">
-            Recurring Invoices{" "}
-            <span className="font-normal text-[var(--ink-muted)]">
-              · {activeCount} active{dueNow > 0 ? ` · ${dueNow} due` : ""}
-            </span>
-          </p>
-          <p className="text-[13px] text-[var(--ink-muted)]">
-            Templates that auto-generate or remind you to issue invoices on schedule.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Recurring Invoices"
+        description={`${activeCount} active${dueNow > 0 ? ` · ${dueNow} due` : ""} — templates that auto-generate or remind you to issue invoices on schedule.`}
+        actions={
         <details className="group relative">
           <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
             + New Template
@@ -350,7 +352,8 @@ export default async function RecurringInvoicesPage({
             </form>
           </div>
         </details>
-      </div>
+        }
+      />
 
       {/* Search */}
       <form method="GET" className="flex gap-2">
@@ -361,101 +364,129 @@ export default async function RecurringInvoicesPage({
       </form>
 
       {/* List */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="doc-list overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Subject</th>
-                <th className="px-4 py-2.5 text-left">Client</th>
-                <th className="hidden px-4 py-2.5 text-left md:table-cell">Frequency</th>
-                <th className="hidden px-4 py-2.5 text-left md:table-cell">Type</th>
-                <th className="px-4 py-2.5 text-right">Amount</th>
-                <th className="px-4 py-2.5 text-center">Next Due</th>
-                <th className="hidden px-4 py-2.5 text-center sm:table-cell">Status</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRecurring.map((rec) => {
-                const total = rec.items.reduce((s, i) => s + i.lineTotal, 0);
-                const isDue = rec.isActive && rec.nextDueAt <= now;
-                return (
-                  <tr key={rec.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-[var(--ink)]">{rec.subject}</p>
-                      <p className="text-[13px] text-[var(--ink-muted)]">{rec.items.length} line{rec.items.length !== 1 ? "s" : ""}</p>
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] md:hidden">
-                        {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency} · {TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-[13px] text-[var(--ink)]">{rec.client.fullName}</td>
-                    <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] md:table-cell">
-                      {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}
-                    </td>
-                    <td className="hidden px-4 py-3 text-[12px] text-[var(--ink-muted)] md:table-cell">
-                      {TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">
-                      {rec.currency} {total.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <p className={`text-[12px] font-medium ${isDue ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>
-                        {fmt(rec.nextDueAt)}
-                      </p>
-                      {isDue && (
-                        <p className="text-[12px] font-bold uppercase text-amber-600">Due Now</p>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 text-center sm:table-cell">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${rec.isActive ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-700" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-                        {rec.isActive ? "Active" : "Paused"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <RowActionsMenu label="Template actions">
-                        <MenuSection label="Actions" />
-                        <div className="px-3 py-1">
-                          <form action={issueNowAction}>
-                            <input type="hidden" name="recurringId" value={rec.id} />
-                            <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                              Issue Invoice Now
-                            </button>
-                          </form>
-                          <form action={toggleRecurringAction}>
-                            <input type="hidden" name="recurringId" value={rec.id} />
-                            <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                              {rec.isActive ? "Pause" : "Resume"}
-                            </button>
-                          </form>
-                        </div>
-                        <MenuDestructiveRow>
-                          <form action={deleteRecurringAction}>
-                            <input type="hidden" name="recurringId" value={rec.id} />
-                            <ConfirmSubmitButton
-                              message={`Delete recurring template "${rec.subject}"? This does not delete already-issued invoices.`}
-                              className="w-full text-left text-[12px] text-red-600"
-                            >
-                              Delete Template
-                            </ConfirmSubmitButton>
-                          </form>
-                        </MenuDestructiveRow>
-                      </RowActionsMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredRecurring.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">
-                    No recurring invoice templates yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        className="panel-shadow"
+        rows={pageRows}
+        getRowKey={(rec) => rec.id}
+        empty="No recurring invoice templates yet."
+        columns={[
+          {
+            key: "subject",
+            header: "Subject",
+            cell: (rec) => (
+              <>
+                <p className="font-medium text-[var(--ink)]">{rec.subject}</p>
+                <p className="text-[13px] text-[var(--ink-muted)]">
+                  {rec.items.length} line{rec.items.length !== 1 ? "s" : ""}
+                </p>
+                <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] md:hidden">
+                  {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency} · {TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType}
+                </p>
+              </>
+            ),
+          },
+          {
+            key: "client",
+            header: "Client",
+            className: "text-[13px] text-[var(--ink)]",
+            cell: (rec) => rec.client.fullName,
+          },
+          {
+            key: "frequency",
+            header: "Frequency",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            cell: (rec) => FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency,
+          },
+          {
+            key: "type",
+            header: "Type",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            cell: (rec) => TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType,
+          },
+          {
+            key: "amount",
+            header: "Amount",
+            align: "right",
+            cell: (rec) => (
+              <span className="font-semibold tabular-nums text-[var(--ink)]">
+                {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()}
+              </span>
+            ),
+          },
+          {
+            key: "nextDue",
+            header: "Next Due",
+            align: "center",
+            cell: (rec) => {
+              const isDue = rec.isActive && rec.nextDueAt <= now;
+              return (
+                <>
+                  <p className={`text-[12px] font-medium ${isDue ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>
+                    {fmt(rec.nextDueAt)}
+                  </p>
+                  {isDue && (
+                    <p className="text-[12px] font-bold uppercase text-amber-600">Due Now</p>
+                  )}
+                </>
+              );
+            },
+          },
+          {
+            key: "status",
+            header: "Status",
+            align: "center",
+            headerClassName: "hidden sm:table-cell",
+            className: "hidden sm:table-cell",
+            cell: (rec) => (
+              <StatusBadge tone={rec.isActive ? "success" : "neutral"}>
+                {rec.isActive ? "Active" : "Paused"}
+              </StatusBadge>
+            ),
+          },
+        ]}
+        actions={(rec) => (
+          <RowActionsMenu label="Template actions">
+            <MenuSection label="Actions" />
+            <div className="px-3 py-1">
+              <form action={issueNowAction}>
+                <input type="hidden" name="recurringId" value={rec.id} />
+                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+                  Issue Invoice Now
+                </button>
+              </form>
+              <form action={toggleRecurringAction}>
+                <input type="hidden" name="recurringId" value={rec.id} />
+                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+                  {rec.isActive ? "Pause" : "Resume"}
+                </button>
+              </form>
+            </div>
+            <MenuDestructiveRow>
+              <form action={deleteRecurringAction}>
+                <input type="hidden" name="recurringId" value={rec.id} />
+                <ConfirmSubmitButton
+                  message={`Delete recurring template "${rec.subject}"? This does not delete already-issued invoices.`}
+                  className="w-full text-left text-[12px] text-red-600"
+                >
+                  Delete Template
+                </ConfirmSubmitButton>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
+        )}
+      />
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="templates"
+        hrefForPage={recurringHref}
+      />
     </div>
   );
 }

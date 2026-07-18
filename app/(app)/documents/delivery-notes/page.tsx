@@ -20,17 +20,16 @@ import {
   DocumentPageHeader,
   DocumentFilterBar,
   DocumentShareMenuSection,
-  DocumentEmptyTableRow,
-  DocumentListTable,
-  DocumentListTableHead,
 } from "@/components/documents";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
 export default async function DeliveryNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; method?: string; create?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; method?: string; create?: string; page?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   const sp = await searchParams;
@@ -38,6 +37,7 @@ export default async function DeliveryNotesPage({
   const periodFilter = sp.period ?? "all";
   const methodFilter = sp.method ?? "all";
   const createMode = sp.create === "1";
+  const page = parsePage(sp.page);
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
@@ -311,6 +311,14 @@ export default async function DeliveryNotesPage({
     if (!matchesDocumentPeriod(n.deliveredAt, periodFilter, now)) return false;
     return true;
   });
+  // KPIs stay whole-dataset (computed from notes/filteredNotes); slice for display only.
+  const pageView = paginationView(page, filteredNotes.length);
+  const pageRows = filteredNotes.slice(pageView.skip, pageView.skip + pageView.take);
+  const deliveryNotesHref = pageHrefBuilder("/documents/delivery-notes", {
+    q,
+    period: periodFilter !== "all" ? periodFilter : "",
+    method: methodFilter !== "all" ? methodFilter : "",
+  });
   const [invoiceOptions, saleOptions] = await Promise.all([
     prisma.invoice.findMany({
       where: { orgId, status: { not: "VOID" } },
@@ -411,112 +419,138 @@ export default async function DeliveryNotesPage({
         </div>
       </DocumentFilterBar>
 
-      <DocumentListTable>
-          <DocumentListTableHead>
-            <tr>
-              <th className="px-3 py-2.5">Delivery Note</th>
-              <th className="hidden px-3 py-2.5 md:table-cell">Source</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Client</th>
-              <th className="px-3 py-2.5">Delivered</th>
-              <th className="hidden px-3 py-2.5 lg:table-cell">Method</th>
-              <th className="px-3 py-2.5">Action</th>
-            </tr>
-          </DocumentListTableHead>
-          <tbody>
-            {filteredNotes.map((n) => {
-              const recipientPhone = n.invoice?.job?.client.phone ?? n.invoice?.client?.phone ?? n.sale?.client?.phone ?? null;
-              const recipientEmail = n.invoice?.job?.client.email ?? n.invoice?.client?.email ?? n.sale?.client?.email ?? null;
-              const deliveryUrl = `${appUrl}/api/delivery-notes/${n.id}`;
-              const sourceLabel = n.invoice?.invoiceNumber ?? n.sale?.invoiceNumber ?? n.sale?.saleNumber ?? n.deliveryNoteNumber;
-              const deliveryShareText = encodeURIComponent(`Your delivery note is ready.\n\n${n.deliveryNoteNumber} for ${sourceLabel}\nPDF: ${deliveryUrl}`);
-              const deliveryWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
-              return (
-              <tr key={n.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                <td className="px-3 py-2.5">
-                  <p className="mono font-bold text-[var(--ink)]">{n.deliveryNoteNumber}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
-                  {/* Client + source visible on mobile (those columns hidden at md/lg) */}
-                  <p className="mt-0.5 text-[13px] font-medium text-[var(--ink)] lg:hidden">
-                    {n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? ""}
-                  </p>
-                </td>
-                <td className="hidden px-3 py-2.5 md:table-cell">
-                  {n.invoice ? (
-                    <Link className="mono font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]" href={n.invoice.job ? `/jobs/${n.invoice.job.id}` : "/documents/invoices"}>
-                      {n.invoice.invoiceNumber}{n.invoice.job ? ` / ${n.invoice.job.jobNumber}` : ""}
-                    </Link>
-                  ) : n.sale ? (
-                    <Link className="mono font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]" href={`/pos/${n.sale.id}`}>
-                      {n.sale.invoiceNumber ?? n.sale.saleNumber}
-                    </Link>
-                  ) : "-"}
-                </td>
-                <td className="hidden px-3 py-2.5 text-[var(--ink-muted)] lg:table-cell">{n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? "-"}</td>
-                <td className="px-3 py-2.5 text-[var(--ink-muted)]">{formatEATDate(n.deliveredAt)}<br /><span className="text-[12px]">{formatEATTime(n.deliveredAt)}</span></td>
-                <td className="hidden px-3 py-2.5 lg:table-cell">
-                  {n.deliveryMethod ? (
-                    <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">
-                      {n.deliveryMethod.replaceAll("_", " ")}
-                    </span>
-                  ) : "-"}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Link href={n.invoice?.job ? `/jobs/${n.invoice.job.id}` : n.sale ? `/pos/${n.sale.id}` : "/documents/delivery-notes"} title="View source" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    </Link>
-                    <a href={`/api/delivery-notes/${n.id}`} target="_blank" rel="noreferrer" title="Download PDF" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] transition hover:bg-[var(--accent)]/20">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                    </a>
-                    <RowActionsMenu label="Delivery note actions">
-                      <div className="py-1 text-left">
-                        <MenuActionLink href={`/api/delivery-notes/${n.id}`} external icon="delivery" tone="accent">
-                          Download Delivery Note
-                        </MenuActionLink>
-                      </div>
-                      <DocumentShareMenuSection
-                        hiddenFieldName="deliveryNoteId"
-                        hiddenFieldValue={n.id}
-                        recipientPhone={recipientPhone}
-                        recipientEmail={recipientEmail}
-                        whatsAppAction={shareDeliveryNoteWhatsAppAction}
-                        emailAction={shareDeliveryNoteEmailAction}
-                        emailLabel="Email delivery note"
-                        waLinkHref={deliveryWaPhone ? `https://wa.me/${deliveryWaPhone}?text=${deliveryShareText}` : null}
-                      />
-                      <MenuSection label="Edit Delivery Note" />
-                      <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
-                        <input type="hidden" name="deliveryNoteId" value={n.id} />
-                        <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                        <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                        <input name="receivedBySignatureText" defaultValue={n.receivedBySignatureText ?? ""} placeholder="Signature text" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                        <select name="deliveryMethod" defaultValue={n.deliveryMethod ?? ""} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
-                          <option value="">No method</option>
-                          {DELIVERY_METHODS.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
-                        </select>
-                        <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                        <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Delivery Note</MenuActionButton>
-                      </form>
-                      <MenuDestructiveRow>
-                        <form action={deleteDeliveryNoteAction}>
-                          <input type="hidden" name="deliveryNoteId" value={n.id} />
-                          <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
-                        </form>
-                      </MenuDestructiveRow>
-                    </RowActionsMenu>
-                  </div>
-                </td>
-              </tr>
-              );
-            })}
-            {filteredNotes.length === 0 ? (
-              <DocumentEmptyTableRow
-                message="No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed."
-                colSpan={6}
-              />
-            ) : null}
-          </tbody>
-      </DocumentListTable>
+      <DataTable
+        className="doc-list"
+        dense
+        rows={pageRows}
+        getRowKey={(n) => n.id}
+        empty="No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed."
+        columns={[
+          {
+            key: "note",
+            header: "Delivery Note",
+            cell: (n) => (
+              <>
+                <p className="mono font-bold text-[var(--ink)]">{n.deliveryNoteNumber}</p>
+                <p className="text-xs text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
+                {/* Client + source visible on mobile (those columns hidden at md/lg) */}
+                <p className="mt-0.5 text-[13px] font-medium text-[var(--ink)] lg:hidden">
+                  {n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? ""}
+                </p>
+              </>
+            ),
+          },
+          {
+            key: "source",
+            header: "Source",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden md:table-cell",
+            cell: (n) =>
+              n.invoice ? (
+                <Link className="mono font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]" href={n.invoice.job ? `/jobs/${n.invoice.job.id}` : "/documents/invoices"}>
+                  {n.invoice.invoiceNumber}{n.invoice.job ? ` / ${n.invoice.job.jobNumber}` : ""}
+                </Link>
+              ) : n.sale ? (
+                <Link className="mono font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]" href={`/pos/${n.sale.id}`}>
+                  {n.sale.invoiceNumber ?? n.sale.saleNumber}
+                </Link>
+              ) : "-",
+          },
+          {
+            key: "client",
+            header: "Client",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden text-[var(--ink-muted)] lg:table-cell",
+            cell: (n) => n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? "-",
+          },
+          {
+            key: "delivered",
+            header: "Delivered",
+            className: "text-[var(--ink-muted)]",
+            cell: (n) => (
+              <>
+                {formatEATDate(n.deliveredAt)}<br /><span className="text-[12px]">{formatEATTime(n.deliveredAt)}</span>
+              </>
+            ),
+          },
+          {
+            key: "method",
+            header: "Method",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden lg:table-cell",
+            cell: (n) =>
+              n.deliveryMethod ? (
+                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">
+                  {n.deliveryMethod.replaceAll("_", " ")}
+                </span>
+              ) : "-",
+          },
+        ]}
+        actions={(n) => {
+          const recipientPhone = n.invoice?.job?.client.phone ?? n.invoice?.client?.phone ?? n.sale?.client?.phone ?? null;
+          const recipientEmail = n.invoice?.job?.client.email ?? n.invoice?.client?.email ?? n.sale?.client?.email ?? null;
+          const deliveryUrl = `${appUrl}/api/delivery-notes/${n.id}`;
+          const sourceLabel = n.invoice?.invoiceNumber ?? n.sale?.invoiceNumber ?? n.sale?.saleNumber ?? n.deliveryNoteNumber;
+          const deliveryShareText = encodeURIComponent(`Your delivery note is ready.\n\n${n.deliveryNoteNumber} for ${sourceLabel}\nPDF: ${deliveryUrl}`);
+          const deliveryWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
+          return (
+            <>
+              <Link href={n.invoice?.job ? `/jobs/${n.invoice.job.id}` : n.sale ? `/pos/${n.sale.id}` : "/documents/delivery-notes"} title="View source" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </Link>
+              <a href={`/api/delivery-notes/${n.id}`} target="_blank" rel="noreferrer" title="Download PDF" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] transition hover:bg-[var(--accent)]/20">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              </a>
+              <RowActionsMenu label="Delivery note actions">
+                <div className="py-1 text-left">
+                  <MenuActionLink href={`/api/delivery-notes/${n.id}`} external icon="delivery" tone="accent">
+                    Download Delivery Note
+                  </MenuActionLink>
+                </div>
+                <DocumentShareMenuSection
+                  hiddenFieldName="deliveryNoteId"
+                  hiddenFieldValue={n.id}
+                  recipientPhone={recipientPhone}
+                  recipientEmail={recipientEmail}
+                  whatsAppAction={shareDeliveryNoteWhatsAppAction}
+                  emailAction={shareDeliveryNoteEmailAction}
+                  emailLabel="Email delivery note"
+                  waLinkHref={deliveryWaPhone ? `https://wa.me/${deliveryWaPhone}?text=${deliveryShareText}` : null}
+                />
+                <MenuSection label="Edit Delivery Note" />
+                <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
+                  <input type="hidden" name="deliveryNoteId" value={n.id} />
+                  <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                  <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                  <input name="receivedBySignatureText" defaultValue={n.receivedBySignatureText ?? ""} placeholder="Signature text" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                  <select name="deliveryMethod" defaultValue={n.deliveryMethod ?? ""} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
+                    <option value="">No method</option>
+                    {DELIVERY_METHODS.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
+                  </select>
+                  <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                  <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Delivery Note</MenuActionButton>
+                </form>
+                <MenuDestructiveRow>
+                  <form action={deleteDeliveryNoteAction}>
+                    <input type="hidden" name="deliveryNoteId" value={n.id} />
+                    <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
+                  </form>
+                </MenuDestructiveRow>
+              </RowActionsMenu>
+            </>
+          );
+        }}
+      />
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="delivery notes"
+        hrefForPage={deliveryNotesHref}
+      />
     </section>
   );
 }
