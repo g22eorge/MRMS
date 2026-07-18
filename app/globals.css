@@ -300,6 +300,99 @@ pre,
     0 12px 28px rgba(17, 17, 17, 0.09);
 }
 
+/* ── Calm shell + dashboard tokens — the approved mockup design language ──
+   Warm borderless panels, a soft diffuse drop shadow (no ring, no inset
+   bevel), and a deeper light-mode gold so figures read rich. Defined
+   globally so the dashboard AND the app frame (sidebar / top bar) can
+   share one look. Nothing consumes these unless it opts in via
+   `var(--dc-*)`, so promoting them to :root has no side effects. Dark
+   variants mirror the app's own triggers: system `prefers-color-scheme`
+   AND the manual `.theme-blackgold` class. */
+:root {
+  --dc-side: #fbfaf6;
+  --dc-panel: #fbfaf6;
+  --dc-panel-2: #f1eee6;
+  --dc-ink: #1a1815;
+  --dc-ink-2: #57534b;
+  --dc-ink-3: #938d81;
+  --dc-line: #e7e2d8;
+  --dc-line-soft: #efebe3;
+  --dc-accent: #a87f16;
+  --dc-accent-2: #7a5f00;
+  --dc-accent-soft: rgba(184, 144, 28, 0.12);
+  --dc-good: #2c8f61;
+  --dc-warn: #bd8410;
+  --dc-crit: #c9463a;
+  --dc-shadow: 0 1px 2px rgba(40, 33, 15, 0.03), 0 10px 30px -20px rgba(40, 33, 15, 0.16);
+  --dc-shadow-hover: 0 1px 2px rgba(40, 33, 15, 0.05), 0 16px 38px -20px rgba(40, 33, 15, 0.26);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dc-side: #121212;
+    --dc-panel: #151515;
+    --dc-panel-2: #1f1f1f;
+    --dc-ink: rgba(255, 255, 255, 0.9);
+    --dc-ink-2: rgba(255, 255, 255, 0.5);
+    --dc-ink-3: rgba(255, 255, 255, 0.32);
+    --dc-line: rgba(255, 255, 255, 0.07);
+    --dc-line-soft: rgba(255, 255, 255, 0.05);
+    --dc-accent: #d4af37;
+    --dc-accent-2: #d4af37;
+    --dc-accent-soft: rgba(212, 175, 55, 0.14);
+    --dc-good: #43bf85;
+    --dc-warn: #dda52c;
+    --dc-crit: #e5695c;
+    --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
+    --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
+  }
+}
+.theme-blackgold {
+  --dc-side: #121212;
+  --dc-panel: #151515;
+  --dc-panel-2: #1f1f1f;
+  --dc-ink: rgba(255, 255, 255, 0.9);
+  --dc-ink-2: rgba(255, 255, 255, 0.5);
+  --dc-ink-3: rgba(255, 255, 255, 0.32);
+  --dc-line: rgba(255, 255, 255, 0.07);
+  --dc-line-soft: rgba(255, 255, 255, 0.05);
+  --dc-accent: #d4af37;
+  --dc-accent-2: #d4af37;
+  --dc-accent-soft: rgba(212, 175, 55, 0.14);
+  --dc-good: #43bf85;
+  --dc-warn: #dda52c;
+  --dc-crit: #e5695c;
+  --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
+  --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
+}
+.dash-cal .dc-card {
+  background: var(--dc-panel);
+  border-radius: 16px;
+  box-shadow: var(--dc-shadow);
+}
+.dash-cal .dc-lift {
+  transition: box-shadow 200ms ease;
+}
+.dash-cal .dc-lift:hover {
+  box-shadow: var(--dc-shadow-hover);
+}
+.dash-cal .dc-btn {
+  background: var(--dc-accent);
+  color: #fff;
+  box-shadow: var(--dc-shadow);
+  transition: filter 150ms ease;
+}
+.dash-cal .dc-btn:hover {
+  filter: brightness(1.06);
+}
+@media (prefers-color-scheme: dark) {
+  .dash-cal .dc-btn {
+    color: #1c1600;
+  }
+}
+.theme-blackgold .dash-cal .dc-btn {
+  color: #1c1600;
+}
+
 /* Elevated panel (modals, dropdowns) */
 .panel-elevated {
   box-shadow:
