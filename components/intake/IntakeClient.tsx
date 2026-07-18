@@ -651,7 +651,7 @@ export function IntakeClient({
       : "All incoming website repair requests appear here. Review each submission, approve or reject, then convert approved requests to jobs.";
 
   return (
-    <>
+    <div className="calm-scope">
       <ConfirmDialog
         open={pendingDelete !== null}
         title={`Delete ${pendingDelete?.requestNumber ?? "request"}?`}
@@ -665,7 +665,7 @@ export function IntakeClient({
         }}
       />
       {/* brief */}
-      <details className="panel-shadow mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open={pendingCount > 0}>
+      <details className="dc-card mb-4 p-3" open={pendingCount > 0}>
         <summary className="list-none">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>
@@ -686,15 +686,15 @@ export function IntakeClient({
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition
                 ${active
-                  ? "border border-[var(--accent)]/50 bg-[var(--accent)] text-black"
-                  : "bg-[var(--panel)] border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+                  ? "bg-[var(--accent)] text-[#1c1600]"
+                  : "bg-[var(--panel)] text-[var(--ink-muted)] shadow-[var(--dc-shadow)] hover:text-[var(--ink)]"
                 }`}
             >
               {tab.label}
               {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold ${active ? "bg-white/20" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold ${active ? "bg-black/10" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {count}
                 </span>
               )}
@@ -720,7 +720,8 @@ export function IntakeClient({
       <DataTable
         rows={filtered}
         getRowKey={(req) => req.id}
-        className="panel-shadow"
+        frameless
+        className="dc-card overflow-hidden"
         empty="No requests in this category."
         onRowClick={(req) => setSelected(req)}
         rowClassName={() => "group cursor-pointer"}
@@ -766,8 +767,8 @@ export function IntakeClient({
             className: "hidden whitespace-nowrap md:table-cell",
             cell: (req) => (
               <>
-                <div className="text-sm text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
-                <div className="text-xs text-[var(--ink-muted)]">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
+                <div className="max-w-[16rem] truncate text-sm font-medium text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
+                <div className="max-w-[16rem] truncate text-xs text-[var(--ink-muted)]">{req.problemDescription || (DEVICE_LABEL[req.deviceType] ?? req.deviceType)}</div>
               </>
             ),
           },
@@ -827,6 +828,6 @@ export function IntakeClient({
           defaultEditMode={drawerMode === "edit"}
         />
       )}
-    </>
+    </div>
   );
 }
