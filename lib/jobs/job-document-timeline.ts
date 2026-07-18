@@ -1,32 +1,16 @@
 import { DOCUMENTS_ROUTES } from "@/lib/documents/routes";
 import { prisma } from "@/lib/prisma";
 
-export type JobDocumentKind = "job_card" | "quotation" | "invoice" | "receipt" | "delivery_note" | "refund";
+import {
+  JOB_DOCUMENT_KIND_LABELS,
+  sortJobDocumentTimeline,
+  type JobDocumentKind,
+  type JobDocumentTimelineEntry,
+} from "./job-document-timeline-shared";
 
-export type JobDocumentTimelineEntry = {
-  id: string;
-  kind: JobDocumentKind;
-  label: string;
-  status?: string | null;
-  amount?: number | null;
-  currency?: string | null;
-  occurredAt: Date;
-  pdfHref: string;
-  listHref: string;
-};
-
-export const JOB_DOCUMENT_KIND_LABELS: Record<JobDocumentKind, string> = {
-  job_card: "Job Card",
-  quotation: "Quotation",
-  invoice: "Invoice",
-  receipt: "Receipt",
-  delivery_note: "Delivery Note",
-  refund: "Refund",
-};
-
-export function sortJobDocumentTimeline(entries: JobDocumentTimelineEntry[]): JobDocumentTimelineEntry[] {
-  return [...entries].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
-}
+// Re-export the client-safe pieces so existing server-side importers keep working.
+export { JOB_DOCUMENT_KIND_LABELS, sortJobDocumentTimeline };
+export type { JobDocumentKind, JobDocumentTimelineEntry };
 
 export async function loadJobDocumentTimeline(params: {
   orgId: string;
