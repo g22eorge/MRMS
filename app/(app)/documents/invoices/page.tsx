@@ -39,6 +39,8 @@ import { BulkActionBar } from "./BulkActionBar";
 import { RowCheckbox } from "./RowCheckbox";
 import { InvoicePreviewProvider } from "./InvoicePreviewProvider";
 import { PreviewButton } from "./PreviewButton";
+import { InvoiceCreateDialog } from "./InvoiceCreateDialog";
+import { InvoiceNewButton } from "./InvoiceNewButton";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -58,6 +60,7 @@ export default async function InvoicesPage({
   const db = orgDb(user.orgId);
   const canCreateInvoice = can.createInvoices(user);
   const canManageInvoicePayments = "ADMIN" === user.role || "OPS" === user.role || can.approveInvoices(user);
+  const canOverrideDiscount = can.overrideDiscount(user);
   if (!(canCreateInvoice || canManageInvoicePayments)) {
     redirect("/dashboard");
   }
@@ -669,6 +672,30 @@ export default async function InvoicesPage({
   ]);
   const defaultInvoiceTaxRate = invoiceTaxRates.find((rate) => rate.isDefault) ?? null;
 
+  const leads = await db.lead
+    .findMany({
+      where: { orgId: user.orgId, status: { notIn: ["LOST", "STALE"] } },
+      orderBy: { updatedAt: "desc" },
+      take: 150,
+      select: { id: true, fullName: true, phone: true, email: true, organization: true, interest: true },
+    })
+    .catch(() => []);
+
+  const jobs = await db.job
+    .findMany({
+      where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } },
+      orderBy: { updatedAt: "desc" },
+      take: 150,
+      select: {
+        id: true,
+        jobNumber: true,
+        brand: true,
+        model: true,
+        client: { select: { fullName: true, phone: true, address: true } },
+      },
+    })
+    .catch(() => []);
+
   // ── Aging analysis ────────────────────────────────────────────────────────
   const outstanding = withAging.filter((i) => !i.isPaid && !i.isVoid);
   const agingBands = [
@@ -790,11 +817,9 @@ export default async function InvoicesPage({
         title="Invoices"
         eyebrow="Documents"
         actions={
-          canCreateInvoice && (
-            <Link href="/documents/invoices?create=1" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold">
-              + New Invoice
-            </Link>
-          )
+                  canCreateInvoice && (
+                    <InvoiceNewButton />
+                  )
         }
       />
 
@@ -881,11 +906,12 @@ export default async function InvoicesPage({
                   <PreviewButton invoiceId={row.id} />
                   <MenuActionLink href={`/documents/invoices/${row.id}?edit=1`} icon="save">Edit</MenuActionLink>
                   <MenuActionLink href={`/api/invoices/${row.id}/pdf`} external icon="download">Print / PDF</MenuActionLink>
-                  {!row.isPaid && !row.isVoid ? (
-                    <form action={`/api/invoices/${row.id}/collect-payment`} method="POST">
-                      <MenuActionButton icon="payment" tone="success" type="submit">Collect Payment</MenuActionButton>
-                    </form>
-                  ) : null}
+{!row.isPaid && !row.isVoid ? (
+                  <MenuActionLink href={`/documents/invoices/${row.id}?pay=1`} icon="payment" tone="success">
+                    Collect Payment
+                  </MenuActionLink>
+                ) : null}
+
                   <MenuSection label="Send" />
                   <form action={`/api/invoices/${row.id}/send`} method="POST">
                     <MenuActionButton icon="open" type="submit">Send by Email</MenuActionButton>
@@ -898,13 +924,11 @@ export default async function InvoicesPage({
                     <span className="px-3 py-1.5 text-[13px] text-[var(--ink-muted)]">Fully paid — no void</span>
                   ) : row.isVoid ? (
                     <span className="px-3 py-1.5 text-[13px] text-[var(--ink-muted)]">Voided</span>
-                  ) : (
-                    <form action={`/api/invoices/${row.id}/void`} method="POST">
-                      <input type="hidden" name="reason" value="Voided from list" />
-                      <input type="hidden" name="confirm" value="1" />
-                      <MenuDestructiveRow icon="delete" type="submit">Void Invoice</MenuDestructiveRow>
-                    </form>
-                  )}
+) : (
+                  <MenuActionLink href={`/documents/invoices/${row.id}`} icon="delete" tone="danger">
+                    View to Void
+                  </MenuActionLink>
+                )}
                 </RowActionsMenu>
               );
 
@@ -951,7 +975,20 @@ export default async function InvoicesPage({
         />
       </div>
 
-    </section>
-    </InvoicePreviewProvider>
+</section>
+<InvoiceCreateDialog
+  currency={orgCurrency}
+  canOverrideDiscount={canOverrideDiscount}
+  clients={clients as any[]}
+  leads={leads as any[]}
+  jobs={jobs as any[]}
+  parts={invoiceParts}
+  taxRates={invoiceTaxRates}
+  defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
+  defaultTaxRate={defaultInvoiceTaxRate?.rate ?? branding.vatRatePercent ?? 0}
+  defaultTaxLabel={defaultInvoiceTaxRate?.code ?? branding.vatLabel ?? "Tax"}
+  action={createStandaloneInvoiceAction}
+/>
+</InvoicePreviewProvider>
   );
 }
