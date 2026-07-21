@@ -87,7 +87,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
           actions={
             <div className="flex flex-wrap items-center gap-2 action-bar">
               <Link href="/documents/quotations" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">← Back</Link>
-              <Link href={`/api/quotations/${quotation.id}/pdf`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">⬇ PDF</Link>
+              <Link href={`/api/quotations/${quotation.id}/pdf`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
             </div>
           }
         />
@@ -106,19 +106,19 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
           {canSend && quotation.client?.phone && (
             <form action={`/api/quotations/${quotation.id}/whatsapp`} method="POST" className="inline">
               <input type="hidden" name="toPhone" value={quotation.client.phone} />
-              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">💬 WhatsApp</button>
+              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
             </form>
           )}
           {canSend && quotation.client?.email && (
             <form action={`/api/quotations/${quotation.id}/send`} method="POST" className="inline">
               <input type="hidden" name="toEmail" value={quotation.client.email} />
-              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">📧 Email</button>
+              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
             </form>
           )}
           {canDelete && (
             <form action={deleteQuotationAction} className="inline">
               <input type="hidden" name="id" value={quotation.id} />
-              <button type="submit" className="btn-premium-destructive rounded-lg px-3 py-1.5 text-[12px] font-medium">🗑 Delete</button>
+              <button type="submit" className="btn-premium-destructive rounded-lg px-3 py-1.5 text-[12px] font-medium">Delete</button>
             </form>
           )}
           <div className="ml-auto flex items-center gap-1 text-[12px] text-[var(--ink-muted)]">

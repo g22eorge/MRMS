@@ -9,6 +9,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
@@ -160,10 +161,16 @@ export default async function InvoiceDetailPage({
                 ← Back
               </Link>
               <Link
+                href={`/documents/invoices/${invoice.id}?edit=1`}
+                className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium"
+              >
+                Edit
+              </Link>
+              <Link
                 href={`/api/invoices/${invoice.id}/pdf`}
                 className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold"
               >
-                ⬇ PDF
+                PDF
               </Link>
             </div>
           }
@@ -171,7 +178,7 @@ export default async function InvoiceDetailPage({
 
         <StatStrip
           variant="cards"
-          columns={6}
+          columns={5}
           tiles={[
             { label: "Invoice #", value: invoice.invoiceNumber },
             { label: "Date", value: formatEATDate(invoice.issuedAt) },
@@ -191,17 +198,6 @@ export default async function InvoiceDetailPage({
               label: "Total",
               value: formatMoney(total, currency),
               valueClass: "text-[var(--ink)]",
-            },
-            {
-              label: "Balance",
-              value: isPaid ? (
-                <span className="text-emerald-700">Cleared</span>
-              ) : isVoid ? (
-                <span className="text-red-700">Voided</span>
-              ) : (
-                <span className="text-amber-700">{formatMoney(balance, currency)}</span>
-              ),
-              valueClass: "",
             },
           ]}
         />
@@ -223,7 +219,7 @@ export default async function InvoiceDetailPage({
                   type="submit"
                   className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium"
                 >
-                  💬 WhatsApp
+                  WhatsApp
                 </button>
               </form>
             )}
@@ -242,7 +238,7 @@ export default async function InvoiceDetailPage({
                   type="submit"
                   className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium"
                 >
-                  📧 Email
+                  Email
                 </button>
               </form>
             )}
@@ -251,7 +247,7 @@ export default async function InvoiceDetailPage({
                 href={`/documents/invoices/${invoice.id}?pay=1`}
                 className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold"
               >
-                💰 Collect Payment
+                Collect Payment
               </Link>
             )}
             {isVoid && (
