@@ -101,7 +101,7 @@ export default async function InvoiceDetailPage({
           receivedAt: true,
           method: true,
           reference: true,
-          createdBy: { select: { fullName: true } },
+          createdBy: { select: { name: true } },
         },
         orderBy: { receivedAt: "desc" },
       },
@@ -169,132 +169,297 @@ export default async function InvoiceDetailPage({
           }
         />
 
-        <div className="max-w-6xl mx-auto">
-          {invoice.job && (
-            <div className="mb-4">
-              <Link
-                href={`/jobs/${invoice.job.id}`}
-                className="text-[13px] text-[var(--accent)] hover:underline"
-              >
-                Related job: {invoice.job.jobNumber} — {invoice.job.brand}{" "}
-                {invoice.job.model}
-              </Link>
-            </div>
-          )}
-
-          <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <p className="text-[12px] font-bold text-[var(--ink-muted)]">Status</p>
-              <p className="mt-1">
+        <StatStrip
+          variant="cards"
+          columns={6}
+          tiles={[
+            { label: "Invoice #", value: invoice.invoiceNumber },
+            { label: "Date", value: formatEATDate(invoice.issuedAt) },
+            {
+              label: "Due",
+              value: invoice.dueDate ? formatEATDate(invoice.dueDate) : "—",
+            },
+            {
+              label: "Status",
+              value: (
                 <StatusBadge tone={INVOICE_STATUS_TONES[invoice.status] ?? "neutral"}>
                   {STATUS_LABEL[invoice.status] ?? invoice.status}
                 </StatusBadge>
-              </p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <p className="text-[12px] font-bold text-[var(--ink-muted)]">Date</p>
-              <p className="mt-1 text-[13px] font-medium">
-                {formatEATDate(invoice.issuedAt)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <p className="text-[12px] font-bold text-[var(--ink-muted)]">Due</p>
-              <p className="mt-1 text-[13px] font-medium">
-                {invoice.dueDate ? formatEATDate(invoice.dueDate) : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <p className="text-[12px] font-bold text-[var(--ink-muted)]">Balance</p>
-              <p
-                className={`mt-1 text-[13px] font-bold ${
-                  isPaid
-                    ? "text-emerald-700"
-                    : isVoid
-                    ? "text-red-700"
-                    : "text-amber-700"
-                }`}
+              ),
+            },
+            {
+              label: "Total",
+              value: formatMoney(total, currency),
+              valueClass: "text-[var(--ink)]",
+            },
+            {
+              label: "Balance",
+              value: isPaid ? (
+                <span className="text-emerald-700">Cleared</span>
+              ) : isVoid ? (
+                <span className="text-red-700">Voided</span>
+              ) : (
+                <span className="text-amber-700">{formatMoney(balance, currency)}</span>
+              ),
+              valueClass: "",
+            },
+          ]}
+        />
+
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-wrap items-center gap-2 action-bar">
+            {invoice.client?.phone && (
+              <form
+                action={`/api/invoices/${invoice.id}/send`}
+                method="POST"
+                className="inline"
               >
-                {isPaid
-                  ? "Cleared"
-                  : isVoid
-                  ? "Voided"
-                  : formatMoney(balance, currency)}
-              </p>
-            </div>
+                <input
+                  type="hidden"
+                  name="toPhone"
+                  value={invoice.client.phone}
+                />
+                <button
+                  type="submit"
+                  className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium"
+                >
+                  💬 WhatsApp
+                </button>
+              </form>
+            )}
+            {invoice.client?.email && (
+              <form
+                action={`/api/invoices/${invoice.id}/send`}
+                method="POST"
+                className="inline"
+              >
+                <input
+                  type="hidden"
+                  name="toEmail"
+                  value={invoice.client.email}
+                />
+                <button
+                  type="submit"
+                  className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium"
+                >
+                  📧 Email
+                </button>
+              </form>
+            )}
+            {!isPaid && !isVoid && (
+              <Link
+                href={`/documents/invoices/${invoice.id}?pay=1`}
+                className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold"
+              >
+                💰 Collect Payment
+              </Link>
+            )}
+            {isVoid && (
+              <span className="text-[12px] font-bold text-red-700">
+                Voided
+              </span>
+            )}
           </div>
 
-          <h3 className="text-sm font-bold text-[var(--ink-muted)] mb-2">
-            Line Items
-          </h3>
-          <DataTable
-            rows={invoice.lines}
-            getRowKey={(line) => line.id}
-            empty="No line items."
-            columns={[
-              {
-                key: "description",
-                header: "Description",
-                cell: (row: any) => (
-                  <span className="font-medium">{row.description}</span>
-                ),
-              },
-              {
-                key: "quantity",
-                header: "Qty",
-                align: "right",
-                cell: (row: any) => row.quantity,
-              },
-              {
-                key: "unitPrice",
-                header: "Unit Price",
-                align: "right",
-                cell: (row: any) => formatMoney(row.unitPrice, currency),
-              },
-              {
-                key: "discount",
-                header: "Discount",
-                align: "right",
-                cell: (row: any) =>
-                  row.discountAmount ? (
-                    <span className="text-red-600">
-                      -{formatMoney(row.discountAmount, currency)}
+          {invoice.client && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                  Client
+                </p>
+              </div>
+              <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Name
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.client.fullName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Phone
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.client.phone ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Email
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.client.email ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Organization
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.client.organization ?? "—"}
+                  </p>
+                </div>
+                <div className="min-[600px]:col-span-2">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Address
+                  </p>
+                  <p className="text-[13px] font-medium whitespace-pre-wrap">
+                    {invoice.client.address ?? "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {invoice.job && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                  Job
+                </p>
+              </div>
+              <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Job #
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.job.jobNumber}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">
+                    Device
+                  </p>
+                  <p className="text-[13px] font-medium">
+                    {invoice.job.brand} {invoice.job.model}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="border-b border-[var(--line)] px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                Line Items
+              </p>
+            </div>
+            {invoice.lines.length ? (
+              <>
+                <DataTable
+                  rows={invoice.lines}
+                  getRowKey={(l: any) => l.id}
+                  dense
+                  columns={[
+                    {
+                      key: "description",
+                      header: "Description",
+                      cell: (row: any) => (
+                        <span className="text-[13px] font-medium">
+                          {row.description}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "quantity",
+                      header: "Qty",
+                      align: "center",
+                      className: "w-[60px]",
+                      cell: (row: any) => (
+                        <span className="text-[13px]">{row.quantity}</span>
+                      ),
+                    },
+                    {
+                      key: "unitPrice",
+                      header: "Unit Price",
+                      align: "right",
+                      className: "w-[110px]",
+                      cell: (row: any) => (
+                        <span className="mono text-[13px]">
+                          {formatMoney(row.unitPrice, currency)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "discount",
+                      header: "Discount",
+                      align: "right",
+                      className: "w-[80px]",
+                      cell: (row: any) => (
+                        <span className="mono text-[13px] text-[var(--ink-muted)]">
+                          {row.discountAmount > 0
+                            ? formatMoney(row.discountAmount, currency)
+                            : "—"}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "tax",
+                      header: "Tax",
+                      align: "right",
+                      className: "w-[80px]",
+                      cell: (row: any) => (
+                        <span className="mono text-[13px]">
+                          {row.taxAmount
+                            ? formatMoney(row.taxAmount, currency)
+                            : "—"}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "total",
+                      header: "Total",
+                      align: "right",
+                      className: "w-[110px]",
+                      cell: (row: any) => (
+                        <span className="mono text-[13px] font-bold">
+                          {formatMoney(row.lineTotal, currency)}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+                <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
+                  <div className="flex w-full max-w-xs justify-between text-[13px]">
+                    <span className="text-[var(--ink-muted)]">Subtotal</span>
+                    <span className="mono font-medium">
+                      {formatMoney(subtotal, currency)}
                     </span>
-                  ) : (
-                    "—"
-                  ),
-              },
-              {
-                key: "tax",
-                header: "Tax",
-                align: "right",
-                cell: (row: any) =>
-                  row.taxAmount ? (
-                    formatMoney(row.taxAmount, currency)
-                  ) : (
-                    "—"
-                  ),
-              },
-              {
-                key: "total",
-                header: "Total",
-                align: "right",
-                cell: (row: any) => (
-                  <span className="font-bold">
-                    {formatMoney(row.lineTotal, currency)}
-                  </span>
-                ),
-              },
-            ]}
-          />
+                  </div>
+                  <div className="flex w-full max-w-xs justify-between text-[13px]">
+                    <span className="text-[var(--ink-muted)]">Tax</span>
+                    <span className="mono font-medium">
+                      {formatMoney(taxTotal, currency)}
+                    </span>
+                  </div>
+                  <div className="flex w-full max-w-xs justify-between text-[14px] border-t border-[var(--line)] pt-1">
+                    <span className="font-bold">Total</span>
+                    <span className="mono font-black">
+                      {formatMoney(total, currency)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-4 text-[13px] text-[var(--ink-muted)]">
+                No items.
+              </div>
+            )}
+          </div>
 
           {invoice.notes && (
-            <div className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-              <h4 className="text-sm font-bold text-[var(--ink)] mb-1">
-                Notes
-              </h4>
-              <p className="text-[13px] text-[var(--ink-muted)] whitespace-pre-wrap">
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                  Notes
+                </p>
+              </div>
+              <div className="p-4 text-[13px] whitespace-pre-wrap text-[var(--ink-muted)]">
                 {sanitizeText(invoice.notes)}
-              </p>
+              </div>
             </div>
           )}
 
@@ -332,7 +497,7 @@ export default async function InvoiceDetailPage({
                   {
                     key: "by",
                     header: "Recorded by",
-                    cell: (row: any) => row.createdBy?.fullName ?? "—",
+                    cell: (row: any) => row.createdBy?.name ?? "—",
                   },
                 ]}
               />
