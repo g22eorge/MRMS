@@ -57,6 +57,8 @@ type PartSelectProps = {
   allowCustom?: boolean;
   customLabel?: string;
   showStock?: boolean;
+  showCreateOption?: boolean;
+  createOptionLabel?: string;
   className?: string;
 };
 
@@ -67,11 +69,14 @@ export function PartSelect({
   allowCustom = true,
   customLabel = "Custom",
   showStock = false,
+  showCreateOption = false,
+  createOptionLabel = "+ Create new…",
   className = "w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--ink)]",
 }: PartSelectProps) {
   return (
     <select value={value} onChange={(event) => onChange(event.target.value)} className={className}>
       {allowCustom ? <option value="">{customLabel}</option> : null}
+      {showCreateOption ? <option value="__new__">{createOptionLabel}</option> : null}
       {parts.map((part) => (
         <option key={part.id} value={part.id}>
           {part.sku} · {part.name}

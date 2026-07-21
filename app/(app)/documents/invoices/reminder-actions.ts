@@ -11,10 +11,11 @@ import {
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { can } from "@/lib/permissions";
+import type { Role } from "@prisma/client";
 
 const VALID_BUCKETS = new Set<string>(["1-30", "31-60", "61+", "all"]);
 
-function canSendInvoiceReminders(user: { role: string; permissions?: string[] }) {
+function canSendInvoiceReminders(user: { role: Role }) {
   return ["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user);
 }
 

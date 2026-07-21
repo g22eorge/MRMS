@@ -5,6 +5,7 @@ import { getWhatsAppConfigForOrg, sendWhatsAppTemplateMessage } from "@/lib/noti
 import { getOrgWhatsAppConfig, saveOrgWhatsAppConfig, deleteOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { prisma } from "@/lib/prisma";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 export type SendTestResult =
   | { ok: true; messageId: string; to: string; from: string }

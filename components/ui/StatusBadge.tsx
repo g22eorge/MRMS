@@ -59,21 +59,22 @@ const SOLID: Partial<Record<BadgeTone, string>> = {
 };
 
 export function StatusBadge({ children, tone = "neutral", dot = false, solid = false, title, className = "" }: StatusBadgeProps) {
-  const cfg = TONES[tone];
+  const cfg = TONES[tone] ?? TONES.neutral;
   const badge = solid ? (SOLID[tone] ?? cfg.badge) : cfg.badge;
   return (
     <span
       title={title}
       className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] font-semibold leading-tight ${badge} ${className}`}
     >
-      {dot ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${solid ? "bg-white/80" : cfg.dot}`} aria-hidden="true" /> : null}
+      {dot ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${solid ? "bg-white/80" : (cfg ?? TONES.neutral).dot}`} aria-hidden="true" /> : null}
       {children}
     </span>
   );
 }
 
-/** Convenience: map an arbitrary status string to a tone via a lookup, with fallback. */
 export function toneFor(map: Record<string, BadgeTone>, key: string | null | undefined, fallback: BadgeTone = "neutral"): BadgeTone {
   if (!key) return fallback;
   return map[key] ?? fallback;
 }
+
+export const toneForInvoice = toneFor;

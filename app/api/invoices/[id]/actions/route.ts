@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireOrgSession } from "@/lib/org-context";
+import { can } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
+import type { DeliveryMethod } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { user, orgId } = await requireOrgSession();
+  const db = prisma as any;
+  const { id } = await ctx.params;
+
+  const invoice = await prisma.invoice.findFirst({ where: { id, orgId }, select: { id: true, orgId: true, invoiceNumber: true, status: true, jobId: true, totalAmount: true, clientId: true } });
+  if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const body = await _req.json().catch(() => ({}));
+  const action = String(body.action ?? "").trim();
+
+  if (action === "update") {
+    if (!(can.approveInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const data: Record<string, unknown> = {};
+    if (body.subject !== undefined) data.subject = body.subject ? String(body.subject).trim() : null;
+    if (body.notes !== undefined) data.notes = body.notes ? String(body.notes).trim() : null;
+    if (body.dueDate !== undefined) data.dueDate = body.dueDate ? new Date(String(body.dueDate)) : null;
+    if (body.status) data.status = String(body.status);
+    if (body.invoiceType) data.invoiceType = String(body.invoiceType);
+
+    const updated = await prisma.invoice.update({ where: { id: invoice.id }, data });
+    await writeSystemAuditEvent({ orgId: invoice.orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "INVOICE_UPDATED", summary: `${updated.invoiceNumber} updated` });
+    revalidatePath("/documents/invoices");
+    revalidatePath(`/documents/invoices/${invoice.id}`);
+    return NextResponse.json(updated);
+  }
+
+  if (action === "deliveryNote") {
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const deliveredByName = String(body.deliveredByName ?? "").trim();
+    const receivedByName = String(body.receivedByName ?? "").trim();
+    const note = String(body.note ?? "").trim();
+    const methodRaw = String(body.deliveryMethod ?? "PICKUP").trim();
+    const deliveryMethod = (["PICKUP", "DELIVERY", "COURIER"].includes(methodRaw) ? methodRaw : "PICKUP") as DeliveryMethod;
+    if (!deliveredByName || !receivedByName) return NextResponse.json({ error: "missing-fields" }, { status: 400 });
+
+    const inv = await prisma.invoice.findFirst({ where: { id: invoice.id, orgId }, select: { paidAmount: true, totalAmount: true, jobId: true, subject: true } });
+    if (!inv) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (inv.paidAmount < inv.totalAmount) return NextResponse.json({ error: "invoice-not-fully-paid" }, { status: 400 });
+
+    const deliveryNoteNumber = await nextDocumentNumber(prisma as any, "DN", "deliveryNote");
+    const desc = inv.jobId
+      ? `Repair handover for job`
+      : (inv.subject ?? invoice.invoiceNumber);
+
+    await prisma.deliveryNote.create({
+      data: {
+        orgId,
+        invoiceId: invoice.id,
+        deliveryNoteNumber,
+        deliveryMethod,
+        deliveredByName,
+        receivedByName,
+        note: note || null,
+        items: { create: [{ description: desc, quantity: 1 }] },
+      },
+      select: { id: true, deliveryNoteNumber: true },
+    });
+
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: invoice.id, action: "DELIVERY_NOTE_CREATED", summary: `DN ${deliveryNoteNumber} for ${invoice.id}` });
+    revalidatePath("/documents/invoices");
+    revalidatePath(`/documents/invoices/${invoice.id}`);
+    return NextResponse.json({ ok: true, deliveryNoteNumber });
+  }
+
+  if (action === "whatsapp") {
+    if (!invoice.jobId) return NextResponse.json({ error: "Standalone invoices must be sent from the job page." }, { status: 400 });
+    await sendInvoiceViaWhatsAppAction(invoice.jobId);
+    revalidatePath("/documents/invoices");
+    revalidatePath(`/documents/invoices/${invoice.id}`);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "void") {
+    if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const updated = await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { status: "VOID" },
+    });
+    await writeSystemAuditEvent({ orgId: invoice.orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "INVOICE_VOIDED", summary: `${updated.invoiceNumber} voided` });
+    revalidatePath("/documents/invoices");
+    revalidatePath(`/documents/invoices/${invoice.id}`);
+    return NextResponse.json({ updated });
+  }
+
+  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}

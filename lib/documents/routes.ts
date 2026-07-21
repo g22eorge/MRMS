@@ -39,18 +39,18 @@ export const DOCUMENTS_NAV: Array<{
     roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"],
   },
   {
-    key: "quotations",
-    href: DOCUMENTS_ROUTES.quotations,
-    label: "Quotations",
-    description: "Issue and track customer quotes",
-    roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "SALES", "TECHNICIAN_INTERNAL", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"],
-  },
-  {
     key: "invoices",
     href: DOCUMENTS_ROUTES.invoices,
     label: "Invoices",
     description: "Bill customers and collect payment",
     roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER", "SALES_CORPORATE", "TECH_MANAGER"],
+  },
+  {
+    key: "quotations",
+    href: DOCUMENTS_ROUTES.quotations,
+    label: "Quotations",
+    description: "Issue and track customer quotes",
+    roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "SALES", "TECHNICIAN_INTERNAL", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"],
   },
   {
     key: "receipts",

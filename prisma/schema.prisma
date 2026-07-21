@@ -145,77 +145,78 @@ model UserInvite {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String
-  email         String        @unique
-  phone         String?
-  emailVerified Boolean       @default(false)
-  image         String?
-  role          Role          @default(OPS)
-  isActive      Boolean       @default(true)
-  accessMode    UserAccessMode @default(FULL)
-  orgId         String?
-  org           Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
-  branchId      String?
-  branch        Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  departmentId  String?
-  department    Department?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  techType      TechType?
-  employeeId    String?
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  phone           String?
+  emailVerified   Boolean        @default(false)
+  image           String?
+  role            Role           @default(OPS)
+  isActive        Boolean        @default(true)
+  accessMode      UserAccessMode @default(FULL)
+  orgId           String?
+  org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId        String?
+  branch          Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  departmentId    String?
+  department      Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  techType        TechType?
+  employeeId      String?
   specializations String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  sessions                Session[]
-  accounts                Account[]
-  permissionGrants        UserPermission[]
-  jobsCreated             Job[]                    @relation("CreatedBy")
-  jobsAssigned            Job[]                    @relation("AssignedTo")
-  payoutsMarked           Job[]                    @relation("PayoutMarkedBy")
-  clientPaymentsMarked    Job[]                    @relation("ClientPaymentMarkedBy")
-  auditLogs               AuditLog[]
-  clientNotes             ClientNote[]
-  notifications           Notification[]
-  notificationPreferences NotificationPreferences?
-  partReservations        PartReservation[]        @relation("PartReservedBy")
-  deliveryNotesCreated    DeliveryNote[]           @relation("DeliveryNoteCreatedBy")
-  stockTransactions       PartStockTransaction[]   @relation("StockTxnBy")
-  paymentsCreated         Payment[]                @relation("PaymentCreatedBy")
-  technicianPayoutsRecorded TechnicianPayout[]      @relation("TechnicianPayoutRecordedBy")
-  refundsCreated          Refund[]
-  creditNotesCreated      CreditNote[]             @relation("CreditNoteCreatedBy")
-  creditNotesReceivedBack CreditNote[]             @relation("CreditNoteReceivedBackBy")
-  salesCreated            Sale[]                   @relation("SaleCreatedBy")
-  accessAuditEntries      UserAccessAudit[]        @relation("AccessAuditTarget")
-  accessAuditChanges      UserAccessAudit[]        @relation("AccessAuditActor")
-  invitesSent             UserInvite[]             @relation("InvitedBy")
-  groupMemberships        UserGroupMember[]
-  complaintsAssigned      Complaint[]      @relation("ComplaintAssignee")
-  salesTargets            SalesTarget[]    @relation("SalesTargets")
-  targetsSet              SalesTarget[]    @relation("TargetSetBy")
-  posSessionsOperated     PosSession[]     @relation("PosSessionOperator")
-  leadsCreated            Lead[]           @relation("LeadCreatedBy")
-  leadsAssigned           Lead[]           @relation("LeadAssignedTo")
-  leadActivities          LeadActivity[]   @relation("LeadActivityBy")
-  quotationsCreated       Quotation[]      @relation("QuotationCreatedBy")
-  quotationsApproved      Quotation[]      @relation("QuotationApprovedBy")
-  fieldVisitsAssigned     FieldVisit[]     @relation("FieldVisitAssignedTo")
-  fieldVisitsScheduled    FieldVisit[]     @relation("FieldVisitScheduledBy")
-  stockTransfersCreated   StockTransfer[]  @relation("StockTransferCreatedBy")
-  stockTransfersApproved  StockTransfer[]  @relation("StockTransferApprovedBy")
-  stockTransfersDispatched StockTransfer[] @relation("StockTransferDispatchedBy")
-  stockTransfersReceived  StockTransfer[]  @relation("StockTransferReceivedBy")
-  goodsReceivedCreated    GoodsReceived[]  @relation("GoodsReceivedCreatedBy")
-  supplierBillsCreated    SupplierBill[]   @relation("SupplierBillCreatedBy")
-  supplierPaymentsCreated SupplierPayment[] @relation("SupplierPaymentCreatedBy")
-  purchaseRequestsCreated PurchaseRequest[] @relation("PurchaseRequestCreatedBy")
-  purchaseRequestsReviewed PurchaseRequest[] @relation("PurchaseRequestReviewedBy")
-  stockCountsCreated       StockCount[]        @relation("StockCountCreatedBy")
-  stockCountsApproved      StockCount[]        @relation("StockCountApprovedBy")
-  expensesCreated          Expense[]           @relation("ExpenseCreatedBy")
-  recurringInvoicesCreated RecurringInvoice[]  @relation("RecurringInvoiceCreatedBy")
-  journalEntriesCreated    JournalEntry[]      @relation("JournalEntryCreatedBy")
-  campaignsCreated         Campaign[]          @relation("CampaignCreatedBy")
+  sessions                  Session[]
+  accounts                  Account[]
+  permissionGrants          UserPermission[]
+  jobsCreated               Job[]                    @relation("CreatedBy")
+  jobsAssigned              Job[]                    @relation("AssignedTo")
+  payoutsMarked             Job[]                    @relation("PayoutMarkedBy")
+  clientPaymentsMarked      Job[]                    @relation("ClientPaymentMarkedBy")
+  auditLogs                 AuditLog[]
+  clientNotes               ClientNote[]
+  notifications             Notification[]
+  notificationPreferences   NotificationPreferences?
+  partReservations          PartReservation[]        @relation("PartReservedBy")
+  deliveryNotesCreated      DeliveryNote[]           @relation("DeliveryNoteCreatedBy")
+  stockTransactions         PartStockTransaction[]   @relation("StockTxnBy")
+  attachmentsUploaded       InvoiceAttachment[]      @relation("InvoiceAttachmentUploadedBy")
+  paymentsCreated           Payment[]                @relation("PaymentCreatedBy")
+  technicianPayoutsRecorded TechnicianPayout[]       @relation("TechnicianPayoutRecordedBy")
+  refundsCreated            Refund[]
+  creditNotesCreated        CreditNote[]             @relation("CreditNoteCreatedBy")
+  creditNotesReceivedBack   CreditNote[]             @relation("CreditNoteReceivedBackBy")
+  salesCreated              Sale[]                   @relation("SaleCreatedBy")
+  accessAuditEntries        UserAccessAudit[]        @relation("AccessAuditTarget")
+  accessAuditChanges        UserAccessAudit[]        @relation("AccessAuditActor")
+  invitesSent               UserInvite[]             @relation("InvitedBy")
+  groupMemberships          UserGroupMember[]
+  complaintsAssigned        Complaint[]              @relation("ComplaintAssignee")
+  salesTargets              SalesTarget[]            @relation("SalesTargets")
+  targetsSet                SalesTarget[]            @relation("TargetSetBy")
+  posSessionsOperated       PosSession[]             @relation("PosSessionOperator")
+  leadsCreated              Lead[]                   @relation("LeadCreatedBy")
+  leadsAssigned             Lead[]                   @relation("LeadAssignedTo")
+  leadActivities            LeadActivity[]           @relation("LeadActivityBy")
+  quotationsCreated         Quotation[]              @relation("QuotationCreatedBy")
+  quotationsApproved        Quotation[]              @relation("QuotationApprovedBy")
+  fieldVisitsAssigned       FieldVisit[]             @relation("FieldVisitAssignedTo")
+  fieldVisitsScheduled      FieldVisit[]             @relation("FieldVisitScheduledBy")
+  stockTransfersCreated     StockTransfer[]          @relation("StockTransferCreatedBy")
+  stockTransfersApproved    StockTransfer[]          @relation("StockTransferApprovedBy")
+  stockTransfersDispatched  StockTransfer[]          @relation("StockTransferDispatchedBy")
+  stockTransfersReceived    StockTransfer[]          @relation("StockTransferReceivedBy")
+  goodsReceivedCreated      GoodsReceived[]          @relation("GoodsReceivedCreatedBy")
+  supplierBillsCreated      SupplierBill[]           @relation("SupplierBillCreatedBy")
+  supplierPaymentsCreated   SupplierPayment[]        @relation("SupplierPaymentCreatedBy")
+  purchaseRequestsCreated   PurchaseRequest[]        @relation("PurchaseRequestCreatedBy")
+  purchaseRequestsReviewed  PurchaseRequest[]        @relation("PurchaseRequestReviewedBy")
+  stockCountsCreated        StockCount[]             @relation("StockCountCreatedBy")
+  stockCountsApproved       StockCount[]             @relation("StockCountApprovedBy")
+  expensesCreated           Expense[]                @relation("ExpenseCreatedBy")
+  recurringInvoicesCreated  RecurringInvoice[]       @relation("RecurringInvoiceCreatedBy")
+  journalEntriesCreated     JournalEntry[]           @relation("JournalEntryCreatedBy")
+  campaignsCreated          Campaign[]               @relation("CampaignCreatedBy")
 
   @@index([orgId])
   @@index([branchId])
@@ -516,16 +517,16 @@ model Client {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  jobs               Job[]
-  devices            Device[]
-  notesEntries       ClientNote[]
-  inboundMessages    InboundMessage[]
-  sales              Sale[]
-  leads              Lead[]
-  quotations         Quotation[]
-  invoices           Invoice[]
-  recurringInvoices  RecurringInvoice[]
-  campaignContacts   CampaignContact[]
+  jobs              Job[]
+  devices           Device[]
+  notesEntries      ClientNote[]
+  inboundMessages   InboundMessage[]
+  sales             Sale[]
+  leads             Lead[]
+  quotations        Quotation[]
+  invoices          Invoice[]
+  recurringInvoices RecurringInvoice[]
+  campaignContacts  CampaignContact[]
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -661,8 +662,8 @@ model Job {
   inboundMessages           InboundMessage[]
   partReservations          PartReservation[]
   stockTransactions         PartStockTransaction[]
-  quotations                Quotation[]   @relation("JobQuotation")
-  fieldVisits               FieldVisit[]  @relation("JobFieldVisits")
+  quotations                Quotation[]                    @relation("JobQuotation")
+  fieldVisits               FieldVisit[]                   @relation("JobFieldVisits")
   technicianPayouts         TechnicianPayout[]
 
   invoice    Invoice?
@@ -689,14 +690,14 @@ model Invoice {
   org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   // Repair invoices link to a Job; standalone invoices link directly to a Client.
-  jobId    String?  @unique
-  job      Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId    String? @unique
+  job      Job?    @relation(fields: [jobId], references: [id], onDelete: Cascade)
   clientId String?
-  client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
-  invoiceType   InvoiceType   @default(REPAIR)
-  subject       String?
-  dueDate       DateTime?
+  invoiceType InvoiceType @default(REPAIR)
+  subject     String?
+  dueDate     DateTime?
 
   invoiceNumber String        @unique
   currency      String        @default("UGX")
@@ -713,13 +714,32 @@ model Invoice {
   payments      Payment[]
   refunds       Refund[]
   deliveryNotes DeliveryNote[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  attachments   InvoiceAttachment[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@index([orgId, issuedAt])
   @@index([orgId, status])
   @@index([orgId, invoiceType])
   @@index([clientId])
+}
+
+model InvoiceAttachment {
+  id           String   @id @default(cuid())
+  orgId        String
+  invoiceId    String
+  fileName     String
+  filePath     String
+  fileSize     Int
+  mimeType     String?
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  uploadedBy User?   @relation("InvoiceAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([invoiceId])
 }
 
 model Payment {
@@ -785,7 +805,7 @@ model Refund {
   creditNoteId String?
   creditNote   CreditNote? @relation(fields: [creditNoteId], references: [id], onDelete: SetNull)
 
-  currency           String @default("UGX")
+  currency           String        @default("UGX")
   exchangeRateToBase Float?
   amount             Float
   method             PaymentMethod @default(CASH)
@@ -809,7 +829,7 @@ model CreditNote {
 
   // Credit notes are for merchandise sales only (Sale-based).
   saleId String
-  sale   Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   creditNoteNumber String   @unique
   currency         String   @default("UGX")
@@ -818,13 +838,13 @@ model CreditNote {
   reason           String?
 
   // Stock return is only applied when items are physically received back.
-  itemsReceivedBackAt  DateTime?
+  itemsReceivedBackAt   DateTime?
   itemsReceivedBackById String?
   itemsReceivedBackBy   User?     @relation("CreditNoteReceivedBackBy", fields: [itemsReceivedBackById], references: [id], onDelete: SetNull)
   itemsReceivedBackNote String?
 
   createdById String
-  createdBy   User   @relation("CreditNoteCreatedBy", fields: [createdById], references: [id])
+  createdBy   User     @relation("CreditNoteCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
 
   items   CreditNoteItem[]
@@ -839,12 +859,12 @@ model CreditNoteItem {
   creditNoteId String
   creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
 
-  partId       String?
-  part         Part?      @relation(fields: [partId], references: [id], onDelete: SetNull)
-  description  String
-  quantity     Int
-  unitPrice    Float
-  lineTotal    Float
+  partId      String?
+  part        Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Int
+  unitPrice   Float
+  lineTotal   Float
 
   createdAt DateTime @default(now())
 
@@ -869,7 +889,7 @@ model Sale {
   status     SaleStatus @default(OPEN)
   saleNumber String     @unique
 
-  billingMode SaleBillingMode @default(CASH)
+  billingMode   SaleBillingMode @default(CASH)
   invoiceNumber String?
   invoicedAt    DateTime?
 
@@ -915,17 +935,17 @@ model DeliveryNote {
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  deliveryNoteNumber String   @unique
-  deliveredAt        DateTime @default(now())
+  deliveryNoteNumber String          @unique
+  deliveredAt        DateTime        @default(now())
   deliveryMethod     DeliveryMethod?
 
-  deliveredByName String
-  receivedByName  String
+  deliveredByName         String
+  receivedByName          String
   receivedBySignatureText String?
 
-  note String?
+  note        String?
   createdById String?
-  createdBy   User?   @relation("DeliveryNoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?    @relation("DeliveryNoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 
   items DeliveryNoteItem[]
@@ -940,11 +960,11 @@ model DeliveryNoteItem {
   deliveryNoteId String
   deliveryNote   DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
 
-  saleItemId  String?
-  saleItem    SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  saleItemId String?
+  saleItem   SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
 
-  partId      String?
-  part        Part?     @relation(fields: [partId], references: [id], onDelete: SetNull)
+  partId String?
+  part   Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
 
   description String
   quantity    Int
@@ -990,18 +1010,18 @@ model Part {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  reservations       PartReservation[]
-  transactions       PartStockTransaction[]
-  saleItems          SaleItem[]
-  purchaseOrderItems PurchaseOrderItem[]
+  reservations         PartReservation[]
+  transactions         PartStockTransaction[]
+  saleItems            SaleItem[]
+  purchaseOrderItems   PurchaseOrderItem[]
   purchaseRequestItems PurchaseRequestItem[]
-  creditNoteItems   CreditNoteItem[]
-  deliveryNoteItems DeliveryNoteItem[]
-  quotationItems    QuotationItem[] @relation("PartQuotationItems")
-  locationStocks    PartLocationStock[]
-  stockTransferItems StockTransferItem[]
-  goodsReceivedItems GoodsReceivedItem[]
-  stockCountItems StockCountItem[]
+  creditNoteItems      CreditNoteItem[]
+  deliveryNoteItems    DeliveryNoteItem[]
+  quotationItems       QuotationItem[]        @relation("PartQuotationItems")
+  locationStocks       PartLocationStock[]
+  stockTransferItems   StockTransferItem[]
+  goodsReceivedItems   GoodsReceivedItem[]
+  stockCountItems      StockCountItem[]
 
   @@unique([sku, orgId])
   @@index([orgId, isActive])
@@ -1163,6 +1183,7 @@ enum OutboundMessageType {
   REPAIR_REQUEST_EMAIL_ALERT
   ADMIN_TEST
   STAFF_REPLY
+  INVOICE_REMINDER
 }
 
 model Notification {
@@ -1345,12 +1366,12 @@ model DocumentBrandingSettings {
   borderColor           String        @default("#E5E5E5")
 
   // Document template selections (gated by org plan in UI/server)
-  invoiceTemplateKey   String        @default("invoice_classic")
-  quotationTemplateKey String        @default("quote_classic")
-  jobCardTemplateKey   String        @default("job_card_classic")
-  receiptTemplateKey   String        @default("receipt_classic")
+  invoiceTemplateKey   String @default("invoice_classic")
+  quotationTemplateKey String @default("quote_classic")
+  jobCardTemplateKey   String @default("job_card_classic")
+  receiptTemplateKey   String @default("receipt_classic")
 
-  updatedAt             DateTime      @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model InboundMessage {
@@ -1616,7 +1637,7 @@ model PurchaseRequest {
   createdAt     DateTime                @default(now())
   updatedAt     DateTime                @updatedAt
 
-  items         PurchaseRequestItem[]
+  items PurchaseRequestItem[]
 
   @@index([orgId, status, createdAt])
   @@index([supplierId])
@@ -1653,10 +1674,10 @@ model PurchaseOrder {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
-  items PurchaseOrderItem[]
-  purchaseRequests PurchaseRequest[]
+  items              PurchaseOrderItem[]
+  purchaseRequests   PurchaseRequest[]
   goodsReceivedNotes GoodsReceived[]
-  supplierBills SupplierBill[]
+  supplierBills      SupplierBill[]
 
   @@index([orgId])
   @@index([supplierId])
@@ -1697,7 +1718,7 @@ model GoodsReceived {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  items       GoodsReceivedItem[]
+  items         GoodsReceivedItem[]
   supplierBills SupplierBill[]
 
   @@index([orgId, receivedAt])
@@ -1724,33 +1745,33 @@ model GoodsReceivedItem {
 }
 
 model SupplierBill {
-  id            String             @id @default(cuid())
-  orgId         String
-  org           Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  billNumber    String             @unique
-  supplierRef   String?
-  status        SupplierBillStatus @default(POSTED)
-  supplierId    String
-  supplier      Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  poId          String?
-  po            PurchaseOrder?     @relation(fields: [poId], references: [id], onDelete: SetNull)
-  grnId         String?
-  grn           GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
-  currency      String             @default("UGX")
-  subtotal      Float
-  taxAmount     Float              @default(0)
-  totalAmount   Float
-  paidAmount    Float              @default(0)
-  issuedAt      DateTime           @default(now())
-  dueAt         DateTime?
-  notes         String?
-  createdById   String
-  createdBy     User               @relation("SupplierBillCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id          String             @id @default(cuid())
+  orgId       String
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billNumber  String             @unique
+  supplierRef String?
+  status      SupplierBillStatus @default(POSTED)
+  supplierId  String
+  supplier    Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  poId        String?
+  po          PurchaseOrder?     @relation(fields: [poId], references: [id], onDelete: SetNull)
+  grnId       String?
+  grn         GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
+  currency    String             @default("UGX")
+  subtotal    Float
+  taxAmount   Float              @default(0)
+  totalAmount Float
+  paidAmount  Float              @default(0)
+  issuedAt    DateTime           @default(now())
+  dueAt       DateTime?
+  notes       String?
+  createdById String
+  createdBy   User               @relation("SupplierBillCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  items         SupplierBillItem[]
-  payments      SupplierPayment[]
+  items    SupplierBillItem[]
+  payments SupplierPayment[]
 
   @@index([orgId, issuedAt])
   @@index([orgId, status])
@@ -1811,7 +1832,7 @@ model StockCount {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  items        StockCountItem[]
+  items StockCountItem[]
 
   @@index([orgId, status, countedAt])
   @@index([locationId])
@@ -2119,7 +2140,7 @@ model StockLocation {
   updatedAt DateTime @updatedAt
 
   goodsReceivedNotes GoodsReceived[]
-  stockCounts StockCount[]
+  stockCounts        StockCount[]
 
   @@unique([orgId, code])
   @@index([orgId, branchId, isActive])
@@ -2157,17 +2178,17 @@ model StockTransfer {
   note           String?
 
   createdById    String
-  createdBy      User                @relation("StockTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy      User    @relation("StockTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   approvedById   String?
-  approvedBy     User?               @relation("StockTransferApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedBy     User?   @relation("StockTransferApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   dispatchedById String?
-  dispatchedBy   User?               @relation("StockTransferDispatchedBy", fields: [dispatchedById], references: [id], onDelete: SetNull)
+  dispatchedBy   User?   @relation("StockTransferDispatchedBy", fields: [dispatchedById], references: [id], onDelete: SetNull)
   receivedById   String?
-  receivedBy     User?               @relation("StockTransferReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+  receivedBy     User?   @relation("StockTransferReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
 
-  items          StockTransferItem[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  items     StockTransferItem[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([orgId, status, createdAt])
   @@index([fromLocationId])
@@ -2175,17 +2196,17 @@ model StockTransfer {
 }
 
 model StockTransferItem {
-  id             String        @id @default(cuid())
-  transferId     String
-  transfer       StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  partId         String
-  part           Part          @relation(fields: [partId], references: [id], onDelete: Restrict)
-  quantity       Int
-  qtyDispatched  Int           @default(0)
-  qtyReceived    Int           @default(0)
-  note           String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  transferId    String
+  transfer      StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  partId        String
+  part          Part          @relation(fields: [partId], references: [id], onDelete: Restrict)
+  quantity      Int
+  qtyDispatched Int           @default(0)
+  qtyReceived   Int           @default(0)
+  note          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([transferId])
   @@index([partId])
@@ -2298,7 +2319,7 @@ model RecurringInvoice {
   client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   subject      String
   invoiceType  InvoiceType  @default(SERVICE)
-  frequency    String       // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
+  frequency    String // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
   nextDueAt    DateTime
   lastIssuedAt DateTime?
   currency     String       @default("UGX")
@@ -2594,19 +2615,19 @@ model SalesTarget {
   branch   Branch? @relation("BranchSalesTargets", fields: [branchId], references: [id], onDelete: SetNull)
 
   setById String?
-  setBy   User? @relation("TargetSetBy", fields: [setById], references: [id], onDelete: SetNull)
+  setBy   User?   @relation("TargetSetBy", fields: [setById], references: [id], onDelete: SetNull)
 
   entityType  TargetEntityType @default(COMPANY)
   metric      TargetMetric     @default(REVENUE)
-  period      String           // "YYYY-MM" or enum label, depending on source
+  period      String // "YYYY-MM" or enum label, depending on source
   periodLabel String?
 
   // Legacy commercial target fields remain for dashboard/report compatibility.
   targetRevenue Float @default(0)
   targetJobs    Int   @default(0)
 
-  targetValue Float @default(0)
-  actualValue Float @default(0)
+  targetValue Float   @default(0)
+  actualValue Float   @default(0)
   notes       String?
 
   createdAt DateTime @default(now())
@@ -2642,37 +2663,37 @@ enum LeadSource {
 }
 
 model Lead {
-  id        String       @id @default(cuid())
-  orgId     String?
-  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
-  branchId  String?
-  branch    Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  id       String        @id @default(cuid())
+  orgId    String?
+  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId String?
+  branch   Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
-  fullName     String
-  phone        String
-  email        String?
-  organization String?
-  interest     String?
-  source       LeadSource @default(WALK_IN)
-  status       LeadStatus @default(NEW)
+  fullName       String
+  phone          String
+  email          String?
+  organization   String?
+  interest       String?
+  source         LeadSource @default(WALK_IN)
+  status         LeadStatus @default(NEW)
   estimatedValue Float?
-  score        Int     @default(0) // 0-100 lead quality score
-  notes        String?
-  lostReason   String? // e.g. "Price", "Competitor", "No Budget", "Timing", "Other"
+  score          Int        @default(0) // 0-100 lead quality score
+  notes          String?
+  lostReason     String? // e.g. "Price", "Competitor", "No Budget", "Timing", "Other"
 
   clientId String?
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   assignedToId String?
-  assignedTo   User? @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedTo   User?   @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdById  String?
-  createdBy    User? @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy    User?   @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   convertedAt DateTime?
   closedAt    DateTime?
   followUpAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   activities       LeadActivity[]
   quotations       Quotation[]
@@ -2720,28 +2741,28 @@ model Quotation {
   jobId    String?
   job      Job?    @relation("JobQuotation", fields: [jobId], references: [id], onDelete: SetNull)
 
-  subtotal    Float @default(0)
-  discountAmount Float @default(0)
-  vatAmount      Float @default(0)
+  subtotal       Float     @default(0)
+  discountAmount Float     @default(0)
+  vatAmount      Float     @default(0)
   taxLabel       String?
   taxRate        Float?
-  totalAmount Float @default(0)
-  notes       String?
-  validUntil  DateTime?
-  sentAt      DateTime?
-  acceptedAt  DateTime?
-  rejectedAt  DateTime?
+  totalAmount    Float     @default(0)
+  notes          String?
+  validUntil     DateTime?
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  rejectedAt     DateTime?
 
-  createdById String?
-  createdBy   User? @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdBy    User?   @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   approvedById String?
-  approvedBy   User? @relation("QuotationApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedBy   User?   @relation("QuotationApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
 
   convertedToInvoiceId String? @unique
 
   items     QuotationItem[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   @@index([orgId, status])
   @@index([leadId])
@@ -2772,25 +2793,25 @@ enum PosSessionStatus {
 }
 
 model PosSession {
-  id         String           @id @default(cuid())
-  orgId      String?
-  org        Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
-  branchId   String?
-  branch     Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  operatorId String
-  operator   User             @relation("PosSessionOperator", fields: [operatorId], references: [id], onDelete: Cascade)
-  status     PosSessionStatus @default(OPEN)
-  openingFloat Float          @default(0)
-  closingCash  Float?
-  cashTotal    Float          @default(0)
-  cardTotal    Float          @default(0)
-  mobileTotal  Float          @default(0)
-  totalSales   Float          @default(0)
-  salesCount   Int            @default(0)
+  id                   String           @id @default(cuid())
+  orgId                String?
+  org                  Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId             String?
+  branch               Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  operatorId           String
+  operator             User             @relation("PosSessionOperator", fields: [operatorId], references: [id], onDelete: Cascade)
+  status               PosSessionStatus @default(OPEN)
+  openingFloat         Float            @default(0)
+  closingCash          Float?
+  cashTotal            Float            @default(0)
+  cardTotal            Float            @default(0)
+  mobileTotal          Float            @default(0)
+  totalSales           Float            @default(0)
+  salesCount           Int              @default(0)
   actualClosingBalance Float?
-  openedAt     DateTime       @default(now())
-  closedAt     DateTime?
-  notes        String?
+  openedAt             DateTime         @default(now())
+  closedAt             DateTime?
+  notes                String?
 
   sales Sale[]
 
@@ -2817,21 +2838,21 @@ enum FieldVisitStatus {
 }
 
 model FieldVisit {
-  id       String           @id @default(cuid())
+  id       String        @id @default(cuid())
   orgId    String?
-  org      Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   branchId String?
-  branch   Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch   Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   jobId    String?
-  job      Job?             @relation("JobFieldVisits", fields: [jobId], references: [id], onDelete: SetNull)
+  job      Job?          @relation("JobFieldVisits", fields: [jobId], references: [id], onDelete: SetNull)
 
-  assignedToId String
-  assignedTo   User   @relation("FieldVisitAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedToId  String
+  assignedTo    User   @relation("FieldVisitAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
   scheduledById String
   scheduledBy   User   @relation("FieldVisitScheduledBy", fields: [scheduledById], references: [id], onDelete: Cascade)
 
-  type      FieldVisitType
-  status    FieldVisitStatus @default(SCHEDULED)
+  type        FieldVisitType
+  status      FieldVisitStatus @default(SCHEDULED)
   scheduledAt DateTime
   startedAt   DateTime?
   arrivedAt   DateTime?
@@ -2867,20 +2888,20 @@ enum AccountType {
 }
 
 model ChartOfAccount {
-  id          String      @id @default(cuid())
+  id          String           @id @default(cuid())
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  code        String      // e.g. "1000"
+  org         Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  code        String // e.g. "1000"
   name        String
   type        AccountType
   parentId    String?
   parent      ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children    ChartOfAccount[] @relation("AccountHierarchy")
   description String?
-  isSystem    Boolean     @default(false) // system accounts can't be deleted
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  isSystem    Boolean          @default(false) // system accounts can't be deleted
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   journalLines JournalLine[]
 
@@ -2898,10 +2919,10 @@ model JournalEntry {
   id          String             @id @default(cuid())
   orgId       String
   org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  entryNumber String             // JE-YYYY-XXXX
+  entryNumber String // JE-YYYY-XXXX
   date        DateTime
   description String
-  reference   String?            // invoice/expense/etc ref
+  reference   String? // invoice/expense/etc ref
   status      JournalEntryStatus @default(DRAFT)
   totalAmount Float              @default(0)
   createdById String
@@ -2963,7 +2984,7 @@ model BankTransaction {
   org           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   date          DateTime
   description   String
-  amount        Float               // positive always; type distinguishes direction
+  amount        Float // positive always; type distinguishes direction
   type          BankTransactionType
   reference     String?
   reconciledAt  DateTime?
@@ -3005,8 +3026,8 @@ model Campaign {
   name        String
   type        CampaignType
   status      CampaignStatus @default(DRAFT)
-  subject     String?        // email subject line
-  body        String         // message body / template
+  subject     String? // email subject line
+  body        String // message body / template
   scheduledAt DateTime?
   startedAt   DateTime?
   completedAt DateTime?
@@ -3044,15 +3065,15 @@ model CampaignContact {
 // ── AI Knowledge & Feedback ──────────────────────────────────────────────────
 
 model AiKnowledgeArticle {
-  id        String   @id @default(cuid())
-  orgId     String?
-  title     String
-  module    String
-  content   String
+  id            String   @id @default(cuid())
+  orgId         String?
+  title         String
+  module        String
+  content       String
   embeddingJson String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([orgId, module, isActive])
   @@index([isActive, updatedAt])
@@ -3074,28 +3095,28 @@ model AiFeedback {
 }
 
 model AiPromptLog {
-  id              String   @id @default(cuid())
-  orgId           String?
-  userId          String?
-  feature         String
-  promptVersion   String
-  model           String?
+  id               String   @id @default(cuid())
+  orgId            String?
+  userId           String?
+  feature          String
+  promptVersion    String
+  model            String?
   questionRedacted String
-  contextSummary  String?
-  mode            String
-  createdAt       DateTime @default(now())
+  contextSummary   String?
+  mode             String
+  createdAt        DateTime @default(now())
 
   @@index([orgId, feature, createdAt])
   @@index([promptVersion, createdAt])
 }
 
 model AiOrgSettings {
-  orgId                    String   @id
-  aiEnabled                Boolean  @default(true)
-  guideEnabled             Boolean  @default(true)
-  insightsEnabled          Boolean  @default(true)
-  allowOrgKnowledge        Boolean  @default(true)
-  allowPromptLogging       Boolean  @default(true)
-  model                    String?
-  updatedAt                DateTime @updatedAt
+  orgId              String   @id
+  aiEnabled          Boolean  @default(true)
+  guideEnabled       Boolean  @default(true)
+  insightsEnabled    Boolean  @default(true)
+  allowOrgKnowledge  Boolean  @default(true)
+  allowPromptLogging Boolean  @default(true)
+  model              String?
+  updatedAt          DateTime @updatedAt
 }

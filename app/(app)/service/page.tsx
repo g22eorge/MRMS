@@ -48,7 +48,7 @@ export default async function ServiceHubPage() {
 
   const db = orgDb(orgId);
   const [openJobs, pendingIntake] = await Promise.all([
-    db.job.count({ where: { orgId, status: { notIn: ["COMPLETED", "CLOSED", "CUSTOMER_CANCELLED"] } } }).catch(() => null),
+    db.job.count({ where: { orgId, status: { notIn: ["COMPLETED", "CLOSED"] } } }).catch(() => null),
     db.repairRequest.count({ where: { orgId, requestStatus: { in: ["PENDING_INTAKE", "PENDING_FRONT_DESK"] } } }).catch(() => null),
   ]);
 

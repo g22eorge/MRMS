@@ -75,12 +75,14 @@ export type DataTableProps<T> = {
   dense?: boolean;
   /** Hide the header row (line-item editors, simple key/value tables). */
   hideHeader?: boolean;
-  /**
-   * Row click handler (client components only — e.g. open a detail drawer).
-   * Pair with `rowClassName` returning "cursor-pointer". Interactive elements
-   * inside cells should stopPropagation.
-   */
-  onRowClick?: (row: T, index: number) => void;
+/**
+ * Row click handler (client components only — e.g. open a detail drawer).
+ * Pair with `rowClassName` returning "cursor-pointer". Interactive elements
+ * inside cells should stopPropagation.
+ */
+onRowClick?: (row: T, index: number) => void;
+/** Light "sheets" surface for the header row. */
+headerSurface?: boolean;
 };
 
 /** Total <td> count of a DataTable — for colSpan in tableFooter/section rows. */
@@ -110,6 +112,7 @@ export function DataTable<T>({
   dense,
   hideHeader,
   onRowClick,
+  headerSurface,
 }: DataTableProps<T>) {
   const cell = dense ? "px-3 py-2" : "px-4 py-2.5";
   const footer = pagination ? (
@@ -157,7 +160,7 @@ export function DataTable<T>({
         <table className="w-full text-left text-[13px]">
           {hideHeader ? null : (
             <thead>
-              <tr className="border-b border-[var(--line)] text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]/70">
+              <tr className={`border-b ${headerSurface ? "border-[var(--line)]/70 bg-[var(--panel-strong)]/60" : "border-[var(--line)]"} text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]/70`}>
                 {columns.map((c) => (
                   <th key={c.key} className={`${cell} font-semibold ${alignClass(c.align)} ${c.headerClassName ?? ""}`}>
                     {c.header}
