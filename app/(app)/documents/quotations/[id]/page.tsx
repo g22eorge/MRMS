@@ -1,3 +1,8 @@
+export const dynamic = "force-dynamic";
+
+
+/* Edit handled via ?edit=1 inline form */
+
 // @ts-nocheck
 import { orgDb } from "@/lib/db";
 import { getCurrentUserRole } from "@/lib/session";
@@ -10,7 +15,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatStrip } from "@/components/ui/StatStrip";
-import { CopyButton } from "@/components/shared/CopyButton";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
 
@@ -50,8 +54,10 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       validUntil: true,
       notes: true,
       discountAmount: true,
-      vatAmount: true,
-      createdAt: true,
+  vatAmount: true,
+  taxRate: true,
+  taxLabel: true,
+  createdAt: true,
       client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } },
       job: { select: { id: true, jobNumber: true, brand: true, model: true, serialOrImei: true } },
       items: { select: { id: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
@@ -59,10 +65,12 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   });
   if (!quotation) redirect("/documents/quotations");
 
-  const org = await db.organization.findFirst({ where: { id: user.orgId }, select: { baseCurrency: true } });
-  const currency = normalizeCurrency(org?.baseCurrency, normalizeCurrency(quotation.currency, "UGX"));
+  const org = await db.organization.findFirst({ where: { id: user.orgId! }, select: { baseCurrency: true } });
+  const currency = normalizeCurrency(org?.baseCurrency ?? "UGX", normalizeCurrency(quotation.currency, "UGX"));
   const subtotal = quotation.items.reduce((sum, item) => sum + item.lineTotal, 0);
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
+  const isEdit = sp?.edit === "1";
+  const isVoid = quotation.status === "VOID";
   const publicLink = `/view/quote/${quotation.id}`;
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
 
@@ -81,28 +89,29 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       <style dangerouslySetInnerHTML={{ __html: `/* print styles injected at runtime */` }} />
       <section className="space-y-4 pb-20" id="print-area">
         <PageHeader
-          title={`Quotation ${quotation.quoteNumber}`}
+          title={`Quotation ${(quotation as any).quoteNumber}`}
           eyebrow="Documents · Quotations"
-          description={quotation.notes ?? "Quotation"}
+          description={sanitizeText(quotation.notes ?? "Quotation")}
           actions={
             <div className="flex flex-wrap items-center gap-2 action-bar">
               <Link href="/documents/quotations" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">← Back</Link>
-              <Link href={`/api/quotations/${quotation.id}/pdf`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
+        <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link>
+                      <Link href={`/api/quotations/${quotation.id}/pdf`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
             </div>
           }
         />
         <StatStrip
           variant="cards"
           tiles={[
-            { label: "Quote #", value: quotation.quoteNumber },
+            { label: "Quote #", value: (quotation as any).quoteNumber },
             { label: "Date", value: formatEATDate(quotation.createdAt) },
-            { label: "Valid Until", value: quotation.validUntil ? formatEATDate(quotation.validUntil) : "—" },
+            { label: "Valid Until", value: ((quotation as any).validUntil) ? formatEATDate((quotation as any).validUntil) : "—" },
             { label: "Status", value: <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status] ?? "neutral"}>{STATUS_LABEL[quotation.status] ?? quotation.status}</StatusBadge> },
             { label: "Total", value: formatMoney(quotation.totalAmount, currency) },
-          ]}
-        />
-
-        <div className="flex flex-wrap items-center gap-2 action-bar">
+        ]}
+      />
+      <div className="max-w-6xl mx-auto">
+      <div className="flex flex-wrap items-center gap-2 action-bar">
           {canSend && quotation.client?.phone && (
             <form action={`/api/quotations/${quotation.id}/whatsapp`} method="POST" className="inline">
               <input type="hidden" name="toPhone" value={quotation.client.phone} />
@@ -120,14 +129,8 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
               <input type="hidden" name="id" value={quotation.id} />
               <button type="submit" className="btn-premium-destructive rounded-lg px-3 py-1.5 text-[12px] font-medium">Delete</button>
             </form>
-          )}
-          <div className="ml-auto flex items-center gap-1 text-[12px] text-[var(--ink-muted)]">
-            <span>Share:</span>
-            <code className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[11px]">{publicLink}</code>
-            <CopyButton text={publicLink} />
-            <Link href={publicLink} target="_blank" className="btn-premium-secondary rounded px-2 py-0.5 text-[11px]">Public View</Link>
-          </div>
-        </div>
+        )}
+      </div>
 
         {quotation.client && (
           <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -160,9 +163,8 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
               <DataTable rows={quotation.items} getRowKey={(l: any) => l.id} dense columns={[
                 { key: "description", header: "Description", cell: (row: any) => <span className="text-[13px] font-medium">{row.description}</span> },
                 { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row: any) => <span className="text-[13px]">{row.quantity}</span> },
-                { key: "unitPrice", header: "Unit Price", align: "right", className: "w-[110px]", cell: (row: any) => <span className="mono text-[13px]">{formatMoney(row.unitPrice, currency)}</span> },
-                { key: "discount", header: "Discount", align: "right", className: "w-[80px]", cell: (row: any) => <span className="mono text-[13px] text-[var(--ink-muted)]">{row.discount > 0 ? formatMoney(row.discount, currency) : "—"}</span> },
-                { key: "total", header: "Total", align: "right", className: "w-[110px]", cell: (row: any) => <span className="mono text-[13px] font-bold">{formatMoney(row.lineTotal, currency)}</span> },
+{ key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono text-[13px] tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
+{ key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono text-[13px] font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
               ]} />
               <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
                 <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
@@ -184,13 +186,68 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
           </div>
         )}
 
-        {quotation.notes && (
+        {(quotation.taxRate || quotation.taxLabel) && (
+      <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-[var(--line)] px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Tax</p>
+        </div>
+        <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Rate</p>
+            <p className="text-[13px] font-medium">{typeof quotation.taxRate === "number" ? `${quotation.taxRate}%` : "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Label</p>
+            <p className="text-[13px] font-medium">{quotation.taxLabel ?? "—"}</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {quotation.notes && (
           <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Notes</p></div>
             <div className="p-4 text-[13px] whitespace-pre-wrap text-[var(--ink-muted)]">{quotation.notes}</div>
           </div>
         )}
-      </section>
+        </div>
+    </section>
     </>
   );
+
+{isEdit ? (
+      <section className="max-w-xl mx-auto space-y-4 pb-20">
+        <PageHeader
+          title={`Edit Quotation ${(quotation as any).quoteNumber}`}
+          eyebrow="Documents · Quotations"
+          description="Edit header fields"
+          actions={
+            <div className="flex flex-wrap items-center gap-2 action-bar">
+              <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">← Back to view</Link>
+            </div>
+          }
+        />
+        <form action={editQuotationAction} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <input type="hidden" name="id" value={quotation.id} />
+          <div className="border-b border-[var(--line)] px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Edit Quotation</p>
+          </div>
+          <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Valid Until</p>
+              <input name="validUntil" type="date" defaultValue={((quotation as any).validUntil) ? new Date((quotation as any).validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </div>
+          </div>
+          <div className="p-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Notes</p>
+            <textarea name="notes" defaultValue={(quotation as any).notes ?? ""} rows={4} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 resize-y" />
+          </div>
+          <div className="border-t border-[var(--line)] px-4 py-3 flex items-center gap-2">
+            <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold">Save Changes</button>
+            <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Cancel</Link>
+          </div>
+        </form>
+      </section>
+    ) : null}
+
 }

@@ -13,6 +13,7 @@ import { StatStrip } from "@/components/ui/StatStrip";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
+import { InvoiceCreateDialog } from "../InvoiceCreateDialog";
 
 const INVOICE_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
@@ -28,6 +29,8 @@ const STATUS_LABEL: Record<string, string> = {
   VOID: "Void",
 };
 
+
+/* Edit handled via ?edit=1 query param */
 export const dynamic = "force-dynamic";
 
 export default async function InvoiceDetailPage({
@@ -137,6 +140,55 @@ export default async function InvoiceDetailPage({
   const balance = total - paidAmount;
   const isPaid = balance <= 0;
   const isVoid = invoice.status === "VOID";
+  const canDelete = ["ADMIN", "OPS"].includes(user.role);
+  const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
+
+  // ---- Edit dialog data ----
+  const sp = searchParams ? await searchParams : {};
+  const isEdit = sp.edit === "1";
+  const clients = isEdit ? await db.client.findMany({
+    where: { orgId: user.orgId },
+    select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true },
+    orderBy: { fullName: "asc" },
+  }) : [];
+  const leads = isEdit ? await db.lead.findMany({
+    where: { orgId: user.orgId },
+    select: { id: true, fullName: true, phone: true, email: true, organization: true, interest: true },
+    orderBy: { fullName: "asc" },
+  }) : [];
+  const jobs = isEdit ? await db.job.findMany({
+    where: { orgId: user.orgId },
+    select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } },
+    orderBy: { createdAt: "desc" },
+  }) : [];
+  const parts = isEdit ? await db.part.findMany({
+    where: { orgId: user.orgId },
+    select: { id: true, sku: true, name: true, unitCost: true, qtyOnHand: true },
+    orderBy: { name: "asc" },
+  }) : [];
+  const taxRates = isEdit ? await db.taxRate.findMany({
+    where: { orgId: user.orgId },
+    select: { id: true, name: true, code: true, rate: true, isDefault: true },
+  }) : [];
+  const editInitialData = isEdit ? {
+    clientId: invoice.client?.id ?? "",
+    invoiceType: invoice.invoiceType ?? "SERVICE",
+    subject: invoice.subject ?? "",
+    dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "",
+    notes: invoice.notes ?? "",
+    taxEnabled: Boolean(invoice.taxRate && invoice.taxRate > 0),
+    taxRate: invoice.taxRate ?? 0,
+    taxLabel: invoice.taxLabel ?? "",
+    lines: invoice.lines.map((l: any) => ({
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      discount: l.discountAmount ?? 0,
+    })),
+  } : undefined;
+  const canOverrideDiscountEdit = isEdit ? can.overrideDiscount(user) : false;
+  // ---- End edit dialog data ----
+
 
   return (
     <>
@@ -204,7 +256,7 @@ export default async function InvoiceDetailPage({
 
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center gap-2 action-bar">
-            {invoice.client?.phone && (
+            {canSend && invoice.client?.phone && (
               <form
                 action={`/api/invoices/${invoice.id}/send`}
                 method="POST"
@@ -223,7 +275,7 @@ export default async function InvoiceDetailPage({
                 </button>
               </form>
             )}
-            {invoice.client?.email && (
+            {canSend && invoice.client?.email && (
               <form
                 action={`/api/invoices/${invoice.id}/send`}
                 method="POST"
@@ -372,36 +424,22 @@ export default async function InvoiceDetailPage({
                       key: "unitPrice",
                       header: "Unit Price",
                       align: "right",
-                      className: "w-[110px]",
+                      className: "min-w-[110px] whitespace-nowrap",
                       cell: (row: any) => (
-                        <span className="mono text-[13px]">
+                        <span className="mono text-[13px] tabular-nums">
                           {formatMoney(row.unitPrice, currency)}
                         </span>
                       ),
                     },
-                    {
-                      key: "discount",
-                      header: "Discount",
-                      align: "right",
-                      className: "w-[80px]",
-                      cell: (row: any) => (
-                        <span className="mono text-[13px] text-[var(--ink-muted)]">
-                          {row.discountAmount > 0
-                            ? formatMoney(row.discountAmount, currency)
-                            : "—"}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: "tax",
+{                       key: "tax",
                       header: "Tax",
                       align: "right",
-                      className: "w-[80px]",
-                      cell: (row: any) => (
-                        <span className="mono text-[13px]">
-                          {row.taxAmount
-                            ? formatMoney(row.taxAmount, currency)
-                            : "—"}
+ className: "min-w-[100px] whitespace-nowrap",
+      cell: (row: any) => (
+        <span className="mono text-[13px] tabular-nums">
+          {row.taxAmount
+            ? formatMoney(row.taxAmount, currency)
+            : "—"}
                         </span>
                       ),
                     },
@@ -409,10 +447,10 @@ export default async function InvoiceDetailPage({
                       key: "total",
                       header: "Total",
                       align: "right",
-                      className: "w-[110px]",
-                      cell: (row: any) => (
-                        <span className="mono text-[13px] font-bold">
-                          {formatMoney(row.lineTotal, currency)}
+ className: "min-w-[100px] whitespace-nowrap",
+      cell: (row: any) => (
+        <span className="mono text-[13px] font-bold tabular-nums">
+          {formatMoney(row.lineTotal, currency)}
                         </span>
                       ),
                     },
@@ -500,7 +538,27 @@ export default async function InvoiceDetailPage({
             </div>
           )}
 
-          {invoice.deliveryNotes.length > 0 && (
+          {(invoice.taxRate || invoice.taxLabel) && (
+      <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-[var(--line)] px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Tax</p>
+        </div>
+        <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Rate</p>
+            <p className="text-[13px] font-medium">
+              {typeof invoice.taxRate === "number" ? `${invoice.taxRate}%` : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Label</p>
+            <p className="text-[13px] font-medium">{invoice.taxLabel ?? "—"}</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {invoice.deliveryNotes.length > 0 && (
             <div className="mt-6">
               <h3 className="text-sm font-bold text-[var(--ink-muted)] mb-2">
                 Delivery Notes
@@ -541,6 +599,38 @@ export default async function InvoiceDetailPage({
           )}
         </div>
       </section>
+{isEdit && (
+  <InvoiceCreateDialog
+    currency={currency}
+    canOverrideDiscount={canOverrideDiscountEdit}
+    clients={clients as any[]}
+    leads={leads as any[]}
+    jobs={jobs as any[]}
+    parts={parts as any[]}
+    taxRates={taxRates as any[]}
+    defaultTaxApplicable={Boolean(invoice.taxRate && invoice.taxRate > 0)}
+    defaultTaxRate={Number(invoice.taxRate) || 0}
+    defaultTaxLabel={invoice.taxLabel ?? ""}
+    action={async (fd: FormData) => {
+      "use server";
+      const fdId = String(fd.get("invoiceId") ?? "").trim();
+      if (!fdId) return;
+      await db.invoice.updateMany({
+        where: { id: fdId },
+        data: {
+          subject: String(fd.get("subject") ?? "").trim() || null,
+          notes: String(fd.get("notes") ?? "").trim() || null,
+          dueDate: fd.get("dueDate") ? new Date(String(fd.get("dueDate"))) : null,
+          invoiceType: String(fd.get("invoiceType") ?? "SERVICE").trim(),
+        },
+      });
+      revalidatePath("/documents/invoices/" + fdId);
+      revalidatePath("/documents/invoices");
+    }}
+    editInvoiceId={invoice.id}
+    editInitialData={editInitialData}
+  />
+)}
     </>
   );
 }

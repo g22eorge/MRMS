@@ -57,6 +57,23 @@ type Props = {
   defaultTaxRate: number;
   defaultTaxLabel: string;
   action: (formData: FormData) => Promise<void>;
+  editInvoiceId?: string;
+  editInitialData?: {
+    clientId?: string;
+    invoiceType?: string;
+    subject?: string;
+    dueDate?: string;
+    notes?: string;
+    taxEnabled?: boolean;
+    taxRate?: number;
+    taxLabel?: string;
+    lines?: Array<{
+      description?: string;
+      quantity?: number;
+      unitPrice?: number;
+      discount?: number;
+    }>;
+  };
 };
 
 export function InvoiceCreateDialog({
@@ -71,8 +88,10 @@ export function InvoiceCreateDialog({
   defaultTaxRate,
   defaultTaxLabel,
   action,
+  editInvoiceId,
+  editInitialData,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(editInvoiceId));
 
   const close = useCallback(() => {
     setOpen(false);
@@ -97,7 +116,7 @@ export function InvoiceCreateDialog({
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="relative w-full max-w-[1300px] rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden">
           <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
-            <p className="text-[13px] font-bold text-[var(--ink)]">New Invoice</p>
+            <p className="text-[13px] font-bold text-[var(--ink)]">{editInvoiceId ? "Edit Invoice" : "New Invoice"}</p>
             <button
               type="button"
               onClick={close}
@@ -107,19 +126,19 @@ export function InvoiceCreateDialog({
             </button>
           </div>
           <div className="p-4 max-h-[80vh] overflow-y-auto">
-            <CreateStandaloneInvoiceForm
-              action={action}
-              currency={currency}
-              canOverrideDiscount={canOverrideDiscount}
-              clients={clients}
-              leads={leads}
-              jobs={jobs}
-              parts={parts}
-              taxRates={taxRates}
-              defaultTaxApplicable={defaultTaxApplicable}
-              defaultTaxRate={defaultTaxRate}
-              defaultTaxLabel={defaultTaxLabel}
-            />
+      <CreateStandaloneInvoiceForm
+        action={action}
+        currency={currency}
+        canOverrideDiscount={canOverrideDiscount}
+        clients={clients}
+        leads={leads}
+        jobs={jobs}
+        parts={parts}
+        taxRates={taxRates}
+        defaultTaxApplicable={defaultTaxApplicable}
+        defaultTaxRate={defaultTaxRate}
+        defaultTaxLabel={defaultTaxLabel}
+      />
           </div>
         </div>
       </div>

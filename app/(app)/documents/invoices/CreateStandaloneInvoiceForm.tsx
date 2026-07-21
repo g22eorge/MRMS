@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, useEffect } from "react";
 
-import { CommercialLineItemsEditor, CustomerPicker, LineItemTotals, TaxToggleField, useCustomerPicker } from "@/components/forms";
+import {
+  CommercialLineItemsEditor,
+  CustomerPicker,
+  LineItemTotals,
+  TaxToggleField,
+  useCustomerPicker,
+} from "@/components/forms";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
 
@@ -41,6 +47,23 @@ type Props = {
   defaultTaxLabel: string;
   leads?: any[];
   jobs?: any[];
+  initialData?: {
+    clientId?: string;
+    invoiceType?: string;
+    subject?: string;
+    dueDate?: string;
+    notes?: string;
+    taxEnabled?: boolean;
+    taxRate?: number;
+    taxLabel?: string;
+    lines?: Array<{
+      description?: string;
+      quantity?: number;
+      unitPrice?: number;
+      discount?: number;
+    }>;
+  };
+  submitLabel?: string;
 };
 
 export function CreateStandaloneInvoiceForm({
@@ -53,12 +76,29 @@ export function CreateStandaloneInvoiceForm({
   defaultTaxApplicable,
   defaultTaxRate,
   defaultTaxLabel,
+  initialData,
+  submitLabel = "Create Invoice",
 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const customer = useCustomerPicker(clients);
-  const { lines, addLine, removeLine, updateLine, serialize } = useLineItemsState(emptyCommercialLineItem);
+  const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
   const [taxEnabled, setTaxEnabled] = useState(defaultTaxApplicable);
   const [partsList, setPartsList] = useState<PartOption[]>(parts);
+
+  // Seed from initialData when available (edit mode)
+  useEffect(() => {
+    if (initialData?.clientId) customer.setSelectedClientId(initialData.clientId);
+  }, [initialData?.clientId]);
+
+  useEffect(() => {
+    if (initialData?.lines?.length) {
+      // @ts-ignore - seeded from edit-initialData (optional fields coerced)
+      replaceLines(initialData.lines.map((line) => ({
+        ...emptyCommercialLineItem,
+        ...line,
+      })));
+    }
+  }, []);
 
   async function handleCreatePart(data: { sku: string; name: string; unitCost?: number | null; qtyOnHand?: number }) {
     const res = await fetch("/api/parts/create", {
@@ -219,14 +259,16 @@ export function CreateStandaloneInvoiceForm({
 
             <div className="p-4">
               <div className="grid grid-cols-2 gap-2">
-                <select name="invoiceType" defaultValue="SERVICE" className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50">
-                  {["SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"].map((type) => (
-                    <option key={type} value={type}>{type.charAt(0) + type.slice(1).toLowerCase()}</option>
-                  ))}
-                </select>
-                <input name="subject" placeholder="Subject" className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                <input name="dueDate" type="date" className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                <input name="notes" placeholder="Notes or payment terms" className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+        <select name="invoiceType" defaultValue={initialData?.invoiceType ?? "SERVICE"} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50">
+          {["SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"].map((type) => (
+            <option key={type} value={type}>
+              {type.charAt(0) + type.slice(1).toLowerCase()}
+            </option>
+          ))}
+        </select>
+        <input name="subject" placeholder="Subject" defaultValue={initialData?.subject ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+        <input name="dueDate" type="date" defaultValue={initialData?.dueDate ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+        <input name="notes" placeholder="Notes or payment terms" defaultValue={initialData?.notes ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
               </div>
             </div>
           </div>
@@ -251,7 +293,7 @@ export function CreateStandaloneInvoiceForm({
                 total={totalAmount}
               />
               <div className="space-y-2">
-                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2.5 text-sm font-bold">Create Invoice</button>
+                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2.5 text-sm font-bold">{submitLabel}</button>
               </div>
             </div>
           </div>

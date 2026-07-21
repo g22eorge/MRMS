@@ -23,12 +23,13 @@ import {
   updateQuotationStatus,
 } from "../../actions";
 
-const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
+ const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "info",
   ACCEPTED: "success",
   REJECTED: "danger",
   EXPIRED: "neutral",
+  VOID: "danger",
 };
 
 export default async function QuotationDetailPage({

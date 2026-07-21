@@ -220,7 +220,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
         <RowActionsMenu label={`Quotation ${row.quoteNumber}`}>
           <MenuActionLink href={`/documents/quotations/${row.id}`} icon="open">View</MenuActionLink>
           <PreviewButton quotationId={row.id} />
-          <MenuActionLink href={`/documents/quotations/${row.id}?edit=1`} icon="save">Edit</MenuActionLink>
+          <MenuActionLink href={`/documents/quotations/${row.id}`} icon="save">Edit</MenuActionLink>
           <MenuActionLink href={`/api/quotations/${row.id}/pdf`} external icon="download">Print / PDF</MenuActionLink>
           {["ACCEPTED", "SENT"].includes(row.status) && (
             <form action={convertToInvoiceAction}>

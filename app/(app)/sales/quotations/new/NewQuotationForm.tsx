@@ -59,6 +59,20 @@ type Props = {
   defaultTaxApplicable: boolean;
   defaultTaxRate: number;
   defaultTaxLabel: string;
+  initialData?: {
+    validUntil?: string;
+    notes?: string;
+    taxEnabled?: boolean;
+    taxRate?: number;
+    taxLabel?: string;
+    lines?: Array<{
+      description?: string;
+      quantity?: number;
+      unitPrice?: number;
+      discount?: number;
+    }>;
+  };
+  submitLabel?: string;
 };
 
 export function NewQuotationForm({
@@ -75,6 +89,8 @@ export function NewQuotationForm({
   defaultTaxApplicable,
   defaultTaxRate,
   defaultTaxLabel,
+  initialData,
+    submitLabel = "Create Quotation",
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -90,9 +106,9 @@ export function NewQuotationForm({
     organization: "",
     address: "",
   });
-  const { lines, addLine, removeLine, updateLine, serialize } = useLineItemsState(emptyCommercialLineItem);
-  const [validUntil, setValidUntil] = useState("");
-  const [notes, setNotes] = useState("");
+  const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
+  const [validUntil, setValidUntil] = useState(initialData?.validUntil ?? "");
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
   const initialTaxKey = taxRates.find((rate) => rate.isDefault)?.id
     ? `rate:${taxRates.find((rate) => rate.isDefault)?.id}`
     : taxRates[0]?.id
