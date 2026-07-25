@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
+import { formatEATDate } from "@/lib/date-eat";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
@@ -11,7 +12,7 @@ import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button, buttonClasses } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -40,34 +41,69 @@ async function nextSaleNumber(db: ReturnType<typeof orgDb>) {
   return `${prefix}${String(next).padStart(4, "0")}`;
 }
 
-export default async function PosPage({ searchParams }: { searchParams: Promise<{ period?: string; page?: string }> }) {
+const SEGMENTS = ["all", "today", "month", "open"] as const;
+type Segment = (typeof SEGMENTS)[number];
+
+export default async function PosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; q?: string; page?: string }>;
+}) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
 
-  const { period, page: pageParam } = await searchParams;
+  const { period, q: rawQ, page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
   const currency = org.baseCurrency;
+  const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
+  const q = (rawQ ?? "").trim();
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [kpiTodayCollections, kpiMonthCollections, kpiMonthCount] = await Promise.all([
+  function segmentFilter(seg: Segment) {
+    if (seg === "today") return { createdAt: { gte: todayStart } };
+    if (seg === "month") return { createdAt: { gte: monthStart } };
+    if (seg === "open") return { status: "OPEN" };
+    return {};
+  }
+
+  const searchFilter = q
+    ? {
+        OR: [
+          { saleNumber: { contains: q } },
+          { notes: { contains: q } },
+          { client: { fullName: { contains: q } } },
+        ],
+      }
+    : {};
+
+  const [
+    kpiTodayCollections,
+    kpiMonthCollections,
+    kpiMonthCount,
+    segCountAll,
+    segCountToday,
+    segCountMonth,
+    segCountOpen,
+  ] = await Promise.all([
     loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: todayStart } }).catch(() => ({ products: 0 })),
     loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => ({ products: 0 })),
     db.payment.count({ where: { saleId: { not: null }, receivedAt: { gte: monthStart }, kind: "PAYMENT" } }).catch(() => 0),
+    db.sale.count().catch(() => 0),
+    db.sale.count({ where: { createdAt: { gte: todayStart } } }).catch(() => 0),
+    db.sale.count({ where: { createdAt: { gte: monthStart } } }).catch(() => 0),
+    db.sale.count({ where: { status: "OPEN" } }).catch(() => 0),
   ]);
   const kpiTodayTotal = kpiTodayCollections.products ?? 0;
   const kpiMonthTotal = kpiMonthCollections.products ?? 0;
   const kpiAvgSale = kpiMonthCount > 0 ? kpiMonthTotal / kpiMonthCount : 0;
 
   let dbNeedsFix = false;
-
-  const branches: { id: string; name: string }[] = [];
-  const defaultBranchId: string | null = null;
 
   async function createSaleAction(_formData: FormData) {
     "use server";
@@ -143,14 +179,6 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     revalidatePath("/pos");
   }
 
-  // Period filter
-  const filterStart =
-    period === "today"
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      : period === "month"
-        ? new Date(now.getFullYear(), now.getMonth(), 1)
-        : undefined;
-
   // Open shift check — use prisma directly (CashierShift not in ORG_SCOPED_MODELS)
   const openShift = await prisma.cashierShift.findFirst({
     where: { orgId, cashierId: user.id, status: "OPEN" },
@@ -171,7 +199,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
-  const salesWhere = filterStart ? { createdAt: { gte: filterStart } } : {};
+  const salesWhere = { ...segmentFilter(segment), ...searchFilter };
   let salesTotal = 0;
   try {
     salesTotal = await db.sale.count({ where: salesWhere });
@@ -201,7 +229,38 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   }
 
   const salesPage = paginationView(page, salesTotal);
-  const salesHref = pageHrefBuilder("/pos", { period });
+  const salesHref = pageHrefBuilder("/pos", { period: segment !== "all" ? segment : "", q });
+  const hasSaleFilters = Boolean(q) || segment !== "all";
+
+  function filterHref(next: Segment, search = q) {
+    const params = new URLSearchParams();
+    if (next !== "all") params.set("period", next);
+    if (search) params.set("q", search);
+    const query = params.toString();
+    return query ? `/pos?${query}` : "/pos";
+  }
+  const segmentHref = (next: Segment) => filterHref(next);
+
+  /** Money for the tight mobile stat strip — currency code lives in the header line. */
+  const compactAmount = (value: number) => formatMoneyCompact(value, currency).replace(`${currency} `, "");
+
+  function canDelete(s: (typeof sales)[number]) {
+    return (
+      user.role === "ADMIN" &&
+      s.status === "OPEN" &&
+      !s.invoicedAt &&
+      s._count.payments === 0 &&
+      s._count.creditNotes === 0 &&
+      s._count.refunds === 0
+    );
+  }
+
+  const segmentChips = [
+    { seg: "all" as Segment, short: "All", long: `${segCountAll} total`, count: segCountAll },
+    { seg: "today" as Segment, short: "Today", long: `${segCountToday} today`, count: segCountToday },
+    { seg: "month" as Segment, short: "Month", long: `${segCountMonth} this month`, count: segCountMonth },
+    { seg: "open" as Segment, short: "Open", long: `${segCountOpen} open`, count: segCountOpen },
+  ];
 
   return (
     <ListPageLayout
@@ -218,12 +277,87 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
               </Button>
             </section>
           ) : null}
-          <PageHeader
-            eyebrow="Point of Sale"
-            title="Sales"
-            description="Walk-in and retail transactions"
-            actions={<Button href="/pos/shifts" variant="secondary" size="sm">Shifts →</Button>}
-          />
+
+          {/* ══ MOBILE HEADER ══ */}
+          <div className="space-y-3 lg:hidden">
+            {/* Title row + New Sale CTA */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-black text-[var(--ink)]">Sales</h1>
+                <p className="text-[13px] text-[var(--ink-muted)]">{segCountAll} total · amounts in {currency}</p>
+              </div>
+              {hasOpenShift ? (
+                <form action={createSaleAction}>
+                  <Button type="submit" size="md" className="rounded-xl font-bold">+ New Sale</Button>
+                </form>
+              ) : (
+                <Button href="/pos/shifts" variant="secondary" size="md" className="rounded-xl">Open shift</Button>
+              )}
+            </div>
+
+            {/* Compact 4-number stat row */}
+            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+              {([
+                { label: "Today", value: compactAmount(kpiTodayTotal) },
+                { label: "Month", value: compactAmount(kpiMonthTotal) },
+                { label: "Txns", value: String(kpiMonthCount) },
+                { label: "Avg", value: compactAmount(kpiAvgSale) },
+              ] as const).map(({ label, value }) => (
+                <div key={label} className="min-w-0 px-1.5 py-3 text-center">
+                  <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+                  <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 4-chip segment filter — grid fills full width */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {segmentChips.map(({ seg, short, count }) => (
+                <Link
+                  key={seg}
+                  href={segmentHref(seg)}
+                  className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                    segment === seg
+                      ? "bg-[var(--accent)] text-black"
+                      : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                  }`}
+                >
+                  {short}{count > 0 && segment !== seg ? ` ${count}` : ""}
+                </Link>
+              ))}
+            </div>
+
+            {/* Search — full width, no redundant button */}
+            <form method="GET">
+              {segment !== "all" ? <input type="hidden" name="period" value={segment} /> : null}
+              <div className="relative">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50" aria-hidden>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Sale number, client or note..."
+                  className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                />
+                {q ? (
+                  <Link href={filterHref(segment, "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </Link>
+                ) : null}
+              </div>
+            </form>
+          </div>
+
+          {/* ══ DESKTOP HEADER ══ */}
+          <div className="hidden lg:block">
+            <PageHeader
+              eyebrow="Point of Sale"
+              title="Sales"
+              description="Walk-in and retail transactions"
+              actions={<Button href="/pos/shifts" variant="secondary" size="sm">Shifts →</Button>}
+            />
+          </div>
         </>
       }
     >
@@ -239,17 +373,17 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         </div>
       )}
 
-      {/* ── KPI tiles (clickable) ── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Link href="/pos?period=today" className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${period === "today" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
+      {/* ══ DESKTOP: KPI tiles ══ */}
+      <div className="hidden grid-cols-2 gap-2 sm:grid-cols-4 lg:grid">
+        <Link href={segmentHref("today")} className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${segment === "today" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Today&apos;s Sales</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(kpiTodayTotal, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">tap to filter ↓</p>
+          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">click to filter ↓</p>
         </Link>
-        <Link href="/pos?period=month" className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${period === "month" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
+        <Link href={segmentHref("month")} className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${segment === "month" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">This Month</p>
           <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(kpiMonthTotal, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">tap to filter ↓</p>
+          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">click to filter ↓</p>
         </Link>
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Transactions MTD</p>
@@ -263,108 +397,177 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         </div>
       </div>
 
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <p className="text-[13px] font-bold text-[var(--ink)]">Sales</p>
-          {period && (
-            <span className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)]">
-              {period === "today" ? "Today" : "This month"}
-              <Link href="/pos" className="ml-1.5 opacity-60 hover:opacity-100">×</Link>
-            </span>
-          )}
+      {/* ══ DESKTOP: Stat chips + New Sale ══ */}
+      <div className="panel-shadow hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 lg:flex">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {segmentChips.map(({ seg, long }) => (
+            <Link
+              key={seg}
+              href={segmentHref(seg)}
+              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                segment === seg
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                  : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
+              }`}
+            >
+              {long}
+            </Link>
+          ))}
         </div>
         {hasOpenShift ? (
-          <form action={createSaleAction} className="flex flex-wrap items-center gap-2">
-            <select
-              name="branchId"
-              defaultValue={defaultBranchId ?? ""}
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
-            >
-              <option value="">No branch</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            <Button type="submit" size="sm">New Sale</Button>
+          <form action={createSaleAction} className="shrink-0">
+            <Button type="submit" size="sm" className="px-4 font-bold">+ New Sale</Button>
           </form>
         ) : (
           <Button href="/pos/shifts" variant="secondary" size="sm">Open a shift first →</Button>
         )}
       </div>
 
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Recent</p>
+      {/* ══ DESKTOP: Filter panel ══ */}
+      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+        <form className="flex items-center gap-2 p-3">
+          {segment !== "all" ? <input type="hidden" name="period" value={segment} /> : null}
+          <input
+            name="q"
+            defaultValue={q}
+            aria-label="Search sales"
+            placeholder="Search by sale number, client or note..."
+            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+          />
+          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          {hasSaleFilters ? (
+            <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+          ) : null}
+        </form>
+      </div>
+
+      {/* ── Sales table / cards ── */}
+      {sales.length === 0 ? (
+        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+          <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
+            <rect x="8" y="5" width="24" height="30" rx="3" stroke="currentColor" strokeWidth="2"/>
+            <path d="M14 13h12M14 20h12M14 27h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <p className="text-sm font-medium text-[var(--ink-muted)]">No sales match this view</p>
+          {hasSaleFilters ? (
+            <Link href="/pos" className="text-xs text-[var(--accent)] hover:underline">Clear filters</Link>
+          ) : null}
         </div>
-        <DataTable
-          frameless
-          rows={sales}
-          getRowKey={(s) => s.id}
-          empty="No sales yet."
-          renderMobileCard={(s) => {
-            const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
-            return (
-              <div className="px-4 py-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="mono text-[13px] font-bold text-[var(--ink)]">{s.saleNumber}</span>
-                  <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
+      ) : (
+        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <DataTable
+            frameless
+            rows={sales}
+            getRowKey={(s) => s.id}
+            renderMobileCard={(s) => {
+              const cur = normalizeCurrency(s.currency, "UGX");
+              const balance = Math.max(0, s.totalAmount - s.paidAmount);
+              return (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Link href={`/pos/${s.id}`} className="shrink-0">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
+                      s.status === "PAID" ? "bg-emerald-500/15 text-emerald-600"
+                      : s.status === "VOID" ? "bg-red-500/15 text-red-600"
+                      : "bg-[var(--accent)]/15 text-[var(--accent)]"
+                    }`}>
+                      {(s.client?.fullName?.[0] ?? "W").toUpperCase()}
+                    </div>
+                  </Link>
+                  <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
+                    <p className="truncate text-[14px] font-bold text-[var(--ink)]">{s.client?.fullName ?? "Walk-in"}</p>
+                    <p className="mt-0.5 truncate text-[13px] text-[var(--ink-muted)]">
+                      <span className="mono">{s.saleNumber}</span>
+                      {" · "}{formatEATDate(s.createdAt)}
+                      {s.createdBy ? <> · {s.createdBy.name}</> : null}
+                    </p>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <p className="text-[14px] font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
+                    {balance > 0 && s.status !== "VOID" ? (
+                      <span className="text-[12px] font-semibold text-amber-600">{formatMoneyCompact(balance, cur)} due</span>
+                    ) : (
+                      <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
+                    )}
+                  </div>
                 </div>
-                <div className="mb-1 flex items-center gap-2">
-                  {s.client
-                    ? <p className="text-[13px] font-medium text-[var(--ink)]">{s.client.fullName}</p>
-                    : <p className="text-[13px] text-[var(--ink-muted)]">Walk-in</p>
-                  }
-                </div>
-                {s.createdBy && (
-                  <p className="mb-1 text-[12px] text-[var(--ink-muted)]">by {s.createdBy.name}</p>
-                )}
-                <div className="mb-2 flex items-baseline gap-3 text-sm">
-                  <span className="font-semibold text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX"))}</span>
-                  <span className="text-[13px] text-[var(--ink-muted)]">paid {formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX"))}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button href={`/pos/${s.id}`} variant="secondary" size="sm">Open/Edit</Button>
-                  {canDeleteSale ? (
-                    <form action={deleteSaleAction}>
-                      <input type="hidden" name="saleId" value={s.id} />
-                      <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className={buttonClasses("danger", "sm")}>Delete</ConfirmSubmitButton>
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-            );
-          }}
-          columns={[
-            { key: "sale", header: "Sale", className: "mono font-semibold", cell: (s) => s.saleNumber },
-            {
-              key: "client",
-              header: "Client",
-              cell: (s) =>
-                s.client
-                  ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
-                  : <span className="text-[var(--ink-muted)]">Walk-in</span>,
-            },
-            { key: "createdBy", header: "Created By", className: "text-[var(--ink-muted)]", cell: (s) => s.createdBy?.name ?? "—" },
-            { key: "total", header: "Total", cell: (s) => formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX")) },
-            { key: "paid", header: "Paid", cell: (s) => formatMoneyCompact(s.paidAmount, normalizeCurrency(s.currency, "UGX")) },
-            { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },
-          ]}
-          actions={(s) => {
-            const canDeleteSale = user.role === "ADMIN" && s.status === "OPEN" && !s.invoicedAt && s._count.payments === 0 && s._count.creditNotes === 0 && s._count.refunds === 0;
-            return (
+              );
+            }}
+            columns={[
+              {
+                key: "sale",
+                header: "Sale",
+                cell: (s) => (
+                  <div className="min-w-0">
+                    <Link href={`/pos/${s.id}`} className="mono block truncate text-[13px] font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
+                      {s.saleNumber}
+                    </Link>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
+                  </div>
+                ),
+              },
+              {
+                key: "client",
+                header: "Client",
+                cell: (s) =>
+                  s.client
+                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
+                    : <span className="text-[var(--ink-muted)]">Walk-in</span>,
+              },
+              {
+                key: "createdBy",
+                header: "Cashier",
+                headerClassName: "hidden xl:table-cell",
+                className: "hidden text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                cell: (s) => s.createdBy?.name ?? <span className="opacity-30">—</span>,
+              },
+              {
+                key: "total",
+                header: "Total",
+                className: "whitespace-nowrap font-semibold tabular-nums",
+                cell: (s) => formatMoneyCompact(s.totalAmount, normalizeCurrency(s.currency, "UGX")),
+              },
+              {
+                key: "balance",
+                header: "Balance",
+                className: "whitespace-nowrap tabular-nums",
+                cell: (s) => {
+                  const cur = normalizeCurrency(s.currency, "UGX");
+                  const balance = Math.max(0, s.totalAmount - s.paidAmount);
+                  if (s.status === "VOID") return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
+                  return balance > 0
+                    ? <span className="text-[13px] font-semibold text-amber-600">{formatMoneyCompact(balance, cur)}</span>
+                    : <span className="text-[13px] font-semibold text-emerald-600">Cleared</span>;
+                },
+              },
+              { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },
+            ]}
+            actions={(s) => (
               <>
-                <Button href={`/pos/${s.id}`} variant="secondary" size="sm">Open/Edit</Button>
-                {canDeleteSale ? (
-                  <form action={deleteSaleAction}>
+                <Link href={`/pos/${s.id}`} title="Open sale"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </Link>
+                <a href={`/api/sales/${s.id}/receipt`} target="_blank" rel="noreferrer" title="Receipt PDF"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-sky-400/40 hover:text-sky-600">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                </a>
+                {canDelete(s) ? (
+                  <form action={deleteSaleAction} className="inline">
                     <input type="hidden" name="saleId" value={s.id} />
-                    <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className={buttonClasses("danger", "sm")}>Delete</ConfirmSubmitButton>
+                    <ConfirmSubmitButton
+                      message="Delete this open POS sale? Stock will be restored."
+                      title="Delete sale"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </ConfirmSubmitButton>
                   </form>
                 ) : null}
               </>
-            );
-          }}
-        />
-      </section>
+            )}
+          />
+        </div>
+      )}
 
       <TablePagination
         page={salesPage.page}
