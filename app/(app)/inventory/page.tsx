@@ -419,7 +419,7 @@ export default async function InventoryPage({
               className={`rounded-lg border px-3 py-1.5 text-[12px] font-bold transition ${
                 showAdd
                   ? "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
-                  : "border-[var(--accent)]/40 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90"
+                  : "border-[var(--accent)]/40 bg-[var(--accent)] text-black hover:bg-[var(--accent)]/90"
               }`}
             >
               {showAdd ? "✕ Cancel" : "+ Add Item"}
