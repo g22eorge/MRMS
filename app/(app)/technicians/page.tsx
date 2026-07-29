@@ -540,7 +540,7 @@ export default async function TechniciansPage({
                 <>
                   <p className="text-[var(--ink-muted)]">{job.ageDays}d old</p>
                   {job.repairTimeline ? (
-                    <p className="text-[13px] text-[var(--accent)]">ETA {job.repairTimeline}</p>
+                    <p className="text-[var(--accent)]">ETA {job.repairTimeline}</p>
                   ) : null}
                   {typeof job.etaProgress === "number" ? (
                     <div className="mt-1 h-1 w-20 rounded-full bg-[var(--line)]">
@@ -569,14 +569,14 @@ export default async function TechniciansPage({
             <>
               <Link
                 href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
-                className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
               >
                 Open
               </Link>
               {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
                 <Link
                   href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
-                  className="btn-premium whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-white"
+                  className="btn-premium whitespace-nowrap rounded-lg px-3 py-1.5 font-semibold text-white"
                 >
                   Complete
                 </Link>

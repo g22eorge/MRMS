@@ -156,7 +156,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setPlanAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Plan</label>
-            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="STARTER">Starter</option>
               <option value="STANDARD">Standard</option>
               <option value="GROWTH">Growth</option>
@@ -174,7 +174,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setBillingStatusAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Status</label>
-            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="TRIALING">Trialing</option>
               <option value="ACTIVE">Active</option>
               <option value="PAST_DUE">Past Due</option>
@@ -191,7 +191,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={extendTrialAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Trial</label>
-            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="7">+7 days</option>
               <option value="14">+14 days</option>
               <option value="30">+30 days</option>
@@ -221,7 +221,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               defaultValue={orgWaCfg?.atSenderId ?? ""}
               placeholder="e.g. EagleInfo"
               maxLength={11} pattern="[A-Za-z0-9]*"
-              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
             />
             <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/30">
               Save
@@ -242,7 +242,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             <input type="hidden" name="orgId" value={org.id} />
             <select
               name="aiModel" defaultValue={org.aiModel ?? ""}
-              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
             >
               <option value="">Platform default</option>
               <option value="claude-haiku-4-5-20251001">Haiku 4.5 — fast / cheap</option>
@@ -341,14 +341,14 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               key: "amount",
               header: "Amount",
               align: "right",
-              className: "font-mono text-[var(--ink)]",
+              className: "mono text-[var(--ink)]",
               cell: (e) => (e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"),
             },
             {
               key: "reference",
               header: "Reference",
               headerClassName: "hidden md:table-cell",
-              className: "hidden font-mono text-xs text-[var(--ink-muted)] md:table-cell",
+              className: "hidden mono text-[12px] text-[var(--ink-muted)] md:table-cell",
               cell: (e) => e.txRef ?? "—",
             },
           ]}

@@ -215,8 +215,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
           {params.new === "1" ? (
             <div className="mt-3 border-t border-[var(--line)] pt-3">
               <form action={createGroupAction} className="space-y-2">
-                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
-                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
+                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] text-white">Create Group</button>
               </form>
             </div>
@@ -247,8 +247,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
                   <form action={updateGroupAction} className="md:col-span-2 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={selected.id} />
-                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none" required />
-                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none" placeholder="Description" />
+                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" required />
+                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" placeholder="Description" />
                     <div className="md:col-span-2 flex items-center justify-between gap-2">
                       <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Save</button>
                     </div>
@@ -266,7 +266,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Members</p>
                 <form action={addMemberAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
-                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none">
+                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none">
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                     ))}
@@ -288,7 +288,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                         cell: (m) => (
                           <>
                             <p className="font-medium">{m.user.name}</p>
-                            <p className="text-xs text-[var(--ink-muted)]">{m.user.email}</p>
+                            <p className="text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
                           </>
                         ),
                       },
@@ -299,7 +299,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                           <form action={removeMemberAction}>
                             <input type="hidden" name="id" value={selected.id} />
                             <input type="hidden" name="memberId" value={m.id} />
-                            <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold hover:border-[var(--accent)]/40">Remove</button>
+                            <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 font-semibold hover:border-[var(--accent)]/40">Remove</button>
                           </form>
                         ),
                       },

@@ -111,7 +111,7 @@ export default async function StockTransfersPage({
           {
             key: "transfer",
             header: "Transfer",
-            className: "font-mono font-semibold text-[var(--ink)]",
+            className: "mono font-semibold text-[var(--ink)]",
             cell: (transfer) => transfer.transferNumber,
           },
           {
@@ -146,10 +146,10 @@ export default async function StockTransfersPage({
         ]}
         actions={(transfer) => (
           <>
-            {transfer.status === "REQUESTED" ? <form action={approveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">Approve</button></form> : null}
-            {transfer.status === "APPROVED" ? <form action={dispatchStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700">Dispatch</button></form> : null}
-            {transfer.status === "DISPATCHED" ? <form action={receiveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700">Receive</button></form> : null}
-            {transfer.status === "REQUESTED" || transfer.status === "APPROVED" ? <form action={cancelStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-red-500/20 px-2.5 py-1 text-xs font-semibold text-red-600">Cancel</button></form> : null}
+            {transfer.status === "REQUESTED" ? <form action={approveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">Approve</button></form> : null}
+            {transfer.status === "APPROVED" ? <form action={dispatchStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-700">Dispatch</button></form> : null}
+            {transfer.status === "DISPATCHED" ? <form action={receiveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-700">Receive</button></form> : null}
+            {transfer.status === "REQUESTED" || transfer.status === "APPROVED" ? <form action={cancelStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-red-500/20 px-2.5 py-1 font-semibold text-red-600">Cancel</button></form> : null}
           </>
         )}
       />

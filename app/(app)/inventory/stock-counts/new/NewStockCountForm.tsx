@@ -52,13 +52,13 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
         <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Count Details</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">Location
-            <select name="locationId" required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]"><option value="">Select location</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}{location.code ? ` (${location.code})` : ""}</option>)}</select>
+            <select name="locationId" required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]"><option value="">Select location</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}{location.code ? ` (${location.code})` : ""}</option>)}</select>
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">Counted at
-            <input name="countedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+            <input name="countedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
         </div>
-        <textarea name="note" rows={2} placeholder="Count note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+        <textarea name="note" rows={2} placeholder="Count note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
       </div>
 
       <LineItemsPanel title="Items" onAddLine={addLine}>
@@ -102,7 +102,7 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
           ]}
           actions={(line) =>
             lines.length > 1 ? (
-              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+              <button type="button" onClick={() => removeLine(line.key)} className="text-[12px] font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
             ) : null
           }
         />

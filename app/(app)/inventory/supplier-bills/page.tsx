@@ -84,8 +84,8 @@ export default async function SupplierBillsPage({
             header: "Bill",
             cell: (bill) => (
               <>
-                <p className="mono text-sm font-bold text-[var(--ink)]">{bill.billNumber}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p>
+                <p className="mono font-bold text-[var(--ink)]">{bill.billNumber}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p>
               </>
             ),
           },
@@ -106,7 +106,7 @@ export default async function SupplierBillsPage({
             key: "linked",
             header: "Linked Doc",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-xs text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
             cell: (bill) => bill.grn ? bill.grn.grnNumber : bill.po ? bill.po.reference ?? `PO-${bill.po.id.slice(-6).toUpperCase()}` : "-",
           },
           {
@@ -134,7 +134,7 @@ export default async function SupplierBillsPage({
           },
         ]}
         actions={(bill) => (
-          <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+          <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
         )}
       />
     </ListPageLayout>

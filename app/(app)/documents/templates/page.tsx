@@ -1,4 +1,8 @@
 import { revalidatePath } from "next/cache";
+
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { redirect } from "next/navigation";
 
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
@@ -145,16 +149,12 @@ export default async function DocumentTemplatesPage() {
 
   return (
     <div className="min-w-0 space-y-4">
-      {/* Page header */}
-      <div>
-        <h1 className="text-xl font-bold text-[var(--ink)]">Document Templates</h1>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          Choose your default template for each document type. Available templates depend on your plan
-          ({" "}
-          <span className="font-medium text-[var(--ink)]">{planLabel(plan)}</span>
-          ).
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Documents"
+        title="Document Templates"
+        description={`Default template per document type · your plan: ${planLabel(plan)}`}
+        actions={<Button href="/settings/branding" variant="secondary" size="sm">Branding settings</Button>}
+      />
 
       {KINDS.map((kind) => {
         const allTemplates = templatesForAll(kind);
@@ -178,16 +178,13 @@ export default async function DocumentTemplatesPage() {
                     <div
                       key={t.key}
                       className={[
-                        "relative flex min-w-0 flex-col overflow-hidden rounded-xl border transition-all",
-                        isCurrent
-                          ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/20"
-                          : "border-[var(--line)]",
+                        "dc-card relative flex min-w-0 flex-col overflow-hidden transition",
+                        isCurrent ? "shadow-[var(--dc-shadow-hover)]" : "",
                         !isAllowed ? "opacity-60" : "",
-                        "bg-[var(--panel)]",
                       ].join(" ")}
                     >
-                      {/* Colour swatch */}
-                      <div className={`h-1.5 w-full rounded-t ${t.previewColor}`} />
+                      {/* Colour swatch / current rail */}
+                      <div className={`h-1.5 w-full ${isCurrent ? "bg-[var(--dc-accent)]" : t.previewColor}`} />
 
                       {/* Card body */}
                       <div className="flex flex-1 flex-col gap-1.5 p-3">
@@ -198,14 +195,10 @@ export default async function DocumentTemplatesPage() {
                           </span>
                           <div className="flex items-center gap-1">
                             {t.templateNumber === 1 && !isCurrent && (
-                              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] font-bold text-emerald-600">
-                                ★ Recommended
-                              </span>
+                              <StatusBadge tone="success">Recommended</StatusBadge>
                             )}
                             {isCurrent ? (
-                              <span className="rounded-full bg-[var(--accent)]/15 px-1.5 py-0.5 text-[12px] font-bold text-[var(--accent)]">
-                                Current
-                              </span>
+                              <StatusBadge tone="accent">Current</StatusBadge>
                             ) : null}
                           </div>
                         </div>
@@ -216,7 +209,7 @@ export default async function DocumentTemplatesPage() {
                         </p>
 
                         {/* Description */}
-                        <p className="text-[13px] leading-snug text-[var(--ink-muted)]">
+                        <p className="text-[12px] leading-snug text-[var(--ink-muted)]">
                           {t.description}
                         </p>
 
@@ -226,39 +219,29 @@ export default async function DocumentTemplatesPage() {
                         </span>
                       </div>
 
-                      {/* Action row */}
-                      <div className="border-t border-[var(--line)] px-3 py-2 space-y-1.5">
-                        {/* Preview — always available */}
+                      {/* Action row — compact, one line */}
+                      <div className="flex items-center gap-1.5 border-t border-[var(--line)] px-2.5 py-2">
                         <a
                           href={`/api/templates/preview?key=${t.key}&kind=${kind}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex w-full items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] font-medium text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+                          title="Preview PDF"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
                         >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                          Preview PDF
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                         </a>
-
-                        {/* Set as default / locked / active */}
                         {isAllowed ? (
                           isCurrent ? (
-                            <span className="block text-center text-[13px] text-[var(--ink-muted)]">✓ Active</span>
+                            <span className="text-[12px] font-semibold text-emerald-600">Active</span>
                           ) : (
-                            <form action={setTemplateAction}>
+                            <form action={setTemplateAction} className="min-w-0 flex-1">
                               <input type="hidden" name="key"  value={t.key} />
                               <input type="hidden" name="kind" value={kind}  />
-                              <button
-                                type="submit"
-                                className="btn-premium w-full rounded-lg px-2 py-1 text-[13px]"
-                              >
-                                Set as default
-                              </button>
+                              <Button type="submit" variant="secondary" size="sm" fullWidth>Set default</Button>
                             </form>
                           )
                         ) : (
-                          <p className="text-center text-[13px] text-[var(--ink-muted)]">
-                            Requires {planLabel(t.minPlan)}
-                          </p>
+                          <span className="truncate text-[12px] text-[var(--ink-muted)]">Needs {planLabel(t.minPlan)}</span>
                         )}
                       </div>
 
@@ -288,14 +271,6 @@ export default async function DocumentTemplatesPage() {
         );
       })}
 
-      {/* Footer link back to full branding settings */}
-      <p className="text-xs text-[var(--ink-muted)]">
-        To update company info, colors, and document content,{" "}
-        <a href="/settings/branding" className="underline underline-offset-2 hover:text-[var(--ink)]">
-          visit Branding Settings
-        </a>
-        .
-      </p>
     </div>
   );
 }

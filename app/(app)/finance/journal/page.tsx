@@ -13,6 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { can } from "@/lib/permissions";
 import { NewJournalEntryForm } from "@/components/finance/NewJournalEntryForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
@@ -258,7 +259,25 @@ export default async function JournalPage({
         eyebrow="Finance"
         title="Journal Entries"
         description="Double-entry ledger — every entry's debits must equal its credits"
-        kpis={[
+        actions={
+          <>
+            <Link
+              href="/finance/accounts"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+            >
+              Chart of Accounts
+            </Link>
+            <Link
+              href="/finance/reports/pl"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+            >
+              P&amp;L →
+            </Link>
+          </>
+        }
+      />
+
+      <StatCards columns={4} cards={[
           {
             label: "Posted This Month",
             value: formatMoneyCompact(thisMonthAmt, currency),
@@ -284,24 +303,7 @@ export default async function JournalPage({
             value: formatMoneyCompact(avgEntryAmt, currency),
             sub: `${voidCount} voided entr${voidCount === 1 ? "y" : "ies"} this year`,
           },
-        ]}
-        actions={
-          <>
-            <Link
-              href="/finance/accounts"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-            >
-              Chart of Accounts
-            </Link>
-            <Link
-              href="/finance/reports/pl"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-            >
-              P&amp;L →
-            </Link>
-          </>
-        }
-      />
+        ]} />
 
       {/* ── NEW ENTRY FORM ─────────────────────────────────────────────────── */}
       {accounts.length === 0 ? (
@@ -326,7 +328,7 @@ export default async function JournalPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           <option value="0">All months</option>
           {MONTHS.map((m, i) => (
@@ -336,7 +338,7 @@ export default async function JournalPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -345,7 +347,7 @@ export default async function JournalPage({
         <select
           name="status"
           defaultValue={statusFilter}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           <option value="all">All statuses</option>
           {STATUSES.map((s) => (
@@ -356,7 +358,7 @@ export default async function JournalPage({
           name="q"
           defaultValue={sp.q ?? ""}
           placeholder="Search description, reference…"
-          className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         />
         <button
           type="submit"
@@ -509,7 +511,7 @@ export default async function JournalPage({
                         header: "Account",
                         cell: (line) => (
                           <>
-                            <span className="font-mono text-[var(--accent)]">{line.account.code}</span>
+                            <span className="mono text-[var(--accent)]">{line.account.code}</span>
                             <span className="ml-1.5 text-[var(--ink-muted)]">{line.account.name}</span>
                           </>
                         ),

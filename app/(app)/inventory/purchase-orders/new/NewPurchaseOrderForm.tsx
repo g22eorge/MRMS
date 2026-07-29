@@ -15,7 +15,7 @@ type Supplier = { id: string; name: string };
 type Part = { id: string; name: string; sku: string; unitCost: number | null };
 type LineData = { description: string; qtyOrdered: number; unitCost: number; partId: string };
 
-const fieldClass = "mt-1 w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/10";
+const fieldClass = "mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
 const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]";
 
 export function NewPurchaseOrderForm({
@@ -148,7 +148,7 @@ export function NewPurchaseOrderForm({
               key: "index",
               header: "#",
               headerClassName: "w-10",
-              className: "w-10 align-top text-xs font-semibold text-[var(--ink-muted)]",
+              className: "w-10 align-top text-[12px] font-semibold text-[var(--ink-muted)]",
               cell: (_line, index) => index + 1,
             },
             {
@@ -161,7 +161,7 @@ export function NewPurchaseOrderForm({
                   parts={parts}
                   onChange={(partId) => onPartSelect(line.key, partId)}
                   customLabel="Custom item"
-                  className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none"
+                  className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
               ),
             },
@@ -170,7 +170,7 @@ export function NewPurchaseOrderForm({
               header: "Description",
               className: "align-top",
               cell: (line) => (
-                <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass} text-sm`} />
+                <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass}`} />
               ),
             },
             {
@@ -180,7 +180,7 @@ export function NewPurchaseOrderForm({
               headerClassName: "w-24",
               className: "w-24 align-top",
               cell: (line) => (
-                <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
+                <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right tabular-nums`} />
               ),
             },
             {
@@ -190,7 +190,7 @@ export function NewPurchaseOrderForm({
               headerClassName: "w-32",
               className: "w-32 align-top",
               cell: (line) => (
-                <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right text-sm tabular-nums`} />
+                <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right tabular-nums`} />
               ),
             },
             {
@@ -203,18 +203,18 @@ export function NewPurchaseOrderForm({
             },
           ]}
           actions={(line) => (
-            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
+            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
               Remove
             </button>
           )}
           tableFooter={
             <tr className="bg-[var(--panel-strong)]">
-              <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">
+              <td colSpan={3} className="px-3 py-2 text-[12px] font-semibold text-[var(--ink-muted)]">
                 Supplier: {selectedSupplier?.name ?? "Not selected"}
               </td>
-              <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
-              <td className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
-              <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
+              <td className="px-3 py-2 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
               <td />
             </tr>
           }

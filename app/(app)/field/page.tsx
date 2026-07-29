@@ -315,7 +315,7 @@ export default async function FieldPage({
                   cell: (row) => (
                     <>
                       <p className="font-medium text-[var(--ink)]">{row.name}</p>
-                      <p className="text-[13px] text-[var(--ink-muted)] capitalize">{row.role.replace(/_/g, " ").toLowerCase()}</p>
+                      <p className="text-[var(--ink-muted)] capitalize">{row.role.replace(/_/g, " ").toLowerCase()}</p>
                     </>
                   ),
                 },
@@ -334,7 +334,7 @@ export default async function FieldPage({
                   header: "Success Rate",
                   align: "right",
                   cell: (row) => (
-                    <span className={`text-xs font-bold tabular-nums ${row.rate >= 80 ? "text-emerald-700" : row.rate >= 60 ? "text-amber-700" : "text-red-600"}`}>
+                    <span className={`font-bold tabular-nums ${row.rate >= 80 ?"text-emerald-700" : row.rate >= 60 ? "text-amber-700" : "text-red-600"}`}>
                       {row.completed + row.failed > 0 ? `${row.rate}%` : "—"}
                     </span>
                   ),
@@ -387,13 +387,13 @@ export default async function FieldPage({
               </div>
               <Link href={`/field/${visit.id}`} className="shrink-0 text-xs font-semibold text-[var(--accent)] hover:underline">View →</Link>
             </div>
-            <p className="mt-1 text-xs text-[var(--ink)]">{formatEATDateTime(visit.scheduledAt)}</p>
-            <p className="mt-0.5 line-clamp-1 text-[13px] text-[var(--ink-muted)]">{visit.address}</p>
-            <div className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
+            <p className="mt-1 text-[12px] text-[var(--ink)]">{formatEATDateTime(visit.scheduledAt)}</p>
+            <p className="mt-0.5 line-clamp-1 text-[var(--ink-muted)]">{visit.address}</p>
+            <div className="mt-0.5 flex flex-wrap gap-x-3 text-[var(--ink-muted)]">
               {visit.contactName && <span>Contact: {visit.contactName}{visit.contactPhone ? ` (${visit.contactPhone})` : ""}</span>}
               {isManager && <span>Assigned: <span className="text-[var(--ink)]">{visit.assignedTo.name}</span></span>}
               {visit.job && (
-                <span>Job: <Link href={`/jobs/${visit.job.id}`} className="font-mono font-semibold text-[var(--accent)] hover:underline">{visit.job.jobNumber}</Link></span>
+                <span>Job: <Link href={`/jobs/${visit.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">{visit.job.jobNumber}</Link></span>
               )}
             </div>
           </div>
@@ -402,7 +402,7 @@ export default async function FieldPage({
           {
             key: "scheduledAt",
             header: "Date / Time",
-            className: "whitespace-nowrap text-xs text-[var(--ink)]",
+            className: "whitespace-nowrap text-[var(--ink)]",
             cell: (visit) => formatEATDateTime(visit.scheduledAt),
           },
           {
@@ -414,7 +414,7 @@ export default async function FieldPage({
           {
             key: "address",
             header: "Address",
-            className: "max-w-[180px] truncate text-xs text-[var(--ink)]",
+            className: "max-w-[180px] truncate text-[var(--ink)]",
             cell: (visit) => visit.address,
           },
           ...(isManager
@@ -422,7 +422,7 @@ export default async function FieldPage({
                 {
                   key: "assignedTo",
                   header: "Assigned To",
-                  className: "whitespace-nowrap text-xs text-[var(--ink)]",
+                  className: "whitespace-nowrap text-[var(--ink)]",
                   cell: (visit) => visit.assignedTo.name,
                 },
               ]
@@ -430,7 +430,7 @@ export default async function FieldPage({
           {
             key: "contact",
             header: "Contact",
-            className: "whitespace-nowrap text-xs text-[var(--ink-muted)]",
+            className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
             cell: (visit) => (
               <>
                 {visit.contactName ?? "—"}
@@ -443,10 +443,10 @@ export default async function FieldPage({
           {
             key: "job",
             header: "Job",
-            className: "whitespace-nowrap text-xs",
+            className: "whitespace-nowrap",
             cell: (visit) =>
               visit.job ? (
-                <Link href={`/jobs/${visit.job.id}`} className="font-mono font-semibold text-[var(--accent)] hover:underline">
+                <Link href={`/jobs/${visit.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">
                   {visit.job.jobNumber}
                 </Link>
               ) : (
@@ -461,7 +461,7 @@ export default async function FieldPage({
           },
         ]}
         actions={(visit) => (
-          <Link href={`/field/${visit.id}`} className="text-xs font-semibold text-[var(--accent)] hover:underline whitespace-nowrap">
+          <Link href={`/field/${visit.id}`} className="font-semibold text-[var(--accent)] hover:underline whitespace-nowrap">
             View →
           </Link>
         )}

@@ -494,7 +494,6 @@ export default async function ReceiptsPage({
 
       <div className="hidden md:block">
         <DataTable
-          dense
           rows={payments}
           getRowKey={(p) => p.id}
           empty="No payments yet."
@@ -512,7 +511,7 @@ export default async function ReceiptsPage({
             {
               key: "amount",
               header: "Amount",
-              className: "mono font-bold text-[var(--ink)]",
+              className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]",
               cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, baseCurrency)),
             },
             {
@@ -521,7 +520,7 @@ export default async function ReceiptsPage({
               headerClassName: "hidden md:table-cell",
               className: "hidden md:table-cell",
               cell: (p) => (
-                <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${methodBadge(p.method)}`}>
+                <span className={`rounded-full border px-2 py-0.5 font-semibold ${methodBadge(p.method)}`}>
                   {p.method.replaceAll("_", " ")}
                 </span>
               ),
@@ -588,18 +587,18 @@ export default async function ReceiptsPage({
                   <MenuSection label="Edit Receipt" />
                   <form action={updateReceiptAction} className="space-y-2 p-3">
                     <input type="hidden" name="paymentId" value={p.id} />
-                    <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                    <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
+                    <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                    <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50">
                       {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
-                    <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                    <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                    <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                    <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
                   </form>
                   <MenuDestructiveRow>
                     <form action={deleteReceiptAction}>
                       <input type="hidden" name="paymentId" value={p.id} />
-                      <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
+                      <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
                     </form>
                   </MenuDestructiveRow>
                 </RowActionsMenu>

@@ -1,4 +1,5 @@
 // @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
+import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 // @ts-nocheck
 import { redirect } from "next/navigation";
@@ -223,7 +224,7 @@ export default async function PLPage({
           <select
             name="month"
             defaultValue={month}
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
           >
             {MONTHS.map((m, i) => (
               <option key={i} value={i + 1}>{m}</option>
@@ -232,7 +233,7 @@ export default async function PLPage({
           <select
             name="year"
             defaultValue={year}
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
           >
             {[year - 2, year - 1, year, year + 1].map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -271,81 +272,45 @@ export default async function PLPage({
         </div>
       </div>
 
-      {/* ── KPI TILES ────────────────────────────────────────────────────── */}
+      {/* ── KPI cards ────────────────────────────────────────────────────── */}
       {hasData && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {/* Revenue */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Revenue</p>
-            <p className="mt-1 text-lg font-bold text-emerald-600 tabular-nums">
-              {formatMoneyCompact(totalRevenue, currency)}
-            </p>
-            {priorRevenue > 0 && (
-              <p
-                className={`mt-1 text-[13px] font-semibold ${
-                  totalRevenue >= priorRevenue ? "text-emerald-500" : "text-red-500"
-                }`}
-              >
-                {changePct(totalRevenue, priorRevenue)} vs {priorLabel}
-              </p>
-            )}
-          </div>
-
-          {/* Expenses */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Expenses</p>
-            <p className="mt-1 text-lg font-bold text-red-500 tabular-nums">
-              {formatMoneyCompact(totalExpense, currency)}
-            </p>
-            {priorExpense > 0 && (
-              <p
-                className={`mt-1 text-[13px] font-semibold ${
-                  totalExpense <= priorExpense ? "text-emerald-500" : "text-red-500"
-                }`}
-              >
-                {changePct(totalExpense, priorExpense)} vs {priorLabel}
-              </p>
-            )}
-          </div>
-
-          {/* Net Income */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-              Net {netIncome >= 0 ? "Income" : "Loss"}
-            </p>
-            <p
-              className={`mt-1 text-lg font-bold tabular-nums ${
-                netIncome >= 0 ? "text-emerald-600" : "text-red-500"
-              }`}
-            >
-              {formatMoneyCompact(Math.abs(netIncome), currency)}
-            </p>
-            {priorNetIncome !== 0 && (
-              <p
-                className={`mt-1 text-[13px] font-semibold ${
-                  netIncome >= priorNetIncome ? "text-emerald-500" : "text-red-500"
-                }`}
-              >
-                {changePct(netIncome, priorNetIncome)} vs prior
-              </p>
-            )}
-          </div>
-
-          {/* Net Margin */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Margin</p>
-            <p
-              className={`mt-1 text-lg font-bold tabular-nums ${
-                netMargin >= 0 ? "text-emerald-600" : "text-red-500"
-              }`}
-            >
-              {netMargin.toFixed(1)}%
-            </p>
-            <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-              Prior: {priorRevenue > 0 ? priorNetMargin.toFixed(1) + "%" : "—"}
-            </p>
-          </div>
-        </div>
+        <StatCards
+          columns={4}
+          cards={[
+            {
+              key: "revenue",
+              label: "Revenue",
+              value: formatMoneyCompact(totalRevenue, currency),
+              sub: priorRevenue > 0 ? `${changePct(totalRevenue, priorRevenue)} vs ${priorLabel}` : undefined,
+              tone: "good",
+              muted: totalRevenue === 0,
+            },
+            {
+              key: "expenses",
+              label: "Expenses",
+              value: formatMoneyCompact(totalExpense, currency),
+              sub: priorExpense > 0 ? `${changePct(totalExpense, priorExpense)} vs ${priorLabel}` : undefined,
+              tone: "crit",
+              muted: totalExpense === 0,
+            },
+            {
+              key: "net",
+              label: `Net ${netIncome >= 0 ? "income" : "loss"}`,
+              value: formatMoneyCompact(Math.abs(netIncome), currency),
+              sub: priorNetIncome !== 0 ? `${changePct(netIncome, priorNetIncome)} vs prior` : undefined,
+              tone: netIncome >= 0 ? "good" : "crit",
+              muted: netIncome === 0,
+            },
+            {
+              key: "margin",
+              label: "Net margin",
+              value: `${netMargin.toFixed(1)}%`,
+              sub: `prior: ${priorRevenue > 0 ? priorNetMargin.toFixed(1) + "%" : "—"}`,
+              tone: netMargin >= 0 ? "good" : "crit",
+              muted: netMargin === 0,
+            },
+          ]}
+        />
       )}
 
       {/* ── EMPTY STATE ──────────────────────────────────────────────────── */}
@@ -391,7 +356,7 @@ export default async function PLPage({
                 header: "Account",
                 cell: (row) => {
                   if (row.kind === "empty")
-                    return <span className="text-sm text-[var(--ink-muted)]">{row.label}</span>;
+                    return <span className="text-[var(--ink-muted)]">{row.label}</span>;
                   if (row.kind === "total")
                     return (
                       <span
@@ -407,8 +372,8 @@ export default async function PLPage({
                   const pct = row.section === "EXPENSE" ? pctOfRevenue(row.amount, totalRevenue) : null;
                   return (
                     <span className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-[var(--accent)]">{row.code}</span>
-                      <span className="text-sm text-[var(--ink)]">{row.name}</span>
+                      <span className="mono text-[var(--accent)]">{row.code}</span>
+                      <span className="text-[var(--ink)]">{row.name}</span>
                       {pct !== null && (
                         <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">
                           {pct}%
@@ -437,7 +402,7 @@ export default async function PLPage({
                         {formatMoney(row.amount, currency)}
                       </span>
                     );
-                  return <span className="text-sm font-medium tabular-nums">{formatMoney(row.amount, currency)}</span>;
+                  return <span className="font-medium tabular-nums">{formatMoney(row.amount, currency)}</span>;
                 },
               },
               {
@@ -460,7 +425,7 @@ export default async function PLPage({
                       </span>
                     );
                   return (
-                    <span className="text-sm tabular-nums text-[var(--ink-muted)]">
+                    <span className="tabular-nums text-[var(--ink-muted)]">
                       {formatMoney(row.priorAmount, currency)}
                     </span>
                   );
@@ -477,7 +442,7 @@ export default async function PLPage({
                     row.section === "REVENUE" ? row.amount >= row.priorAmount : row.amount <= row.priorAmount;
                   return (
                     <span
-                      className={`text-[13px] font-semibold tabular-nums ${improved ? "text-emerald-600" : "text-red-500"}`}
+                      className={`font-semibold tabular-nums ${improved ?"text-emerald-600" : "text-red-500"}`}
                     >
                       {changePct(row.amount, row.priorAmount) ?? "—"}
                     </span>
@@ -546,21 +511,21 @@ export default async function PLPage({
                     {
                       key: "month",
                       header: "Month",
-                      className: "text-sm font-medium text-[var(--ink)]",
+                      className: "font-medium text-[var(--ink)]",
                       cell: (row) => row.key,
                     },
                     {
                       key: "revenue",
                       header: "Revenue",
                       align: "right",
-                      className: "text-sm tabular-nums text-emerald-600",
+                      className: "tabular-nums text-emerald-600",
                       cell: (row) => formatMoneyCompact(row.revenue, currency),
                     },
                     {
                       key: "expenses",
                       header: "Expenses",
                       align: "right",
-                      className: "text-sm tabular-nums text-[var(--ink-muted)]",
+                      className: "tabular-nums text-[var(--ink-muted)]",
                       cell: (row) => formatMoneyCompact(row.expenses, currency),
                     },
                     {

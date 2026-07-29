@@ -173,7 +173,7 @@ export default async function AccountLedgerPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           <option value="0">All months</option>
           {MONTHS.map((m, i) => (
@@ -183,7 +183,7 @@ export default async function AccountLedgerPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -271,7 +271,7 @@ export default async function AccountLedgerPage({
             header: "Entry",
             cell: (row) =>
               row.id === "__opening__" ? null : (
-                <span className="font-mono text-[13px] font-semibold text-[var(--accent)]">
+                <span className="mono font-semibold text-[var(--accent)]">
                   {row.journalEntry.entryNumber}
                 </span>
               ),
@@ -281,12 +281,12 @@ export default async function AccountLedgerPage({
             header: "Description",
             cell: (row) =>
               row.id === "__opening__" ? (
-                <span className="text-[13px] italic text-[var(--ink-muted)]">Opening balance</span>
+                <span className="italic text-[var(--ink-muted)]">Opening balance</span>
               ) : (
-                <span className="text-[13px] font-medium text-[var(--ink)]">
+                <span className="font-medium text-[var(--ink)]">
                   {row.journalEntry.description}
                   {row.journalEntry.reference && (
-                    <span className="ml-1.5 text-[13px] font-normal text-[var(--ink-muted)]">
+                    <span className="ml-1.5 font-normal text-[var(--ink-muted)]">
                       · {row.journalEntry.reference}
                     </span>
                   )}
@@ -330,7 +330,7 @@ export default async function AccountLedgerPage({
             align: "right",
             cell: (row) =>
               row.id === "__opening__" ? (
-                <span className="text-[13px] font-semibold tabular-nums text-[var(--ink-muted)]">
+                <span className="font-semibold tabular-nums text-[var(--ink-muted)]">
                   {formatMoney(openingBalance, currency)}
                 </span>
               ) : (
@@ -347,11 +347,11 @@ export default async function AccountLedgerPage({
         ]}
         tableFooter={
           <tr>
-            <td colSpan={4} className="px-4 py-3 text-sm font-bold text-[var(--ink)]">Totals</td>
-            <td className="px-4 py-3 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+            <td colSpan={4} className="px-4 py-3 font-bold text-[var(--ink)]">Totals</td>
+            <td className="px-4 py-3 text-right font-bold tabular-nums text-[var(--ink)]">
               {formatMoney(totalDebit, currency)}
             </td>
-            <td className="px-4 py-3 text-right text-sm font-bold tabular-nums text-[var(--ink-muted)]">
+            <td className="px-4 py-3 text-right font-bold tabular-nums text-[var(--ink-muted)]">
               {formatMoney(totalCredit, currency)}
             </td>
             <td

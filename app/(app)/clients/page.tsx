@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { StatCards } from "@/components/ui/StatCards";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { orgDb } from "@/lib/db";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -287,29 +288,16 @@ export default async function ClientsPage({
         </form>
       </div>
 
-      {/* ══ DESKTOP: KPI tiles (unchanged) ══ */}
-      <div className="hidden lg:grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Total Clients</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiTotal}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all time</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">New This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiNewThisMonth}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">first seen this month</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">With Active Jobs</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiWithActiveJobs}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">open repairs</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Organisations</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiWithOrg}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">with org name</p>
-        </div>
-      </div>
+      {/* ══ DESKTOP: KPI cards ══ */}
+      <StatCards
+        columns={4}
+        cards={[
+          { key: "total",  label: "Total clients",   value: kpiTotal,          sub: "all time",              muted: kpiTotal === 0 },
+          { key: "new",    label: "New this month",  value: kpiNewThisMonth,   sub: "first seen this month", tone: "good",   muted: kpiNewThisMonth === 0 },
+          { key: "active", label: "With active jobs", value: kpiWithActiveJobs, sub: "open repairs",          tone: "accent", muted: kpiWithActiveJobs === 0 },
+          { key: "orgs",   label: "Organisations",   value: kpiWithOrg,        sub: "with org name",         muted: kpiWithOrg === 0 },
+        ]}
+      />
 
       {/* ══ DESKTOP: Stat chips + New Client ══ */}
       <div className="panel-shadow hidden lg:flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -420,8 +408,8 @@ export default async function ClientsPage({
                   </div>
                 </Link>
                 <Link href={`/clients/${client.id}`} className="min-w-0 flex-1 active:opacity-70">
-                  <p className="truncate text-[14px] font-bold text-[var(--ink)]">{client.fullName}</p>
-                  <p className="mt-0.5 truncate text-[13px] text-[var(--ink-muted)]">
+                  <p className="truncate font-bold text-[var(--ink)]">{client.fullName}</p>
+                  <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                     {formatPhoneDisplay(client.phone)}
                     {client.organization ? <> · <span className="opacity-80">{client.organization}</span></> : null}
                     {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}

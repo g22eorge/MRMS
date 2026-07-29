@@ -78,11 +78,11 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
           tableFooter={
             <>
               <tr>
-                <td colSpan={3} className="px-4 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td>
+                <td colSpan={3} className="px-4 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Subtotal</td>
                 <td className="px-4 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{bill.subtotal.toLocaleString()}</td>
               </tr>
               <tr>
-                <td colSpan={3} className="px-4 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Tax</td>
+                <td colSpan={3} className="px-4 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Tax</td>
                 <td className="px-4 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{bill.taxAmount.toLocaleString()}</td>
               </tr>
             </>
@@ -121,11 +121,11 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
           empty="No payments recorded yet."
           columns={[
             { key: "date", header: "Date", className: "text-[var(--ink)]", cell: (payment) => fmt(payment.paidAt) },
-            { key: "method", header: "Method", className: "text-xs font-semibold text-[var(--ink-muted)]", cell: (payment) => payment.method },
+            { key: "method", header: "Method", className: "text-[12px] font-semibold text-[var(--ink-muted)]", cell: (payment) => payment.method },
             {
               key: "reference",
               header: "Reference",
-              className: "hidden sm:table-cell text-xs text-[var(--ink-muted)]",
+              className: "hidden sm:table-cell text-[12px] text-[var(--ink-muted)]",
               headerClassName: "hidden sm:table-cell",
               cell: (payment) => payment.reference ?? "-",
             },
@@ -135,7 +135,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
             <form action={deleteSupplierPaymentAction}>
               <input type="hidden" name="id" value={payment.id} />
               <input type="hidden" name="billId" value={bill.id} />
-              <button type="submit" className="text-xs font-semibold text-red-600 hover:text-red-700">Delete</button>
+              <button type="submit" className="font-semibold text-red-600 hover:text-red-700">Delete</button>
             </form>
           )}
         />

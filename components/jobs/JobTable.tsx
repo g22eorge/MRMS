@@ -16,7 +16,7 @@ function AgeBadge({ receivedAt, status }: { receivedAt: Date; status: string }) 
   const terminal = status === "COMPLETED" || status === "CLOSED";
   const days = jobAgeDays(receivedAt);
   if (terminal) {
-    return <span className="text-[13px] tabular-nums text-[var(--ink-muted)]/50">{days}d</span>;
+    return <span className="tabular-nums text-[var(--ink-muted)]/50">{days}d</span>;
   }
   const cls =
     days >= 8
@@ -25,7 +25,7 @@ function AgeBadge({ receivedAt, status }: { receivedAt: Date; status: string }) 
         ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
         : "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
   return (
-    <span className={`rounded-md px-1.5 py-0.5 text-[13px] font-semibold tabular-nums ${cls}`}>
+    <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold leading-tight tabular-nums ${cls}`}>
       {days}d
     </span>
   );
@@ -459,7 +459,7 @@ export function JobTable({
           <>
             <Link
               href={`/jobs/${job.id}`}
-              className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+              className="whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
             >
               Open
             </Link>

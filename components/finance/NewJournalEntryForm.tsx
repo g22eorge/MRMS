@@ -256,7 +256,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -269,7 +269,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Monthly rent — May 2025"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -281,7 +281,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="INV-001, Receipt #42…"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
         </div>
@@ -322,7 +322,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     name={`lines[${i}][accountId]`}
                     value={line.accountId}
                     onChange={(e) => setLine(i, { accountId: e.target.value })}
-                    className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
+                    className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
                   >
                     <option value="">— Select account —</option>
                     {accounts.map((a) => (
@@ -342,7 +342,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     value={line.description}
                     onChange={(e) => setLine(i, { description: e.target.value })}
                     placeholder="optional memo"
-                    className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
+                    className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
                   />
                 ),
               },
@@ -360,7 +360,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     value={line.debit}
                     onChange={(e) => setLine(i, { debit: e.target.value })}
                     placeholder="0"
-                    className="w-28 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-right"
+                    className="w-28 rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right"
                   />
                 ),
               },
@@ -378,7 +378,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     value={line.credit}
                     onChange={(e) => setLine(i, { credit: e.target.value })}
                     placeholder="0"
-                    className="w-28 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-right"
+                    className="w-28 rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right"
                   />
                 ),
               },
@@ -393,10 +393,10 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     >
                       Totals
                     </td>
-                    <td className={`px-3 py-2 text-right text-xs font-bold tabular-nums ${balanced ? "text-emerald-600" : "text-amber-600"}`}>
+                    <td className={`px-3 py-2 text-right font-bold tabular-nums ${balanced ?"text-emerald-600" : "text-amber-600"}`}>
                       {totalDR.toLocaleString()}
                     </td>
-                    <td className={`px-3 py-2 text-right text-xs font-bold tabular-nums ${balanced ? "text-emerald-600" : "text-amber-600"}`}>
+                    <td className={`px-3 py-2 text-right font-bold tabular-nums ${balanced ?"text-emerald-600" : "text-amber-600"}`}>
                       {totalCR.toLocaleString()}
                     </td>
                   </tr>
@@ -433,7 +433,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
         </div>
 
         {serverError && (
-          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[13px] text-red-600">
             {serverError}
           </p>
         )}

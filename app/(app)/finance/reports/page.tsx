@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
@@ -74,23 +75,21 @@ export default async function FinanceReportsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="px-4 py-3">
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">Financial Reports</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Statements, analysis and export tools</p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Financial Reports"
+        description="Statements, analysis and export tools"
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reports.map((r) => (
           <Link
             key={r.href}
             href={r.href}
-            className="panel-shadow flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 transition hover:border-[var(--accent)]/40 hover:bg-[var(--panel-strong)]"
+            className="dc-card flex flex-col gap-2 p-5 transition hover:shadow-[var(--dc-shadow-hover)]"
           >
             <span className="text-[var(--accent)]">{r.icon}</span>
             <p className="font-semibold text-[var(--ink)]">{r.title}</p>
-            <p className="text-xs text-[var(--ink-muted)]">{r.desc}</p>
+            <p className="text-[12px] text-[var(--ink-muted)]">{r.desc}</p>
             <p className="mt-auto text-[13px] font-semibold text-[var(--accent)]">Open Report →</p>
           </Link>
         ))}

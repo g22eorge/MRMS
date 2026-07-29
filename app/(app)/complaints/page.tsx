@@ -224,15 +224,15 @@ export default async function ComplaintsPage({
             <div className="px-4 py-3">
               <div className="mb-1.5 flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-mono text-[12px] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
+                  <p className="mono text-[12px] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
                   <p className="text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
                 </div>
                 <StatusBadge tone={toneFor(STATUS_TONES, c.status)} className="shrink-0">
                   {COMPLAINT_STATUS_LABELS[c.status]}
                 </StatusBadge>
               </div>
-              <p className="mb-1 text-[13px] font-semibold text-[var(--ink)]">{c.clientName}
-                <span className="ml-1.5 text-[13px] font-normal text-[var(--ink-muted)]">{c.clientPhone}</span>
+              <p className="mb-1 font-semibold text-[var(--ink)]">{c.clientName}
+                <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{c.clientPhone}</span>
               </p>
               <p className="mb-1.5 line-clamp-2 text-[12px] text-[var(--ink-muted)]">{c.description}</p>
               <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
@@ -243,7 +243,7 @@ export default async function ComplaintsPage({
                   </span>
                 )}
                 {c.job && (
-                  <Link href={`/jobs/${c.job.id}`} className="font-mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
+                  <Link href={`/jobs/${c.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
                 )}
               </div>
               <div className="mt-2">{updateMenu(c)}</div>
@@ -256,7 +256,7 @@ export default async function ComplaintsPage({
             header: "Ref",
             cell: (c) => (
               <>
-                <p className="font-mono text-xs font-bold text-[var(--ink)]">{c.complaintNumber}</p>
+                <p className="mono font-bold text-[var(--ink)]">{c.complaintNumber}</p>
                 <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
               </>
             ),
@@ -280,7 +280,7 @@ export default async function ComplaintsPage({
             header: "Category",
             cell: (c) => (
               <>
-                <p className="text-[13px] text-[var(--ink)]">{COMPLAINT_CATEGORY_LABELS[c.category]}</p>
+                <p className="text-[var(--ink)]">{COMPLAINT_CATEGORY_LABELS[c.category]}</p>
                 <p className="text-[12px] text-[var(--ink-muted)]">{c.channel}</p>
               </>
             ),
@@ -290,7 +290,7 @@ export default async function ComplaintsPage({
             header: "Client",
             cell: (c) => (
               <>
-                <p className="text-xs font-semibold text-[var(--ink)]">{c.clientName}</p>
+                <p className="font-semibold text-[var(--ink)]">{c.clientName}</p>
                 <p className="text-[12px] text-[var(--ink-muted)]">{c.clientPhone}</p>
               </>
             ),
@@ -300,7 +300,7 @@ export default async function ComplaintsPage({
             header: "Description",
             className: "max-w-[200px]",
             cell: (c) => (
-              <p className="line-clamp-3 text-[13px] text-[var(--ink-muted)]" title={c.description}>{c.description}</p>
+              <p className="line-clamp-3 text-[var(--ink-muted)]" title={c.description}>{c.description}</p>
             ),
           },
           {
@@ -308,8 +308,8 @@ export default async function ComplaintsPage({
             header: "Job",
             cell: (c) =>
               c.job
-                ? <Link href={`/jobs/${c.job.id}`} className="font-mono text-[13px] font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
-                : <span className="text-[13px] text-[var(--ink-muted)]">—</span>,
+                ? <Link href={`/jobs/${c.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
+                : <span className="text-[var(--ink-muted)]">—</span>,
           },
         ]}
         actions={(c) => updateMenu(c)}

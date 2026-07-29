@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 
 /**
- * App-wide KPI/stat strip — the single way to render summary numbers on a page.
- * Generalized from the documents module's KpiStrip; use everywhere instead of
- * hand-rolled `grid grid-cols-N divide-x` stat blocks.
+ * Divided stat strip — for summary numbers that live INSIDE a card (the
+ * identity/summary header of a detail page).
+ *
+ * For a page-level KPI band (list pages, hubs) use `StatCards` instead: flat
+ * `dc-card` tiles with a tone rail, the app-wide standard. The `cards` variant
+ * here is legacy — it renders bordered tiles and should not be used in new code.
  */
 
 export type StatTile = {

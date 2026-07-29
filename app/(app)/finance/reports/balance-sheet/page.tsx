@@ -1,5 +1,6 @@
 // @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
+import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
@@ -170,7 +171,7 @@ export default async function BalanceSheetPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>{m}</option>
@@ -179,7 +180,7 @@ export default async function BalanceSheetPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           {[year - 2, year - 1, year, year + 1].map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -208,61 +209,44 @@ export default async function BalanceSheetPage({
             </div>
           )}
 
-          {/* ── FINANCIAL RATIOS STRIP ───────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                Total Assets
-              </p>
-              <p className="mt-1 text-lg font-bold text-blue-600 tabular-nums">
-                {formatMoneyCompact(totalAssets, currency)}
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--ink-muted)]">Cumulative to date</p>
-            </div>
-
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                Working Capital
-              </p>
-              <p
-                className={`mt-1 text-lg font-bold tabular-nums ${
-                  workingCapital >= 0 ? "text-emerald-600" : "text-red-500"
-                }`}
-              >
-                {workingCapital < 0 ? "−" : ""}
-                {formatMoneyCompact(Math.abs(workingCapital), currency)}
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--ink-muted)]">Assets − Liabilities</p>
-            </div>
-
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                Debt Ratio
-              </p>
-              <p
-                className={`mt-1 text-lg font-bold tabular-nums ${
-                  Number(debtRatio ?? 0) <= 0.5 ? "text-emerald-600" : "text-amber-500"
-                }`}
-              >
-                {debtRatio !== null ? debtRatio : "—"}
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--ink-muted)]">Liabilities / Assets</p>
-            </div>
-
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                Debt-to-Equity
-              </p>
-              <p
-                className={`mt-1 text-lg font-bold tabular-nums ${
-                  Number(debtToEquity ?? 0) <= 1 ? "text-emerald-600" : "text-amber-500"
-                }`}
-              >
-                {debtToEquity !== null ? debtToEquity : "—"}
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--ink-muted)]">Liabilities / Equity</p>
-            </div>
-          </div>
+          {/* ── Financial ratios ─────────────────────────────────────────── */}
+          <StatCards
+            columns={4}
+            cards={[
+              {
+                key: "assets",
+                label: "Total assets",
+                value: formatMoneyCompact(totalAssets, currency),
+                sub: "cumulative to date",
+                tone: "accent",
+                muted: totalAssets === 0,
+              },
+              {
+                key: "workingCapital",
+                label: "Working capital",
+                value: `${workingCapital < 0 ? "-" : ""}${formatMoneyCompact(Math.abs(workingCapital), currency)}`,
+                sub: "assets − liabilities",
+                tone: workingCapital >= 0 ? "good" : "crit",
+                muted: workingCapital === 0,
+              },
+              {
+                key: "debtRatio",
+                label: "Debt ratio",
+                value: debtRatio !== null ? debtRatio : "—",
+                sub: "liabilities / assets",
+                tone: Number(debtRatio ?? 0) <= 0.5 ? "good" : "warn",
+                muted: debtRatio === null,
+              },
+              {
+                key: "debtToEquity",
+                label: "Debt-to-equity",
+                value: debtToEquity !== null ? debtToEquity : "—",
+                sub: "liabilities / equity",
+                tone: Number(debtToEquity ?? 0) <= 1 ? "good" : "warn",
+                muted: debtToEquity === null,
+              },
+            ]}
+          />
 
           {/* ── MAIN LAYOUT: two columns on wide screens ─────────────────── */}
           <div className="grid gap-4 lg:grid-cols-2">

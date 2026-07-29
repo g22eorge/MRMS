@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 
 function saleStatusTone(status: string): BadgeTone {
@@ -373,29 +374,46 @@ export default async function PosPage({
         </div>
       )}
 
-      {/* ══ DESKTOP: KPI tiles ══ */}
-      <div className="hidden grid-cols-2 gap-2 sm:grid-cols-4 lg:grid">
-        <Link href={segmentHref("today")} className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${segment === "today" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Today&apos;s Sales</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(kpiTodayTotal, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">click to filter ↓</p>
-        </Link>
-        <Link href={segmentHref("month")} className={`panel-shadow rounded-xl border px-3 py-2.5 transition hover:bg-[var(--panel-strong)] ${segment === "month" ? "border-[var(--accent)]/40 bg-[var(--accent)]/5" : "border-[var(--line)] bg-[var(--panel)]"}`}>
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(kpiMonthTotal, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">click to filter ↓</p>
-        </Link>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Transactions MTD</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiMonthCount}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">this month</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Avg Sale Value</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(kpiAvgSale, currency)}</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">per transaction</p>
-        </div>
-      </div>
+      {/* ══ DESKTOP: KPI cards ══ */}
+      <StatCards
+        columns={4}
+        cards={[
+          {
+            key: "today",
+            label: "Today's sales",
+            value: formatMoneyCompact(kpiTodayTotal, currency),
+            sub: "click to filter",
+            tone: "good",
+            muted: kpiTodayTotal === 0,
+            active: segment === "today",
+            href: segmentHref("today"),
+          },
+          {
+            key: "month",
+            label: "This month",
+            value: formatMoneyCompact(kpiMonthTotal, currency),
+            sub: "click to filter",
+            tone: "accent",
+            muted: kpiMonthTotal === 0,
+            active: segment === "month",
+            href: segmentHref("month"),
+          },
+          {
+            key: "count",
+            label: "Transactions MTD",
+            value: kpiMonthCount,
+            sub: "this month",
+            muted: kpiMonthCount === 0,
+          },
+          {
+            key: "avg",
+            label: "Avg sale value",
+            value: formatMoneyCompact(kpiAvgSale, currency),
+            sub: "per transaction",
+            muted: kpiAvgSale === 0,
+          },
+        ]}
+      />
 
       {/* ══ DESKTOP: Stat chips + New Sale ══ */}
       <div className="panel-shadow hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 lg:flex">
@@ -474,8 +492,8 @@ export default async function PosPage({
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate text-[14px] font-bold text-[var(--ink)]">{s.client?.fullName ?? "Walk-in"}</p>
-                    <p className="mt-0.5 truncate text-[13px] text-[var(--ink-muted)]">
+                    <p className="truncate font-bold text-[var(--ink)]">{s.client?.fullName ?? "Walk-in"}</p>
+                    <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
                       {" · "}{formatEATDate(s.createdAt)}
                       {s.createdBy ? <> · {s.createdBy.name}</> : null}
@@ -498,7 +516,7 @@ export default async function PosPage({
                 header: "Sale",
                 cell: (s) => (
                   <div className="min-w-0">
-                    <Link href={`/pos/${s.id}`} className="mono block truncate text-[13px] font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
+                    <Link href={`/pos/${s.id}`} className="mono block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
                       {s.saleNumber}
                     </Link>
                     <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
@@ -535,8 +553,8 @@ export default async function PosPage({
                   const balance = Math.max(0, s.totalAmount - s.paidAmount);
                   if (s.status === "VOID") return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
                   return balance > 0
-                    ? <span className="text-[13px] font-semibold text-amber-600">{formatMoneyCompact(balance, cur)}</span>
-                    : <span className="text-[13px] font-semibold text-emerald-600">Cleared</span>;
+                    ? <span className="font-semibold text-amber-600">{formatMoneyCompact(balance, cur)}</span>
+                    : <span className="font-semibold text-emerald-600">Cleared</span>;
                 },
               },
               { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },

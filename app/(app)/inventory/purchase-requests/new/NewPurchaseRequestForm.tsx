@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { LineItemsPanel, PartSelect, lineItemInputClass } from "@/components/forms";
+import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { createPurchaseRequestAction } from "../actions";
@@ -50,64 +51,48 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
   const completedLines = lines.filter((line) => line.description.trim() && line.quantity > 0).length;
   const linkedLines = lines.filter((line) => line.partId).length;
 
-  return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Procurement Brief</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-            A purchase request is the internal buying argument. Capture why the business needs the spend, when it is needed, the preferred supplier, and enough line detail for approval or conversion to PO without rework.
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-4">
-            {[
-              ["1", "Need"],
-              ["2", "Approve"],
-              ["3", "Order"],
-              ["4", "Receive"],
-            ].map(([step, label]) => (
-              <div key={step} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[11px] font-black text-[var(--accent)]">{step}</p>
-                <p className="text-xs font-semibold text-[var(--ink)]">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Approval Snapshot</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Lines ready</dt><dd className="font-bold text-[var(--ink)]">{completedLines}/{lines.length}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Catalog linked</dt><dd className="font-bold text-[var(--ink)]">{linkedLines}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Exposure</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{total.toLocaleString()}</dd></div>
-          </dl>
-        </div>
-      </div>
+  const field =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const label = "mb-1 block text-[12px] font-medium text-[var(--ink-muted)]";
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-4">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Request Details</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">Preferred supplier
-            <select name="supplierId" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Request Details</p>
+          <p className="text-[12px] text-[var(--ink-muted)]">
+            {completedLines}/{lines.length} lines ready · {linkedLines} catalog linked · exposure{" "}
+            <span className="font-semibold tabular-nums text-[var(--ink)]">{total.toLocaleString()}</span>
+          </p>
+        </div>
+        <div className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label htmlFor="pr-supplier" className={label}>Preferred supplier</label>
+            <select id="pr-supplier" name="supplierId" className={field}>
               <option value="">No preference</option>
               {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
             </select>
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">Priority
-            <select name="priority" defaultValue="NORMAL" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
+          </div>
+          <div>
+            <label htmlFor="pr-priority" className={label}>Priority</label>
+            <select id="pr-priority" name="priority" defaultValue="NORMAL" className={field}>
               <option value="LOW">Low</option>
               <option value="NORMAL">Normal</option>
               <option value="HIGH">High</option>
               <option value="URGENT">Urgent</option>
             </select>
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">Needed by
-            <input name="neededBy" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">Reason
-            <input name="reason" placeholder="e.g. low stock, customer repair" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
-          </label>
+          </div>
+          <div>
+            <label htmlFor="pr-needed" className={label}>Needed by</label>
+            <input id="pr-needed" name="neededBy" type="date" className={field} />
+          </div>
+          <div>
+            <label htmlFor="pr-reason" className={label}>Reason</label>
+            <input id="pr-reason" name="reason" placeholder="e.g. low stock, customer repair" className={field} />
+          </div>
+          <textarea name="notes" rows={2} placeholder="Additional notes" aria-label="Additional notes" className={`${field} sm:col-span-2 xl:col-span-4`} />
         </div>
-        <textarea name="notes" rows={2} placeholder="Additional notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
-      </div>
+      </section>
 
       <LineItemsPanel title="Requested Items" onAddLine={addLine}>
         <DataTable
@@ -150,29 +135,36 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
               header: "Total",
               align: "right",
               headerClassName: "w-32",
-              className: "w-32 text-xs tabular-nums text-[var(--ink-muted)]",
+              className: "w-32 text-[12px] tabular-nums text-[var(--ink-muted)]",
               cell: (line) => (line.quantity * line.estimatedUnitCost).toLocaleString(),
             },
           ]}
           actions={(line) =>
             lines.length > 1 ? (
-              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+              <button type="button" onClick={() => removeLine(line.key)} title="Remove line"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
             ) : null
           }
           tableFooter={
             <tr className="bg-[var(--gold)]/5">
-              <td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Estimated Total</td>
-              <td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td>
+              <td colSpan={4} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Estimated Total</td>
+              <td className="px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td>
               <td />
             </tr>
           }
         />
       </LineItemsPanel>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Submitting..." : "Submit Request"}</button>
-        <Link href="/inventory/purchase-requests" className="rounded-lg border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</Link>
+      {error ? (
+        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-700 dark:text-red-400">{error}</p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" size="sm" disabled={pending} className="px-4 font-bold">
+          {pending ? "Submitting..." : "Submit Request"}
+        </Button>
+        <Link href="/inventory/purchase-requests" className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
       </div>
     </form>
   );

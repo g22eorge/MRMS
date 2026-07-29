@@ -71,7 +71,7 @@ export function PartSelect({
   showStock = false,
   showCreateOption = false,
   createOptionLabel = "+ Create new…",
-  className = "w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--ink)]",
+  className = "w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-xs text-[var(--ink)]",
 }: PartSelectProps) {
   return (
     <select value={value} onChange={(event) => onChange(event.target.value)} className={className}>
@@ -88,6 +88,6 @@ export function PartSelect({
 }
 
 const inputClass =
-  "w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50";
+  "w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50";
 
 export { inputClass as lineItemInputClass };

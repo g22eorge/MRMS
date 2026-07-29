@@ -13,6 +13,7 @@ import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActio
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { can } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
@@ -198,7 +199,17 @@ export default async function BankPage({
         eyebrow="Finance"
         title="Bank Accounts"
         description="Manage accounts, record transactions, and reconcile"
-        kpis={[
+        actions={
+          <Link
+            href="/finance/accounts"
+            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+          >
+            Chart of Accounts
+          </Link>
+        }
+      />
+
+      <StatCards columns={4} cards={[
           {
             label: "Total Accounts",
             value: bankAccounts.filter((a) => a.isActive).length,
@@ -222,16 +233,7 @@ export default async function BankPage({
             valueClass: "text-red-500",
             sub: "all accounts",
           },
-        ]}
-        actions={
-          <Link
-            href="/finance/accounts"
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-          >
-            Chart of Accounts
-          </Link>
-        }
-      />
+        ]} />
 
       {/* ── ADD BANK ACCOUNT ─────────────────────────────────────────────── */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -248,7 +250,7 @@ export default async function BankPage({
               name="name"
               required
               placeholder="Main Operations"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -257,7 +259,7 @@ export default async function BankPage({
               name="bankName"
               required
               placeholder="Stanbic Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -265,7 +267,7 @@ export default async function BankPage({
             <input
               name="accountNumber"
               placeholder="9030012345"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -276,7 +278,7 @@ export default async function BankPage({
               min="0"
               step="0.01"
               placeholder="0.00"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div className="flex justify-end sm:col-span-4">
@@ -403,14 +405,14 @@ export default async function BankPage({
                         type="date"
                         required
                         defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Type *</label>
                       <select
                         name="type"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       >
                         <option value="CREDIT">Credit (Money In)</option>
                         <option value="DEBIT">Debit (Money Out)</option>
@@ -422,7 +424,7 @@ export default async function BankPage({
                         name="description"
                         required
                         placeholder="Payment received..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
@@ -434,7 +436,7 @@ export default async function BankPage({
                         step="0.01"
                         required
                         placeholder="0.00"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
@@ -442,7 +444,7 @@ export default async function BankPage({
                       <input
                         name="reference"
                         placeholder="Cheque #, transfer ref..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div className="flex items-end">
@@ -491,7 +493,7 @@ export default async function BankPage({
                     {
                       key: "date",
                       header: "Date",
-                      className: "whitespace-nowrap text-xs text-[var(--ink-muted)]",
+                      className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
                       cell: (tx) =>
                         new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }),
                     },
@@ -501,7 +503,7 @@ export default async function BankPage({
                       cell: (tx) => (
                         <>
                           <p className="font-medium text-[var(--ink)]">{tx.description}</p>
-                          {tx.reference && <p className="text-xs text-[var(--ink-muted)]">{tx.reference}</p>}
+                          {tx.reference && <p className="text-[12px] text-[var(--ink-muted)]">{tx.reference}</p>}
                         </>
                       ),
                     },
@@ -549,23 +551,23 @@ export default async function BankPage({
                   actions={(tx) => (
                     <form action={reconcile}>
                       <input type="hidden" name="id" value={tx.id} />
-                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
+                      <button type="submit" className="text-[var(--accent)] hover:underline">
                         {tx.reconciledAt ? "Unmark" : "Reconcile"}
                       </button>
                     </form>
                   )}
                   tableFooter={
                     <tr>
-                      <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-[var(--ink-muted)]">
+                      <td colSpan={2} className="px-4 py-2.5 text-[12px] font-bold text-[var(--ink-muted)]">
                         {transactions.length} transactions{q ? " (filtered)" : ""}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-emerald-700">
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700">
                         {formatMoney(txCreditsTotal, currency)}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-red-600">
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-red-600">
                         {formatMoney(txDebitsTotal, currency)}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-[var(--ink)]">
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-[var(--ink)]">
                         {formatMoney(activeAccount.currentBalance, currency)}
                       </td>
                       <td colSpan={2} />
@@ -577,8 +579,8 @@ export default async function BankPage({
                       <>
                         <div className={`px-4 py-3 ${tx.reconciledAt ? "opacity-60" : ""}`}>
                           <div className="mb-0.5 flex items-start justify-between gap-2">
-                            <p className="text-[13px] font-medium text-[var(--ink)]">{tx.description}</p>
-                            <span className={`shrink-0 text-[13px] font-bold tabular-nums ${tx.type === "CREDIT" ? "text-emerald-700" : "text-red-600"}`}>
+                            <p className="font-medium text-[var(--ink)]">{tx.description}</p>
+                            <span className={`shrink-0 font-bold tabular-nums ${tx.type ==="CREDIT" ? "text-emerald-700" : "text-red-600"}`}>
                               {tx.type === "CREDIT" ? "+" : "−"}{formatMoney(tx.amount, currency)}
                             </span>
                           </div>

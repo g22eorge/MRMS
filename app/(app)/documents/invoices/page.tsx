@@ -859,7 +859,7 @@ export default async function InvoicesPage({
         </form>
       </div>
 
-      <div className="max-w-6xl mx-auto">
+      <div>
         {(filtered as any[]).length > 0 ? (
           <BulkSelectionProvider pageIds={filtered.map((r: any) => r.id)}>
             <BulkActionBar />
@@ -937,20 +937,18 @@ export default async function InvoicesPage({
                   rows={rows}
                   getRowKey={(r) => r.id}
                   empty="No invoices found."
-                  dense
-                  headerSurface
                   columns={[
                     { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox invoiceId={row.id} /> },
                     { key: "invoiceNumber", header: "Invoice #", className: "w-[150px]", cell: (row: any) => (
-                      <Link href={`/documents/invoices/${row.id}`} className="mono text-sm font-bold text-[var(--accent)] hover:underline truncate whitespace-nowrap">
+                      <Link href={`/documents/invoices/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">
                         {row.invoiceNumber}
                       </Link>
                     )},
                     { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
                     { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: any) => <span className="mono text-[13px] truncate whitespace-nowrap">{row.amount}</span> },
-                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: any) => <span className="text-[13px]">{row.issued}</span> },
-                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: any) => <span className="text-[13px]">{row.due}</span> },
+                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.issued}</span> },
+                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.due}</span> },
                     { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: any) => row.balance },
                   ]}
                   actions={actions}

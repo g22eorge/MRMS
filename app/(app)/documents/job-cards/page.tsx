@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { StatCards } from "@/components/ui/StatCards";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatStrip } from "@/components/ui/StatStrip";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -186,16 +186,12 @@ export default async function JobCardsPage({
       </div>
 
       {/* KPI strip */}
-      <StatStrip
-        variant="cards"
-        columns={4}
-        tiles={[
+      <StatCards columns={4} cards={[
           { label: "Showing", value: total, sub: "job cards" },
           { label: "In repair", value: byStatus.IN_REPAIR ?? 0, sub: "active repairs" },
           { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", valueClass: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "text-[var(--dc-good)]" : undefined },
           { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", valueClass: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "text-[var(--dc-warn)]" : undefined },
-        ]}
-      />
+        ]} />
 
       {/* Period chips */}
       <div className="flex gap-2">
@@ -219,12 +215,12 @@ export default async function JobCardsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search job #, client, device…"
-          className="flex-1 min-w-[180px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50"
+          className="flex-1 min-w-[180px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50"
         />
         <select
           name="status"
           defaultValue={statusFilter ?? ""}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
         >
           <option value="">All statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -261,7 +257,7 @@ export default async function JobCardsPage({
             header: "Job",
             cell: (job) => (
               <>
-                <Link href={`/jobs/${job.id}`} className="mono text-xs font-bold text-[var(--accent)] hover:underline">
+                <Link href={`/jobs/${job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">
                   {job.jobNumber}
                 </Link>
                 <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] sm:hidden">{job.client.fullName}</p>
@@ -275,7 +271,7 @@ export default async function JobCardsPage({
             className: "hidden sm:table-cell",
             cell: (job) => (
               <>
-                <p className="text-xs font-medium text-[var(--ink)]">{job.client.fullName}</p>
+                <p className="font-medium text-[var(--ink)]">{job.client.fullName}</p>
                 <p className="text-[12px] text-[var(--ink-muted)]">{job.client.phone}</p>
               </>
             ),
@@ -288,7 +284,7 @@ export default async function JobCardsPage({
             cell: (job) => (
               <span className="inline-flex items-center gap-1.5">
                 <DeviceIcon type={job.deviceType} />
-                <span className="text-xs text-[var(--ink)]">{job.brand} {job.model}</span>
+                <span className="text-[var(--ink)]">{job.brand} {job.model}</span>
               </span>
             ),
           },
@@ -301,7 +297,7 @@ export default async function JobCardsPage({
             key: "received",
             header: "Received",
             headerClassName: "hidden lg:table-cell",
-            className: "hidden whitespace-nowrap text-xs text-[var(--ink-muted)] lg:table-cell",
+            className: "hidden whitespace-nowrap text-[var(--ink-muted)] lg:table-cell",
             cell: (job) => formatEATDate(job.receivedAt),
           },
         ]}

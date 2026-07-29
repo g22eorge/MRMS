@@ -50,7 +50,7 @@ export function POMetaForm({ po }: { po: POData }) {
             name="reference"
             type="text"
             defaultValue={po.reference ?? ""}
-            className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
           />
         </div>
         <div>
@@ -59,7 +59,7 @@ export function POMetaForm({ po }: { po: POData }) {
             name="orderedAt"
             type="date"
             defaultValue={toDateInput(po.orderedAt)}
-            className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
           />
         </div>
         <div>
@@ -68,7 +68,7 @@ export function POMetaForm({ po }: { po: POData }) {
             name="expectedAt"
             type="date"
             defaultValue={toDateInput(po.expectedAt)}
-            className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+            className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
           />
         </div>
         <div className="sm:col-span-3">
@@ -77,7 +77,7 @@ export function POMetaForm({ po }: { po: POData }) {
           name="notes"
           rows={2}
           defaultValue={po.notes ?? ""}
-          className="w-full resize-none rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+          className="w-full resize-none rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
         />
         </div>
       </div>

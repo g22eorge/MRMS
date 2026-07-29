@@ -105,7 +105,7 @@ export default async function PurchaseOrdersPage({
         empty={
           <div className="space-y-3">
             <p>No purchase orders yet.</p>
-            <Link href="/inventory/purchase-orders/new" className="inline-flex rounded-md border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-2.5 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15">
+            <Link href="/inventory/purchase-orders/new" className="inline-flex rounded-md border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-2.5 py-1.5 font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15">
               Create PO
             </Link>
           </div>
@@ -115,7 +115,7 @@ export default async function PurchaseOrdersPage({
             key: "po",
             header: "PO",
             cell: (po) => (
-              <Link href={`/inventory/purchase-orders/${po.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poNumber(po)}</Link>
+              <Link href={`/inventory/purchase-orders/${po.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poNumber(po)}</Link>
             ),
           },
           {
@@ -181,16 +181,16 @@ export default async function PurchaseOrdersPage({
               <form action={setPurchaseOrderStatusAction}>
                 <input type="hidden" name="id" value={po.id} />
                 <input type="hidden" name="status" value="ORDERED" />
-                <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-semibold text-sky-700">Issue</button>
+                <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 font-semibold text-sky-700">Issue</button>
               </form>
             ) : ["ORDERED", "PARTIAL"].includes(po.status) ? (
-              <Link href={`/inventory/purchase-orders/${po.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">Receive</Link>
+              <Link href={`/inventory/purchase-orders/${po.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-700">Receive</Link>
             ) : null}
-            <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</Link>
-            <Link href={`/inventory/purchase-orders/${po.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open</Link>
+            <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</Link>
+            <Link href={`/inventory/purchase-orders/${po.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open</Link>
             <form action={deletePurchaseOrderAction}>
               <input type="hidden" name="id" value={po.id} />
-              <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-600">Delete</button>
+              <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2 py-1 font-semibold text-red-600">Delete</button>
             </form>
           </>
         )}

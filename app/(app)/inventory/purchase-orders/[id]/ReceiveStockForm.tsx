@@ -46,7 +46,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
             required
-            className="mt-1 w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm font-normal normal-case tracking-normal text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+            className="mt-1 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm font-normal normal-case tracking-normal text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
           >
             {locations.map((location) => (
               <option key={location.id} value={location.id}>
@@ -101,7 +101,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
                       [item.id]: Math.min(item.qtyOrdered, parseInt(e.target.value, 10) || 0),
                     }))
                   }
-                  className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-right text-sm tabular-nums text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
+                  className="w-24 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-right tabular-nums text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/10"
                 />
               ),
             },

@@ -101,7 +101,7 @@ export default async function PaymentsPage({
             key: "amount",
             header: "Amount",
             align: "right",
-            className: "font-mono",
+            className: "mono",
             cell: (e) => (e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"),
           },
           {
@@ -113,7 +113,7 @@ export default async function PaymentsPage({
           {
             key: "reference",
             header: "Reference",
-            className: "font-mono text-xs text-[var(--ink-muted)] max-w-[160px] truncate",
+            className: "mono text-[12px] text-[var(--ink-muted)] max-w-[160px] truncate",
             cell: (e) => e.txRef ?? "—",
           },
         ]}

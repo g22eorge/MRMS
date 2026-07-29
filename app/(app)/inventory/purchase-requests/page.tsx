@@ -78,8 +78,8 @@ export default async function PurchaseRequestsPage({
             header: "Request",
             cell: (request) => (
               <>
-                <p className="mono text-sm font-bold text-[var(--ink)]">{request.requestNumber}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{request.priority} · {fmt(request.createdAt)}</p>
+                <p className="mono font-bold text-[var(--ink)]">{request.requestNumber}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{request.priority} · {fmt(request.createdAt)}</p>
               </>
             ),
           },
@@ -114,10 +114,10 @@ export default async function PurchaseRequestsPage({
         ]}
         actions={(request) => (
           <>
-            <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+            <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
             <form action={deletePurchaseRequestAction}>
               <input type="hidden" name="id" value={request.id} />
-              <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-600">Delete</button>
+              <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 font-semibold text-red-600">Delete</button>
             </form>
           </>
         )}

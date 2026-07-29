@@ -317,7 +317,7 @@ export default async function PartDetailPage({
                   key: "change",
                   header: "Change",
                   align: "right",
-                  className: "text-[14px] font-black tabular-nums",
+                  className: "font-black tabular-nums",
                   cell: (txn) => {
                     const isIn = txn.type === "IN";
                     const isOt = txn.type === "OUT";
@@ -333,7 +333,7 @@ export default async function PartDetailPage({
                   key: "balance",
                   header: "Balance",
                   align: "right",
-                  className: "text-[13px] font-semibold tabular-nums text-[var(--ink)]",
+                  className: "font-semibold tabular-nums text-[var(--ink)]",
                   cell: (txn) => txn.balance,
                 },
                 {

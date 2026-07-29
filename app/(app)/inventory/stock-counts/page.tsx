@@ -84,8 +84,8 @@ export default async function StockCountsPage({
             header: "Count",
             cell: (count) => (
               <>
-                <p className="mono text-sm font-bold text-[var(--ink)]">{count.countNumber}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{count.createdBy.name || count.createdBy.email}</p>
+                <p className="mono font-bold text-[var(--ink)]">{count.countNumber}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{count.createdBy.name || count.createdBy.email}</p>
               </>
             ),
           },
@@ -119,7 +119,7 @@ export default async function StockCountsPage({
           },
         ]}
         actions={(count) => (
-          <Link href={`/inventory/stock-counts/${count.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+          <Link href={`/inventory/stock-counts/${count.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
         )}
       />
     </ListPageLayout>
