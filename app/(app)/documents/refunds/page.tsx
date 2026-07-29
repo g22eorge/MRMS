@@ -508,7 +508,7 @@ export default async function RefundsPage({
               />
             </div>
             <div className="flex justify-end gap-2 sm:col-span-2 lg:col-span-3">
-              <button type="submit" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white hover:opacity-90">
+              <button type="submit" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90">
                 Issue Refund
               </button>
             </div>

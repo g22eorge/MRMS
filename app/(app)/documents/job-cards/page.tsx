@@ -6,6 +6,7 @@ import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { DataTable } from "@/components/ui/DataTable";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -184,21 +185,17 @@ export default async function JobCardsPage({
         </Link>
       </div>
 
-      {/* KPI strip — borderless, hairline-separated */}
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]/60 sm:grid-cols-4">
-        {[
-          { label: "Showing", value: total, sub: "job cards", tone: "text-[var(--ink)]" },
-          { label: "In repair", value: byStatus.IN_REPAIR ?? 0, sub: "active repairs", tone: "text-[var(--ink)]" },
-          { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", tone: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--ink)]" },
-          { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", tone: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : "text-[var(--ink)]" },
-        ].map(({ label, value, sub, tone }) => (
-          <div key={label} className="bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]/70">{label}</p>
-            <p className={`mt-1 text-lg font-bold tabular-nums ${tone}`}>{value}</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{sub}</p>
-          </div>
-        ))}
-      </div>
+      {/* KPI strip */}
+      <StatStrip
+        variant="cards"
+        columns={4}
+        tiles={[
+          { label: "Showing", value: total, sub: "job cards" },
+          { label: "In repair", value: byStatus.IN_REPAIR ?? 0, sub: "active repairs" },
+          { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", valueClass: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "text-[var(--dc-good)]" : undefined },
+          { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", valueClass: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "text-[var(--dc-warn)]" : undefined },
+        ]}
+      />
 
       {/* Period chips */}
       <div className="flex gap-2">
