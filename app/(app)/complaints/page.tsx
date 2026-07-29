@@ -195,7 +195,7 @@ export default async function ComplaintsPage({
                 href={key ? `/complaints?status=${key}` : "/complaints"}
                 className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                   active
-                    ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                 }`}
               >
