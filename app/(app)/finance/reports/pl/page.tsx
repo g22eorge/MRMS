@@ -240,7 +240,7 @@ export default async function PLPage({
           </select>
           <button
             type="submit"
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
           >
             View
           </button>

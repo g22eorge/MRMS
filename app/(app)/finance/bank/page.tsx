@@ -448,7 +448,7 @@ export default async function BankPage({
                     <div className="flex items-end">
                       <button
                         type="submit"
-                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
                       >
                         Add
                       </button>
