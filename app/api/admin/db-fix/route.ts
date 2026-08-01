@@ -255,6 +255,159 @@ async function runCriticalPageSchemaRepair(changes: Array<{ kind: string; detail
   }
 }
 
+/**
+ * Additive schema for the recent commercial/portal work (portal logins, repair
+ * messages, assessment visibility, warranty, stock-ledger enrichment, system
+ * announcements). All idempotent — safe to run repeatedly.
+ */
+async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; detail: string }>) {
+  const addColumn = async (table: string, cols: Set<string>, name: string, type: string, dflt?: string) => {
+    if (cols.has(name)) return;
+    const defaultClause = dflt ? ` DEFAULT ${dflt}` : "";
+    await prisma.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN "${name}" ${type}${defaultClause}`);
+    cols.add(name);
+    changes.push({ kind: "alter_table", detail: `Added ${table}.${name}` });
+  };
+
+  // Job — warranty coverage (Phase 4c)
+  if (await tableExists("Job")) {
+    const cols = await tableColumns("Job");
+    await addColumn("Job", cols, "warrantyMonths", "INTEGER");
+    await addColumn("Job", cols, "warrantyExpiresAt", "DATETIME");
+  }
+
+  // PartStockTransaction — org scope / location / valuation / source (M6)
+  if (await tableExists("PartStockTransaction")) {
+    const cols = await tableColumns("PartStockTransaction");
+    await addColumn("PartStockTransaction", cols, "orgId", "TEXT");
+    await addColumn("PartStockTransaction", cols, "locationId", "TEXT");
+    await addColumn("PartStockTransaction", cols, "unitCost", "REAL");
+    await addColumn("PartStockTransaction", cols, "sourceType", "TEXT");
+    await addColumn("PartStockTransaction", cols, "sourceId", "TEXT");
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PartStockTransaction_orgId_createdAt_idx" ON "PartStockTransaction"("orgId", "createdAt")');
+  }
+
+  // RepairRequest — portal linkage (Phase 4b)
+  if (await tableExists("RepairRequest")) {
+    const cols = await tableColumns("RepairRequest");
+    await addColumn("RepairRequest", cols, "clientId", "TEXT");
+    await addColumn("RepairRequest", cols, "submittedByPortalUserId", "TEXT");
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "RepairRequest_clientId_idx" ON "RepairRequest"("clientId")');
+  }
+
+  // DiagnosisReport — ensure table exists, then add visibility (Phase 4c)
+  if (!(await tableExists("DiagnosisReport"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DiagnosisReport" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "jobId" TEXT NOT NULL,
+        "authorId" TEXT,
+        "visibility" TEXT NOT NULL DEFAULT 'INTERNAL',
+        "summary" TEXT NOT NULL,
+        "findings" TEXT,
+        "recommendedWork" TEXT,
+        "riskNotes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    changes.push({ kind: "create_table", detail: "Created DiagnosisReport" });
+  } else {
+    const cols = await tableColumns("DiagnosisReport");
+    await addColumn("DiagnosisReport", cols, "visibility", "TEXT", "'INTERNAL'");
+  }
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "DiagnosisReport_orgId_jobId_createdAt_idx" ON "DiagnosisReport"("orgId", "jobId", "createdAt")');
+
+  // SystemAnnouncement — platform-wide banner (Phase 2)
+  if (!(await tableExists("SystemAnnouncement"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SystemAnnouncement" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "title" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "level" TEXT NOT NULL DEFAULT 'INFO',
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "startsAt" DATETIME,
+        "endsAt" DATETIME,
+        "createdById" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "SystemAnnouncement_isActive_startsAt_endsAt_idx" ON "SystemAnnouncement"("isActive", "startsAt", "endsAt")');
+    changes.push({ kind: "create_table", detail: "Created SystemAnnouncement" });
+  }
+
+  // PortalUser — corporate customer login (Phase 4a)
+  if (!(await tableExists("PortalUser"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PortalUser" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "clientId" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "email" TEXT NOT NULL,
+        "phone" TEXT,
+        "department" TEXT,
+        "position" TEXT,
+        "role" TEXT NOT NULL DEFAULT 'IT_OFFICER',
+        "passwordHash" TEXT,
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "lastLoginAt" DATETIME,
+        "createdById" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "PortalUser_orgId_email_key" ON "PortalUser"("orgId", "email")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PortalUser_clientId_idx" ON "PortalUser"("clientId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PortalUser_orgId_idx" ON "PortalUser"("orgId")');
+    changes.push({ kind: "create_table", detail: "Created PortalUser + indexes" });
+  }
+
+  // PortalSession — portal auth cookie store (Phase 4a)
+  if (!(await tableExists("PortalSession"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PortalSession" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "token" TEXT NOT NULL,
+        "portalUserId" TEXT NOT NULL,
+        "expiresAt" DATETIME NOT NULL,
+        "ipAddress" TEXT,
+        "userAgent" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("portalUserId") REFERENCES "PortalUser"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "PortalSession_token_key" ON "PortalSession"("token")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PortalSession_portalUserId_idx" ON "PortalSession"("portalUserId")');
+    changes.push({ kind: "create_table", detail: "Created PortalSession + indexes" });
+  }
+
+  // RepairMessage — two-way staff/customer thread (Phase 4c)
+  if (!(await tableExists("RepairMessage"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "RepairMessage" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "jobId" TEXT NOT NULL,
+        "clientId" TEXT,
+        "authorType" TEXT NOT NULL,
+        "authorId" TEXT,
+        "authorName" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "RepairMessage_jobId_createdAt_idx" ON "RepairMessage"("jobId", "createdAt")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "RepairMessage_orgId_jobId_idx" ON "RepairMessage"("orgId", "jobId")');
+    changes.push({ kind: "create_table", detail: "Created RepairMessage + indexes" });
+  }
+}
+
 async function runDbFix() {
   const user = await assertPlatformAdmin();
   if (!user) {
@@ -263,6 +416,7 @@ async function runDbFix() {
 
   const changes: Array<{ kind: string; detail: string }> = [];
   await runCriticalPageSchemaRepair(changes);
+  await runRecentAdditiveSchemaRepair(changes);
 
   // Organization: multi-currency columns
   try {
