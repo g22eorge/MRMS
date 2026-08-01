@@ -49,7 +49,7 @@ export async function setTarget(data: {
     if (!targetUser) throw new Error("User not found");
   } else if (d.entityType === "DEPARTMENT") {
     if (!d.departmentId) throw new Error("Department is required");
-    const department = await prisma.department.findUnique({ where: { id: d.departmentId }, select: { id: true } });
+    const department = await prisma.department.findFirst({ where: { id: d.departmentId, OR: [{ orgId }, { orgId: null }] }, select: { id: true } });
     if (!department) throw new Error("Department not found");
   } else if (d.entityType === "BRANCH") {
     if (!d.branchId) throw new Error("Branch is required");

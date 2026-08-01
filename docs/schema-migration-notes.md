@@ -42,15 +42,34 @@ Note: on SQLite/libSQL, adding a column or unique index rebuilds the table, so
 is a rebuild, not a loss — but production should apply through the reviewed db-fix /
 migration path, never a blind `--accept-data-loss` against live data.
 
-## Still pending (not in this batch — larger/cross-model)
+## 3. `DocumentSequence` model (H7) — SAFE (additive table)
 
-- **M15** — `Department.orgId` + `@@unique([orgId, code])`: needs a back-relation on
-  Organization and a backfill of `orgId` for existing rows (assign each department to
-  an org). Deferred — needs the backfill decision.
+New table backing the atomic document-number counter. Additive — creating an empty
+table has no effect on existing data. The counter lazy-initialises from the current
+max on first use per (type, year), so numbering continues seamlessly. No backfill.
+
+## 4. `Department.orgId` + `@@unique([orgId, code])` (M15) — additive column + REQUIRES BACKFILL
+
+- `orgId` is nullable, so adding it does not break existing rows.
+- The unique constraint moves from `code` (global) to `([orgId, code])`. This can only
+  fail if two departments share a code within the same org (or both null) — unlikely;
+  check with:
+  ```sql
+  SELECT orgId, code, COUNT(*) c FROM Department GROUP BY orgId, code HAVING c > 1;
+  ```
+- **Backfill:** legacy departments have `orgId = NULL`. The app shows them transitionally
+  (org's own + nulls), but you should assign them:
+  ```bash
+  DATABASE_URL=... node scripts/backfill-department-org.mjs <careOrgId> --dry-run
+  DATABASE_URL=... node scripts/backfill-department-org.mjs <careOrgId>
+  ```
+  For single-tenant care, pass the care org id (all departments belong to it).
+
+## Still pending (not yet done — larger/cross-model)
+
 - **M6** — `PartStockTransaction` `orgId` / `locationId` / `unitCost` / source ref:
   additive, but `orgId` should be backfilled from `part.orgId` for existing rows.
 - **H14 (relations)** — converting `Receipt`'s loose FKs to `@relation` with `onDelete`
-  touches Payment/Sale/Invoice/Client (back-relations). Deferred — cross-model.
+  touches Payment/Sale/Invoice/Client (back-relations). Cross-model.
 - **H1-invoice** — `InvoiceLine.partId` + decrement invoiced goods on finalization
-  (with reversal on void/credit). Additive column, but the decrement/reversal logic is
-  a feature; deferred.
+  (with reversal on void/credit).

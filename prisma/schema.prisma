@@ -75,6 +75,7 @@ model Organization {
   auditLogs              AuditLog[]
   invites                UserInvite[]
   branches               Branch[]
+  departments            Department[]  @relation("OrgDepartments")
   suppliers              Supplier[]
   purchaseRequests       PurchaseRequest[]
   purchaseOrders         PurchaseOrder[]
@@ -1548,13 +1549,17 @@ model Branch {
 }
 
 model Department {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
+  orgId     String?
+  org       Organization? @relation("OrgDepartments", fields: [orgId], references: [id], onDelete: SetNull)
   name      String
-  code      String   @unique
-  createdAt DateTime @default(now())
+  code      String
+  createdAt DateTime      @default(now())
 
   users        User[]
   salesTargets SalesTarget[] @relation("DeptSalesTargets")
+
+  @@unique([orgId, code])
 }
 
 // ── Supplier ──────────────────────────────────────────────────────────────────
