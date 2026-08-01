@@ -218,6 +218,7 @@ model User {
   recurringInvoicesCreated  RecurringInvoice[]       @relation("RecurringInvoiceCreatedBy")
   journalEntriesCreated     JournalEntry[]           @relation("JournalEntryCreatedBy")
   campaignsCreated          Campaign[]               @relation("CampaignCreatedBy")
+  receiptsIssued            Receipt[]                @relation("ReceiptIssuedBy")
 
   @@index([orgId])
   @@index([branchId])
@@ -528,6 +529,7 @@ model Client {
   invoices          Invoice[]
   recurringInvoices RecurringInvoice[]
   campaignContacts  CampaignContact[]
+  receipts          Receipt[]
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -716,6 +718,7 @@ model Invoice {
   refunds       Refund[]
   deliveryNotes DeliveryNote[]
   attachments   InvoiceAttachment[]
+  receipts      Receipt[]
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -765,6 +768,7 @@ model Payment {
 
   createdById String?
   createdBy   User?   @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  receipts    Receipt[]
 
   note      String?
   createdAt DateTime @default(now())
@@ -912,6 +916,7 @@ model Sale {
   creditNotes       CreditNote[]
   deliveryNotes     DeliveryNote[]
   stockTransactions PartStockTransaction[]
+  receipts          Receipt[]
 
   createdById String?
   createdBy   User?   @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1544,6 +1549,7 @@ model Branch {
   salesTargets SalesTarget[] @relation("BranchSalesTargets")
   fieldVisits  FieldVisit[]
   expenses     Expense[]
+  receipts     Receipt[]
 
   @@index([orgId])
 }
@@ -2389,14 +2395,20 @@ model Receipt {
   orgId         String
   receiptNumber String    @unique
   paymentId     String?
+  payment       Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   saleId        String?
+  sale          Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
   invoiceId     String?
+  invoice       Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   branchId      String?
+  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
   clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   amount        Float
   currency      String    @default("UGX")
   issuedAt      DateTime  @default(now())
   issuedById    String?
+  issuedBy      User?     @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
   voidedAt      DateTime?
   voidReason    String?
 
