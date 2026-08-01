@@ -35,6 +35,7 @@ import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { postRefund } from "@/lib/accounting/post";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
@@ -898,6 +899,16 @@ export async function recordClientPaymentAction(formData: FormData) {
           amount: payload.amount,
           currency,
           issuedById: session.user.id,
+        });
+      } else {
+        // C5: a repair-tab refund pays cash out — post the ledger reversal so the
+        // P&L/cash reports stay complete. Keyed on the payment id (posts once).
+        await postRefund(tx, {
+          orgId,
+          userId: session.user.id,
+          amount: payload.amount,
+          reference: `pay:${payment.id}`,
+          description: `Refund on job invoice ${safeInvoiceNumber}`,
         });
       }
 
