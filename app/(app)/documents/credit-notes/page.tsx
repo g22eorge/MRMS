@@ -61,13 +61,33 @@ export default async function CreditNotesPage({
     const note = String(formData.get("note") ?? "").trim();
     if (!creditNoteId) return;
 
-    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, creditNoteNumber: true, itemsReceivedBackAt: true } });
+    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, creditNoteNumber: true, saleId: true, itemsReceivedBackAt: true } });
     if (!cn || cn.itemsReceivedBackAt) return;
 
-    const { user: actor } = await requireOrgSession();
-    await prisma.creditNote.update({
-      where: { id: creditNoteId },
-      data: { itemsReceivedBackAt: new Date(), itemsReceivedBackById: actor.id, itemsReceivedBackNote: note || null },
+    await prisma.$transaction(async (tx) => {
+      // Restore returned stock — the POS "received back" path did this but the
+      // Documents path only stamped a timestamp, silently losing inventory (H5).
+      const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true } });
+      for (const it of items) {
+        if (!it.partId) continue;
+        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, sku: true, name: true } });
+        if (!part) continue;
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: Math.abs(it.quantity) } } });
+        await tx.partStockTransaction.create({
+          data: {
+            partId: part.id,
+            saleId: cn.saleId,
+            type: "IN",
+            quantity: Math.abs(it.quantity),
+            reason: `Return (${cn.creditNoteNumber}) ${it.description || `${part.sku} ${part.name}`}`,
+            createdById: user.id,
+          },
+        });
+      }
+      await tx.creditNote.update({
+        where: { id: creditNoteId },
+        data: { itemsReceivedBackAt: new Date(), itemsReceivedBackById: user.id, itemsReceivedBackNote: note || null },
+      });
     });
     await writeSystemAuditEvent({
       orgId,

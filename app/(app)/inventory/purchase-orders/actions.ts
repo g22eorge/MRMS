@@ -309,22 +309,24 @@ export async function receiveStockAction(
             createdById: session.user.id,
           },
         });
-        const [partBefore, aggregate] = await Promise.all([
-          tx.part.findUnique({ where: { id: u.partId }, select: { unitCost: true } }),
-          tx.partLocationStock.aggregate({ where: { partId: u.partId }, _sum: { qtyOnHand: true } }),
-        ]);
-        const newQty = aggregate._sum.qtyOnHand ?? 0;
+        const partBefore = await tx.part.findUnique({
+          where: { id: u.partId },
+          select: { qtyOnHand: true, unitCost: true },
+        });
+        const oldQty = partBefore?.qtyOnHand ?? 0;
+        // Part.qtyOnHand is authoritative: increment by the received delta rather
+        // than recomputing from SUM(PartLocationStock), which would silently wipe
+        // stock recorded via manual adjustments or POS (C2 corruption fix).
         // Weighted-average cost; never overwrite the cost basis with a zero/
         // negative receipt price (which would destroy valuation and margins).
         let nextCost = partBefore?.unitCost ?? 0;
         if (u.unitCost > 0) {
-          const oldQty = Math.max(0, newQty - u.delta);
           const denom = oldQty + u.delta;
           nextCost = denom > 0 ? (oldQty * nextCost + u.delta * u.unitCost) / denom : u.unitCost;
         }
         await tx.part.update({
           where: { id: u.partId },
-          data: { qtyOnHand: newQty, unitCost: nextCost },
+          data: { qtyOnHand: { increment: u.delta }, unitCost: nextCost },
         });
       }
     }

@@ -139,8 +139,10 @@ export async function approveStockCountAction(formData: FormData): Promise<void>
       await tx.partStockTransaction.create({
         data: { partId: item.partId, type: "ADJUST", quantity: item.varianceQty, reason: `STOCK_COUNT ${count.countNumber}: system=${item.systemQty} counted=${item.countedQty}`, createdById: session.user.id },
       });
-      const aggregate = await tx.partLocationStock.aggregate({ where: { partId: item.partId }, _sum: { qtyOnHand: true } });
-      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: aggregate._sum.qtyOnHand ?? 0 } });
+      // Part.qtyOnHand is authoritative: apply the counted variance as a delta
+      // rather than recomputing from SUM(location), which would wipe unlocated
+      // stock recorded via manual adjustments or POS (C2 corruption fix).
+      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { increment: item.varianceQty } } });
     }
 
     await tx.stockCount.update({ where: { id }, data: { status: "APPROVED", approvedAt: new Date(), approvedById: session.user.id } });

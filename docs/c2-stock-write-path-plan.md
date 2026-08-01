@@ -1,102 +1,65 @@
-# C2 — Unify the stock write-path (implementation plan)
+# C2 — Stock write-path corruption fix
 
-Status: **planned, not yet implemented.** This is the most invasive change in the
-audit — it touches live inventory data and needs a one-time backfill — so it is
-staged deliberately and gated on lower-environment verification.
+Status: **core corruption fixed & runtime-verified.** Follow-ons (H1 repair/invoice
+consumption) tracked below.
 
-## The defect (recap)
+## The defect
 
-Two stock quantities are maintained by different code that overwrites each other:
+`Part.qtyOnHand` (read by every report, dashboard, POS check, low-stock alert) was
+being **overwritten with `SUM(PartLocationStock)`** by three paths — PO receive,
+stock-count approve, and stock transfer. But manual adjustments and POS sales write
+`Part.qtyOnHand` **directly and never create location rows**, so the first
+location-based operation on such a part silently wiped all its manual/POS history.
 
-- `Part.qtyOnHand` — read by every report, dashboard, POS availability check, and
-  low-stock alert.
-- `PartLocationStock.qtyOnHand` — per-location balances used by PO receiving,
-  transfers, and stock counts.
+Failure: part seeded to 70 via manual adjust (no location row) → PO receives 5 →
+old code set `Part = SUM(location) = 5`, losing 65 units.
 
-Three inconsistent write styles exist today:
+## The fix (implemented — no schema change, no data backfill)
 
-| Path | File | Style |
-|------|------|-------|
-| PO receive | `app/(app)/inventory/purchase-orders/actions.ts:298-327` | upsert location, then `Part.qtyOnHand = SUM(location)` |
-| Stock count approve | `app/(app)/inventory/stock-counts/actions.ts:131-132` | upsert location, then `Part.qtyOnHand = SUM(location)` |
-| Transfer | `app/(app)/inventory/transfers/actions.ts:123-167` | update both locations, recompute Part |
-| Manual adjust | `app/(app)/inventory/actions.ts:135` | `Part.qtyOnHand += delta` — **no location write** |
-| POS sale / delete / credit-return | `app/(app)/pos/[id]/page.tsx` | `Part.qtyOnHand ±` — **no location write** |
-| Canonical service (unused) | `lib/inventory-service.ts` | increments **both** in lockstep |
+`lib/inventory-service.ts` already documents the correct invariant: **`Part.qtyOnHand`
+is authoritative and updated by direct increment/decrement; `PartLocationStock` is a
+per-location mirror, not the source of truth.** The corruption came entirely from the
+three paths that violated this by recomputing `Part` from the location SUM.
 
-Failure: a part seeded via manual adjust (only `Part.qtyOnHand`, no location row)
-gets its `qtyOnHand` overwritten to `SUM(location)` on the first PO receive /
-count / transfer — silently erasing all prior manual + POS movements.
+Fix = make those three paths obey the invariant:
 
-`lib/inventory-service.ts` already implements the correct lockstep writes and the
-negative-stock guards, but **nothing in `app/` calls it** (only tests do).
+| Path | File | Change |
+|------|------|--------|
+| PO receive | `inventory/purchase-orders/actions.ts` | `Part.qtyOnHand { increment: delta }` (was `= SUM(location)`); weighted-avg cost now reads the true `Part.qtyOnHand` |
+| Stock count | `inventory/stock-counts/actions.ts` | `Part.qtyOnHand { increment: variance }` (was `= SUM(location)`) |
+| Transfer | `inventory/transfers/actions.ts` | removed the `syncPartAggregate` recompute entirely — an intra-org transfer moves stock between locations and must not change the org total |
 
-## Target design
+Manual adjust and POS were already correct (direct increment) and needed no change.
 
-Single source of truth: **`PartLocationStock` is authoritative; `Part.qtyOnHand`
-is a derived cache** kept in lockstep on every write. Every mutation goes through
-`lib/inventory-service.ts`, which already:
+**Why no backfill:** the original plan (make location authoritative + backfill
+`PartLocationStock` for existing `qtyOnHand`) is unnecessary once `Part` is authoritative
+and never recomputed. Incrementing preserves the existing value regardless of whether a
+location row exists, so no live-data migration is required.
 
-- upserts the location row with a signed delta, and
-- increments/decrements `Part.qtyOnHand` by the same delta (no `SUM` recompute),
-- writes a `PartStockTransaction` ledger row,
-- enforces the negative-stock guard against available (`qtyOnHand - qtyReserved`).
+## Verification (runtime, against a real Prisma DB)
 
-## Phased implementation
+A throwaway-DB script reproduced the exact corruption scenario and asserted:
+- seed `qtyOnHand=70` (no location row)
+- PO receive +5 → **75** (not wiped to 5); weighted-avg cost `(70·1000+5·2000)/75 ≈ 1067`
+- stock-count +3 → **78**
+- confirmed `SUM(location)=8` (the value the old bug would have set)
 
-### Phase 0 — Prerequisites (no behaviour change)
-1. Add `orgId` + `locationId` + `unitCost` + a source ref to `PartStockTransaction`
-   (finding M6). *Schema migration — additive columns, low risk.* Needed so the
-   ledger can reconstruct movements per location.
-2. Give every part a default location. Confirm a `StockLocation` marked default
-   per org (or create "Main"). New parts already need an opening-balance path
-   (finding M8/opening-balance helper `lib/commercial/inventory.ts` is currently
-   dead) — wire `syncDefaultLocationStock` on part create.
+All assertions passed. `tsc` clean; clean `vercel-build` exit 0.
 
-### Phase 1 — Backfill (the risky, one-time data step)
-For every active `Part` with `qtyOnHand > 0` and **no** `PartLocationStock` rows,
-create a `PartLocationStock` row at the org's default location with
-`qtyOnHand = Part.qtyOnHand`. After backfill, `SUM(location) == Part.qtyOnHand`
-for every part — so the recompute-from-aggregate style becomes safe and the two
-systems are reconciled.
+## Known residual (acceptable, not corruption)
 
-- Write as an idempotent script (`scripts/backfill-part-location-stock.mjs`),
-  runnable per org.
-- **Verify in a copy of production first.** Assert, before and after, that
-  `Part.qtyOnHand` is unchanged for every part and that every part now has
-  `SUM(PartLocationStock) == Part.qtyOnHand`.
-- Run inside a transaction per org; log every row written; support a `--dry-run`.
+`PartLocationStock` remains a **partial** breakdown for parts touched by manual/POS
+(those paths still don't write a location row), so per-location views can understate
+such parts. `Part.qtyOnHand` — what everything reads — is correct. Making manual/POS
+location-aware (writing to a default location) is an optional enhancement, not required
+for correctness; it needs a default-location resolution step.
 
-### Phase 2 — Cutover (route all writes through the service)
-Replace the ad-hoc blocks with `inventory-service` calls, one path per PR:
-1. Manual adjust (`inventory/actions.ts`) → `applyAdjustment` (writes both tables).
-2. POS sale add/delete/credit-return (`pos/[id]/page.tsx`) → `issueStock` /
-   `receiveStock`. Also wires the location so POS stops being location-blind.
-3. PO receive → `receiveStock` (increment, not `SUM`-recompute).
-4. Stock count approve → `applyAdjustment`.
-5. Transfers → `issueStock` + `receiveStock` across the two locations.
+## Follow-ons (separate work, not part of the corruption fix)
 
-After every path is on the service, delete the `Part.qtyOnHand = SUM(location)`
-recompute lines — they are no longer needed and were the corruption vector.
-
-### Phase 3 — Dependent fixes unlocked
-Once the write-path is unified, these fall out cheaply:
-- **H1** — repair parts consume stock: call `reserveForJob` on assignment,
-  `consumeReservation` on completion, `releaseReservation` on cancel.
-- **H1 (invoice goods)** — decrement part-linked invoice lines on finalization.
-- **H5** — the Documents credit-note "mark received" restores stock via the same
-  service call the POS path uses.
-- **M2** — resolved by construction (POS/manual now write location rows).
-- **L5** — availability checks use `qtyOnHand - qtyReserved` (the service already does).
-
-## Verification gate (every PR)
-- `bunx tsc --noEmit`, `bun run lint`, `bun run vercel-build`.
-- `bun run qa:data-integrity` and `bun run qa:concurrency` after Phase 2.
-- A reconciliation assertion: for a sample org, `SUM(PartLocationStock) ==
-  Part.qtyOnHand` for every active part, before and after each cutover PR.
-
-## Rollback
-Phases 2–3 are pure code (revertable by PR). Phase 1 is data: keep the pre-backfill
-`Part.qtyOnHand` snapshot so the location rows can be recomputed or removed. Do not
-delete the recompute lines (Phase 2 final step) until the backfill is verified in
-production.
+- **H1** — repairs and invoiced goods still don't decrement stock. Wire the existing
+  (unused) reservation engine: `reserveForJob` on assignment, `consumeReservation` on
+  completion, `releaseReservation` on cancel; decrement part-linked invoice lines on
+  finalization. This is a feature addition, not a bug in the write-path.
+- **H5** — DONE: the Documents credit-note "mark received" now restores stock like POS.
+- **M6** — enrich `PartStockTransaction` (orgId, locationId, unitCost, source ref) —
+  additive schema migration, for ledger reconstruction.

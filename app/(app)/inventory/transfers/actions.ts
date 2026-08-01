@@ -28,11 +28,6 @@ async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
   return composeOrgNumber(tag, inner, next);
 }
 
-async function syncPartAggregate(tx: Prisma.TransactionClient, partId: string) {
-  const agg = await tx.partLocationStock.aggregate({ where: { partId }, _sum: { qtyOnHand: true } });
-  await tx.part.update({ where: { id: partId }, data: { qtyOnHand: agg._sum.qtyOnHand ?? 0 } });
-}
-
 async function loadTransfer(tx: Prisma.TransactionClient, id: string, orgId: string) {
   return tx.stockTransfer.findFirst({
     where: { id, orgId },
@@ -134,7 +129,6 @@ export async function dispatchStockTransferAction(formData: FormData) {
           createdById: user.id,
         },
       });
-      await syncPartAggregate(tx, item.partId);
     }
 
     await tx.stockTransfer.update({
@@ -176,7 +170,6 @@ export async function receiveStockTransferAction(formData: FormData) {
           createdById: user.id,
         },
       });
-      await syncPartAggregate(tx, item.partId);
     }
 
     await tx.stockTransfer.update({
