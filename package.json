@@ -19,6 +19,7 @@
     "qa:e2e": "playwright test",
     "qa:repair-requests": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun scripts/qa-repair-request-numbers.mjs",
     "db:prod-job-safety": "bun scripts/prod-job-column-safety.mjs",
+  "db:sync-schema": "node scripts/sync-schema-to-db.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "qa:pdf-smoke": "node scripts/qa-pdf-smoke.mjs",
     "qa:rate-limit": "node scripts/qa-rate-limit.mjs",

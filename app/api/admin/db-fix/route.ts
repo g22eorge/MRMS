@@ -406,6 +406,58 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "RepairMessage_orgId_jobId_idx" ON "RepairMessage"("orgId", "jobId")');
     changes.push({ kind: "create_table", detail: "Created RepairMessage + indexes" });
   }
+
+  // InvoiceLine — invoice line items (the base Invoice repair above never made this)
+  if (!(await tableExists("InvoiceLine"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "InvoiceLine" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "invoiceId" TEXT NOT NULL,
+        "sourceType" TEXT,
+        "sourceId" TEXT,
+        "description" TEXT NOT NULL,
+        "quantity" REAL NOT NULL DEFAULT 1,
+        "unitPrice" REAL NOT NULL,
+        "discountAmount" REAL NOT NULL DEFAULT 0,
+        "taxAmount" REAL NOT NULL DEFAULT 0,
+        "lineTotal" REAL NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceLine_orgId_invoiceId_idx" ON "InvoiceLine"("orgId", "invoiceId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceLine_sourceType_sourceId_idx" ON "InvoiceLine"("sourceType", "sourceId")');
+    changes.push({ kind: "create_table", detail: "Created InvoiceLine + indexes" });
+  }
+
+  // InvoiceAttachment — files attached to an invoice
+  if (!(await tableExists("InvoiceAttachment"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "InvoiceAttachment" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "invoiceId" TEXT NOT NULL,
+        "fileName" TEXT NOT NULL,
+        "filePath" TEXT NOT NULL,
+        "fileSize" INTEGER NOT NULL,
+        "mimeType" TEXT,
+        "uploadedById" TEXT,
+        "uploadedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY ("uploadedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceAttachment_orgId_idx" ON "InvoiceAttachment"("orgId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceAttachment_invoiceId_idx" ON "InvoiceAttachment"("invoiceId")');
+    changes.push({ kind: "create_table", detail: "Created InvoiceAttachment + indexes" });
+  }
+
+  // Invoice — indexes the earlier repair block omitted (safe if Invoice exists)
+  if (await tableExists("Invoice")) {
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Invoice_orgId_invoiceType_idx" ON "Invoice"("orgId", "invoiceType")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Invoice_clientId_idx" ON "Invoice"("clientId")');
+  }
 }
 
 async function runDbFix() {

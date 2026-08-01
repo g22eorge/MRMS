@@ -18,18 +18,28 @@ function run(command, args, options = {}) {
 // heal failure only warns (the /api/admin/db-fix endpoint is the manual
 // fallback), so a transient DB blip doesn't block an otherwise-fine deploy.
 if (process.env.TURSO_DATABASE_URL) {
-  console.log("[vercel-build] Healing production schema (prod-job-column-safety)...");
-  const heal = spawnSync("node", ["scripts/prod-job-column-safety.mjs"], {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-    env: process.env,
-  });
-  if (heal.status !== 0) {
-    if (process.env.STRICT_SCHEMA_HEAL === "1") {
-      console.error("[vercel-build] Schema heal failed and STRICT_SCHEMA_HEAL=1 — aborting build.");
-      process.exit(heal.status ?? 1);
+  // sync-schema-to-db reconciles EVERY model/column from schema.prisma (creates
+  // missing tables/columns/indexes); prod-job-column-safety then normalizes Job
+  // data. Both idempotent. A failure warns and continues (DB Fix endpoint is the
+  // manual fallback) unless STRICT_SCHEMA_HEAL=1.
+  const healSteps = [
+    ["Reconciling full schema", "scripts/sync-schema-to-db.mjs"],
+    ["Normalizing Job data", "scripts/prod-job-column-safety.mjs"],
+  ];
+  for (const [label, script] of healSteps) {
+    console.log(`[vercel-build] ${label} (${script})...`);
+    const heal = spawnSync("node", [script], {
+      stdio: "inherit",
+      shell: process.platform === "win32",
+      env: process.env,
+    });
+    if (heal.status !== 0) {
+      if (process.env.STRICT_SCHEMA_HEAL === "1") {
+        console.error(`[vercel-build] ${script} failed and STRICT_SCHEMA_HEAL=1 — aborting build.`);
+        process.exit(heal.status ?? 1);
+      }
+      console.warn(`[vercel-build] ${script} did not complete cleanly; continuing build. Run DB Fix (/api/admin/db-fix) after deploy to finish.`);
     }
-    console.warn("[vercel-build] Schema heal did not complete cleanly; continuing build. Run DB Fix (/api/admin/db-fix) after deploy to finish.");
   }
 }
 
