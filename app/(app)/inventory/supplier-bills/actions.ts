@@ -79,6 +79,29 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
 
   const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
   const totalAmount = subtotal + taxAmount;
+
+  // M4: over-/double-billing guard (basic 3-way match).
+  if (grnId) {
+    const dup = await prisma.supplierBill.findFirst({
+      where: { orgId, grnId, status: { not: "CANCELLED" } },
+      select: { billNumber: true },
+    });
+    if (dup) return { error: `This goods-received note is already billed on ${dup.billNumber}` };
+  }
+  if (poId) {
+    const [poItems, priorBills] = await Promise.all([
+      prisma.purchaseOrderItem.findMany({ where: { poId }, select: { qtyOrdered: true, unitCost: true } }),
+      prisma.supplierBill.findMany({ where: { orgId, poId, status: { not: "CANCELLED" } }, select: { subtotal: true } }),
+    ]);
+    const poValue = poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0);
+    const alreadyBilled = priorBills.reduce((sum, b) => sum + b.subtotal, 0);
+    if (poValue > 0 && alreadyBilled + subtotal > poValue + 0.01) {
+      return {
+        error: `Billing ${currency} ${(alreadyBilled + subtotal).toLocaleString()} would exceed the PO value of ${currency} ${poValue.toLocaleString()} (already billed ${currency} ${alreadyBilled.toLocaleString()})`,
+      };
+    }
+  }
+
   const billNumber = await generateBillNumber(orgId);
 
   const bill = await prisma.supplierBill.create({

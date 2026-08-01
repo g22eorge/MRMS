@@ -384,3 +384,104 @@ export async function receiveStockAction(
   }).catch(() => {});
   return {};
 }
+
+/**
+ * M5: reverse (void) a posted goods-received note. Decrements the received
+ * stock, writes reversal ledger rows, rolls the PO status back, and marks the
+ * GRN CANCELLED. Blocked when the GRN is already billed, or when reversing
+ * would drive stock negative (the goods have since moved out).
+ */
+export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ error?: string }> {
+  const { orgId, session } = await requireAdmin();
+  const grnId = String(formData.get("grnId") ?? "").trim();
+  if (!grnId) return { error: "Missing goods-received note" };
+
+  const grn = await prisma.goodsReceived.findFirst({
+    where: { id: grnId, orgId, status: "POSTED" },
+    select: {
+      id: true, grnNumber: true, poId: true, locationId: true,
+      items: { select: { partId: true, poItemId: true, quantity: true } },
+    },
+  });
+  if (!grn) return { error: "Goods-received note not found or already reversed" };
+
+  const billed = await prisma.supplierBill.findFirst({
+    where: { orgId, grnId, status: { not: "CANCELLED" } },
+    select: { billNumber: true },
+  });
+  if (billed) return { error: `Cannot reverse — this GRN is billed on ${billed.billNumber}. Cancel the bill first.` };
+
+  const result = await prisma.$transaction(async (tx) => {
+    for (const item of grn.items) {
+      if (!item.partId || item.quantity <= 0) continue;
+
+      const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { qtyOnHand: true } });
+      if (!part) continue;
+      if (part.qtyOnHand - item.quantity < 0) {
+        return { error: "Cannot reverse — some received stock has already been sold or moved out." };
+      }
+
+      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: item.quantity } } });
+      const loc = await tx.partLocationStock.findUnique({
+        where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
+        select: { qtyOnHand: true },
+      });
+      if (loc) {
+        await tx.partLocationStock.update({
+          where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
+          data: { qtyOnHand: { decrement: Math.min(loc.qtyOnHand, item.quantity) } },
+        });
+      }
+      if (item.poItemId) {
+        await tx.purchaseOrderItem.update({
+          where: { id: item.poItemId },
+          data: { qtyReceived: { decrement: item.quantity } },
+        });
+      }
+      await tx.partStockTransaction.create({
+        data: {
+          partId: item.partId,
+          orgId,
+          locationId: grn.locationId,
+          sourceType: "GRN",
+          sourceId: grn.id,
+          type: "OUT",
+          quantity: item.quantity,
+          reason: `Reversal of ${grn.grnNumber}`,
+          createdById: session.user.id,
+        },
+      });
+    }
+
+    await tx.goodsReceived.update({ where: { id: grn.id }, data: { status: "CANCELLED" } });
+
+    // Roll the PO status back to match the reduced received quantities.
+    if (grn.poId) {
+      const allItems = await tx.purchaseOrderItem.findMany({ where: { poId: grn.poId }, select: { qtyOrdered: true, qtyReceived: true } });
+      const allReceived = allItems.length > 0 && allItems.every((i) => i.qtyReceived >= i.qtyOrdered);
+      const anyReceived = allItems.some((i) => i.qtyReceived > 0);
+      await tx.purchaseOrder.update({
+        where: { id: grn.poId },
+        data: { status: (allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED") as never },
+      });
+    }
+    return { ok: true as const };
+  });
+
+  if ("error" in result) return { error: result.error };
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "GoodsReceived",
+    entityId: grnId,
+    action: "GOODS_RECEIVED_REVERSED",
+    summary: `${grn.grnNumber} reversed (${grn.items.length} line${grn.items.length === 1 ? "" : "s"})`,
+  });
+
+  revalidatePath("/inventory/goods-received");
+  revalidatePath(`/inventory/goods-received/${grnId}`);
+  if (grn.poId) revalidatePath(`/inventory/purchase-orders/${grn.poId}`);
+  revalidatePath("/procurement");
+  return {};
+}

@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { reverseGoodsReceivedAction } from "@/app/(app)/inventory/purchase-orders/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,10 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
   if (grn.po) billParams.set("poId", grn.po.id);
   const newBillHref = `/inventory/supplier-bills/new?${billParams.toString()}`;
 
+  // M5: a POSTED, unbilled GRN can be reversed (voided) to undo the stock receipt.
+  const hasActiveBill = grn.supplierBills.some((b) => b.status !== "CANCELLED");
+  const canReverse = grn.status === "POSTED" && !hasActiveBill;
+
   return (
     <div className="space-y-4">
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -113,6 +118,19 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             <Link href="/inventory/goods-received" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">All GRNs</Link>
             <Link href={`/api/procurement/documents/goods-received/${grn.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Print / PDF</Link>
             <Link href={newBillHref} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">Create Bill</Link>
+            {canReverse && (
+              <form
+                action={async (fd: FormData) => {
+                  "use server";
+                  await reverseGoodsReceivedAction(fd);
+                }}
+              >
+                <input type="hidden" name="grnId" value={grn.id} />
+                <button type="submit" className="rounded-lg border border-red-400/40 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">
+                  Reverse GRN
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
