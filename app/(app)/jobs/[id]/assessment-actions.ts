@@ -24,18 +24,22 @@ export async function generateAssessmentAction(formData: FormData): Promise<void
     where: { id: jobId, orgId },
     select: {
       jobNumber: true, brand: true, model: true, deviceType: true, issueDescription: true,
-      diagnosisNotes: true, recommendedRepair: true, partsNeeded: true, technicianNotes: true,
+      diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true, workDone: true,
+      partsNeeded: true, technicianNotes: true,
     },
   });
   if (!job) return;
 
-  // Require diagnosis + repair details before drafting (parts are optional).
-  if (!(job.diagnosisNotes ?? "").trim() || !(job.recommendedRepair ?? "").trim()) return;
+  // Require diagnosis + repair details before drafting (parts optional). Each
+  // can come from more than one field depending on the workflow.
+  const diagnosis = (job.diagnosisNotes ?? "").trim() || (job.externalDiagnosis ?? "").trim();
+  const repairDetails = (job.recommendedRepair ?? "").trim() || (job.workDone ?? "").trim();
+  if (!diagnosis || !repairDetails) return;
 
   const ai = await generateAssessmentDraft({
     orgId,
     userId: user.id,
-    job: { ...job, deviceType: String(job.deviceType) },
+    job: { ...job, deviceType: String(job.deviceType), diagnosisNotes: diagnosis, recommendedRepair: repairDetails },
   });
 
   const draft = ai.ok

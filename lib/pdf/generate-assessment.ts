@@ -56,7 +56,7 @@ export async function generateAssessmentBuffer(params: {
     where: { id: jobId, orgId },
     select: {
       jobNumber: true, issueDescription: true, brand: true, model: true, deviceType: true,
-      diagnosisNotes: true, partsNeeded: true, recommendedRepair: true, clientBill: true,
+      diagnosisNotes: true, externalDiagnosis: true, partsNeeded: true, recommendedRepair: true, workDone: true, clientBill: true,
       warrantyMonths: true, warrantyExpiresAt: true,
       quotations: {
         orderBy: { createdAt: "desc" }, take: 1,
@@ -67,9 +67,11 @@ export async function generateAssessmentBuffer(params: {
   if (!job) return { ok: false, error: "Repair not found" };
 
   // The report requires the diagnosis and repair details to be completed first.
-  // Parts are optional — a report can still be produced without them.
-  const hasDiagnosis = Boolean((job.diagnosisNotes ?? "").trim());
-  const hasRepairDetails = Boolean((job.recommendedRepair ?? "").trim());
+  // Parts are optional — a report can still be produced without them. "Diagnosis"
+  // and "repair details" each live in more than one field depending on the
+  // workflow (in-house vs external, recommendation vs work done).
+  const hasDiagnosis = Boolean(((job.diagnosisNotes ?? "") + (job.externalDiagnosis ?? "")).trim());
+  const hasRepairDetails = Boolean(((job.recommendedRepair ?? "") + (job.workDone ?? "")).trim());
   if (!hasDiagnosis || !hasRepairDetails) {
     return { ok: false, error: "Complete the diagnosis and repair details before the report can be downloaded (parts are optional)." };
   }

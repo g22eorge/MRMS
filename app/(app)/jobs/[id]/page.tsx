@@ -293,10 +293,13 @@ export default async function JobDetailPage({
       orderBy: { createdAt: "desc" },
       select: { id: true, visibility: true, summary: true, findings: true, recommendedWork: true, riskNotes: true },
     }).catch(() => []),
-    prisma.job.findFirst({ where: { id, orgId }, select: { warrantyMonths: true, warrantyExpiresAt: true, diagnosisNotes: true, recommendedRepair: true } }),
+    prisma.job.findFirst({ where: { id, orgId }, select: { warrantyMonths: true, warrantyExpiresAt: true, diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true, workDone: true } }),
   ]);
   // The assessment report needs diagnosis + repair details first (parts optional).
-  const canAssess = Boolean((warrantyInfo?.diagnosisNotes ?? "").trim()) && Boolean((warrantyInfo?.recommendedRepair ?? "").trim());
+  // Each may live in more than one field depending on the workflow.
+  const canAssess =
+    Boolean(((warrantyInfo?.diagnosisNotes ?? "") + (warrantyInfo?.externalDiagnosis ?? "")).trim())
+    && Boolean(((warrantyInfo?.recommendedRepair ?? "") + (warrantyInfo?.workDone ?? "")).trim());
   const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50";
 
   return (
