@@ -9,6 +9,30 @@ function run(command, args, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+// ── Step 0: heal the production schema (additive, idempotent) ────────────────
+// Runs only on a real deploy (Turso env present), before the env below is
+// cleared for Prisma's SQLite build validation. Applies recent additive
+// columns/tables via @libsql/client (independent of Prisma) so the freshly
+// deployed code never boots against a stale prod schema. Safe to repeat.
+// Set STRICT_SCHEMA_HEAL=1 to fail the build if the heal errors; by default a
+// heal failure only warns (the /api/admin/db-fix endpoint is the manual
+// fallback), so a transient DB blip doesn't block an otherwise-fine deploy.
+if (process.env.TURSO_DATABASE_URL) {
+  console.log("[vercel-build] Healing production schema (prod-job-column-safety)...");
+  const heal = spawnSync("node", ["scripts/prod-job-column-safety.mjs"], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+    env: process.env,
+  });
+  if (heal.status !== 0) {
+    if (process.env.STRICT_SCHEMA_HEAL === "1") {
+      console.error("[vercel-build] Schema heal failed and STRICT_SCHEMA_HEAL=1 — aborting build.");
+      process.exit(heal.status ?? 1);
+    }
+    console.warn("[vercel-build] Schema heal did not complete cleanly; continuing build. Run DB Fix (/api/admin/db-fix) after deploy to finish.");
+  }
+}
+
 // ── Step 1: prisma generate + model assertion ────────────────────────────────
 // prisma.config.ts reads process.env.DATABASE_URL at PrismaClient init time,
 // so we must mutate process.env directly — passing via the child's env option
