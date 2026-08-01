@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
-import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { formatMoney, normalizeCurrency, roundMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -27,7 +27,8 @@ async function recalcSaleTotals(
 ) {
   const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
   const subtotal = itemsAgg._sum.lineTotal ?? 0;
-  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true } });
+  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true } });
+  const currency = normalizeCurrency(current?.currency, "UGX");
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
   const taxable = Math.max(0, subtotal - discountAmount);
   let vatRate = 0;
@@ -35,8 +36,9 @@ async function recalcSaleTotals(
     const branding = await tx.documentBrandingSettings.findFirst({ where: { orgId }, select: { vatRatePercent: true } });
     vatRate = Math.max(0, branding?.vatRatePercent ?? 18) / 100;
   }
-  const vatAmount = taxable * vatRate;
-  const totalAmount = taxable + vatAmount;
+  // Round to the currency's minor unit so zero-decimal (UGX) totals stay payable.
+  const vatAmount = roundMoney(taxable * vatRate, currency);
+  const totalAmount = roundMoney(taxable + vatAmount, currency);
 
   await tx.sale.update({
     where: { id: saleId },

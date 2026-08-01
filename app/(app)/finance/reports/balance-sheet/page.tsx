@@ -80,7 +80,7 @@ export default async function BalanceSheetPage({
 }: {
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { user, org } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
   const sp = await searchParams;
@@ -92,7 +92,7 @@ export default async function BalanceSheetPage({
   const asOf = new Date(year, month, 0, 23, 59, 59);
 
   const lines = await prisma.journalLine.findMany({
-    where: { journalEntry: { status: "POSTED", date: { lte: asOf } } },
+    where: { journalEntry: { orgId, status: "POSTED", date: { lte: asOf } } },
     include: { account: true },
   });
 

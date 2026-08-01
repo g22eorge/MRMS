@@ -212,10 +212,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
         )}
         </div>
     </section>
-    </>
-  );
-
-{isEdit ? (
+    {isEdit ? (
       <section className="max-w-xl mx-auto space-y-4 pb-20">
         <PageHeader
           title={`Edit Quotation ${(quotation as any).quoteNumber}`}
@@ -227,7 +224,26 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
             </div>
           }
         />
-        <form action={editQuotationAction} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <form
+          action={async (fd: FormData) => {
+            "use server";
+            const { user } = await getCurrentUserRole();
+            if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+            const db = orgDb(user.orgId);
+            const validUntilRaw = String(fd.get("validUntil") ?? "").trim();
+            await db.quotation.updateMany({
+              where: { id, orgId: user.orgId },
+              data: {
+                validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
+                notes: String(fd.get("notes") ?? "").trim() || null,
+              },
+            });
+            revalidatePath(`/documents/quotations/${id}`);
+            revalidatePath("/documents/quotations");
+            redirect(`/documents/quotations/${id}`);
+          }}
+          className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+        >
           <input type="hidden" name="id" value={quotation.id} />
           <div className="border-b border-[var(--line)] px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Edit Quotation</p>
@@ -249,5 +265,6 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
         </form>
       </section>
     ) : null}
-
+    </>
+  );
 }

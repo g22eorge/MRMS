@@ -82,11 +82,11 @@ export default async function CashFlowPage({
     bankAccountsCount,
   ] = await Promise.all([
     prisma.payment.findMany({
-      where: { invoiceId: { not: null }, receivedAt: { gte: from, lte: to } },
+      where: { orgId: user.orgId, invoiceId: { not: null }, receivedAt: { gte: from, lte: to } },
       select: { amount: true, currency: true, exchangeRateToBase: true, method: true },
     }).catch(() => []),
     prisma.payment.findMany({
-      where: { saleId: { not: null }, receivedAt: { gte: from, lte: to } },
+      where: { orgId: user.orgId, saleId: { not: null }, receivedAt: { gte: from, lte: to } },
       select: { amount: true, currency: true, exchangeRateToBase: true, method: true },
     }).catch(() => []),
     db.expense.findMany({
@@ -94,23 +94,23 @@ export default async function CashFlowPage({
       select: { amount: true, currency: true, exchangeRateToBase: true, category: true },
     }).catch(() => []),
     prisma.supplierPayment.findMany({
-      where: { paidAt: { gte: from, lte: to } },
+      where: { orgId: user.orgId, paidAt: { gte: from, lte: to } },
       select: { amount: true, currency: true },
     }).catch(() => []),
     prisma.bankTransaction.aggregate({
-      where: { type: "CREDIT", date: { gte: from, lte: to } },
+      where: { orgId: user.orgId, type: "CREDIT", date: { gte: from, lte: to } },
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: null } })),
     prisma.bankTransaction.aggregate({
-      where: { type: "DEBIT", date: { gte: from, lte: to } },
+      where: { orgId: user.orgId, type: "DEBIT", date: { gte: from, lte: to } },
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: null } })),
     prisma.payment.findMany({
-      where: { invoiceId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId: user.orgId, invoiceId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     prisma.payment.findMany({
-      where: { saleId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId: user.orgId, saleId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     db.expense.findMany({
@@ -118,7 +118,7 @@ export default async function CashFlowPage({
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     prisma.supplierPayment.findMany({
-      where: { paidAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId: user.orgId, paidAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true },
     }).catch(() => []),
     db.bankAccount.count().catch(() => 0),

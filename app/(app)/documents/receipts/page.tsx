@@ -133,6 +133,10 @@ export default async function ReceiptsPage({
         data: { amount, method, reference: reference || null, note: note || null },
       });
 
+      // Keep the linked Receipt document in sync (no relation/cascade exists,
+      // so the amount must be updated explicitly or the job timeline goes stale).
+      await tx.receipt.updateMany({ where: { orgId, paymentId }, data: { amount } });
+
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });
         if (invoice) {
@@ -170,6 +174,13 @@ export default async function ReceiptsPage({
 
     await prisma.$transaction(async (tx) => {
       await tx.payment.deleteMany({ where: { id: paymentId, orgId } });
+
+      // Void (rather than delete) the linked Receipt document so the numbered
+      // record is retained for audit; the job timeline already hides voided rows.
+      await tx.receipt.updateMany({
+        where: { orgId, paymentId },
+        data: { voidedAt: new Date(), voidReason: "Payment deleted" },
+      });
 
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });

@@ -49,12 +49,31 @@ const jobListSelect = {
   device:     { select: { id: true, deviceType: true, brand: true, model: true } },
 } as const;
 
+// External technicians must never receive client PII or client pricing from the
+// server (AGENTS.md invariant). Drop `client` and `clientBill` from their query;
+// they keep only their own payout fields (externalTechFee/externalTechBill).
+const jobListSelectExternalTech = {
+  id: true, jobNumber: true, status: true, repairPath: true,
+  receivedAt: true, updatedAt: true, completedAt: true,
+  clientPaid: true, externalPaid: true,
+  externalTechFee: true, externalTechBill: true,
+  deviceType: true, brand: true, model: true, serialOrImei: true,
+  clientId: true, deviceId: true, assignedToId: true,
+  issueDescription: true, diagnosisNotes: true,
+  assignedTo: { select: { id: true, name: true } },
+  device:     { select: { id: true, deviceType: true, brand: true, model: true } },
+} as const;
+
 type JobWithClient = Prisma.JobGetPayload<{
   select: typeof jobListSelect;
 }> & {
   oneTimeExternalAssignment?: { technicianName: string } | null;
 };
-type JobWithoutClient = JobWithClient;
+type JobWithoutClient = Prisma.JobGetPayload<{
+  select: typeof jobListSelectExternalTech;
+}> & {
+  oneTimeExternalAssignment?: { technicianName: string } | null;
+};
 
 const supportsOneTimeExternal = Boolean(
   Prisma.dmmf.datamodel.models
@@ -232,9 +251,11 @@ export default async function JobsPage({
             : {}),
         };
 
+  const externalTechRole = user.role === "TECHNICIAN_EXTERNAL";
+  const roleAwareSelect = externalTechRole ? jobListSelectExternalTech : jobListSelect;
   const selectWithOneTime = supportsOneTimeExternal
-    ? { ...jobListSelect, oneTimeExternalAssignment: { select: { technicianName: true } } }
-    : jobListSelect;
+    ? { ...roleAwareSelect, oneTimeExternalAssignment: { select: { technicianName: true } } }
+    : roleAwareSelect;
 
   let jobs: Array<JobWithClient | JobWithoutClient> = [];
   let total = 0;
@@ -368,7 +389,7 @@ export default async function JobsPage({
       assignedTo: job.assignedTo?.name ?? (job as { oneTimeExternalAssignment?: { technicianName: string } }).oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
-      clientBill: getClientBill(job),
+      clientBill: externalTechRole ? null : getClientBill(job),
       clientPaid: (job as { clientPaid?: boolean | null }).clientPaid ?? null,
       workflowReason: (job as { workflowReason?: JobRow["workflowReason"] }).workflowReason ?? null,
     }));
@@ -440,7 +461,7 @@ export default async function JobsPage({
       receivedAt: job.receivedAt,
       updatedAt: job.updatedAt,
       externalTechBill: getExternalTechBill(job),
-      clientBill: getClientBill(job),
+      clientBill: externalTechRole ? null : getClientBill(job),
       clientPaid: (job as { clientPaid?: boolean | null }).clientPaid ?? null,
       repairTimeline: (job as typeof job & { repairTimeline?: string | null }).repairTimeline ?? null,
       workflowReason: withWorkflow.workflowReason ?? null,

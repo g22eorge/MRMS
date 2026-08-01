@@ -127,13 +127,14 @@ export default async function ChartOfAccountsPage() {
     }),
     // All posted lines for running balance
     prisma.journalLine.findMany({
-      where: { journalEntry: { status: "POSTED" } },
+      where: { journalEntry: { orgId: user.orgId, status: "POSTED" } },
       select: { accountId: true, debit: true, credit: true },
     }),
     // This month's lines for activity
     prisma.journalLine.findMany({
       where: {
         journalEntry: {
+          orgId: user.orgId,
           status: "POSTED",
           date: { gte: thisMonthStart, lte: thisMonthEnd },
         },

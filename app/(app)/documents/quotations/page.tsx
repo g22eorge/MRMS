@@ -53,6 +53,12 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   const where: Prisma.QuotationWhereInput = { orgId: user.orgId };
   if (statusFilter !== "ALL") where.status = statusFilter as QuotationStatus;
+  if (q) {
+    where.OR = [
+      { quoteNumber: { contains: q } },
+      { client: { fullName: { contains: q } } },
+    ];
+  }
 
   const [quotations, totalItems] = await Promise.all([
     db.quotation.findMany({

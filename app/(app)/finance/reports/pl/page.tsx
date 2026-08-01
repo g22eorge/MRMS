@@ -34,7 +34,7 @@ export default async function PLPage({
 }: {
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { user, org } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
   const sp = await searchParams;
@@ -64,16 +64,17 @@ export default async function PLPage({
 
   const [lines, priorLines, trendLines] = await Promise.all([
     prisma.journalLine.findMany({
-      where: { journalEntry: { status: "POSTED", date: { gte: from, lte: to } } },
+      where: { journalEntry: { orgId, status: "POSTED", date: { gte: from, lte: to } } },
       include: { account: true, journalEntry: { select: { date: true } } },
     }),
     prisma.journalLine.findMany({
-      where: { journalEntry: { status: "POSTED", date: { gte: priorFrom, lte: priorTo } } },
+      where: { journalEntry: { orgId, status: "POSTED", date: { gte: priorFrom, lte: priorTo } } },
       include: { account: true },
     }),
     prisma.journalLine.findMany({
       where: {
         journalEntry: {
+          orgId,
           status: "POSTED",
           date: { gte: trendWindowStart, lte: trendWindowEnd },
         },
