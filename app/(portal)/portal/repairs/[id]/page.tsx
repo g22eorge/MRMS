@@ -1,0 +1,193 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { requirePortalSession } from "@/lib/portal-auth";
+import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/currency";
+import { PortalHeader } from "@/components/portal/PortalHeader";
+
+export const dynamic = "force-dynamic";
+
+// Customer-facing repair steps (internal workshop sub-states are collapsed).
+const STEPS = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED"] as const;
+const STEP_LABEL: Record<string, string> = {
+  RECEIVED: "Received",
+  DIAGNOSING: "Diagnosis",
+  AWAITING_APPROVAL: "Awaiting your approval",
+  IN_REPAIR: "In repair",
+  READY_FOR_PICKUP: "Ready for collection",
+  COMPLETED: "Completed",
+};
+const STEP_INDEX: Record<string, number> = {
+  RECEIVED: 0, INTAKE: 0,
+  DIAGNOSING: 1, REFERRED: 1,
+  AWAITING_APPROVAL: 2,
+  IN_REPAIR: 3,
+  READY_FOR_PICKUP: 4,
+  COMPLETED: 5, CLOSED: 5, DELIVERED: 5,
+};
+
+function fmtDate(d: Date | null) {
+  return d ? d.toISOString().slice(0, 10) : "—";
+}
+
+export default async function PortalRepairDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { portalUser, client, org } = await requirePortalSession();
+
+  // Isolation: the repair must belong to THIS customer + shop, or it doesn't exist.
+  const job = await prisma.job.findFirst({
+    where: { id, orgId: org.id, clientId: client.id },
+    select: {
+      id: true, jobNumber: true, status: true, statusNote: true,
+      brand: true, model: true, deviceType: true, serialOrImei: true,
+      receivedAt: true, completedAt: true,
+      quotations: {
+        select: { id: true, quoteNumber: true, status: true, totalAmount: true, currency: true, validUntil: true, sentAt: true },
+        orderBy: { createdAt: "desc" },
+      },
+      invoice: { select: { invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true } },
+    },
+  });
+  if (!job) notFound();
+
+  // Assessment report — only customer-visible ones (INTERNAL drafts never show).
+  const [reports, warranties, history] = await Promise.all([
+    prisma.diagnosisReport.findMany({
+      where: { orgId: org.id, jobId: job.id, NOT: { visibility: "INTERNAL" } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, summary: true, findings: true, recommendedWork: true, riskNotes: true, createdAt: true },
+    }),
+    prisma.warrantyClaim.findMany({
+      where: { orgId: org.id, originalJobId: job.id },
+      orderBy: { openedAt: "desc" },
+      select: { id: true, status: true, reason: true, resolution: true, openedAt: true, closedAt: true },
+    }),
+    prisma.jobStatusHistory.findMany({
+      where: { orgId: org.id, jobId: job.id },
+      orderBy: { changedAt: "asc" },
+      select: { toStatus: true, changedAt: true, reason: true },
+    }),
+  ]);
+
+  const currentStep = STEP_INDEX[job.status] ?? 0;
+  const companyName = client.organization || client.fullName;
+  const device = [job.brand, job.model].filter(Boolean).join(" ") || "Device";
+
+  const invoice = job.invoice;
+  const outstanding = invoice ? Math.max(0, invoice.totalAmount - invoice.paidAmount) : 0;
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" />
+
+      <Link href="/portal/repairs" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
+
+      {/* Summary */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="font-mono text-lg font-black text-[var(--ink)]">{job.jobNumber}</p>
+            <p className="text-[13px] text-[var(--ink-muted)]">{device}{job.serialOrImei ? ` · ${job.serialOrImei}` : ""}</p>
+          </div>
+          <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-[12px] font-bold text-[var(--accent)]">
+            {STEP_LABEL[job.status] ?? job.status.replaceAll("_", " ")}
+          </span>
+        </div>
+        {job.statusNote ? <p className="mt-2 rounded-lg bg-[var(--panel-strong)]/50 px-3 py-2 text-[13px] text-[var(--ink)]">{job.statusNote}</p> : null}
+      </div>
+
+      {/* Progress */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="mb-3 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Progress</p>
+        <ol className="space-y-2">
+          {STEPS.map((step, i) => {
+            const done = i < currentStep;
+            const current = i === currentStep;
+            return (
+              <li key={step} className="flex items-center gap-3 text-[13px]">
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${done ? "bg-emerald-500 text-white" : current ? "bg-[var(--accent)] text-black" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                  {done ? "✓" : i + 1}
+                </span>
+                <span className={current ? "font-semibold text-[var(--ink)]" : done ? "text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{STEP_LABEL[step]}</span>
+              </li>
+            );
+          })}
+        </ol>
+        {history.length > 0 ? (
+          <div className="mt-3 border-t border-[var(--line)] pt-3">
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">History</p>
+            <ul className="space-y-1">
+              {history.map((h, i) => (
+                <li key={i} className="flex justify-between text-[12px] text-[var(--ink-muted)]">
+                  <span>{STEP_LABEL[h.toStatus] ?? h.toStatus.replaceAll("_", " ")}</span>
+                  <span>{fmtDate(h.changedAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Assessment report */}
+      {reports.length > 0 ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+          {reports.map((r) => (
+            <div key={r.id} className="space-y-2 text-[13px]">
+              <p className="text-[var(--ink)]">{r.summary}</p>
+              {r.findings ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Findings:</span> <span className="text-[var(--ink)]">{r.findings}</span></div> : null}
+              {r.recommendedWork ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Recommended work:</span> <span className="text-[var(--ink)]">{r.recommendedWork}</span></div> : null}
+              {r.riskNotes ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Notes:</span> <span className="text-[var(--ink)]">{r.riskNotes}</span></div> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Quotation */}
+      {job.quotations.length > 0 ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Quotation</p>
+          {job.quotations.map((q) => (
+            <div key={q.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 py-2 text-[13px] last:border-0">
+              <div>
+                <span className="font-mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
+                {q.validUntil ? <span className="ml-2 text-[12px] text-[var(--ink-muted)]">valid until {fmtDate(q.validUntil)}</span> : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Financials */}
+      {invoice ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div><p className="text-[15px] font-bold tabular-nums text-[var(--ink)]">{formatMoney(invoice.totalAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Total</p></div>
+            <div><p className="text-[15px] font-bold tabular-nums text-emerald-600">{formatMoney(invoice.paidAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Paid</p></div>
+            <div><p className={`text-[15px] font-bold tabular-nums ${outstanding > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(outstanding, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Outstanding</p></div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Warranty */}
+      {warranties.length > 0 ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+          {warranties.map((w) => (
+            <div key={w.id} className="text-[13px]">
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${w.status === "OPEN" ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"}`}>{w.status}</span>
+              <span className="ml-2 text-[var(--ink)]">{w.reason}</span>
+              {w.resolution ? <p className="mt-1 text-[12px] text-[var(--ink-muted)]">{w.resolution}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}

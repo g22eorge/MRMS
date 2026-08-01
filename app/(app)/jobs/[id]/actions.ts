@@ -36,6 +36,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { postRefund } from "@/lib/accounting/post";
+import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
@@ -718,6 +719,15 @@ export async function updateJobAction(formData: FormData) {
             select: { client: { select: { fullName: true } } },
           }))?.client.fullName ?? "Client";
     await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
+    // Record the transition so the client portal (and staff) can show a real
+    // repair timeline. Additive + best-effort — never blocks the status change.
+    await writeJobStatusHistory({
+      orgId,
+      jobId: job.id,
+      fromStatus: existing.status,
+      toStatus: job.status,
+      changedById: user.id,
+    });
   }
 
   if (existing.assignedToId !== job.assignedToId && job.assignedToId) {

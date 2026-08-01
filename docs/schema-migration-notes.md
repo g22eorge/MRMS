@@ -130,3 +130,13 @@ proxy (`proxy.ts` PUBLIC_PATHS `/portal`) because they self-guard via
 `requirePortalSession` (own signed `portal-session` cookie).
 
 - Production: create the `PortalUser` + `PortalSession` tables; regenerate client.
+
+## 11. Portal Phase 4b — `RepairRequest.clientId` + `submittedByPortalUserId` — SAFE (additive)
+
+Two nullable columns so a portal-submitted repair request is attributable to the
+corporate client + portal user (and shown as "pending review" in the portal).
+Additive, no backfill. Also wired the previously-dead `writeJobStatusHistory` into
+the job status-change action so `JobStatusHistory` populates (drives the portal
+repair timeline).
+
+- Production: add the two columns; regenerate the client.

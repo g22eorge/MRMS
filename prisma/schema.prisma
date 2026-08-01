@@ -1473,6 +1473,9 @@ model RepairRequest {
 
   // Linked job (set when converted to a job)
   linkedJobId String?
+  // Portal attribution: set when a corporate client submits via the client portal.
+  clientId                String?
+  submittedByPortalUserId String?
 
   // Anti-spam
   submissionIp String?
@@ -1485,6 +1488,7 @@ model RepairRequest {
 
   @@index([requestStatus, createdAt])
   @@index([phone])
+  @@index([clientId])
 }
 
 // Allocates human-friendly repair request numbers safely under concurrency.

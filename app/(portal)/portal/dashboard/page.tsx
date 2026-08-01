@@ -1,8 +1,9 @@
 import type { JobStatus } from "@prisma/client";
+import Link from "next/link";
 
 import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
-import { portalLogoutAction } from "../actions";
+import { PortalHeader } from "@/components/portal/PortalHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -38,20 +39,10 @@ export default async function PortalDashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">{org.name} · Client Portal</p>
-          <h1 className="mt-0.5 text-xl font-black text-[var(--ink)]">Welcome, {portalUser.name}</h1>
-          <p className="text-[13px] text-[var(--ink-muted)]">
-            {companyName} · {ROLE_LABEL[portalUser.role] ?? portalUser.role}
-          </p>
-        </div>
-        <form action={portalLogoutAction}>
-          <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
-            Sign out
-          </button>
-        </form>
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="dashboard" />
+      <div>
+        <h1 className="text-xl font-black text-[var(--ink)]">Welcome, {portalUser.name}</h1>
+        <p className="text-[13px] text-[var(--ink-muted)]">{companyName} · {ROLE_LABEL[portalUser.role] ?? portalUser.role}</p>
       </div>
 
       {/* Summary */}
@@ -78,14 +69,16 @@ export default async function PortalDashboardPage() {
         ) : (
           <ul>
             {recent.map((job) => (
-              <li key={job.id} className="flex items-center justify-between border-b border-[var(--line)]/60 px-4 py-2.5 text-[13px] last:border-0">
-                <div>
-                  <span className="font-mono font-semibold text-[var(--ink)]">{job.jobNumber}</span>
-                  <span className="ml-2 text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
-                </div>
-                <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
-                  {job.status.replaceAll("_", " ")}
-                </span>
+              <li key={job.id} className="border-b border-[var(--line)]/60 text-[13px] last:border-0">
+                <Link href={`/portal/repairs/${job.id}`} className="flex items-center justify-between px-4 py-2.5 transition hover:bg-[var(--panel-strong)]/40">
+                  <div>
+                    <span className="font-mono font-semibold text-[var(--ink)]">{job.jobNumber}</span>
+                    <span className="ml-2 text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
+                  </div>
+                  <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
+                    {job.status.replaceAll("_", " ")}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
