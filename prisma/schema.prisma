@@ -655,6 +655,9 @@ model Job {
 
   receivedAt     DateTime        @default(now())
   completedAt    DateTime?
+  // Warranty coverage on the completed repair (shown in the client portal).
+  warrantyMonths    Int?
+  warrantyExpiresAt DateTime?
   deliveredAt    DateTime?
   deliveryMethod DeliveryMethod? // PICKUP, DELIVERY, COURIER
   deliveredTo    String? // name of person who received

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
+import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { canViewJobDocumentTimeline } from "@/lib/documents/routes";
 import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
@@ -286,6 +287,16 @@ export default async function JobDetailPage({
     select: { id: true, authorType: true, authorName: true, body: true, createdAt: true },
   }).catch(() => []);
 
+  const [assessments, warrantyInfo] = await Promise.all([
+    prisma.diagnosisReport.findMany({
+      where: { orgId, jobId: id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, visibility: true, summary: true, findings: true, recommendedWork: true, riskNotes: true },
+    }).catch(() => []),
+    prisma.job.findFirst({ where: { id, orgId }, select: { warrantyMonths: true, warrantyExpiresAt: true } }),
+  ]);
+  const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50";
+
   return (
     <>
       <JobDetailTabs
@@ -324,6 +335,68 @@ export default async function JobDetailPage({
           </form>
         </div>
       ) : null}
+
+      {/* Assessment report (AI-drafted, staff-reviewed) + warranty — surfaced to the client portal. */}
+      <div className="mx-auto mt-4 max-w-5xl space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+          <form action={generateAssessmentAction}>
+            <input type="hidden" name="jobId" value={id} />
+            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
+          </form>
+        </div>
+        {assessments.length === 0 ? (
+          <p className="text-[13px] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>
+        ) : (
+          assessments.map((r) => {
+            const visible = r.visibility !== "INTERNAL";
+            return (
+              <div key={r.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${visible ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{visible ? "Visible to client" : "Internal draft"}</span>
+                  <div className="flex gap-2">
+                    <form action={publishAssessmentAction}>
+                      <input type="hidden" name="reportId" value={r.id} />
+                      <input type="hidden" name="jobId" value={id} />
+                      <input type="hidden" name="visible" value={String(!visible)} />
+                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</button>
+                    </form>
+                    <form action={deleteAssessmentAction}>
+                      <input type="hidden" name="reportId" value={r.id} />
+                      <input type="hidden" name="jobId" value={id} />
+                      <button type="submit" className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[12px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button>
+                    </form>
+                  </div>
+                </div>
+                <form action={updateAssessmentAction} className="space-y-2">
+                  <input type="hidden" name="reportId" value={r.id} />
+                  <input type="hidden" name="jobId" value={id} />
+                  <input name="summary" defaultValue={r.summary} placeholder="Summary" className={ta} />
+                  <textarea name="findings" defaultValue={r.findings ?? ""} rows={2} placeholder="Inspection findings" className={ta} />
+                  <textarea name="recommendedWork" defaultValue={r.recommendedWork ?? ""} rows={2} placeholder="Recommended / completed work" className={ta} />
+                  <textarea name="riskNotes" defaultValue={r.riskNotes ?? ""} rows={2} placeholder="Notes / recommendations" className={ta} />
+                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] text-white">Save report</button>
+                </form>
+              </div>
+            );
+          })
+        )}
+
+        <div className="border-t border-[var(--line)] pt-3">
+          <p className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+          <p className="mb-2 text-[13px] text-[var(--ink-muted)]">
+            {warrantyInfo?.warrantyExpiresAt
+              ? `Covered for ${warrantyInfo.warrantyMonths} month${warrantyInfo.warrantyMonths === 1 ? "" : "s"} — until ${warrantyInfo.warrantyExpiresAt.toISOString().slice(0, 10)}.`
+              : "No warranty set."}
+          </p>
+          <form action={setWarrantyAction} className="flex items-center gap-2">
+            <input type="hidden" name="jobId" value={id} />
+            <input name="months" type="number" min={0} max={60} defaultValue={warrantyInfo?.warrantyMonths ?? 0} className="w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]" />
+            <span className="text-[13px] text-[var(--ink-muted)]">months</span>
+            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] text-white">Set warranty</button>
+          </form>
+        </div>
+      </div>
     </>
   );
 }

@@ -43,6 +43,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       id: true, jobNumber: true, status: true, statusNote: true,
       brand: true, model: true, deviceType: true, serialOrImei: true,
       receivedAt: true, completedAt: true,
+      warrantyMonths: true, warrantyExpiresAt: true,
       quotations: {
         select: { id: true, quoteNumber: true, status: true, totalAmount: true, currency: true, validUntil: true, sentAt: true },
         orderBy: { createdAt: "desc" },
@@ -225,7 +226,27 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
         </form>
       </div>
 
-      {/* Warranty */}
+      {/* Warranty coverage */}
+      {job.warrantyExpiresAt ? (
+        (() => {
+          const active = job.warrantyExpiresAt >= new Date();
+          return (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+              <p className="mb-1 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+              <p className="text-[13px]">
+                <span className={`mr-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                  {active ? "Active" : "Expired"}
+                </span>
+                <span className="text-[var(--ink)]">
+                  {job.warrantyMonths}-month warranty {active ? "covering this repair until" : "expired on"} {fmtDate(job.warrantyExpiresAt)}.
+                </span>
+              </p>
+            </div>
+          );
+        })()
+      ) : null}
+
+      {/* Warranty claims */}
       {warranties.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>

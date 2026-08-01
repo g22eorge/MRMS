@@ -146,3 +146,11 @@ repair timeline).
 New `RepairMessage` table (two-way repair thread between staff and portal users;
 not org-scoped, queried with explicit orgId+jobId). `NotificationType` gains
 `PORTAL_MESSAGE`. Additive, no backfill; regenerate the client in production.
+
+## 13. Portal Phase 4c — assessment reports + warranty — SAFE (additive)
+
+`Job.warrantyMonths` + `Job.warrantyExpiresAt` (nullable) for warranty coverage
+shown in the portal. `DiagnosisReport` (already in schema) is now wired: staff
+generate an AI-drafted (Gemini) or blank report, edit, then flip `visibility`
+INTERNAL->CLIENT to publish it to the portal. Additive columns, no backfill.
+Needs `GEMINI_API_KEY` for AI drafting (degrades to a blank editable report).
