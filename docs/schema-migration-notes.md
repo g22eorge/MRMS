@@ -119,3 +119,14 @@ with their payment instead of orphaning. `DocumentTaxLine` and PaymentAllocation
   constraint, so adding the value is a no-op at the DB level — only the Prisma
   client needs regenerating.
 - Production: create the `SystemAnnouncement` table; regenerate the client.
+
+## 10. Portal/SaaS Phase 4a — `PortalUser` + `PortalSession` + `PortalRole` — SAFE (additive)
+
+New customer-portal identity, fully separate from staff auth. Additive tables +
+enum; no backfill. `PortalUser` links to `Client` + `Organization` (both cascade).
+NOT added to `ORG_SCOPED_MODELS` — `lib/portal-auth.ts` scopes every query by the
+portal user's own org + client. Portal routes are exempted from the staff auth
+proxy (`proxy.ts` PUBLIC_PATHS `/portal`) because they self-guard via
+`requirePortalSession` (own signed `portal-session` cookie).
+
+- Production: create the `PortalUser` + `PortalSession` tables; regenerate client.

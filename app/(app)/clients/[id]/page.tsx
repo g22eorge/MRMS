@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
+import { createPortalUserAction, togglePortalUserAction } from "./portal-actions";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
@@ -128,6 +129,15 @@ export default async function ClientDetailPage({
 
   // M20: statement of account (receivables) — only for finance-capable roles.
   const statement = canSeeFinancials ? await getClientStatement(orgId, id, org.baseCurrency) : null;
+
+  // Portal access (Phase 4): corporate-client logins this shop has provisioned.
+  const portalUsers = canEdit
+    ? await prisma.portalUser.findMany({
+        where: { orgId, clientId: id },
+        select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
 
   async function updateClient(formData: FormData) {
     "use server";
@@ -351,6 +361,49 @@ export default async function ClientDetailPage({
               </table>
             </div>
           )}
+        </div>
+      ) : null}
+
+      {canEdit ? (
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="mb-3">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
+          </div>
+
+          {portalUsers.length > 0 && (
+            <div className="mb-3 space-y-1.5">
+              {portalUsers.map((pu) => (
+                <div key={pu.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[13px]">
+                  <div>
+                    <span className="font-medium text-[var(--ink)]">{pu.name}</span>
+                    <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
+                    {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">revoked</span>}
+                  </div>
+                  <form action={togglePortalUserAction}>
+                    <input type="hidden" name="portalUserId" value={pu.id} />
+                    <input type="hidden" name="clientId" value={client.id} />
+                    <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
+                      {pu.isActive ? "Revoke" : "Restore"}
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form action={createPortalUserAction} className="grid gap-2 sm:grid-cols-2">
+            <input type="hidden" name="clientId" value={client.id} />
+            <input name="name" required placeholder="Full name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <input name="email" type="email" required placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <select name="role" defaultValue="IT_OFFICER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]">
+              <option value="IT_OFFICER">IT Officer</option>
+              <option value="ORG_ADMIN">Organization Administrator</option>
+              <option value="MEMBER">Member</option>
+            </select>
+            <input name="password" type="text" required minLength={8} placeholder="Temporary password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white sm:col-span-2">Create portal login</button>
+          </form>
         </div>
       ) : null}
 

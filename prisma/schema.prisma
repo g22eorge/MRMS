@@ -100,6 +100,7 @@ model Organization {
   bankAccounts           BankAccount[]
   bankTransactions       BankTransaction[]
   campaigns              Campaign[]
+  portalUsers            PortalUser[] @relation("OrgPortalUsers")
 
   @@index([slug])
   @@index([isActive])
@@ -532,6 +533,7 @@ model Client {
   recurringInvoices RecurringInvoice[]
   campaignContacts  CampaignContact[]
   receipts          Receipt[]
+  portalUsers       PortalUser[] @relation("ClientPortalUsers")
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -3185,4 +3187,55 @@ model SystemAnnouncement {
   updatedAt   DateTime  @updatedAt
 
   @@index([isActive, startsAt, endsAt])
+}
+
+// ── Corporate Client Portal (Phase 4) ───────────────────────────────────────
+// A PortalUser is a CUSTOMER login, fully separate from staff `User`/BetterAuth.
+// It belongs to a Client (the corporate customer) and an Organization (the shop
+// tenant), so access is isolated at both the tenant and the customer level.
+// Not added to ORG_SCOPED_MODELS — portal-auth scopes every query explicitly.
+
+enum PortalRole {
+  ORG_ADMIN // corporate customer's admin — manages portal users, sees all their repairs/docs
+  IT_OFFICER // primary contact — submits and tracks repairs
+  MEMBER // additional user; permissions configurable
+}
+
+model PortalUser {
+  id           String     @id @default(cuid())
+  orgId        String
+  org          Organization @relation("OrgPortalUsers", fields: [orgId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client     @relation("ClientPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
+  name         String
+  email        String
+  phone        String?
+  department   String?
+  position     String?
+  role         PortalRole @default(IT_OFFICER)
+  passwordHash String?
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdById  String? // staff user who provisioned this portal login
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  sessions PortalSession[]
+
+  @@unique([orgId, email])
+  @@index([clientId])
+  @@index([orgId])
+}
+
+model PortalSession {
+  id           String     @id @default(cuid())
+  token        String     @unique
+  portalUserId String
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime   @default(now())
+
+  @@index([portalUserId])
 }

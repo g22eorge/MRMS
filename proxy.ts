@@ -32,6 +32,7 @@ const PUBLIC_PATHS = [
   "/status",
   "/onboarding",           // New-user org setup flow
   "/feedback",             // Public feedback widget
+  "/portal",               // Client portal — has its own auth (requirePortalSession)
 
   // Public metadata assets
   "/opengraph-image",
