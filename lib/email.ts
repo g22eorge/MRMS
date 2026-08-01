@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 
+import { TRIAL_DAYS } from "@/lib/billing-access";
+
 const FROM = process.env.EMAIL_FROM ?? "Duuka ProMax <noreply@app.eagleinfosolutions.com>";
 
 async function send(to: string, subject: string, html: string) {
@@ -32,7 +34,7 @@ export async function sendWelcomeEmail(to: string, name: string, orgName: string
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   await send(to, `Welcome to Duuka ProMax — ${orgName}`, base(`
     <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 8px">Welcome, ${name}!</h2>
-    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your workspace <strong style="color:#fff">${orgName}</strong> is live. You're on a free 14-day trial — no credit card needed.</p>
+    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your workspace <strong style="color:#fff">${orgName}</strong> is live. You're on a free ${TRIAL_DAYS}-day trial — no credit card needed.</p>
     <a href="${appUrl}/dashboard" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Open your workspace →</a>
   `));
 }

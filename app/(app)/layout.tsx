@@ -13,13 +13,9 @@ import { can } from "@/lib/permissions";
 import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
-import { sendTrialExpiryWarning } from "@/lib/email";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getOrgModules } from "@/lib/module-access";
 import Link from "next/link";
-
-// Module-level dedup: only send trial warning email once per server instance per org.
-const trialWarningSent = new Set<string>();
 
 export default async function AppLayout({
   children,
@@ -68,28 +64,8 @@ export default async function AppLayout({
   const isSuspended = trialExpired || isPastDue;
 
   // Read-only mode: allow navigation + downloads. Mutations are blocked server-side.
-
-  // ── Trial expiry warning email (fire-and-forget, once per server instance) ─
-  if (org?.billingStatus === "TRIALING" && org.trialEndsAt) {
-    const daysLeft = Math.ceil((org.trialEndsAt.getTime() - now.getTime()) / 86_400_000);
-    if (daysLeft <= 3 && daysLeft > 0 && !trialWarningSent.has(orgId)) {
-      trialWarningSent.add(orgId);
-      prisma.user
-        .findFirst({ where: { orgId, role: "ADMIN" }, select: { email: true, name: true } })
-        .then((admin) => {
-          if (admin) {
-            void sendTrialExpiryWarning(
-              admin.email,
-              admin.name,
-              org.name,
-              daysLeft,
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  }
-  // ─────────────────────────────────────────────────────────────────────────
+  // Trial-expiry reminders (14/7/3/1 days) are sent reliably by the
+  // /api/cron/subscription-lifecycle cron, not from this render path.
 
   const paymentWhere: Prisma.JobWhereInput = {
     orgId,

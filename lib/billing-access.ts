@@ -1,5 +1,11 @@
 import type { OrgBillingStatus, OrgPlan } from "@prisma/client";
 
+/** Length of the free trial granted to every new organization, in days. */
+export const TRIAL_DAYS = 30;
+
+/** Days-remaining thresholds at which the org admin is reminded the trial is ending. */
+export const TRIAL_REMINDER_DAYS = [14, 7, 3, 1] as const;
+
 export type OrgBillingSnapshot = {
   plan: OrgPlan;
   billingStatus: OrgBillingStatus;

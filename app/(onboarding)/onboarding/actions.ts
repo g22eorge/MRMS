@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { sendWelcomeEmail } from "@/lib/email";
 import { ALL_MODULES, recommendPlanForModules } from "@/lib/module-access";
+import { TRIAL_DAYS } from "@/lib/billing-access";
 
 const schema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters").max(100),
@@ -77,7 +78,7 @@ export async function createOrganization(
   const recommendedPlan = recommendPlanForModules(modules);
 
   const trialEndsAt = new Date();
-  trialEndsAt.setDate(trialEndsAt.getDate() + 60);
+  trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
   await prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({

@@ -12,6 +12,7 @@ import {
   recommendPlanForModules,
 } from "@/lib/module-catalog";
 import { createOrganization, type CreateOrgState } from "./actions";
+import { TRIAL_DAYS } from "@/lib/billing-access";
 
 // ── Plan display metadata ─────────────────────────────────────────────────────
 
@@ -251,11 +252,11 @@ export function OnboardingForm() {
                 <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
                   {meta.price == null
                     ? "Free forever — no credit card needed"
-                    : `${fmt(meta.price)} after your 60-day free trial`}
+                    : `${fmt(meta.price)} after your ${TRIAL_DAYS}-day free trial`}
                 </p>
               </div>
               <span className="rounded-full bg-emerald-100 px-2 py-1 text-[12px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                60 days free
+                {TRIAL_DAYS} days free
               </span>
             </div>
             {meta.price != null && (

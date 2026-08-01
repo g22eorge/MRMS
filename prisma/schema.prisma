@@ -1165,6 +1165,7 @@ enum NotificationType {
   FIELD_VISIT_COMPLETED
   CREDIT_NOTE_ISSUED
   REFUND_ISSUED
+  BILLING
 }
 
 enum NotificationChannel {
