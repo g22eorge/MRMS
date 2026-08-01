@@ -124,14 +124,17 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
 }
 
 export async function cancelSupplierBillAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireInventoryManager();
+  const { orgId, session } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.supplierBill.updateMany({
+  const result = await prisma.supplierBill.updateMany({
     where: { id, orgId, paidAmount: 0 },
     data: { status: "CANCELLED" },
   });
+  if (result.count > 0) {
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "SupplierBill", entityId: id, action: "SUPPLIER_BILL_CANCELLED", summary: `Supplier bill ${id} cancelled` });
+  }
 
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");

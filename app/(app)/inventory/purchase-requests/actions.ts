@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -121,6 +122,10 @@ export async function reviewPurchaseRequestAction(formData: FormData): Promise<v
     },
   });
 
+  if (req) {
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseRequest", entityId: id, action: `PURCHASE_REQUEST_${action}`, summary: `${req.requestNumber} ${action.toLowerCase()}` });
+  }
+
   if (action === "APPROVED" && req) {
     const actor = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, email: true } });
     notifyPurchaseRequest({
@@ -137,17 +142,18 @@ export async function reviewPurchaseRequestAction(formData: FormData): Promise<v
 }
 
 export async function deletePurchaseRequestAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireInventoryManager();
+  const { orgId, session } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
   const request = await prisma.purchaseRequest.findFirst({
     where: { id, orgId },
-    select: { convertedPoId: true },
+    select: { convertedPoId: true, requestNumber: true },
   });
   if (!request) return;
 
   await prisma.purchaseRequest.delete({ where: { id } });
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseRequest", entityId: id, action: "PURCHASE_REQUEST_DELETED", summary: `${request.requestNumber} deleted` });
 
   revalidatePath("/inventory/purchase-requests");
   revalidatePath("/procurement");

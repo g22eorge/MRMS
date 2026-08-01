@@ -40,7 +40,7 @@ function parseOptionalDate(raw: FormDataEntryValue | null, label: string): { dat
 export async function createPurchaseOrderAction(
   formData: FormData,
 ): Promise<{ id?: string; error?: string }> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
 
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   if (!supplierId) return { error: "Supplier is required" };
@@ -114,6 +114,7 @@ export async function createPurchaseOrderAction(
         },
       },
     });
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: po.id, action: "PURCHASE_ORDER_CREATED", summary: `PO ${reference ?? po.id} created${issueNow ? " (issued)" : ""}` });
     revalidatePath("/procurement");
     revalidatePath("/inventory/purchase-orders");
     return { id: po.id };
@@ -198,7 +199,7 @@ export async function setPurchaseOrderStatusAction(formData: FormData): Promise<
 }
 
 export async function deletePurchaseOrderAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
@@ -206,6 +207,7 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
     where: { id, orgId },
     select: {
       id: true,
+      reference: true,
       items: { select: { qtyReceived: true } },
       _count: { select: { goodsReceivedNotes: true, supplierBills: true } },
     },
@@ -223,6 +225,7 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
   }
 
   await prisma.purchaseOrder.delete({ where: { id } });
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_DELETED", summary: `PO ${po.reference ?? id} deleted` });
 
   revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
