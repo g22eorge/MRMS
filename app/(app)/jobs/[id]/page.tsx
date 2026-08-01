@@ -340,10 +340,15 @@ export default async function JobDetailPage({
       <div className="mx-auto mt-4 max-w-5xl space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
-          <form action={generateAssessmentAction}>
-            <input type="hidden" name="jobId" value={id} />
-            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
-          </form>
+          <div className="flex items-center gap-2">
+            {assessments.length > 0 ? (
+              <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
+            ) : null}
+            <form action={generateAssessmentAction}>
+              <input type="hidden" name="jobId" value={id} />
+              <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
+            </form>
+          </div>
         </div>
         {assessments.length === 0 ? (
           <p className="text-[13px] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>

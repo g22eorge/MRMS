@@ -139,7 +139,12 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {/* Assessment report */}
       {reports.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+            <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">
+              ↓ Download PDF
+            </a>
+          </div>
           {reports.map((r) => (
             <div key={r.id} className="space-y-2 text-[13px]">
               <p className="text-[var(--ink)]">{r.summary}</p>
