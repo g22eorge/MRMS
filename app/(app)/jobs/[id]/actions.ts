@@ -885,7 +885,9 @@ export async function recordClientPaymentAction(formData: FormData) {
       await tx.job.updateMany({
         where: { id: job.id, orgId },
         data: {
-          invoiceNumber,
+          // Use the collision-checked number, not the raw derived one, so the
+          // job's invoiceNumber (a @unique column) always matches its invoice.
+          invoiceNumber: safeInvoiceNumber,
           invoiceIssuedAt: issuedAt,
         },
       });

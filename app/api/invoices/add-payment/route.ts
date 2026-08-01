@@ -1,8 +1,11 @@
+import type { PaymentMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { toBaseAmount } from "@/lib/currency";
+
+const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 import { createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { revalidatePath } from "next/cache";
@@ -42,12 +45,26 @@ export async function POST(request: Request) {
   }
 
   const invCurrency = invoice.currency ?? "UGX";
-  const baseAmount = toBaseAmount({ amount, currency: invCurrency, baseCurrency, exchangeRateToBase: null });
-  const baseTotal = toBaseAmount({ amount: invoice.totalAmount, currency: invCurrency, baseCurrency, exchangeRateToBase: null });
-  const basePaid = toBaseAmount({ amount: invoice.paidAmount ?? 0, currency: invCurrency, baseCurrency, exchangeRateToBase: null });
+
+  // Foreign-currency payments must carry an FX rate; without it toBaseAmount
+  // returns 0, so paidAmount never advances and the invoice never marks PAID.
+  const rawRate = String(body.exchangeRateToBase ?? "").replace(/,/g, "").trim();
+  const exchangeRateToBase = invCurrency === baseCurrency ? null : (rawRate ? Number(rawRate) : null);
+  if (invCurrency !== baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
+    return new Response("Exchange rate is required for a foreign-currency payment", { status: 400 });
+  }
+
+  const baseAmount = toBaseAmount({ amount, currency: invCurrency, baseCurrency, exchangeRateToBase });
+  const baseTotal = toBaseAmount({ amount: invoice.totalAmount, currency: invCurrency, baseCurrency, exchangeRateToBase });
+  const basePaid = toBaseAmount({ amount: invoice.paidAmount ?? 0, currency: invCurrency, baseCurrency, exchangeRateToBase });
   if (baseAmount > baseTotal - basePaid) {
     return new Response("Overpayment", { status: 400 });
   }
+
+  const methodUpper = methodRaw.toUpperCase();
+  const method: PaymentMethod = (PAYMENT_METHODS as string[]).includes(methodUpper)
+    ? (methodUpper as PaymentMethod)
+    : "OTHER";
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -57,7 +74,8 @@ export async function POST(request: Request) {
           invoiceId,
           amount,
           currency: invCurrency,
-          method: methodRaw.toUpperCase() as any,
+          exchangeRateToBase,
+          method,
           kind: "PAYMENT",
           receivedAt: new Date(),
           createdById: user.id,

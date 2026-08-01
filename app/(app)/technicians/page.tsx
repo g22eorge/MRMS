@@ -85,10 +85,10 @@ export default async function TechniciansPage({
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const [totalTechs, internalCount, externalCount, assignedThisMonth] = await Promise.all([
-    prisma.user.count({ where: { role: { in: ["TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] } } }).catch(() => 0),
-    prisma.user.count({ where: { role: "TECHNICIAN_INTERNAL" } }).catch(() => 0),
-    prisma.user.count({ where: { role: "TECHNICIAN_EXTERNAL" } }).catch(() => 0),
-    prisma.job.count({ where: { assignedToId: { not: null }, receivedAt: { gte: monthStart } } }).catch(() => 0),
+    prisma.user.count({ where: { orgId: user.orgId, role: { in: ["TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] } } }).catch(() => 0),
+    prisma.user.count({ where: { orgId: user.orgId, role: "TECHNICIAN_INTERNAL" } }).catch(() => 0),
+    prisma.user.count({ where: { orgId: user.orgId, role: "TECHNICIAN_EXTERNAL" } }).catch(() => 0),
+    prisma.job.count({ where: { orgId: user.orgId, assignedToId: { not: null }, receivedAt: { gte: monthStart } } }).catch(() => 0),
   ]);
 
   const validStatuses = new Set<string>(JOB_STATUSES);

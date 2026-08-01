@@ -487,7 +487,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
 
     const existingSale = await prisma.sale.findFirst({
       where: { id: saleId, orgId },
-      select: { id: true, status: true, saleNumber: true, currency: true },
+      select: { id: true, status: true, saleNumber: true, currency: true, totalAmount: true },
     });
     if (!existingSale || existingSale.status !== "PAID") return;
 
@@ -518,6 +518,14 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const currency = normalizeCurrency(existingSale.currency, org.baseCurrency);
     const totalAmount = picked.reduce((sum, p) => sum + p.lineTotal, 0);
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) return;
+
+    // Cumulative-return cap: total value across all credit notes for this sale
+    // must never exceed what was sold (prevents unlimited over-refund).
+    const priorCredited = await prisma.creditNote.aggregate({
+      where: { orgId, saleId },
+      _sum: { totalAmount: true },
+    });
+    if ((priorCredited._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) return;
 
     const result = await prisma.$transaction(async (tx) => {
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote");

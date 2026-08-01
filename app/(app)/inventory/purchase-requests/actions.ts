@@ -171,14 +171,20 @@ export async function convertPurchaseRequestToPoAction(formData: FormData): Prom
   const supplier = await prisma.supplier.findFirst({ where: { id: supplierId, orgId, isActive: true }, select: { id: true } });
   if (!supplier) return;
 
+  // Don't issue (ORDERED) a PO with zero-cost lines — that bypasses the same
+  // guard createPurchaseOrderAction enforces and lets a receipt zero out the
+  // part's cost basis. Leave it DRAFT until costs are filled in.
+  const hasZeroCost = request.items.some((item) => !item.estimatedUnitCost || item.estimatedUnitCost <= 0);
+  const poStatus = hasZeroCost ? "DRAFT" : "ORDERED";
+
   const po = await prisma.$transaction(async (tx) => {
     const created = await tx.purchaseOrder.create({
       data: {
         orgId,
         supplierId,
-        status: "ORDERED",
+        status: poStatus,
         reference,
-        orderedAt: new Date(),
+        orderedAt: hasZeroCost ? null : new Date(),
         expectedAt: expectedAtRaw ? new Date(expectedAtRaw) : null,
         notes: `Converted from ${request.requestNumber}${request.reason ? `: ${request.reason}` : ""}`,
         items: {

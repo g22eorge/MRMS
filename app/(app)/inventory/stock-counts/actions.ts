@@ -62,6 +62,14 @@ export async function createStockCountAction(formData: FormData): Promise<{ id?:
   const parts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true } });
   if (parts.length !== partIds.length) return { error: "One or more inventory items are invalid" };
 
+  // Snapshot system quantity server-side from the location's live stock — never
+  // trust the client-supplied systemQty (which could be stale or forged).
+  const locationStock = await prisma.partLocationStock.findMany({
+    where: { orgId, locationId, partId: { in: partIds } },
+    select: { partId: true, qtyOnHand: true },
+  });
+  const systemQtyByPart = new Map(locationStock.map((row) => [row.partId, row.qtyOnHand]));
+
   const stockCount = await prisma.stockCount.create({
     data: {
       orgId,
@@ -73,13 +81,16 @@ export async function createStockCountAction(formData: FormData): Promise<{ id?:
       note,
       createdById: session.user.id,
       items: {
-        create: lines.map((line) => ({
-          partId: line.partId,
-          systemQty: line.systemQty,
-          countedQty: line.countedQty,
-          varianceQty: line.countedQty - line.systemQty,
-          note: line.note ?? null,
-        })),
+        create: lines.map((line) => {
+          const systemQty = systemQtyByPart.get(line.partId) ?? 0;
+          return {
+            partId: line.partId,
+            systemQty,
+            countedQty: line.countedQty,
+            varianceQty: line.countedQty - systemQty,
+            note: line.note ?? null,
+          };
+        }),
       },
     },
     select: { id: true },

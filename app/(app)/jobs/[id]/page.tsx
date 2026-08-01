@@ -161,6 +161,7 @@ export default async function JobDetailPage({
     can.assignJobs(user)
       ? await prisma.user.findMany({
           where: {
+            orgId,
             isActive: true,
             role: { in: [Role.TECHNICIAN_INTERNAL, Role.TECHNICIAN_EXTERNAL] },
           },

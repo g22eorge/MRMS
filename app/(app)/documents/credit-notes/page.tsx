@@ -206,6 +206,12 @@ export default async function CreditNotesPage({
 
     const totalAmount = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
+    // Cumulative-return cap: existing credit notes for this sale plus this one
+    // must not exceed the sale total (prevents unlimited over-refund).
+    const saleTotal = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { totalAmount: true } });
+    const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
+    if (saleTotal && (priorCredited._sum.totalAmount ?? 0) + totalAmount > saleTotal.totalAmount) return;
+
     let creditNoteNumber = "";
     let creditNoteId = "";
     await prisma.$transaction(async (tx) => {

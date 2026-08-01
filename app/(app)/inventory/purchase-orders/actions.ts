@@ -203,9 +203,21 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
     where: { id, orgId },
     select: {
       id: true,
+      items: { select: { qtyReceived: true } },
+      _count: { select: { goodsReceivedNotes: true, supplierBills: true } },
     },
   });
   if (!po) return;
+
+  // Never hard-delete a PO once stock was received or a GRN/bill is linked —
+  // deletion would orphan those records and leave received stock unreversed.
+  if (
+    po.items.some((item) => item.qtyReceived > 0) ||
+    po._count.goodsReceivedNotes > 0 ||
+    po._count.supplierBills > 0
+  ) {
+    return;
+  }
 
   await prisma.purchaseOrder.delete({ where: { id } });
 
@@ -297,13 +309,22 @@ export async function receiveStockAction(
             createdById: session.user.id,
           },
         });
-        const aggregate = await tx.partLocationStock.aggregate({
-          where: { partId: u.partId },
-          _sum: { qtyOnHand: true },
-        });
+        const [partBefore, aggregate] = await Promise.all([
+          tx.part.findUnique({ where: { id: u.partId }, select: { unitCost: true } }),
+          tx.partLocationStock.aggregate({ where: { partId: u.partId }, _sum: { qtyOnHand: true } }),
+        ]);
+        const newQty = aggregate._sum.qtyOnHand ?? 0;
+        // Weighted-average cost; never overwrite the cost basis with a zero/
+        // negative receipt price (which would destroy valuation and margins).
+        let nextCost = partBefore?.unitCost ?? 0;
+        if (u.unitCost > 0) {
+          const oldQty = Math.max(0, newQty - u.delta);
+          const denom = oldQty + u.delta;
+          nextCost = denom > 0 ? (oldQty * nextCost + u.delta * u.unitCost) / denom : u.unitCost;
+        }
         await tx.part.update({
           where: { id: u.partId },
-          data: { qtyOnHand: aggregate._sum.qtyOnHand ?? 0, unitCost: u.unitCost },
+          data: { qtyOnHand: newQty, unitCost: nextCost },
         });
       }
     }

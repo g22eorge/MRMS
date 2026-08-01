@@ -377,7 +377,7 @@ export async function addQuotationItem(
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   await assertEditableQuotation(quotationId, orgId, user);
-  const discount = can.overrideDiscount(user) ? item.discount : 0;
+  const discount = can.overrideDiscount(user) ? Math.max(0, Math.min(100, item.discount)) : 0;
   const lineTotal = quotationLineTotal({ ...item, discount });
 
   await prisma.quotationItem.create({
@@ -431,7 +431,7 @@ export async function updateQuotationItem(
   if (!existing) throw new Error("Quotation item not found");
   await assertEditableQuotation(existing.quotationId, orgId, user);
 
-  const discount = can.overrideDiscount(user) ? item.discount : 0;
+  const discount = can.overrideDiscount(user) ? Math.max(0, Math.min(100, item.discount)) : 0;
   const lineTotal = quotationLineTotal({ ...item, discount });
 
   await prisma.quotationItem.update({

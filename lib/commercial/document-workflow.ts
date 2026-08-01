@@ -171,7 +171,9 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
                 description: item.description,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                discountAmount: item.discount,
+                // QuotationItem.discount is a percentage; InvoiceLine.discountAmount
+                // is an absolute currency value — convert instead of copying raw.
+                discountAmount: item.quantity * item.unitPrice * ((item.discount ?? 0) / 100),
                 taxAmount,
                 lineTotal: item.lineTotal,
               };
