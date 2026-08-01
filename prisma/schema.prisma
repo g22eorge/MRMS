@@ -458,6 +458,8 @@ enum SaleBillingMode {
 enum SaleStatus {
   OPEN
   PAID
+  PARTIALLY_RETURNED
+  RETURNED
   VOID
 }
 
@@ -769,6 +771,7 @@ model Payment {
   createdById String?
   createdBy   User?   @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   receipts    Receipt[]
+  allocations PaymentAllocation[]
 
   note      String?
   createdAt DateTime @default(now())
@@ -1061,6 +1064,13 @@ model PartStockTransaction {
   type        StockTransactionType
   quantity    Int
   reason      String?
+  // M6: org scope, location, unit cost, and the source document that caused the
+  // movement — so a stock ledger row can be reconciled and valued.
+  orgId       String?
+  locationId  String?
+  unitCost    Float? // cost per unit at the time of the movement
+  sourceType  String? // GRN | PO | ADJUSTMENT | TRANSFER | SALE | REPAIR | CREDIT_NOTE
+  sourceId    String? // id of the causing document
   jobId       String?
   job         Job?                 @relation(fields: [jobId], references: [id], onDelete: SetNull)
   saleId      String?
@@ -1070,6 +1080,7 @@ model PartStockTransaction {
   createdAt   DateTime             @default(now())
 
   @@index([partId, createdAt])
+  @@index([orgId, createdAt])
   @@index([jobId])
   @@index([saleId])
 }
@@ -2422,6 +2433,9 @@ model PaymentAllocation {
   id          String   @id @default(cuid())
   orgId       String
   paymentId   String
+  // L10: real FK so allocations die with their payment instead of orphaning.
+  // (targetType/targetId stays polymorphic by design.)
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   targetType  String
   targetId    String
   amount      Float

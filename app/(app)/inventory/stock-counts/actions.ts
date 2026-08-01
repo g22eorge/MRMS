@@ -138,7 +138,7 @@ export async function approveStockCountAction(formData: FormData): Promise<void>
         update: { qtyOnHand: { increment: item.varianceQty } },
       });
       await tx.partStockTransaction.create({
-        data: { partId: item.partId, type: "ADJUST", quantity: item.varianceQty, reason: `STOCK_COUNT ${count.countNumber}: system=${item.systemQty} counted=${item.countedQty}`, createdById: session.user.id },
+        data: { partId: item.partId, orgId, locationId: count.locationId, sourceType: "STOCK_COUNT", sourceId: id, type: "ADJUST", quantity: item.varianceQty, reason: `STOCK_COUNT ${count.countNumber}: system=${item.systemQty} counted=${item.countedQty}`, createdById: session.user.id },
       });
       // Part.qtyOnHand is authoritative: apply the counted variance as a delta
       // rather than recomputing from SUM(location), which would wipe unlocated

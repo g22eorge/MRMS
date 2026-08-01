@@ -312,6 +312,11 @@ export async function receiveStockAction(
         await tx.partStockTransaction.create({
           data: {
             partId: u.partId,
+            orgId,
+            locationId,
+            unitCost: u.unitCost,
+            sourceType: "GRN",
+            sourceId: grnId,
             type: "IN",
             quantity: u.delta,
             reason: `Received via ${grnNumber}`,

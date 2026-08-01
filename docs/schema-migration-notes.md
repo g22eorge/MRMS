@@ -80,8 +80,33 @@ product invoices decrement on issue and restore on void; repair invoices
 (`sourceType = "QuotationItem"`) are consumed at job completion instead, so there
 is no double-count.
 
-## Still pending
+## 6. `PartStockTransaction` enrichment (M6) — SAFE (additive) — DONE
 
-- **M6** — `PartStockTransaction` `orgId` / `locationId` / `unitCost` / source ref:
-  additive, but `orgId` should be backfilled from `part.orgId` for existing rows.
-  Lower value (ledger enrichment); not yet done.
+Adds `orgId`, `locationId`, `unitCost`, `sourceType`, `sourceId` (all nullable) so a
+stock-ledger row can be org-scoped, valued, and traced to its causing document.
+Populated at the goods-received, adjust, stock-count, and transfer write paths.
+
+- Additive nullable columns → no existing-row conflict.
+- Backfill: `bun run scripts/backfill-stock-txn-org.ts` sets `orgId` from `part.orgId`
+  for pre-existing rows (idempotent — only touches rows where `orgId IS NULL`).
+- Production: apply the column adds, then run the backfill.
+
+## 7. `SaleStatus` adds `PARTIALLY_RETURNED` / `RETURNED` (M10) — SAFE (enum values)
+
+Sales now reflect returns: `syncSalePaymentState` sets the sale to
+`PARTIALLY_RETURNED` or `RETURNED` from cumulative credit-note quantity vs sold
+quantity. Credit-note create paths call the sync; the "PAID-only" guards on the POS
+and Documents credit-note/refund flows were relaxed to also allow
+`PARTIALLY_RETURNED` (so a second credit note isn't blocked — preserves the H4 cap).
+
+- SQLite stores enums as TEXT with no CHECK constraint → adding values is a no-op at
+  the DB level; only the Prisma client needs regenerating. No data migration.
+
+## 8. `PaymentAllocation.payment` FK (L10) — adds an FK constraint
+
+Adds a real `@relation(paymentId → Payment, onDelete: Cascade)` so allocations die
+with their payment instead of orphaning. `DocumentTaxLine` and PaymentAllocation's
+`targetType/targetId` stay polymorphic by design (no clean single-table relation).
+
+- Production: adding the FK constraint fails if orphan allocations reference a missing
+  payment — check/clean first (dev had none).

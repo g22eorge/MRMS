@@ -124,6 +124,10 @@ export async function dispatchStockTransferAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: item.partId,
+          orgId,
+          locationId: transfer.fromLocationId,
+          sourceType: "TRANSFER",
+          sourceId: transfer.id,
           type: "OUT",
           quantity: item.quantity,
           reason: `Stock transfer ${transfer.transferNumber} dispatched`,
@@ -166,6 +170,10 @@ export async function receiveStockTransferAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: item.partId,
+          orgId,
+          locationId: transfer.toLocationId,
+          sourceType: "TRANSFER",
+          sourceId: transfer.id,
           type: "IN",
           quantity: receiveQty,
           reason: `Stock transfer ${transfer.transferNumber} received`,

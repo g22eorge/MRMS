@@ -510,7 +510,9 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       where: { id: saleId, orgId },
       select: { id: true, status: true, saleNumber: true, currency: true, totalAmount: true },
     });
-    if (!existingSale || existingSale.status !== "PAID") return;
+    // A partially-returned sale can still receive further credit notes (up to the
+    // cumulative cap below); only OPEN/VOID/fully-RETURNED sales are excluded.
+    if (!existingSale || !["PAID", "PARTIALLY_RETURNED"].includes(existingSale.status)) return;
 
     const items = await prisma.saleItem.findMany({
       where: { saleId },
@@ -574,6 +576,9 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           lineTotal: p.lineTotal,
         })),
       });
+
+      // M10: reflect the return on the sale (PARTIALLY_RETURNED / RETURNED).
+      await syncSalePaymentState(tx, { orgId, saleId });
 
       return { id: created.id, creditNoteNumber };
     });
@@ -669,7 +674,9 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     if (!Number.isFinite(amount) || amount <= 0) return;
 
     const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
-    if (!existingSale || existingSale.status !== "PAID") return;
+    // A credit note can be refunded whether the sale is PAID or already flipped
+    // to a returned state by an earlier credit note (M10).
+    if (!existingSale || !["PAID", "PARTIALLY_RETURNED", "RETURNED"].includes(existingSale.status)) return;
 
     const creditNote = await prisma.creditNote.findFirst({
       where: { id: creditNoteId, orgId, saleId },
@@ -1016,7 +1023,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           </span>
         </summary>
 
-        {sale.status === "PAID" ? (
+        {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
           <div className="space-y-3 border-t border-[var(--line)] p-3">
             {/* Issue credit note */}
             <form action={createCreditNoteAction} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">

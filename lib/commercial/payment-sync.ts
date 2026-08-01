@@ -171,11 +171,16 @@ export async function syncSalePaymentState(
 ): Promise<SalePaymentSyncResult> {
   const sale = await tx.sale.findFirst({
     where: { id: params.saleId, orgId: params.orgId },
-    select: { totalAmount: true },
+    select: { totalAmount: true, status: true },
   });
 
   if (!sale) {
     throw new Error(`Sale ${params.saleId} not found for org ${params.orgId}`);
+  }
+
+  // A voided sale's status must not be recomputed back to OPEN/PAID.
+  if (sale.status === "VOID") {
+    return { paidAmount: 0, isPaid: false, totalAmount: sale.totalAmount };
   }
 
   const org = await tx.organization.findUnique({ where: { id: params.orgId }, select: { baseCurrency: true } });
@@ -183,12 +188,26 @@ export async function syncSalePaymentState(
   const paidAmount = await sumSalePaidAmount(tx, { orgId: params.orgId, saleId: params.saleId, baseCurrency });
   const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
 
+  // M10: reflect returns on the sale. Fully-returned → RETURNED; partially
+  // returned → PARTIALLY_RETURNED; otherwise the normal paid/open state.
+  const [soldAgg, creditNotes] = await Promise.all([
+    tx.saleItem.aggregate({ where: { saleId: params.saleId }, _sum: { quantity: true } }),
+    tx.creditNote.findMany({ where: { orgId: params.orgId, saleId: params.saleId }, select: { items: { select: { quantity: true } } } }),
+  ]);
+  const soldQty = soldAgg._sum.quantity ?? 0;
+  const returnedQty = creditNotes.reduce((s, cn) => s + cn.items.reduce((a, i) => a + i.quantity, 0), 0);
+
+  let status: "OPEN" | "PAID" | "PARTIALLY_RETURNED" | "RETURNED";
+  if (returnedQty > 0 && soldQty > 0 && returnedQty >= soldQty) status = "RETURNED";
+  else if (returnedQty > 0) status = "PARTIALLY_RETURNED";
+  else status = isPaid ? "PAID" : "OPEN";
+
   await tx.sale.updateMany({
     where: { id: params.saleId, orgId: params.orgId },
     data: {
       paidAmount,
       paidAt: isPaid ? new Date() : null,
-      status: isPaid ? "PAID" : "OPEN",
+      status,
     },
   });
 

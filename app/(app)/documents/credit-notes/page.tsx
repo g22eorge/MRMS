@@ -12,6 +12,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
@@ -259,6 +260,8 @@ export default async function CreditNotesPage({
         select: { id: true },
       });
       creditNoteId = created.id;
+      // M10: reflect the return on the sale (PARTIALLY_RETURNED / RETURNED).
+      await syncSalePaymentState(tx, { orgId, saleId });
     });
     await writeSystemAuditEvent({
       orgId,
@@ -346,7 +349,7 @@ export default async function CreditNotesPage({
       take: PAGE_SIZE,
     }).catch(() => []),
     prisma.sale.findMany({
-      where: { orgId, status: "PAID" },
+      where: { orgId, status: { in: ["PAID", "PARTIALLY_RETURNED"] } },
       select: {
         id: true,
         saleNumber: true,

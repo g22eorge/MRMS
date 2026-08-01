@@ -137,6 +137,8 @@ export async function adjustStockAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: part.id,
+          orgId,
+          sourceType: "ADJUSTMENT",
           type,
           quantity: logQty,
           reason: logReason,
