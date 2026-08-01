@@ -27,13 +27,24 @@ export async function sumInvoicePaidAmount(
     netRefunds?: boolean;
   },
 ): Promise<number> {
-  const payments = await tx.payment.findMany({
-    where: { orgId: params.orgId, invoiceId: params.invoiceId },
-    select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
-  });
   const netRefunds = params.netRefunds !== false;
+  const [payments, refunds] = await Promise.all([
+    tx.payment.findMany({
+      where: { orgId: params.orgId, invoiceId: params.invoiceId },
+      select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
+    }),
+    // Standalone Refund rows (Documents → Refunds path) net off the invoice too.
+    // The job-detail path instead records REFUND-kind Payment rows, and no single
+    // refund produces both, so there is no double-counting.
+    netRefunds
+      ? tx.refund.findMany({
+          where: { orgId: params.orgId, invoiceId: params.invoiceId },
+          select: { amount: true, currency: true, exchangeRateToBase: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
-  return payments.reduce((sum, payment) => {
+  const paymentsTotal = payments.reduce((sum, payment) => {
     const base = toBaseAmount({
       amount: payment.amount,
       currency: payment.currency,
@@ -43,6 +54,15 @@ export async function sumInvoicePaidAmount(
     if (netRefunds && payment.kind === "REFUND") return sum - base;
     return sum + base;
   }, 0);
+
+  const refundsTotal = refunds.reduce((sum, refund) => sum + toBaseAmount({
+    amount: refund.amount,
+    currency: refund.currency,
+    baseCurrency: params.baseCurrency,
+    exchangeRateToBase: refund.exchangeRateToBase,
+  }), 0);
+
+  return paymentsTotal - refundsTotal;
 }
 
 /**

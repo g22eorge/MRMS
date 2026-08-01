@@ -14,6 +14,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
@@ -106,20 +107,28 @@ export default async function RefundsPage({
     }
     if (refundableAmount <= 0 || amountRaw > refundableAmount) return;
 
-    const refund = await prisma.refund.create({
-      data: {
-        orgId,
-        invoiceId,
-        saleId,
-        creditNoteId,
-        currency,
-        amount: amountRaw,
-        method,
-        reference: reference || null,
-        note: note || null,
-        createdById: user.id,
-      },
-      select: { id: true },
+    const refund = await prisma.$transaction(async (tx) => {
+      const created = await tx.refund.create({
+        data: {
+          orgId,
+          invoiceId,
+          saleId,
+          creditNoteId,
+          currency,
+          amount: amountRaw,
+          method,
+          reference: reference || null,
+          note: note || null,
+          createdById: user.id,
+        },
+        select: { id: true },
+      });
+      // Recompute invoice paid state so a refund actually reduces paidAmount /
+      // reopens the invoice (was previously left showing PAID in full).
+      if (invoiceId) {
+        await syncInvoicePaymentState(tx, { orgId, invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
+      }
+      return created;
     });
     await writeSystemAuditEvent({
       orgId,

@@ -56,23 +56,33 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!inv) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (inv.paidAmount < inv.totalAmount) return NextResponse.json({ error: "invoice-not-fully-paid" }, { status: 400 });
 
-    const deliveryNoteNumber = await nextDocumentNumber(prisma as any, "DN", "deliveryNote");
+    // Dedup: one delivery note per invoice (there is no @unique on invoiceId).
+    const existingDn = await prisma.deliveryNote.findFirst({ where: { orgId, invoiceId: invoice.id }, select: { deliveryNoteNumber: true } });
+    if (existingDn) {
+      return NextResponse.json({ ok: true, deliveryNoteNumber: existingDn.deliveryNoteNumber, duplicate: true });
+    }
+
     const desc = inv.jobId
       ? `Repair handover for job`
       : (inv.subject ?? invoice.invoiceNumber);
 
-    await prisma.deliveryNote.create({
-      data: {
-        orgId,
-        invoiceId: invoice.id,
-        deliveryNoteNumber,
-        deliveryMethod,
-        deliveredByName,
-        receivedByName,
-        note: note || null,
-        items: { create: [{ description: desc, quantity: 1 }] },
-      },
-      select: { id: true, deliveryNoteNumber: true },
+    // Allocate the number and create the note in one transaction (was split
+    // across two calls, so the number could collide or the create fail alone).
+    const deliveryNoteNumber = await prisma.$transaction(async (tx) => {
+      const number = await nextDocumentNumber(tx, "DN", "deliveryNote");
+      await tx.deliveryNote.create({
+        data: {
+          orgId,
+          invoiceId: invoice.id,
+          deliveryNoteNumber: number,
+          deliveryMethod,
+          deliveredByName,
+          receivedByName,
+          note: note || null,
+          items: { create: [{ description: desc, quantity: 1 }] },
+        },
+      });
+      return number;
     });
 
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: invoice.id, action: "DELIVERY_NOTE_CREATED", summary: `DN ${deliveryNoteNumber} for ${invoice.id}` });

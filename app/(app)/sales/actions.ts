@@ -318,9 +318,26 @@ export async function updateQuotationStatus(quotationId: string, status: Quotati
   };
   const quotation = await prisma.quotation.findFirst({
     where: accessWhere,
-    select: { id: true, leadId: true, quoteNumber: true, lead: { select: { fullName: true } } },
+    select: { id: true, status: true, convertedToInvoiceId: true, leadId: true, quoteNumber: true, lead: { select: { fullName: true } } },
   });
   if (!quotation) throw new Error("Quotation not found");
+
+  // Server-side state machine — a role check alone let any status jump to any
+  // other (e.g. revert ACCEPTED→DRAFT to edit an approved quote, or re-accept a
+  // rejected one). Enforce the allowed transitions here, not just in the UI.
+  const ALLOWED_TRANSITIONS: Record<QuotationStatus, QuotationStatus[]> = {
+    DRAFT: ["SENT", "ACCEPTED", "REJECTED", "EXPIRED", "VOID"],
+    SENT: ["ACCEPTED", "REJECTED", "EXPIRED", "DRAFT", "VOID"],
+    ACCEPTED: ["VOID"],
+    REJECTED: ["DRAFT", "SENT", "VOID"],
+    EXPIRED: ["DRAFT", "SENT", "VOID"],
+    VOID: [],
+  };
+  if (quotation.status === status) return; // idempotent no-op
+  if (quotation.convertedToInvoiceId) throw new Error("Quotation has already been converted to an invoice");
+  if (!ALLOWED_TRANSITIONS[quotation.status]?.includes(status)) {
+    throw new Error(`Cannot change quotation from ${quotation.status} to ${status}`);
+  }
 
   const now = new Date();
   const result = await prisma.quotation.updateMany({
