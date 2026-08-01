@@ -130,7 +130,9 @@ export default async function AppLayout({
     orgUsers,
   ] = await Promise.all([
     prisma.part.findMany({
-      where: { orgId, isActive: true, reorderLevel: { gt: 0 } },
+      // Include parts with a reorder level set, OR any part at/below zero on hand
+      // (a part left at the default reorderLevel 0 was never flagged even at 0 stock).
+      where: { orgId, isActive: true, OR: [{ reorderLevel: { gt: 0 } }, { qtyOnHand: { lte: 0 } }] },
       select: { qtyOnHand: true, reorderLevel: true },
     }).catch(() => []),
     (can.reviewExternalBills(user) || can.approveInvoices(user)) ? prisma.job.count({ where: paymentWhere }) : Promise.resolve(0),

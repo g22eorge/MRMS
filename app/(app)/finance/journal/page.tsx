@@ -7,6 +7,7 @@ import type { JournalEntryStatus } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
 import { orgDb } from "@/lib/db";
+import { maxNumberSequence } from "@/lib/commercial/org-number";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
@@ -92,9 +93,11 @@ export default async function JournalPage({
     if (Math.abs(totalDebit - totalCredit) > 0.01)
       return { error: `Entry is not balanced — debits ${totalDebit.toFixed(2)} ≠ credits ${totalCredit.toFixed(2)}.` };
 
-    const count = await db.journalEntry.count({});
+    // Per-year sequence (was a lifetime count, so year-stamped numbers desynced).
     const entryYear   = new Date(dateStr).getFullYear();
-    const entryNumber = `JE-${entryYear}-${String(count + 1).padStart(4, "0")}`;
+    const inner       = `JE-${entryYear}-`;
+    const existingNumbers = await db.journalEntry.findMany({ where: { entryNumber: { contains: inner } }, select: { entryNumber: true } });
+    const entryNumber = `${inner}${String(maxNumberSequence(inner, existingNumbers.map((e) => e.entryNumber)) + 1).padStart(4, "0")}`;
 
     await db.journalEntry.create({
       data: {

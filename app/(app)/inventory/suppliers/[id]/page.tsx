@@ -127,7 +127,8 @@ export default async function SupplierDetailPage({
   const [prices, parts, billTotals, overdueBillCount, openPoCount] = await Promise.all([
     prisma.supplierPrice.findMany({ where: { orgId, supplierId: supplier.id }, orderBy: { validFrom: "desc" } }),
     prisma.part.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, sku: true, name: true } }),
-    prisma.supplierBill.aggregate({
+    prisma.supplierBill.groupBy({
+      by: ["currency"],
       where: { orgId, supplierId: supplier.id, status: { not: "CANCELLED" } },
       _sum: { totalAmount: true, paidAmount: true },
     }),
@@ -140,9 +141,17 @@ export default async function SupplierDetailPage({
   ]);
 
   const partLabel = new Map(parts.map((part) => [part.id, `${part.sku} · ${part.name}`]));
-  const totalBillAmount = billTotals._sum.totalAmount ?? 0;
-  const totalPaidAmount = billTotals._sum.paidAmount ?? 0;
-  const supplierBalance = Math.max(0, totalBillAmount - totalPaidAmount);
+  // Balances are per-currency — never sum UGX and USD bills into one figure.
+  const balancesByCurrency = billTotals
+    .map((row) => ({
+      currency: row.currency ?? "UGX",
+      balance: Math.max(0, (row._sum.totalAmount ?? 0) - (row._sum.paidAmount ?? 0)),
+    }))
+    .filter((row) => row.balance > 0);
+  const supplierBalance = balancesByCurrency.reduce((sum, row) => sum + row.balance, 0);
+  const supplierBalanceLabel = balancesByCurrency.length === 0
+    ? formatMoney(0)
+    : balancesByCurrency.map((row) => formatMoney(row.balance, row.currency)).join(" + ");
   const leadTimes = prices.map((price) => price.leadTimeDays).filter((days): days is number => days != null);
   const averageLeadDays = leadTimes.length > 0 ? Math.round(leadTimes.reduce((sum, days) => sum + days, 0) / leadTimes.length) : null;
   const recentPoValue = supplier.purchaseOrders.reduce(
@@ -190,7 +199,7 @@ export default async function SupplierDetailPage({
 
       <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Open POs" value={openPoCount.toLocaleString()} hint={`${supplier._count.purchaseOrders.toLocaleString()} total`} tone={openPoCount > 0 ? "amber" : "neutral"} />
-        <Metric label="Bill Balance" value={formatMoney(supplierBalance)} hint={`${overdueBillCount} overdue`} tone={supplierBalance > 0 ? "amber" : "green"} />
+        <Metric label="Bill Balance" value={supplierBalanceLabel} hint={`${overdueBillCount} overdue`} tone={supplierBalance > 0 ? "amber" : "green"} />
         <Metric label="Price Lines" value={prices.length.toLocaleString()} hint={averageLeadDays != null ? `${averageLeadDays}d avg lead` : "no lead times"} tone="neutral" />
         <Metric label="Recent PO Value" value={formatMoney(recentPoValue)} hint="latest 12 orders" tone="neutral" />
         <Metric label="Last Activity" value={fmt(lastActivityAt)} hint={`${supplier._count.goodsReceivedNotes} GRNs`} tone="neutral" />
