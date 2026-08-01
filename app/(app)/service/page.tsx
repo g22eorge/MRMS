@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
-import { orgDb } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 
 type Tile = { label: string; href: string; icon: string; color: string; description: string };
 
@@ -48,7 +48,7 @@ export default async function ServiceHubPage() {
 
   const db = orgDb(orgId);
   const [openJobs, pendingIntake] = await Promise.all([
-    db.job.count({ where: { orgId, status: { notIn: ["COMPLETED", "CLOSED", "CUSTOMER_CANCELLED"] } } }).catch(() => null),
+    db.job.count({ where: { orgId, status: { notIn: ["COMPLETED", "CLOSED"] } } }).catch(() => null),
     db.repairRequest.count({ where: { orgId, requestStatus: { in: ["PENDING_INTAKE", "PENDING_FRONT_DESK"] } } }).catch(() => null),
   ]);
 
@@ -72,7 +72,7 @@ export default async function ServiceHubPage() {
         >
           ← Jobs
           {openJobs !== null && (
-            <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{openJobs}</span>
+            <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-black leading-none">{openJobs}</span>
           )}
         </Link>
         <Link

@@ -117,7 +117,7 @@
 }
 
 .theme-blackgold .panel-shadow {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 24px 64px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--dc-shadow);
 }
 
 .theme-blackgold .btn-premium {
@@ -284,20 +284,131 @@ pre,
 }
 
 .panel-shadow {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 0 0 1px rgba(17, 17, 17, 0.04),
-    0 2px 4px rgba(17, 17, 17, 0.04),
-    0 8px 20px rgba(17, 17, 17, 0.06);
-  transition: box-shadow 200ms ease, border-color 200ms ease, transform 180ms ease;
+  box-shadow: var(--dc-shadow);
+  transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 
 .panel-shadow:hover {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 0 0 1px rgba(212, 175, 55, 0.2),
-    0 4px 8px rgba(17, 17, 17, 0.05),
-    0 12px 28px rgba(17, 17, 17, 0.09);
+  box-shadow: var(--dc-shadow-hover);
+}
+
+/* ── Calm shell + dashboard tokens — the approved mockup design language ──
+   Warm borderless panels, a soft diffuse drop shadow (no ring, no inset
+   bevel), and a deeper light-mode gold so figures read rich. Defined
+   globally so the dashboard AND the app frame (sidebar / top bar) can
+   share one look. Nothing consumes these unless it opts in via
+   `var(--dc-*)`, so promoting them to :root has no side effects. Dark
+   variants mirror the app's own triggers: system `prefers-color-scheme`
+   AND the manual `.theme-blackgold` class. */
+:root {
+  --dc-side: #fbfaf6;
+  --dc-panel: #fbfaf6;
+  --dc-panel-2: #f1eee6;
+  --dc-ink: #1a1815;
+  --dc-ink-2: #57534b;
+  --dc-ink-3: #938d81;
+  --dc-line: #e7e2d8;
+  --dc-line-soft: #efebe3;
+  --dc-accent: #a87f16;
+  --dc-accent-2: #7a5f00;
+  --dc-accent-soft: rgba(184, 144, 28, 0.12);
+  --dc-good: #2c8f61;
+  --dc-warn: #bd8410;
+  --dc-crit: #c9463a;
+  --dc-crit-soft: rgba(201, 70, 58, 0.12);
+  --dc-blue: #3d6fb4;
+  --dc-violet: #7c5ccf;
+  --dc-shadow: 0 1px 2px rgba(40, 33, 15, 0.03), 0 10px 30px -20px rgba(40, 33, 15, 0.16);
+  --dc-shadow-hover: 0 1px 2px rgba(40, 33, 15, 0.05), 0 16px 38px -20px rgba(40, 33, 15, 0.26);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dc-side: #121212;
+    --dc-panel: #151515;
+    --dc-panel-2: #1f1f1f;
+    --dc-ink: rgba(255, 255, 255, 0.9);
+    --dc-ink-2: rgba(255, 255, 255, 0.5);
+    --dc-ink-3: rgba(255, 255, 255, 0.32);
+    --dc-line: rgba(255, 255, 255, 0.07);
+    --dc-line-soft: rgba(255, 255, 255, 0.05);
+    --dc-accent: #d4af37;
+    --dc-accent-2: #d4af37;
+    --dc-accent-soft: rgba(212, 175, 55, 0.14);
+    --dc-good: #43bf85;
+    --dc-warn: #dda52c;
+    --dc-crit: #e5695c;
+    --dc-crit-soft: rgba(229, 105, 92, 0.15);
+    --dc-blue: #6fa1e0;
+    --dc-violet: #a78bfa;
+    --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
+    --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
+  }
+}
+.theme-blackgold {
+  --dc-side: #121212;
+  --dc-panel: #151515;
+  --dc-panel-2: #1f1f1f;
+  --dc-ink: rgba(255, 255, 255, 0.9);
+  --dc-ink-2: rgba(255, 255, 255, 0.5);
+  --dc-ink-3: rgba(255, 255, 255, 0.32);
+  --dc-line: rgba(255, 255, 255, 0.07);
+  --dc-line-soft: rgba(255, 255, 255, 0.05);
+  --dc-accent: #d4af37;
+  --dc-accent-2: #d4af37;
+  --dc-accent-soft: rgba(212, 175, 55, 0.14);
+  --dc-good: #43bf85;
+  --dc-warn: #dda52c;
+  --dc-crit: #e5695c;
+  --dc-crit-soft: rgba(229, 105, 92, 0.15);
+  --dc-blue: #6fa1e0;
+  --dc-violet: #a78bfa;
+  --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
+  --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
+}
+.dc-card {
+  background: var(--dc-panel);
+  border-radius: 16px;
+  box-shadow: var(--dc-shadow);
+}
+.dc-lift {
+  transition: box-shadow 200ms ease;
+}
+.dc-lift:hover {
+  box-shadow: var(--dc-shadow-hover);
+}
+.dc-btn {
+  background: var(--dc-accent);
+  color: #fff;
+  box-shadow: var(--dc-shadow);
+  transition: filter 150ms ease;
+}
+.dc-btn:hover {
+  filter: brightness(1.06);
+}
+@media (prefers-color-scheme: dark) {
+  .dc-btn {
+    color: #1c1600;
+  }
+}
+.theme-blackgold .dc-btn {
+  color: #1c1600;
+}
+
+/* Calm palette remap for the job detail page. The JobDetailTabs component is
+   very large and uses the app tokens (--panel, --panel-strong, --line, --ink,
+   --accent) throughout; remapping them to the shared --dc-* calm values on a
+   `.jobdetail-cal` wrapper gives the whole page the flat warm surface without
+   editing hundreds of class names. Scoped to the wrapper only. */
+.jobdetail-cal,
+.calm-scope {
+  --panel: var(--dc-panel);
+  --panel-strong: var(--dc-panel-2);
+  --line: var(--dc-line);
+  --ink: var(--dc-ink);
+  --ink-muted: var(--dc-ink-2);
+  --accent: var(--dc-accent);
+  --accent-fg: var(--dc-accent-2);
+  --accent-muted: var(--dc-accent-soft);
 }
 
 /* Elevated panel (modals, dropdowns) */
@@ -355,77 +466,84 @@ pre,
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 
+/* Modern flat premium buttons: solid fills, hairline borders, subtle depth.
+   Sizing (padding/radius/text) is owned by the <Button> component; these
+   classes only carry the visual language so raw usages stay consistent too. */
+
 .btn-premium {
-  border: 1px solid rgba(180, 148, 10, 0.8);
-  background: linear-gradient(160deg, #e8c337 0%, #c49e0a 100%);
-  color: #fff;
+  border: 1px solid rgba(150, 122, 8, 0.35);
+  background: var(--accent);
+  color: #1a1500;
   font-weight: 600;
   letter-spacing: -0.01em;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.25) inset,
-    0 1px 2px rgba(180, 148, 10, 0.3),
-    0 4px 12px rgba(180, 148, 10, 0.2);
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+  box-shadow: 0 1px 2px rgba(26, 21, 0, 0.12);
 }
 
 .btn-premium:hover {
-  filter: brightness(1.06);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.25) inset,
-    0 2px 4px rgba(180, 148, 10, 0.3),
-    0 6px 16px rgba(180, 148, 10, 0.25);
+  filter: brightness(1.04);
+  box-shadow: 0 2px 6px rgba(26, 21, 0, 0.16);
 }
 
 .btn-premium:active {
-  transform: translateY(1px);
-  filter: brightness(0.98);
+  transform: translateY(0.5px);
+  filter: brightness(0.97);
 }
 
 .btn-premium-secondary {
   border: 1px solid var(--line);
-  /* Uses theme tokens so it stays readable in dark mode. */
-  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-strong) 100%);
+  background: var(--panel);
   color: var(--ink);
   font-weight: 500;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 2px rgba(17, 17, 17, 0.06), 0 3px 8px rgba(17, 17, 17, 0.05);
-  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  box-shadow: 0 1px 1px rgba(17, 17, 17, 0.03);
 }
 
 .btn-premium-secondary:hover {
-  border-color: #c4bfb8;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 1px 3px rgba(17, 17, 17, 0.08), 0 4px 12px rgba(17, 17, 17, 0.09);
+  background: var(--panel-strong);
+  border-color: var(--accent-border);
 }
 
+.btn-premium-secondary:active {
+  transform: translateY(0.5px);
+}
+
+/* Destructive: red-tinted outline — clean and unmistakable without shouting. */
 .btn-premium-danger {
-  border: 1px solid #1a1a1a;
-  background: linear-gradient(160deg, #2a2a2a 0%, #0a0a0a 100%);
-  color: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
   font-weight: 600;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.btn-premium-danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 .btn-premium-success {
-  border: 1px solid rgba(180, 148, 10, 0.8);
-  background: linear-gradient(160deg, #e8c337 0%, #c49e0a 100%);
+  border: 1px solid rgba(21, 128, 61, 0.4);
+  background: #16a34a;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 4px 12px rgba(180, 148, 10, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.btn-premium-warning {
-  border: 1px solid #1a1a1a;
-  background: linear-gradient(160deg, #2a2a2a 0%, #0a0a0a 100%);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 3px 10px rgba(0, 0, 0, 0.2);
+.btn-premium-success:hover {
+  filter: brightness(1.05);
 }
 
+/* Dark / warning share a flat near-black treatment. */
+.btn-premium-warning,
 .btn-premium-dark {
-  border: 1px solid #1a1a1a;
-  background: linear-gradient(160deg, #2a2a2a 0%, #0a0a0a 100%);
-  color: #fff;
+  border: 1px solid transparent;
+  background: var(--ink);
+  color: var(--panel);
   font-weight: 600;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 3px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.btn-premium-warning:hover,
+.btn-premium-dark:hover {
+  filter: brightness(1.1);
 }
 
 .btn-premium,
@@ -434,7 +552,7 @@ pre,
 .btn-premium-success,
 .btn-premium-warning,
 .btn-premium-dark {
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease, border-color 120ms ease;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
 .btn-premium:focus-visible,
@@ -553,6 +671,12 @@ a:hover .nav-icon-premium {
   padding: 0.375rem 0.75rem;
   font-size: 13px;
   line-height: 1.25;
+}
+
+/* Icon-only buttons: the global button padding above must never squeeze the
+   glyph — flex would otherwise shrink SVGs to the tiny leftover content box. */
+:where(button) > svg {
+  flex-shrink: 0;
 }
 
 :where(input, select, textarea) {
@@ -870,8 +994,10 @@ tr:has(details[open]) {
 /* ── Mobile document list: transforms overflow-x tables into stacked cards ── */
 /*
  * Usage: add class "doc-list" to the overflow-x-auto wrapper div around a
- * <table>. On screens < 640 px the table collapses into one card per row,
- * all hidden columns become visible, and the actions row gets a tinted footer.
+ * <table>, or pass className="doc-list" to <DataTable> (descendant selector
+ * tolerates DataTable's inner overflow wrapper). On screens < 640 px the table
+ * collapses into one card per row, all hidden columns become visible, and the
+ * actions row gets a tinted footer.
  * The desktop table layout is completely untouched (sm+).
  */
 @media (max-width: 639px) {
@@ -885,7 +1011,7 @@ tr:has(details[open]) {
   }
 
   /* Table becomes a block flow */
-  .doc-list > table {
+  .doc-list table {
     display: block;
     width: 100%;
     border: none;
@@ -893,12 +1019,12 @@ tr:has(details[open]) {
   }
 
   /* Hide the column header row */
-  .doc-list > table > thead {
+  .doc-list table > thead {
     display: none !important;
   }
 
   /* tbody becomes a vertical stack of cards */
-  .doc-list > table > tbody {
+  .doc-list table > tbody {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -906,7 +1032,7 @@ tr:has(details[open]) {
   }
 
   /* Each row is a card */
-  .doc-list > table > tbody > tr {
+  .doc-list table > tbody > tr {
     display: block !important;
     border: 1px solid var(--line) !important;
     border-radius: 0.875rem !important;
@@ -914,14 +1040,14 @@ tr:has(details[open]) {
     background: var(--panel) !important;
     transition: box-shadow 0.15s;
   }
-  .doc-list > table > tbody > tr:hover {
+  .doc-list table > tbody > tr:hover {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
     background: var(--panel) !important;
   }
 
   /* Every cell is a full-width block — override all Tailwind show/hide utilities.
    * Exception: cells with .doc-list-hide remain hidden (mobile-specific suppression). */
-  .doc-list > table > tbody > tr > td:not(.doc-list-hide) {
+  .doc-list table > tbody > tr > td:not(.doc-list-hide) {
     display: block !important;
     width: 100% !important;
     padding: 0.5rem 0.875rem !important;
@@ -931,28 +1057,28 @@ tr:has(details[open]) {
   }
 
   /* First cell (document/job number) is the card "headline" — slightly more padding, no top border */
-  .doc-list > table > tbody > tr > td:first-child {
+  .doc-list table > tbody > tr > td:first-child {
     border-top: none !important;
     padding-top: 0.75rem !important;
     padding-bottom: 0.5rem !important;
   }
 
   /* Last cell (actions) gets a subtle tinted footer background */
-  .doc-list > table > tbody > tr > td:last-child {
+  .doc-list table > tbody > tr > td:last-child {
     background: var(--panel-strong) !important;
     padding-top: 0.625rem !important;
     padding-bottom: 0.625rem !important;
   }
 
   /* Buttons inside action cells wrap naturally; give them breathing room */
-  .doc-list > table > tbody > tr > td:last-child > *,
-  .doc-list > table > tbody > tr > td:last-child > div {
+  .doc-list table > tbody > tr > td:last-child > *,
+  .doc-list table > tbody > tr > td:last-child > div {
     flex-wrap: wrap !important;
     gap: 0.375rem !important;
   }
 
   /* Empty cells (—, null) collapse so they don't leave blank space */
-  .doc-list > table > tbody > tr > td:empty {
+  .doc-list table > tbody > tr > td:empty {
     display: none !important;
     border: none !important;
     padding: 0 !important;
@@ -961,7 +1087,7 @@ tr:has(details[open]) {
   /* doc-list-hide: explicitly suppress a cell even inside doc-list.
    * Use on desktop-only columns (Balance, Overdue, redundant Client)
    * that should truly be absent from the mobile card stack. */
-  .doc-list > table > tbody > tr > td.doc-list-hide {
+  .doc-list table > tbody > tr > td.doc-list-hide {
     display: none !important;
     border: none !important;
     padding: 0 !important;

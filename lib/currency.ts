@@ -32,6 +32,22 @@ export function isSupportedCurrency(value: string): value is SupportedCurrency {
   return (SUPPORTED_CURRENCIES as readonly string[]).includes(value);
 }
 
+/** Decimal places for a currency's minor unit (0 for UGX/JPY/KRW, else 2). */
+export function currencyDecimals(currency: string) {
+  return ZERO_DECIMAL.has((currency ?? "").toUpperCase()) ? 0 : 2;
+}
+
+/**
+ * Round a monetary amount to its currency's minor unit. Prevents fractional
+ * totals on zero-decimal currencies (e.g. a UGX total of 29,653.4 that a
+ * whole-shilling payment can never reach, stranding the sale as unpayable).
+ */
+export function roundMoney(amount: number, currency: string) {
+  if (!Number.isFinite(amount)) return 0;
+  const factor = 10 ** currencyDecimals(currency);
+  return Math.round((amount + Number.EPSILON) * factor) / factor;
+}
+
 export function normalizeCurrency(value: unknown, fallback: string) {
   const raw = typeof value === "string" ? value : "";
   const next = raw.toUpperCase().trim();

@@ -70,7 +70,7 @@ export function PhotoUploader({
         }}
         className="flex flex-wrap items-center gap-2"
       >
-        <select name="label" className="rounded-md border border-[var(--line)] px-2 py-1">
+        <select name="label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none">
           <option value="before">Before</option>
           <option value="during">During</option>
           <option value="after">After</option>
@@ -84,7 +84,7 @@ export function PhotoUploader({
 
       <div className="grid gap-3 md:grid-cols-3">
         {photos.map((photo) => (
-          <div key={photo.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
+          <div key={photo.id} className="rounded-xl bg-[var(--panel-strong)] p-2">
             <Image src={photo.url} alt={photo.label ?? "job photo"} width={320} height={160} className="h-40 w-full rounded object-cover" />
             <div className="mt-2 flex items-center justify-between">
               <span className="text-xs text-[var(--ink-muted)]">{photo.label ?? "-"}</span>

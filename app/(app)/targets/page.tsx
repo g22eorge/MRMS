@@ -147,6 +147,8 @@ export default async function TargetsPage({ searchParams }: { searchParams: Sear
       : Promise.resolve([] as { id: string; name: string }[]),
     canSet
       ? prisma.department.findMany({
+          // Org's own departments, plus legacy unscoped ones until backfilled.
+          where: { OR: [{ orgId }, { orgId: null }] },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         }).catch(() => [] as { id: string; name: string }[])

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -18,15 +20,13 @@ async function requireInventoryManager() {
 }
 
 async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
-  const year = new Date().getFullYear();
-  const prefix = `ST-${year}-`;
-  const count = await tx.stockTransfer.count({ where: { orgId, transferNumber: { startsWith: prefix } } });
-  return `${prefix}${String(count + 1).padStart(4, "0")}`;
-}
-
-async function syncPartAggregate(tx: Prisma.TransactionClient, partId: string) {
-  const agg = await tx.partLocationStock.aggregate({ where: { partId }, _sum: { qtyOnHand: true } });
-  await tx.part.update({ where: { id: partId }, data: { qtyOnHand: agg._sum.qtyOnHand ?? 0 } });
+  const inner = `ST-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.transferNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 async function loadTransfer(tx: Prisma.TransactionClient, id: string, orgId: string) {
@@ -124,13 +124,16 @@ export async function dispatchStockTransferAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: item.partId,
+          orgId,
+          locationId: transfer.fromLocationId,
+          sourceType: "TRANSFER",
+          sourceId: transfer.id,
           type: "OUT",
           quantity: item.quantity,
           reason: `Stock transfer ${transfer.transferNumber} dispatched`,
           createdById: user.id,
         },
       });
-      await syncPartAggregate(tx, item.partId);
     }
 
     await tx.stockTransfer.update({
@@ -142,6 +145,7 @@ export async function dispatchStockTransferAction(formData: FormData) {
   const dispatched = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
   if (dispatched) {
     notifyStockTransferUpdated({ orgId, transferNumber: dispatched.transferNumber, status: "DISPATCHED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_DISPATCHED", summary: `${dispatched.transferNumber} dispatched` });
   }
   revalidatePath("/inventory/transfers");
 }
@@ -166,13 +170,16 @@ export async function receiveStockTransferAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: item.partId,
+          orgId,
+          locationId: transfer.toLocationId,
+          sourceType: "TRANSFER",
+          sourceId: transfer.id,
           type: "IN",
           quantity: receiveQty,
           reason: `Stock transfer ${transfer.transferNumber} received`,
           createdById: user.id,
         },
       });
-      await syncPartAggregate(tx, item.partId);
     }
 
     await tx.stockTransfer.update({
@@ -182,6 +189,7 @@ export async function receiveStockTransferAction(formData: FormData) {
   });
 
   const received = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
+  if (received) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_RECEIVED", summary: `${received.transferNumber} received` });
   if (received) {
     notifyStockTransferUpdated({ orgId, transferNumber: received.transferNumber, status: "RECEIVED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
   }

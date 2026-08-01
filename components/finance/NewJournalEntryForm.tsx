@@ -14,6 +14,7 @@
  */
 
 import { useState, useTransition } from "react";
+import { DataTable } from "@/components/ui/DataTable";
 import { JOURNAL_TEMPLATES, type JournalTemplate } from "@/lib/journal-templates";
 
 // Minimal shape needed from the COA query
@@ -255,7 +256,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -268,7 +269,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Monthly rent — May 2025"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -280,7 +281,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="INV-001, Receipt #42…"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
         </div>
@@ -302,82 +303,89 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
-            <table className="w-full text-sm">
-              <thead className="border-b border-[var(--line)] bg-[var(--panel)]">
-                <tr>
-                  <th className="w-2/5 px-3 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                    Account *
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                    Memo
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-sky-600">
-                    Debit (DR)
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-emerald-600">
-                    Credit (CR)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)] bg-[var(--bg)]">
-                {lines.map((line, i) => (
-                  <tr key={i} className={line.accountId ? "" : "opacity-60 focus-within:opacity-100"}>
-                    <td className="px-3 py-2">
-                      <select
-                        name={`lines[${i}][accountId]`}
-                        value={line.accountId}
-                        onChange={(e) => setLine(i, { accountId: e.target.value })}
-                        className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
-                      >
-                        <option value="">— Select account —</option>
-                        {accounts.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.code} — {a.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        name={`lines[${i}][description]`}
-                        value={line.description}
-                        onChange={(e) => setLine(i, { description: e.target.value })}
-                        placeholder="optional memo"
-                        className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        name={`lines[${i}][debit]`}
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={line.debit}
-                        onChange={(e) => setLine(i, { debit: e.target.value })}
-                        placeholder="0"
-                        className="w-28 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-right"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        name={`lines[${i}][credit]`}
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={line.credit}
-                        onChange={(e) => setLine(i, { credit: e.target.value })}
-                        placeholder="0"
-                        className="w-28 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs text-right"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-
-              {/* Running totals footer */}
-              {hasAmounts && (
-                <tfoot className="border-t-2 border-[var(--line)] bg-[var(--panel)]">
+          <DataTable
+            frameless
+            dense
+            className="overflow-hidden rounded-lg border border-[var(--line)]"
+            rows={lines}
+            getRowKey={(_line, i) => String(i)}
+            empty="No journal lines."
+            rowClassName={(line) => (line.accountId ? undefined : "opacity-60 focus-within:opacity-100")}
+            columns={[
+              {
+                key: "account",
+                header: "Account *",
+                headerClassName: "w-2/5",
+                className: "w-2/5",
+                cell: (line, i) => (
+                  <select
+                    name={`lines[${i}][accountId]`}
+                    value={line.accountId}
+                    onChange={(e) => setLine(i, { accountId: e.target.value })}
+                    className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
+                  >
+                    <option value="">— Select account —</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} — {a.name}
+                      </option>
+                    ))}
+                  </select>
+                ),
+              },
+              {
+                key: "memo",
+                header: "Memo",
+                cell: (line, i) => (
+                  <input
+                    name={`lines[${i}][description]`}
+                    value={line.description}
+                    onChange={(e) => setLine(i, { description: e.target.value })}
+                    placeholder="optional memo"
+                    className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5"
+                  />
+                ),
+              },
+              {
+                key: "debit",
+                header: "Debit (DR)",
+                align: "right",
+                headerClassName: "!text-sky-600",
+                cell: (line, i) => (
+                  <input
+                    name={`lines[${i}][debit]`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={line.debit}
+                    onChange={(e) => setLine(i, { debit: e.target.value })}
+                    placeholder="0"
+                    className="w-28 rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right"
+                  />
+                ),
+              },
+              {
+                key: "credit",
+                header: "Credit (CR)",
+                align: "right",
+                headerClassName: "!text-emerald-600",
+                cell: (line, i) => (
+                  <input
+                    name={`lines[${i}][credit]`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={line.credit}
+                    onChange={(e) => setLine(i, { credit: e.target.value })}
+                    placeholder="0"
+                    className="w-28 rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right"
+                  />
+                ),
+              },
+            ]}
+            tableFooter={
+              hasAmounts ? (
+                <>
                   <tr>
                     <td
                       colSpan={2}
@@ -385,24 +393,24 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                     >
                       Totals
                     </td>
-                    <td className={`px-3 py-2 text-right text-xs font-bold tabular-nums ${balanced ? "text-emerald-600" : "text-amber-600"}`}>
+                    <td className={`px-3 py-2 text-right font-bold tabular-nums ${balanced ?"text-emerald-600" : "text-amber-600"}`}>
                       {totalDR.toLocaleString()}
                     </td>
-                    <td className={`px-3 py-2 text-right text-xs font-bold tabular-nums ${balanced ? "text-emerald-600" : "text-amber-600"}`}>
+                    <td className={`px-3 py-2 text-right font-bold tabular-nums ${balanced ?"text-emerald-600" : "text-amber-600"}`}>
                       {totalCR.toLocaleString()}
                     </td>
                   </tr>
-                  {!balanced && hasAmounts && (
+                  {!balanced && (
                     <tr>
                       <td colSpan={4} className="px-3 pb-2 text-right text-[12px] font-semibold text-amber-600">
                         Difference: {Math.abs(totalDR - totalCR).toLocaleString()} — entry will be rejected until balanced
                       </td>
                     </tr>
                   )}
-                </tfoot>
-              )}
-            </table>
-          </div>
+                </>
+              ) : undefined
+            }
+          />
 
           <p className="mt-2 flex items-start gap-1.5 text-[13px] text-[var(--ink-muted)]">
             <svg
@@ -425,7 +433,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
         </div>
 
         {serverError && (
-          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[13px] text-red-600">
             {serverError}
           </p>
         )}

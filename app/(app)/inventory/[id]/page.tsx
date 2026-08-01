@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -278,66 +280,77 @@ export default async function PartDetailPage({
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Movement Log</p>
               <p className="text-[11px] tabular-nums text-[var(--ink-muted)]">{transactions.length} entries</p>
             </div>
-            {transactions.length === 0 ? (
-              <p className="px-5 py-10 text-center text-[13px] text-[var(--ink-muted)]">No movements recorded yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="border-b border-[var(--line)] bg-[var(--panel-strong)]">
-                    <tr className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60">
-                      <th className="px-5 py-2.5 text-left">Date &amp; Time</th>
-                      <th className="px-3 py-2.5 text-left">Action</th>
-                      <th className="px-3 py-2.5 text-right">Change</th>
-                      <th className="px-3 py-2.5 text-right">Balance</th>
-                      <th className="hidden px-3 py-2.5 text-left sm:table-cell">Reference</th>
-                      <th className="px-5 py-2.5 text-left">Handler</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--line)]">
-                    {txnsDisplay.map((txn) => {
-                      const isIn  = txn.type === "IN";
-                      const isOt  = txn.type === "OUT";
-                      const sign  = isIn ? "+" : isOt ? "−" : (txn.quantity >= 0 ? "+" : "−");
-                      const changeColor = isIn ? "text-emerald-600" : isOt ? "text-red-500" : "text-amber-600";
-                      const badgeCls    = isIn
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
-                        : isOt
-                        ? "border-red-400/30 bg-red-500/10 text-red-600"
-                        : "border-amber-400/30 bg-amber-500/10 text-amber-700";
-                      const label = isIn ? "Inbound" : isOt ? "Write-off" : "Correction";
-                      return (
-                        <tr key={txn.id} className="transition-colors hover:bg-[var(--panel-strong)]/40">
-                          <td className="px-5 py-3 text-[12px] tabular-nums text-[var(--ink)] whitespace-nowrap">
-                            {txn.createdAt.toLocaleDateString([], { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")}
-                            {" "}
-                            <span className="text-[var(--ink-muted)]">
-                              {txn.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className={`inline-block rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeCls}`}>
-                              {label}
-                            </span>
-                          </td>
-                          <td className={`px-3 py-3 text-right text-[14px] font-black tabular-nums ${changeColor}`}>
-                            {sign}{Math.abs(txn.quantity)}
-                          </td>
-                          <td className="px-3 py-3 text-right text-[13px] font-semibold tabular-nums text-[var(--ink)]">
-                            {txn.balance}
-                          </td>
-                          <td className="hidden max-w-[180px] truncate px-3 py-3 text-[12px] text-[var(--ink-muted)] sm:table-cell">
-                            {txn.reason ?? <span className="text-[var(--ink-muted)]/30">—</span>}
-                          </td>
-                          <td className="px-5 py-3 text-[12px] text-[var(--ink-muted)] whitespace-nowrap">
-                            {txn.createdBy?.name ?? <span className="text-[var(--ink-muted)]/30">—</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable
+              frameless
+              dense
+              rows={txnsDisplay}
+              getRowKey={(txn) => txn.id}
+              empty="No movements recorded yet."
+              columns={[
+                {
+                  key: "date",
+                  header: <>Date &amp; Time</>,
+                  className: "text-[12px] tabular-nums text-[var(--ink)] whitespace-nowrap",
+                  cell: (txn) => (
+                    <>
+                      {txn.createdAt.toLocaleDateString([], { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")}
+                      {" "}
+                      <span className="text-[var(--ink-muted)]">
+                        {txn.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </>
+                  ),
+                },
+                {
+                  key: "action",
+                  header: "Action",
+                  cell: (txn) => (
+                    <StatusBadge
+                      tone={txn.type === "IN" ? "success" : txn.type === "OUT" ? "danger" : "warning"}
+                      className="uppercase tracking-wide"
+                    >
+                      {txn.type === "IN" ? "Inbound" : txn.type === "OUT" ? "Write-off" : "Correction"}
+                    </StatusBadge>
+                  ),
+                },
+                {
+                  key: "change",
+                  header: "Change",
+                  align: "right",
+                  className: "font-black tabular-nums",
+                  cell: (txn) => {
+                    const isIn = txn.type === "IN";
+                    const isOt = txn.type === "OUT";
+                    const sign = isIn ? "+" : isOt ? "−" : (txn.quantity >= 0 ? "+" : "−");
+                    return (
+                      <span className={isIn ? "text-emerald-600" : isOt ? "text-red-500" : "text-amber-600"}>
+                        {sign}{Math.abs(txn.quantity)}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "balance",
+                  header: "Balance",
+                  align: "right",
+                  className: "font-semibold tabular-nums text-[var(--ink)]",
+                  cell: (txn) => txn.balance,
+                },
+                {
+                  key: "reference",
+                  header: "Reference",
+                  className: "hidden max-w-[180px] truncate text-[12px] text-[var(--ink-muted)] sm:table-cell",
+                  headerClassName: "hidden sm:table-cell",
+                  cell: (txn) => txn.reason ?? <span className="text-[var(--ink-muted)]/30">—</span>,
+                },
+                {
+                  key: "handler",
+                  header: "Handler",
+                  className: "text-[12px] text-[var(--ink-muted)] whitespace-nowrap",
+                  cell: (txn) => txn.createdBy?.name ?? <span className="text-[var(--ink-muted)]/30">—</span>,
+                },
+              ]}
+            />
           </div>
         </div>
 

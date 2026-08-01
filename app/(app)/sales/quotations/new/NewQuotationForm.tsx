@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { CommercialLineItemsEditor, LineItemTotals, TaxToggleField } from "@/components/forms";
 import { FormTextarea } from "@/components/ui/form-field";
+import { useLineItemsState } from "@/hooks/useLineItemsState";
+import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
 
 type ClientOption = {
   id: string;
@@ -31,15 +34,6 @@ type JobOption = {
 type PartOption = { id: string; sku: string; name: string; unitCost: number | null; qtyOnHand: number };
 type TaxRateOption = { id: string; name: string; code: string; rate: number; isDefault: boolean };
 
-type LineItem = {
-  id: number;
-  partId: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-};
-
 type CustomerSource = {
   key: string;
   kind: "client" | "lead" | "job";
@@ -65,9 +59,21 @@ type Props = {
   defaultTaxApplicable: boolean;
   defaultTaxRate: number;
   defaultTaxLabel: string;
+  initialData?: {
+    validUntil?: string;
+    notes?: string;
+    taxEnabled?: boolean;
+    taxRate?: number;
+    taxLabel?: string;
+    lines?: Array<{
+      description?: string;
+      quantity?: number;
+      unitPrice?: number;
+      discount?: number;
+    }>;
+  };
+  submitLabel?: string;
 };
-
-let nextId = 1;
 
 export function NewQuotationForm({
   leadId,
@@ -83,6 +89,8 @@ export function NewQuotationForm({
   defaultTaxApplicable,
   defaultTaxRate,
   defaultTaxLabel,
+  initialData,
+    submitLabel = "Create Quotation",
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -98,11 +106,9 @@ export function NewQuotationForm({
     organization: "",
     address: "",
   });
-  const [items, setItems] = useState<LineItem[]>([
-    { id: nextId++, partId: "", description: "", quantity: 1, unitPrice: 0, discount: 0 },
-  ]);
-  const [validUntil, setValidUntil] = useState("");
-  const [notes, setNotes] = useState("");
+  const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
+  const [validUntil, setValidUntil] = useState(initialData?.validUntil ?? "");
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
   const initialTaxKey = taxRates.find((rate) => rate.isDefault)?.id
     ? `rate:${taxRates.find((rate) => rate.isDefault)?.id}`
     : taxRates[0]?.id
@@ -185,38 +191,21 @@ export function NewQuotationForm({
   }, [taxRates, defaultTaxLabel, defaultTaxRate]);
   const selectedTax = taxOptions.find((option) => option.key === selectedTaxKey) ?? taxOptions[0];
 
-  function updateItem(id: number, patch: Partial<LineItem>) {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
-  }
-
-  function selectPart(id: number, partId: string) {
+  function selectPart(key: number, partId: string) {
     const part = parts.find((item) => item.id === partId);
-    updateItem(id, {
+    updateLine(key, {
       partId,
       description: part ? `${part.sku} - ${part.name}` : "",
       unitPrice: part?.unitCost ?? 0,
     });
   }
 
-  function addItem() {
-    setItems((prev) => [...prev, { id: nextId++, partId: "", description: "", quantity: 1, unitPrice: 0, discount: 0 }]);
-  }
-
-  function removeItem(id: number) {
-    if (items.length <= 1) return;
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }
-
-  function calcLineTotal(item: LineItem) {
-    return item.quantity * item.unitPrice * (1 - item.discount / 100);
-  }
-
   const validItems = useMemo(
-    () => items.filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice >= 0),
-    [items],
+    () => lines.filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice >= 0),
+    [lines],
   );
-  const subtotal = items.reduce((sum, item) => sum + calcLineTotal(item), 0);
-  const productLines = items.filter((item) => item.partId).length;
+  const subtotal = lines.reduce((sum, item) => sum + commercialLineTotal(item, canOverrideDiscount), 0);
+  const productLines = lines.filter((item) => item.partId).length;
   const taxRate = taxEnabled ? Math.max(0, Number(selectedTax?.taxRate ?? 0)) : 0;
   const taxAmount = subtotal * (taxRate / 100);
   const totalAmount = subtotal + taxAmount;
@@ -256,13 +245,13 @@ export function NewQuotationForm({
             taxApplicable: taxEnabled,
             taxRate,
             taxLabel: taxEnabled ? selectedTax?.taxLabel : undefined,
-            items: validItems.map((item) => ({
+            items: serialize((item) => ({
               partId: item.partId || null,
               description: item.description,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
-              discount: item.discount,
-            })),
+              discount: canOverrideDiscount ? item.discount : 0,
+            })).filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice >= 0),
           }),
         });
         const result = await response.json().catch(() => null) as { id?: string; href?: string; error?: string } | null;
@@ -400,23 +389,26 @@ export function NewQuotationForm({
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
               <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--gold)] hover:underline">Tax rates</Link>
             </div>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Lines ready</dt><dd className="font-bold text-[var(--ink)]">{validItems.length}/{items.length}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Product lines</dt><dd className="font-bold text-[var(--ink)]">{productLines}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Subtotal</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(subtotal)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">{taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}</dt><dd className="font-bold tabular-nums text-[var(--ink)]">{formatAmount(taxAmount)}</dd></div>
-              <div className="flex justify-between gap-3 border-t border-[var(--line)] pt-2"><dt className="font-semibold text-[var(--ink)]">Total</dt><dd className="text-[15px] font-black tabular-nums text-[var(--ink)]">{formatAmount(totalAmount)}</dd></div>
-            </dl>
+            <LineItemTotals
+              className="mt-3"
+              currency={currency}
+              formatMoney={formatAmount}
+              leadingRows={[
+                { label: "Lines ready", value: <>{validItems.length}/{lines.length}</> },
+                { label: "Product lines", value: productLines },
+              ]}
+              subtotal={subtotal}
+              taxLabel={taxEnabled ? `${selectedTax?.taxLabel ?? "Tax"} (${taxRate}%)` : "Tax"}
+              taxAmount={taxAmount}
+              total={totalAmount}
+            />
             <div className="mt-3 space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <label className="flex items-center justify-between gap-3 text-xs font-semibold text-[var(--ink)]">
-                <span>Tax applicable</span>
-                <input
-                  type="checkbox"
-                  checked={taxEnabled}
-                  onChange={(event) => setTaxEnabled(event.target.checked)}
-                  className="h-4 w-4 rounded border-[var(--line)]"
-                />
-              </label>
+              <TaxToggleField
+                enabled={taxEnabled}
+                onChange={setTaxEnabled}
+                label="Tax applicable"
+                className="flex items-center justify-between gap-3 text-xs font-semibold text-[var(--ink)]"
+              />
               {taxEnabled ? (
                 <select
                   value={selectedTaxKey}
@@ -457,125 +449,17 @@ export function NewQuotationForm({
           </section>
         </div>
 
-        <section className="panel-shadow min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Products & Services</p>
-              <p className="text-[13px] text-[var(--ink-muted)]">Select inventory products or add custom service lines.</p>
-            </div>
-            <button type="button" onClick={addItem} className="rounded-md bg-[var(--gold)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">Add Line</button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] border-collapse text-[13px]">
-              <thead className="bg-[var(--panel-strong)]/50 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-                <tr className="border-b border-[var(--line)]">
-                  <th className="w-64 px-3 py-2">Product</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="w-20 px-3 py-2 text-right">Qty</th>
-                  <th className="w-28 px-3 py-2 text-right">Unit Price</th>
-                  {canOverrideDiscount ? <th className="w-20 px-3 py-2 text-right">Disc %</th> : null}
-                  <th className="w-28 px-3 py-2 text-right">Total</th>
-                  <th className="w-10 px-3 py-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {items.map((item) => (
-                  <tr key={item.id} className="align-top hover:bg-[var(--gold)]/5">
-                    <td className="px-3 py-2">
-                      <select
-                        value={item.partId}
-                        onChange={(event) => selectPart(item.id, event.target.value)}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
-                      >
-                        <option value="">Custom line</option>
-                        {parts.map((part) => (
-                          <option key={part.id} value={part.id}>
-                            {part.sku} - {part.name} ({part.qtyOnHand} in stock)
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(event) => updateItem(item.id, { description: event.target.value })}
-                        placeholder="Product, service, or package description"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/15"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={item.unitPrice}
-                        onChange={(event) => updateItem(item.id, { unitPrice: Number(event.target.value) })}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50"
-                      />
-                    </td>
-                    {canOverrideDiscount ? (
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="any"
-                          value={item.discount}
-                          onChange={(event) => updateItem(item.id, { discount: Number(event.target.value) })}
-                          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50"
-                        />
-                      </td>
-                    ) : null}
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">
-                      {formatAmount(calcLineTotal(item))}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        disabled={items.length <= 1}
-                        className="rounded-md px-2 py-1 text-[var(--ink-muted)] transition hover:bg-red-500/10 hover:text-red-500 disabled:opacity-30"
-                        aria-label="Remove item"
-                      >
-                        x
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-[var(--line)] bg-[var(--gold)]/5">
-                  <td colSpan={canOverrideDiscount ? 5 : 4} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td>
-                  <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{formatAmount(subtotal)}</td>
-                  <td />
-                </tr>
-                {taxEnabled ? (
-                  <tr className="bg-[var(--gold)]/5">
-                    <td colSpan={canOverrideDiscount ? 5 : 4} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">{selectedTax?.taxLabel ?? "Tax"} ({taxRate}%)</td>
-                    <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{formatAmount(taxAmount)}</td>
-                    <td />
-                  </tr>
-                ) : null}
-                <tr className="bg-[var(--panel-strong)]">
-                  <td colSpan={canOverrideDiscount ? 5 : 4} className="px-3 py-3 text-right text-xs font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</td>
-                  <td className="px-3 py-3 text-right text-base font-black tabular-nums text-[var(--ink)]">{formatAmount(totalAmount)}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </section>
+        <CommercialLineItemsEditor
+          items={lines}
+          parts={parts}
+          canOverrideDiscount={canOverrideDiscount}
+          formatAmount={formatAmount}
+          onAddLine={addLine}
+          onRemoveLine={removeLine}
+          onUpdateLine={updateLine}
+          onSelectPart={selectPart}
+          className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

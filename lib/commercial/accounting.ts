@@ -1,7 +1,5 @@
 import { Prisma } from "@prisma/client";
 
-import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-
 type Tx = Prisma.TransactionClient;
 
 type InvoiceLineInput = {
@@ -85,61 +83,5 @@ export async function replaceDocumentTaxLines({
     });
   } catch {
     // Optional accounting detail table; ignore when schema has not been deployed yet.
-  }
-}
-
-export async function writePaymentAccountingDocuments({
-  tx,
-  orgId,
-  paymentId,
-  amount,
-  currency,
-  issuedById,
-  saleId = null,
-  invoiceId = null,
-  branchId = null,
-  targetType,
-  targetId,
-}: {
-  tx: Tx;
-  orgId: string;
-  paymentId: string;
-  amount: number;
-  currency: string;
-  issuedById?: string | null;
-  saleId?: string | null;
-  invoiceId?: string | null;
-  branchId?: string | null;
-  targetType: string;
-  targetId: string;
-}) {
-  try {
-    await tx.paymentAllocation.create({
-      data: {
-        orgId,
-        paymentId,
-        targetType,
-        targetId,
-        amount,
-      },
-    });
-
-    const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
-
-    await tx.receipt.create({
-      data: {
-        orgId,
-        receiptNumber,
-        paymentId,
-        saleId,
-        invoiceId,
-        branchId,
-        amount,
-        currency,
-        issuedById: issuedById ?? null,
-      },
-    });
-  } catch {
-    // Receipts/allocations are additive commercial records; keep payment capture non-blocking.
   }
 }

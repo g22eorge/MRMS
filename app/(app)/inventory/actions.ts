@@ -8,6 +8,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { checkPartLimit } from "@/lib/plan-limits";
 import { notifyStockAlert } from "@/lib/notifications";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
 type StockTxnType = "IN" | "OUT" | "ADJUST";
 
@@ -102,8 +103,9 @@ export async function adjustStockAction(formData: FormData) {
       redirect(`/inventory/${partId}?error=Enter+a+non-zero+quantity`);
   }
 
+  let auditDelta: { before: number; delta: number; logQty: number; logReason: string | null } | null = null;
   try {
-    await prisma.$transaction(async (tx) => {
+    auditDelta = await prisma.$transaction(async (tx) => {
       const part = await tx.part.findFirst({
         where: { id: partId, orgId },
         select: { id: true, qtyOnHand: true },
@@ -135,16 +137,35 @@ export async function adjustStockAction(formData: FormData) {
       await tx.partStockTransaction.create({
         data: {
           partId: part.id,
+          orgId,
+          sourceType: "ADJUSTMENT",
           type,
           quantity: logQty,
           reason: logReason,
           createdById: session.user.id,
         },
       });
+
+      return { before: part.qtyOnHand, delta, logQty, logReason };
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to adjust stock";
     redirect(`/inventory/${partId}?error=${encodeURIComponent(message)}`);
+  }
+
+  // Central audit trail for manual stock changes (the PartStockTransaction row is
+  // domain data; this is the cross-module accountability record).
+  if (auditDelta) {
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "Part",
+      entityId: partId,
+      action: "STOCK_ADJUSTED",
+      summary: `Stock ${type} ${auditDelta.logQty}${auditDelta.logReason ? ` — ${auditDelta.logReason}` : ""} (${auditDelta.before} → ${auditDelta.before + auditDelta.delta})`,
+      before: { qtyOnHand: auditDelta.before },
+      after: { qtyOnHand: auditDelta.before + auditDelta.delta },
+    });
   }
 
   // Fire stock alert (out-of-stock or low-stock) if threshold crossed.

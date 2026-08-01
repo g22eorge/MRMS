@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { can } from "@/lib/permissions";
+import { hrefModuleAllowed } from "@/lib/nav/href-module";
+import { routeShortLabel as sl } from "@/lib/nav/registry";
 import type { Role } from "@prisma/client";
 
 type NavItem = {
@@ -49,84 +51,73 @@ const fieldIcon       = <Icon d={["M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1
 const complaintsIcon  = <Icon d={["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z","M12 9v4","M12 17h.01"]} />;
 const salesIcon       = <Icon d={["M22 12h-4l-3 9L9 3l-3 9H2"]} />;
 const aiIcon          = <Icon d={["M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z","M7.5 13.5c.83 0 1.5-.67 1.5-1.5S8.33 10.5 7.5 10.5 6 11.17 6 12s.67 1.5 1.5 1.5z","M16.5 13.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S15 11.17 15 12s.67 1.5 1.5 1.5z"]} />;
-const financeNavIcon  = <Icon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} />;
-const activityNavIcon = <Icon d={["M22 12h-4l-3 9L9 3l-3 9H2"]} />;
 const targetsIcon     = <Icon d="" size={22}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></Icon>;
 const recurringIcon   = <Icon d={["M17 1l4 4-4 4","M3 11V9a4 4 0 0 1 4-4h14","M7 23l-4-4 4-4","M21 13v2a4 4 0 0 1-4 4H3"]} />;
 const taxIcon         = <Icon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M9 13l6 0","M9 9h1","M9 17h1","M14 9h1","M14 17h1"]} />;
 const shiftsIcon      = <Icon d={["M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z","M12 6v6l4 2"]} />;
 
 /* ─────────────────────────── named items ──────────────────────────────── */
+// Labels come from the canonical route registry (lib/nav/registry.ts) —
+// only icons are defined locally.
 const ITEMS = {
-  dashboard:      { href: "/dashboard",                 label: "Home",         icon: homeIcon      },
-  jobs:           { href: "/jobs",                      label: "Queue",        icon: jobsIcon      },
-  board:          { href: "/technicians",               label: "Techs",        icon: boardIcon     },
-  intake:         { href: "/intake",                    label: "Intake",       icon: intakeIcon    },
-  clients:        { href: "/clients",                   label: "Clients",      icon: clientsIcon   },
-  reports:        { href: "/reports",                   label: "Reports",      icon: reportsIcon   },
-  aiInsights:     { href: "/ai-insights",               label: "AI Insights",  icon: aiIcon        },
-  pos:            { href: "/pos",                       label: "POS",          icon: posIcon       },
-  inventory:      { href: "/inventory",                 label: "Inventory",    icon: inventoryIcon },
-  payoutFollowups:{ href: "/payout-followups",          label: "Payments",     icon: payoutsIcon   },
-  payouts:        { href: "/technicians/payouts",       label: "Payouts",      icon: payoutsIcon   },
-  jobCards:       { href: "/documents/job-cards",       label: "Job Cards",    icon: jobCardIcon   },
-  quotations:     { href: "/documents/quotations",      label: "Quotes",       icon: quoteIcon     },
-  invoiceDocs:    { href: "/documents/invoices",        label: "Invoices",     icon: invoiceIcon   },
-  receipts:       { href: "/documents/receipts",        label: "Receipts",     icon: receiptIcon   },
-  deliveryNotes:  { href: "/documents/delivery-notes",  label: "Delivery",     icon: deliveryIcon  },
-  creditNotes:    { href: "/documents/credit-notes",    label: "Credit Notes", icon: creditNoteIcon},
-  refunds:        { href: "/documents/refunds",         label: "Refunds",      icon: refundIcon    },
-  cashierShifts:  { href: "/pos/shifts",                label: "Shifts",       icon: shiftsIcon    },
-  expenses:       { href: "/finance/expenses",          label: "Expenses",     icon: expensesIcon  },
-  taxRates:       { href: "/finance/tax-rates",         label: "Tax Rates",    icon: taxIcon       },
-  recurring:      { href: "/finance/recurring",         label: "Recurring",    icon: recurringIcon },
-  sales:          { href: "/sales",                     label: "Sales",        icon: salesIcon     },
-  field:          { href: "/field",                     label: "Field",        icon: fieldIcon     },
-  complaints:     { href: "/complaints",                label: "Complaints",   icon: complaintsIcon},
-  targets:        { href: "/targets",                   label: "Targets",      icon: targetsIcon   },
-  invoices:       { href: "/documents/invoices",         label: "Invoices",     icon: invoiceIcon     },
-  finance:        { href: "/finance",                   label: "Finance",      icon: financeNavIcon  },
-  activity:       { href: "/reports",                   label: "Activity",     icon: activityNavIcon },
+  dashboard:      { href: "/dashboard",                 label: sl("/dashboard"),                icon: homeIcon      },
+  jobs:           { href: "/jobs",                      label: sl("/jobs"),                     icon: jobsIcon      },
+  board:          { href: "/technicians",               label: sl("/technicians"),              icon: boardIcon     },
+  intake:         { href: "/intake",                    label: sl("/intake"),                   icon: intakeIcon    },
+  clients:        { href: "/clients",                   label: sl("/clients"),                  icon: clientsIcon   },
+  reports:        { href: "/reports",                   label: sl("/reports"),                  icon: reportsIcon   },
+  aiInsights:     { href: "/ai-insights",               label: sl("/ai-insights"),              icon: aiIcon        },
+  pos:            { href: "/pos",                       label: sl("/pos"),                      icon: posIcon       },
+  inventory:      { href: "/inventory",                 label: sl("/inventory"),                icon: inventoryIcon },
+  payoutFollowups:{ href: "/payout-followups",          label: sl("/payout-followups"),         icon: payoutsIcon   },
+  payouts:        { href: "/technicians/payouts",       label: sl("/technicians/payouts"),      icon: payoutsIcon   },
+  jobCards:       { href: "/documents/job-cards",       label: sl("/documents/job-cards"),      icon: jobCardIcon   },
+  quotations:     { href: "/documents/quotations",      label: sl("/documents/quotations"),     icon: quoteIcon     },
+  invoiceDocs:    { href: "/documents/invoices",        label: sl("/documents/invoices"),       icon: invoiceIcon   },
+  receipts:       { href: "/documents/receipts",        label: sl("/documents/receipts"),       icon: receiptIcon   },
+  deliveryNotes:  { href: "/documents/delivery-notes",  label: sl("/documents/delivery-notes"), icon: deliveryIcon  },
+  creditNotes:    { href: "/documents/credit-notes",    label: sl("/documents/credit-notes"),   icon: creditNoteIcon},
+  refunds:        { href: "/documents/refunds",         label: sl("/documents/refunds"),        icon: refundIcon    },
+  cashierShifts:  { href: "/pos/shifts",                label: sl("/pos/shifts"),               icon: shiftsIcon    },
+  expenses:       { href: "/finance/expenses",          label: sl("/finance/expenses"),         icon: expensesIcon  },
+  taxRates:       { href: "/finance/tax-rates",         label: sl("/finance/tax-rates"),        icon: taxIcon       },
+  recurring:      { href: "/finance/recurring",         label: sl("/finance/recurring"),        icon: recurringIcon },
+  sales:          { href: "/sales",                     label: sl("/sales"),                    icon: salesIcon     },
+  field:          { href: "/field",                     label: sl("/field"),                    icon: fieldIcon     },
+  complaints:     { href: "/complaints",                label: sl("/complaints"),               icon: complaintsIcon},
+  targets:        { href: "/targets",                   label: sl("/targets"),                  icon: targetsIcon   },
 } satisfies Record<string, NavItem>;
 
-/* ───────────────────────── module guard ──────────────────────────────── */
-const hrefModule: Record<string, string> = {
-  "/jobs": "JOBS", "/intake": "JOBS", "/technicians": "JOBS",
-  "/clients": "JOBS", "/payout-followups": "JOBS",
-  "/finance": "INVOICING",
-  "/complaints": "COMPLAINTS", "/field": "FIELD",
-  "/inventory": "INVENTORY", "/pos": "POS",
-  "/documents/job-cards": "INVOICING", "/documents/quotations": "INVOICING",
-  "/documents/invoices": "INVOICING", "/documents/receipts": "INVOICING",
-  "/documents/delivery-notes": "INVOICING", "/documents/credit-notes": "INVOICING",
-  "/documents/refunds": "INVOICING", "/pos/shifts": "POS",
-  "/reports": "REPORTS", "/ai-insights": "REPORTS",
-  "/sales": "SALES", "/targets": "TARGETS",
-};
+/** Hrefs shown in the primary bottom bar for a role — exported so the Header
+ *  back-button logic stays in sync instead of keeping its own list. */
+export function getPrimaryHrefs(role: Role, permissions: string[], mods?: Set<string>): Set<string> {
+  return new Set(getPrimaryItems(role, permissions, mods).map((i) => i.href));
+}
 
 /* ─────────────────── role-based nav config ─────────────────────────── */
 function getPrimaryItems(role: Role, permissions: string[], mods?: Set<string>): NavItem[] {
   const perm = { role, permissions };
-  const ok   = (href: string) => !mods || !hrefModule[href] || mods.has(hrefModule[href]);
+  const ok   = (href: string) => hrefModuleAllowed(href, mods);
   if (role === "TECHNICIAN_EXTERNAL" || !can.viewIntake(perm)) {
     return [ITEMS.dashboard, ITEMS.jobs, ITEMS.board].filter((i) => ok(i.href));
   }
-  // ADMIN / OPS / MANAGER get a 4-tab premium bar: Home | Repairs | Finance | Activity
+  // ADMIN / OPS / MANAGER get a 4-tab premium bar: Home | Jobs | Invoices | Reports
   if (["ADMIN", "OPS", "MANAGER"].includes(role)) {
-    return [ITEMS.dashboard, ITEMS.jobs, ITEMS.invoices, ITEMS.activity].filter((i) => ok(i.href));
+    return [ITEMS.dashboard, ITEMS.jobs, ITEMS.invoiceDocs, ITEMS.reports].filter((i) => ok(i.href));
   }
   return [ITEMS.dashboard, ITEMS.intake, ITEMS.jobs].filter((i) => ok(i.href));
 }
 
 function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): NavGroup[] {
   const perm = { role, permissions };
-  const modOk = (href: string) => !mods || !hrefModule[href] || mods.has(hrefModule[href]);
+  const modOk = (href: string) => hrefModuleAllowed(href, mods);
 
-  // Roles for which "board" is already a PRIMARY nav item — don't duplicate in More.
-  const boardInPrimary = role === "TECHNICIAN_EXTERNAL" || !can.viewIntake(perm);
+  // Anything already in the PRIMARY bar for this role must not repeat in More.
+  const primaryHrefs = new Set(getPrimaryItems(role, permissions, mods).map((i) => i.href));
 
   const allow = (href: string): boolean => {
     if (!modOk(href)) return false;
+    if (primaryHrefs.has(href)) return false;
     switch (href) {
       case ITEMS.clients.href:        return can.viewClientInfo(perm);
       case ITEMS.reports.href:        return can.viewAccountsSummary(perm);
@@ -147,8 +138,6 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
       case ITEMS.payoutFollowups.href:return can.reviewExternalBills(perm) || can.approveInvoices(perm);
       // Inventory page guard: ADMIN, MANAGER, TECH_MANAGER, OPS, TECHNICIAN_INTERNAL
       case ITEMS.inventory.href:      return ["ADMIN","OPS","TECHNICIAN_INTERNAL","MANAGER","TECH_MANAGER"].includes(role);
-      // Board/Techs: skip if already a primary item for this role (avoids duplicate)
-      case ITEMS.board.href:          return !boardInPrimary;
       case ITEMS.sales.href:          return can.createLeads(perm);
       // Field page: accessible to managers AND field techs who can record signoffs
       case ITEMS.field.href:          return can.manageFieldVisits(perm) || can.recordFieldSignoffs(perm);
@@ -241,7 +230,7 @@ export function BottomNav({
                 }`}>
                   {item.icon}
                   {typeof badge === "number" && badge > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[13px] font-black leading-none text-black">
+                    <span className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-black ring-2 ring-[var(--panel)]">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}

@@ -28,13 +28,17 @@ import {
   notifyPayoutGenerated,
 } from "@/lib/notifications";
 import { deliverOutboundMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
-import { getWhatsAppConfigForOrg, uploadWhatsAppMedia, sendWhatsAppDocument } from "@/lib/notifications/whatsapp";
+import { enqueueWhatsAppDocument, type WhatsAppDocumentKind } from "@/lib/notifications/whatsapp-document-outbox";
 import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
-import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
+import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { postRefund } from "@/lib/accounting/post";
+import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
+import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 
 const workflowReasonValues = [
@@ -651,6 +655,15 @@ export async function updateJobAction(formData: FormData) {
     },
   });
 
+  // On completion, decrement stock for the parts on the accepted quotation.
+  // Best-effort + idempotent: a stock-write failure must not block the repair
+  // from completing, and re-entering COMPLETED never double-consumes.
+  if (payload.nextStatus === JobStatus.COMPLETED && existing.status !== JobStatus.COMPLETED) {
+    await consumeRepairPartsForJob({ orgId, jobId: payload.jobId, userId: session.user.id }).catch((error) => {
+      console.error("[jobs] repair parts consumption failed", error);
+    });
+  }
+
   const job =
     user.role === "TECHNICIAN_EXTERNAL"
       ? await prisma.job.findUnique({
@@ -683,9 +696,16 @@ export async function updateJobAction(formData: FormData) {
           },
         });
 
+  const statusChangedTo =
+    payload.nextStatus && payload.nextStatus !== existing.status ? payload.nextStatus : undefined;
+
   if (!job) {
     console.error("[updateJobAction] job fetch after update returned null — notifications skipped", { jobId: existing.id });
-    return { success: true, warn: "Job updated but post-update fetch failed — notifications may not have fired." };
+    return {
+      success: true,
+      warn: "Job updated but post-update fetch failed — notifications may not have fired.",
+      statusChangedTo,
+    };
   }
 
   // Notifications must compare against the pre-update snapshot.
@@ -699,6 +719,15 @@ export async function updateJobAction(formData: FormData) {
             select: { client: { select: { fullName: true } } },
           }))?.client.fullName ?? "Client";
     await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
+    // Record the transition so the client portal (and staff) can show a real
+    // repair timeline. Additive + best-effort — never blocks the status change.
+    await writeJobStatusHistory({
+      orgId,
+      jobId: job.id,
+      fromStatus: existing.status,
+      toStatus: job.status,
+      changedById: user.id,
+    });
   }
 
   if (existing.assignedToId !== job.assignedToId && job.assignedToId) {
@@ -721,7 +750,10 @@ export async function updateJobAction(formData: FormData) {
   revalidatePath("/technicians");
   revalidatePath("/dashboard");
 
-  return { success: true };
+  const resolvedStatusChangedTo =
+    existing.status !== job.status ? job.status : statusChangedTo;
+
+  return { success: true, statusChangedTo: resolvedStatusChangedTo };
 }
 
 export async function recordClientPaymentAction(formData: FormData) {
@@ -758,6 +790,7 @@ export async function recordClientPaymentAction(formData: FormData) {
       jobNumber: true,
       status: true,
       clientBill: true,
+      clientId: true,
       invoiceNumber: true,
       invoiceIssuedAt: true,
       externalTechBill: true,
@@ -847,7 +880,7 @@ export async function recordClientPaymentAction(formData: FormData) {
         throw new Error("This payment will overpay the client bill. Tick confirm overpayment if this is intentional.");
       }
 
-      await tx.payment.create({
+      const payment = await tx.payment.create({
         data: {
           orgId,
           invoiceId: invoice.id,
@@ -861,36 +894,48 @@ export async function recordClientPaymentAction(formData: FormData) {
           note,
           createdById: session.user.id,
         },
+        select: { id: true },
       });
 
-       const payments = await tx.payment.findMany({
-          where: { orgId, invoiceId: invoice.id },
-          select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
+      // Generate a receipt for real payments (not refunds), like the invoice and
+      // POS flows. The job payment path previously created none, so most repair
+      // payments had no receipt document.
+      if (payload.kind !== "REFUND") {
+        await createReceiptForPayment(tx, {
+          orgId,
+          paymentId: payment.id,
+          invoiceId: invoice.id,
+          clientId: job.clientId ?? null,
+          amount: payload.amount,
+          currency,
+          issuedById: session.user.id,
         });
-        const paidAmount = payments.reduce(
-          (sum, p) => sum + (p.kind === "REFUND" ? -1 : 1) * toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }),
-          0,
-        );
-       const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
+      } else {
+        // C5: a repair-tab refund pays cash out — post the ledger reversal so the
+        // P&L/cash reports stay complete. Keyed on the payment id (posts once).
+        await postRefund(tx, {
+          orgId,
+          userId: session.user.id,
+          amount: payload.amount,
+          reference: `pay:${payment.id}`,
+          description: `Refund on job invoice ${safeInvoiceNumber}`,
+        });
+      }
 
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          paidAmount,
-          paidAt: isPaid ? new Date() : null,
-          status: invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED",
-        },
+      const { paidAmount, isPaid } = await syncInvoicePaymentState(tx, {
+        orgId,
+        invoiceId: invoice.id,
+        baseCurrency,
+        actorUserId: session.user.id,
+        clientPaymentRef: reference || null,
       });
 
-      // Keep legacy job flags in sync for existing queues.
-      await tx.job.update({
-        where: { id: job.id },
+      await tx.job.updateMany({
+        where: { id: job.id, orgId },
         data: {
-          clientPaid: isPaid,
-          clientPaidAt: isPaid ? new Date() : null,
-          clientPaidById: isPaid ? session.user.id : null,
-          clientPaymentRef: reference || null,
-          invoiceNumber,
+          // Use the collision-checked number, not the raw derived one, so the
+          // job's invoiceNumber (a @unique column) always matches its invoice.
+          invoiceNumber: safeInvoiceNumber,
           invoiceIssuedAt: issuedAt,
         },
       });
@@ -914,6 +959,8 @@ export async function recordClientPaymentAction(formData: FormData) {
     revalidatePath("/dashboard");
     notifyPaymentReceived({
       orgId,
+      // Client gets a confirmation for real payments only, not refunds.
+      jobId: payload.kind === "REFUND" ? undefined : job.id,
       jobNumber: job.jobNumber,
       amount: payload.amount,
       currency: org.baseCurrency,
@@ -1234,94 +1281,60 @@ export async function sendManualReplyAction(
 async function sendPdfViaWhatsApp(opts: {
   jobId: string;
   userId: string;
-  buffer: Buffer;
   filename: string;
   clientPhone: string;
   caption: string;
   outboxBody: string;
+  documentKind: WhatsAppDocumentKind;
+  stampQuotedAt?: boolean;
+  staffName: string;
+  staffRole: string;
   auditAction: string;
   auditDetail: Record<string, string>;
   orgId: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const outbox = await prisma.outboundMessage.create({
-    data: {
-      channel: "WHATSAPP",
-      status: "PENDING",
-      type: "STAFF_REPLY",
-      to: opts.clientPhone,
-      subject: null,
-      body: opts.outboxBody,
-      provider: "meta",
-      jobId: opts.jobId,
-      orgId: opts.orgId,
-      nextAttemptAt: new Date(),
+  const enqueued = await enqueueWhatsAppDocument({
+    orgId: opts.orgId,
+    to: opts.clientPhone,
+    body: opts.outboxBody,
+    jobId: opts.jobId,
+    document: {
+      documentKind: opts.documentKind,
+      filename: opts.filename,
+      caption: opts.caption,
+      staffName: opts.staffName,
+      staffRole: opts.staffRole,
+      staffUserId: opts.userId,
+      stampQuotedAt: opts.stampQuotedAt,
+      auditAction: opts.auditAction,
+      auditDetail: opts.auditDetail,
     },
-    select: { id: true },
+  });
+
+  if (!enqueued.outboxId) {
+    if ("sent" in enqueued && enqueued.sent) {
+      revalidatePath(`/jobs/${opts.jobId}`);
+      return { success: true };
+    }
+    return { success: false, error: enqueued.error ?? "Failed to queue WhatsApp document" };
+  }
+
+  const delivery = await deliverOutboundMessage(enqueued.outboxId);
+  if (delivery.ok && "sent" in delivery && delivery.sent) {
+    revalidatePath(`/jobs/${opts.jobId}`);
+    return { success: true };
+  }
+
+  const outboxRow = await prisma.outboundMessage.findUnique({
+    where: { id: enqueued.outboxId },
+    select: { lastError: true },
   }).catch(() => null);
 
-  async function markOutboxFailed(error: string) {
-    if (!outbox) return;
-    await prisma.outboundMessage.update({
-      where: { id: outbox.id },
-      data: {
-        status: "FAILED",
-        attemptCount: { increment: 1 },
-        lastAttemptAt: new Date(),
-        nextAttemptAt: new Date(Date.now() + 30_000),
-        lastErrorCode: "SEND_ERROR",
-        lastError: error.slice(0, 500),
-        lockedAt: null,
-      },
-    }).catch(() => null);
-  }
-
-  const cfg = await getWhatsAppConfigForOrg(opts.orgId);
-  if (!cfg) {
-    await markOutboxFailed("WhatsApp not configured");
-    return { success: false, error: "WhatsApp not configured" };
-  }
-
-  const upload = await uploadWhatsAppMedia(opts.buffer, opts.filename, "application/pdf", cfg);
-  if (!upload.ok) {
-    await markOutboxFailed(upload.error);
-    return { success: false, error: upload.error };
-  }
-
-  const send = await sendWhatsAppDocument(opts.clientPhone, upload.mediaId, opts.filename, opts.caption, cfg);
-  if (!send.success) {
-    await markOutboxFailed(send.error ?? "Document send failed");
-    return { success: false, error: send.error };
-  }
-
-  if (outbox) {
-    await prisma.outboundMessage.update({
-      where: { id: outbox.id },
-      data: {
-        status: "SENT",
-        providerMessageId: send.messageId,
-        sentAt: new Date(),
-        attemptCount: { increment: 1 },
-        lastAttemptAt: new Date(),
-        lastErrorCode: null,
-        lastError: null,
-        lockedAt: null,
-      },
-    }).catch(() => null);
-  }
-
-  await Promise.allSettled([
-    prisma.auditLog.create({
-      data: {
-        jobId: opts.jobId,
-        userId: opts.userId,
-        action: opts.auditAction,
-        detail: JSON.stringify({ ...opts.auditDetail, messageId: send.messageId }),
-      },
-    }).catch(() => null),
-  ]);
-
   revalidatePath(`/jobs/${opts.jobId}`);
-  return { success: true };
+  return {
+    success: false,
+    error: outboxRow?.lastError ?? ("error" in delivery ? delivery.error : undefined) ?? "Document send failed",
+  };
 }
 
 export async function sendQuotationViaWhatsAppAction(
@@ -1336,12 +1349,37 @@ export async function sendQuotationViaWhatsAppAction(
   if (!result.ok) return { success: false, error: result.error };
   return sendPdfViaWhatsApp({
     jobId, userId: user.id, orgId,
-    buffer: result.buffer, filename: result.filename, clientPhone: result.clientPhone,
+    filename: result.filename, clientPhone: result.clientPhone,
     caption: `Please find your quotation (${result.quotationNumber}) attached.`,
     outboxBody: `[Quotation PDF] ${result.quotationNumber}`,
+    documentKind: "quotation",
+    stampQuotedAt: true,
+    staffName: user.name,
+    staffRole: user.role,
     auditAction: "QUOTATION_SENT_WHATSAPP",
     auditDetail: { quotationNumber: result.quotationNumber },
   });
+}
+
+export async function issueJobInvoiceAction(
+  jobId: string,
+): Promise<{ success: true; invoiceNumber: string } | { success: false; error: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS"].includes(user.role) && !can.approveInvoices({ role: user.role, permissions: user.permissions })) {
+    return { success: false, error: "Not authorised" };
+  }
+
+  const result = await generateInvoiceBuffer(jobId, user.name, user.role, user.id, orgId, {
+    persistInvoiceRecord: true,
+  });
+  if (!result.ok) return { success: false, error: result.error };
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/documents/invoices");
+  revalidatePath("/dashboard");
+
+  return { success: true, invoiceNumber: result.invoiceNumber };
 }
 
 export async function sendInvoiceViaWhatsAppAction(
@@ -1356,9 +1394,12 @@ export async function sendInvoiceViaWhatsAppAction(
   if (!result.ok) return { success: false, error: result.error };
   return sendPdfViaWhatsApp({
     jobId, userId: user.id, orgId,
-    buffer: result.buffer, filename: result.filename, clientPhone: result.clientPhone,
+    filename: result.filename, clientPhone: result.clientPhone,
     caption: `Please find your invoice (${result.invoiceNumber}) attached.`,
     outboxBody: `[Invoice PDF] ${result.invoiceNumber}`,
+    documentKind: "invoice",
+    staffName: user.name,
+    staffRole: user.role,
     auditAction: "INVOICE_SENT_WHATSAPP",
     auditDetail: { invoiceNumber: result.invoiceNumber },
   });
@@ -1376,9 +1417,12 @@ export async function sendJobCardViaWhatsAppAction(
   if (!result.ok) return { success: false, error: result.error };
   return sendPdfViaWhatsApp({
     jobId, userId: user.id, orgId,
-    buffer: result.buffer, filename: result.filename, clientPhone: result.clientPhone,
+    filename: result.filename, clientPhone: result.clientPhone,
     caption: `Please find your job card (${result.documentNumber}) attached.`,
     outboxBody: `[Job Card PDF] ${result.documentNumber}`,
+    documentKind: "job_card",
+    staffName: user.name,
+    staffRole: user.role,
     auditAction: "JOB_CARD_SENT_WHATSAPP",
     auditDetail: { documentNumber: result.documentNumber },
   });

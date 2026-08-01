@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 
 import { getAppCurrency, normalizeCurrency, parseSupportedCurrencies } from "@/lib/currency";
 import { getOrgAccess } from "@/lib/billing-access";
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole, getCurrentUserRoleOptional } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
@@ -28,7 +29,7 @@ export async function requireOrgSession() {
 
   if (deployment.mode === "CARE_SINGLE_TENANT") {
     if (checkIsPlatformAdmin(user!.email)) {
-      redirect("/platform");
+      redirect(PLATFORM_ROUTES.home);
     }
 
     if (user!.orgId !== EIS_ORG_ID) {
@@ -43,7 +44,7 @@ export async function requireOrgSession() {
 
   if (!user!.orgId) {
     if (checkIsPlatformAdmin(user!.email)) {
-      redirect("/platform");
+      redirect(PLATFORM_ROUTES.home);
     }
     redirect("/onboarding");
   }
@@ -109,16 +110,4 @@ export async function getOrgSessionOptional() {
     user,
     orgId: user?.orgId ?? null,
   };
-}
-
-/**
- * Minimal org-scoped where clause fragment.
- * Merge this into any Prisma query's `where` to enforce tenant isolation.
- *
- * Usage:
- *   const { orgId } = await requireOrgSession();
- *   const jobs = await prisma.job.findMany({ where: { ...orgWhere(orgId), status: "RECEIVED" } });
- */
-export function orgWhere(orgId: string) {
-  return { orgId } as const;
 }

@@ -1,4 +1,5 @@
 import { getCurrentUserRole } from "@/lib/session";
+import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 
 export default async function ProfilePage() {
@@ -7,6 +8,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-4">
       <ProfileForm name={user.name} email={user.email} role={user.role} phone={user.phone} />
+      <ChangePasswordForm />
     </div>
   );
 }

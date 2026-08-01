@@ -5,6 +5,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/subscription-lifecycle",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/data-heal",
       "schedule": "30 2 * * *"
     },

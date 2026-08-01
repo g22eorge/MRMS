@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
-import { SearchToggle } from "@/components/shared/SearchToggle";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
 
 import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { revalidateCommunicationsOutbox } from "@/lib/communications/revalidate";
 import { deliverOutboundMessageForOrg, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
@@ -17,31 +18,43 @@ type SearchParams = {
   status?: string;
   type?: string;
   q?: string;
+  page?: string;
 };
 
 const CHANNELS = Object.values(OutboundMessageChannel);
 const STATUSES = Object.values(OutboundMessageStatus);
 const TYPES = Object.values(OutboundMessageType);
 
+const PAGE_SIZE = 20;
+
+// Borderless status pills — semantic colour via tint + text, no ring.
 const STATUS_STYLES: Record<string, string> = {
-  SENT:    "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  PENDING: "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  FAILED:  "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  DEAD:    "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  SENT:    "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
+  PENDING: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+  FAILED:  "bg-red-500/12 text-red-600 dark:text-red-400",
+  DEAD:    "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
 };
 
-const CHANNEL_STYLES: Record<string, string> = {
-  WHATSAPP: "border-[#25D366]/30 bg-[#25D366]/8 text-[#128C42]",
-  EMAIL:    "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+const CHANNEL_DOT: Record<string, string> = {
+  WHATSAPP: "bg-[#25D366]",
+  EMAIL:    "bg-blue-500",
 };
 
-function shortId(id: string) {
-  return id.slice(0, 8) + "…";
+const CHANNEL_LABEL: Record<string, string> = {
+  WHATSAPP: "WhatsApp",
+  EMAIL:    "Email",
+};
+
+function isGoodDelivery(status: string | null | undefined) {
+  return status === "delivered" || status === "read";
 }
 
-function shortWamid(wamid: string | null) {
-  if (!wamid) return null;
-  return wamid.slice(0, 20) + "…";
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-semibold ${STATUS_STYLES[status] ?? STATUS_STYLES.DEAD}`}>
+      {status}
+    </span>
+  );
 }
 
 function fmtDate(d: Date | null | undefined) {
@@ -73,6 +86,7 @@ export default async function OutboxPage({
     ? (filters.type as OutboundMessageType)
     : null;
   const q = typeof filters.q === "string" ? filters.q.trim() : "";
+  const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1);
 
   const where: Prisma.OutboundMessageWhereInput = {
     orgId,
@@ -91,31 +105,23 @@ export default async function OutboxPage({
       : {}),
   };
 
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, filteredTotal] = await Promise.all([
     prisma.outboundMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      take: 200,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         channel: true,
         type: true,
         status: true,
         to: true,
-        attemptCount: true,
-        lastAttemptAt: true,
         nextAttemptAt: true,
         sentAt: true,
-        createdAt: true,
-        provider: true,
-        providerMessageId: true,
         providerDeliveryStatus: true,
-        providerDeliveryAt: true,
-        providerDeliveryErrorCode: true,
-        providerDeliveryError: true,
         lastErrorCode: true,
         lastError: true,
-        metaTemplateName: true,
       },
     }),
     prisma.outboundMessage.groupBy({
@@ -123,16 +129,32 @@ export default async function OutboxPage({
       _count: { status: true },
       where: { orgId },
     }),
+    prisma.outboundMessage.count({ where }),
   ]);
 
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count.status]));
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  const rangeStart = filteredTotal === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, filteredTotal);
+
+  // Preserve active filters when moving between pages.
+  function pageHref(targetPage: number) {
+    const params = new URLSearchParams({
+      ...(channel ? { channel } : {}),
+      ...(status ? { status } : {}),
+      ...(q ? { q } : {}),
+      ...(targetPage > 1 ? { page: String(targetPage) } : {}),
+    });
+    const qs = params.toString();
+    return qs ? `${COMMUNICATIONS_ROUTES.outbox}?${qs}` : COMMUNICATIONS_ROUTES.outbox;
+  }
 
   async function retryNowAction() {
     "use server";
     const { user, orgId } = await requireOrgSession();
     if (!(user.role === "ADMIN" || user.role === "OPS")) redirect("/dashboard");
     await retryDueOutboundMessages(getOutboxRetryLimit(25), { orgId });
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
 
   async function retryOneAction(formData: FormData) {
@@ -142,7 +164,7 @@ export default async function OutboxPage({
     const id = String(formData.get("id") ?? "");
     if (!id) return;
     await deliverOutboundMessageForOrg(id, orgId);
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
 
   async function markDeadAction(formData: FormData) {
@@ -155,241 +177,192 @@ export default async function OutboxPage({
       where: { id, orgId },
       data: { status: "DEAD", nextAttemptAt: new Date(0), lockedAt: null },
     });
-    revalidatePath("/settings/notifications/outbox");
+    revalidateCommunicationsOutbox();
   }
+
+  const totalCount = counts.reduce((sum, c) => sum + c._count.status, 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href="/settings/notifications"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Notifications
-        </Link>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/settings/notifications/templates" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
-            Templates
-          </Link>
-          {user.role === "ADMIN" ? (
-            <Link href="/settings/notifications/whatsapp" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
-              WhatsApp
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Summary + filter bar */}
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        {/* Status chips */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      {/* Status filters + search + actions */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        {/* Status segmented control */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/60 p-1">
           {[
-            { label: "All", key: "" },
-            { label: "Sent", key: "SENT" },
-            { label: "Pending", key: "PENDING" },
-            { label: "Failed", key: "FAILED" },
-            { label: "Dead", key: "DEAD" },
-          ].map(({ label, key }) => {
+            { label: "All", key: "", count: totalCount },
+            { label: "Sent", key: "SENT", count: byStatus.SENT ?? 0 },
+            { label: "Pending", key: "PENDING", count: byStatus.PENDING ?? 0 },
+            { label: "Failed", key: "FAILED", count: byStatus.FAILED ?? 0 },
+            { label: "Dead", key: "DEAD", count: byStatus.DEAD ?? 0 },
+          ].map(({ label, key, count }) => {
             const active = (status ?? "") === key;
-            const href = `/settings/notifications/outbox?${new URLSearchParams({ ...(channel ? { channel } : {}), ...(q ? { q } : {}), ...(key ? { status: key } : {}) }).toString()}`;
+            const href = `${COMMUNICATIONS_ROUTES.outbox}?${new URLSearchParams({ ...(channel ? { channel } : {}), ...(q ? { q } : {}), ...(key ? { status: key } : {}) }).toString()}`;
             return (
               <Link
                 key={key || "all"}
                 href={href}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
-                  active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                aria-current={active ? "true" : undefined}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
+                  active
+                    ? "bg-[var(--accent)] text-black shadow-sm"
+                    : "text-[var(--ink-muted)] hover:bg-[var(--panel)] hover:text-[var(--ink)]"
                 }`}
               >
-                {label}{key ? ` · ${byStatus[key] ?? 0}` : ""}
+                {label}
+                <span className={`tabular-nums ${active ? "text-black/60" : "text-[var(--ink-muted)]/60"}`}>{count}</span>
               </Link>
             );
           })}
         </div>
-        {/* Right actions */}
+
+        {/* Search + actions */}
         <div className="flex shrink-0 items-center gap-2">
-          <SearchToggle
-            basePath="/settings/notifications/outbox"
-            defaultValue={q}
-            placeholder="Search recipient / error / ID"
-            preserve={{ channel: channel ?? undefined, status: status ?? undefined }}
-          />
+          <form method="get" action={COMMUNICATIONS_ROUTES.outbox} className="relative">
+            {channel ? <input type="hidden" name="channel" value={channel} /> : null}
+            {status ? <input type="hidden" name="status" value={status} /> : null}
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]/60"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10.5 10.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Search recipient or error"
+              className="h-9 w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 text-[13px] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:w-56"
+            />
+          </form>
+          <Link
+            href={COMMUNICATIONS_ROUTES.preferences}
+            className="hidden h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] sm:inline-flex"
+          >
+            Preferences
+          </Link>
           <form action={retryNowAction}>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px]">Run Retry</button>
+            <button
+              type="submit"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[13px] font-bold text-black transition hover:brightness-105"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
+              Run Retry
+            </button>
           </form>
         </div>
       </div>
 
       {/* Table */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        {rows.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-[var(--ink-muted)]">
-            No messages match these filters.
+      <DataTable
+        rows={rows}
+        getRowKey={(r) => r.id}
+        empty="No messages match these filters."
+        renderMobileCard={(r) => (
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <StatusPill status={r.status} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate mono text-[13px] font-medium text-[var(--ink)]">{r.to}</p>
+              <p className="truncate text-[12px] text-[var(--ink-muted)]">
+                {CHANNEL_LABEL[r.channel] ?? r.channel} · {r.type.replaceAll("_", " ").toLowerCase()}
+                {r.lastError ? <span className="text-red-600 dark:text-red-400"> · failed</span> : r.sentAt ? ` · ${fmtDate(r.sentAt)}` : ""}
+              </p>
+            </div>
+            {r.status !== "SENT" && (
+              <form action={retryOneAction} className="shrink-0">
+                <input type="hidden" name="id" value={r.id} />
+                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-muted)]">Retry</button>
+              </form>
+            )}
           </div>
-        ) : (
+        )}
+        columns={[
+          {
+            key: "status",
+            header: "Status",
+            cell: (r) => <StatusPill status={r.status} />,
+          },
+          {
+            key: "recipient",
+            header: "Recipient",
+            className: "whitespace-nowrap mono font-medium text-[var(--ink)]",
+            cell: (r) => r.to,
+          },
+          {
+            key: "message",
+            header: "Message",
+            cell: (r) => (
+              <span className="inline-flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${CHANNEL_DOT[r.channel] ?? "bg-[var(--ink-muted)]"}`} />
+                <span className="text-[var(--ink-muted)]">{r.type.replaceAll("_", " ").toLowerCase()}</span>
+              </span>
+            ),
+          },
+          {
+            key: "when",
+            header: "When",
+            className: "whitespace-nowrap text-[var(--ink-muted)]",
+            cell: (r) =>
+              r.sentAt
+                ? fmtDate(r.sentAt)
+                : r.nextAttemptAt && r.nextAttemptAt > new Date()
+                  ? <span className="text-amber-600 dark:text-amber-400">Due {fmtDate(r.nextAttemptAt)}</span>
+                  : "—",
+          },
+          {
+            key: "result",
+            header: "Result",
+            className: "max-w-[260px] truncate",
+            cell: (r) =>
+              r.lastError ? (
+                <span className="text-red-600 dark:text-red-400" title={`${r.lastErrorCode ? `[${r.lastErrorCode}] ` : ""}${r.lastError}`}>
+                  {r.lastErrorCode ? `${r.lastErrorCode}: ` : ""}{r.lastError}
+                </span>
+              ) : r.providerDeliveryStatus ? (
+                <span className={isGoodDelivery(r.providerDeliveryStatus) ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--ink-muted)]"}>
+                  {r.providerDeliveryStatus}
+                </span>
+              ) : (
+                <span className="text-[var(--ink-muted)]/60">—</span>
+              ),
+          },
+        ]}
+        actions={(r) => (
           <>
-            {/* Mobile outbox cards */}
-            <div className="divide-y divide-[var(--line)] lg:hidden">
-              {rows.map((r) => (
-                <div key={`m-${r.id}`} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[13px] font-semibold ${STATUS_STYLES[r.status] ?? STATUS_STYLES.DEAD}`}>{r.status}</span>
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide ${CHANNEL_STYLES[r.channel] ?? ""}`}>{r.channel}</span>
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      {r.status !== "SENT" && (
-                        <form action={retryOneAction}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <button type="submit" className="rounded border border-[var(--line)] px-2 py-0.5 text-[13px] font-medium hover:bg-[var(--panel-strong)]">Retry</button>
-                        </form>
-                      )}
-                      {r.status !== "DEAD" && r.status !== "SENT" && (
-                        <form action={markDeadAction}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <button type="submit" className="rounded border border-[var(--line)] px-2 py-0.5 text-[13px] font-medium text-[var(--ink-muted)] hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">Discard</button>
-                        </form>
-                      )}
-                    </div>
-                  </div>
-                  <p className="mt-1 font-mono text-sm font-medium text-[var(--ink)]">{r.to}</p>
-                  <div className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
-                    <span>{r.type.replaceAll("_", " ").toLowerCase()}</span>
-                    {r.sentAt && <span>{fmtDate(r.sentAt)}</span>}
-                    {r.attemptCount > 0 && <span>{r.attemptCount} attempt{r.attemptCount !== 1 ? "s" : ""}</span>}
-                  </div>
-                  {r.providerDeliveryStatus && (
-                    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide ${r.providerDeliveryStatus === "delivered" || r.providerDeliveryStatus === "read" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{r.providerDeliveryStatus}</span>
-                  )}
-                  {r.lastError && (
-                    <p className="mt-0.5 line-clamp-2 text-[13px] text-red-600">{r.lastErrorCode ? `[${r.lastErrorCode}] ` : ""}{r.lastError}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-            {/* Desktop table */}
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60">
-                    {["Status", "Channel / Type", "Recipient", "Sent / Scheduled", "Delivery", "Error", "Actions"].map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]">
-                  {rows.map((r) => (
-                    <tr key={r.id} className="group align-top transition-colors hover:bg-[var(--panel-strong)]/40">
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${STATUS_STYLES[r.status] ?? STATUS_STYLES.DEAD}`}>
-                        {r.status}
-                      </span>
-                    </td>
-
-                    {/* Channel + Type */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide ${CHANNEL_STYLES[r.channel] ?? ""}`}>
-                        {r.channel}
-                      </span>
-                      <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-                        {r.type.replaceAll("_", " ").toLowerCase()}
-                      </p>
-                      {r.metaTemplateName ? (
-                        <p className="mt-0.5 font-mono text-[12px] text-[var(--accent)]/70">
-                          tpl: {r.metaTemplateName}
-                        </p>
-                      ) : null}
-                    </td>
-
-                    {/* Recipient */}
-                    <td className="px-4 py-3">
-                      <p className="font-mono text-sm font-medium text-[var(--ink)]">{r.to}</p>
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{shortId(r.id)}</p>
-                    </td>
-
-                    {/* Sent / Scheduled */}
-                    <td className="px-4 py-3">
-                      {r.sentAt ? (
-                        <p className="text-xs font-medium text-[var(--ink)]">{fmtDate(r.sentAt)}</p>
-                      ) : r.nextAttemptAt && r.nextAttemptAt > new Date() ? (
-                        <p className="text-[13px] text-amber-600">Due {fmtDate(r.nextAttemptAt)}</p>
-                      ) : (
-                        <p className="text-[13px] text-[var(--ink-muted)]">—</p>
-                      )}
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">
-                        {r.attemptCount} attempt{r.attemptCount !== 1 ? "s" : ""}
-                      </p>
-                    </td>
-
-                    {/* Delivery */}
-                    <td className="px-4 py-3">
-                      {r.providerDeliveryStatus ? (
-                        <>
-                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide ${r.providerDeliveryStatus === "delivered" || r.providerDeliveryStatus === "read" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-                            {r.providerDeliveryStatus}
-                          </span>
-                          {r.providerDeliveryAt ? (
-                            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmtDate(r.providerDeliveryAt)}</p>
-                          ) : null}
-                        </>
-                      ) : r.providerMessageId ? (
-                        <p className="font-mono text-[12px] text-[var(--ink-muted)]" title={r.providerMessageId}>
-                          {shortWamid(r.providerMessageId)}
-                        </p>
-                      ) : (
-                        <span className="text-[13px] text-[var(--ink-muted)]">—</span>
-                      )}
-                    </td>
-
-                    {/* Error */}
-                    <td className="px-4 py-3 max-w-[200px]">
-                      {r.lastError ? (
-                        <>
-                          {r.lastErrorCode ? (
-                            <span className="font-mono text-[12px] font-semibold text-red-600">{r.lastErrorCode}</span>
-                          ) : null}
-                          <p className="mt-0.5 line-clamp-3 text-[13px] text-[var(--ink-muted)]" title={r.lastError}>
-                            {r.lastError}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-[13px] text-[var(--ink-muted)]">—</span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1.5">
-                        {r.status !== "SENT" ? (
-                          <form action={retryOneAction}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <button type="submit" className="btn-premium-secondary w-full rounded-lg px-3 py-1.5 text-xs">
-                              Retry
-                            </button>
-                          </form>
-                        ) : null}
-                        {r.status !== "DEAD" && r.status !== "SENT" ? (
-                          <form action={markDeadAction}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <button type="submit" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">
-                              Discard
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            {r.status !== "SENT" ? (
+              <form action={retryOneAction}>
+                <input type="hidden" name="id" value={r.id} />
+                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-muted)]">
+                  Retry
+                </button>
+              </form>
+            ) : null}
+            {r.status !== "DEAD" && r.status !== "SENT" ? (
+              <form action={markDeadAction}>
+                <input type="hidden" name="id" value={r.id} />
+                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-medium text-[var(--ink-muted)] transition-colors hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">
+                  Discard
+                </button>
+              </form>
+            ) : null}
           </>
         )}
-      </div>
+      />
+
+      {/* Pagination */}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        total={filteredTotal}
+        unit="messages"
+        hrefForPage={pageHref}
+      />
     </div>
   );
 }

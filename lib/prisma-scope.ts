@@ -2,7 +2,7 @@
  * Scoped Prisma client — the safe path for all API routes and Server Components.
  *
  * Usage:
- *   import { scopedDb } from "@/lib/prisma-scope";
+ *   import { scopedDb } from "@/lib/db";
  *   const db = scopedDb(session.user.orgId);
  *   const jobs = await db.job.findMany({ ... }); // orgId injected automatically
  *
@@ -24,95 +24,9 @@
  *   wrapper — no new DB connection is created.
  */
 
+import { ORG_SCOPED_MODELS, SOFT_DELETE_MODELS } from "@/lib/org-scoped-models";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-
-// ── Models that carry orgId ───────────────────────────────────────────────────
-// Keep in sync with prisma/schema.prisma.  Models NOT listed here pass through
-// unfiltered (e.g. Session, Account, Verification which are user-scoped by token).
-
-const ORG_SCOPED_MODELS = new Set([
-  "Branch",
-  "BranchNumberingSettings",
-  "BranchOperatingHours",
-  "Client",
-  "ClientNote",
-  "CommunicationTemplate",
-  "CommunicationPolicy",
-  "Complaint",
-  "ConversationMessage",
-  "CreditNote",
-  "CreditNoteItem",
-  "DeliveryNote",
-  "DeliveryNoteItem",
-  "Department",
-  "Device",
-  "DeviceSpecification",
-  "DiagnosisReport",
-  "DocumentBrandingSettings",
-  "FieldVisit",
-  "FileAsset",
-  "GoodsReceived",
-  "InboundMessage",
-  "InventoryCategory",
-  "Invoice",
-  "InvoiceLine",
-  "Job",
-  "JobAssignmentHistory",
-  "JobStatusHistory",
-  "Lead",
-  "LeadActivity",
-  "Notification",
-  "OutboundMessage",
-  "Part",
-  "PartLocationStock",
-  "PartReservation",
-  "PartStockTransaction",
-  "Payment",
-  "PaymentAllocation",
-  "Photo",
-  "PosSession",
-  "PurchaseOrder",
-  "PurchaseOrderItem",
-  "PurchaseRequest",
-  "QualityCheck",
-  "Quotation",
-  "QuotationItem",
-  "Receipt",
-  "Refund",
-  "ReorderRule",
-  "RepairRequest",
-  "Sale",
-  "SaleItem",
-  "SalesTarget",
-  "StockCount",
-  "StockLocation",
-  "StockTransfer",
-  "Supplier",
-  "SupplierBill",
-  "SupplierPayment",
-  "SupplierPrice",
-  "User",
-  "UserGroup",
-  "UserGroupMember",
-  "UserGroupPermission",
-  "UserInvite",
-  "UserPermission",
-  "WarrantyClaim",
-  "AuditLog",
-]);
-
-// Models with a deletedAt field that should always be filtered.
-const SOFT_DELETE_MODELS = new Set([
-  "Client",
-  "Job",
-  "Invoice",
-  "Part",
-  "PurchaseOrder",
-  "Quotation",
-  "Sale",
-  "Supplier",
-]);
 
 // ── Where clause injection helpers ─────────────────────────────────────────────
 
@@ -224,9 +138,37 @@ export function scopedDb(orgId: string) {
         async create({ model, args, query }) {
           // Inject orgId into create data so callers don't have to.
           if (ORG_SCOPED_MODELS.has(model)) {
-            const typedArgs = args as { data?: Record<string, unknown> };
-            if (typedArgs.data && !("orgId" in typedArgs.data)) {
+            const typedArgs = args as { data?: Record<string, unknown> | Record<string, unknown>[] };
+            if (Array.isArray(typedArgs.data)) {
+              typedArgs.data = typedArgs.data.map((row) =>
+                row && typeof row === "object" && !("orgId" in row) ? { ...row, orgId } : row,
+              );
+            } else if (typedArgs.data && typeof typedArgs.data === "object" && !("orgId" in typedArgs.data)) {
               typedArgs.data.orgId = orgId;
+            }
+          }
+          return query(args);
+        },
+
+        async createMany({ model, args, query }) {
+          if (ORG_SCOPED_MODELS.has(model)) {
+            const typedArgs = args as { data?: Record<string, unknown>[] };
+            if (Array.isArray(typedArgs.data)) {
+              typedArgs.data = typedArgs.data.map((row) =>
+                row && !("orgId" in row) ? { ...row, orgId } : row,
+              );
+            }
+          }
+          return query(args);
+        },
+
+        async createManyAndReturn({ model, args, query }) {
+          if (ORG_SCOPED_MODELS.has(model)) {
+            const typedArgs = args as { data?: Record<string, unknown>[] };
+            if (Array.isArray(typedArgs.data)) {
+              typedArgs.data = typedArgs.data.map((row) =>
+                row && !("orgId" in row) ? { ...row, orgId } : row,
+              );
             }
           }
           return query(args);

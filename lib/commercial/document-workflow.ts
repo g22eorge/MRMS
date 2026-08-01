@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 
+import { postSalePayment } from "@/lib/accounting/post";
+
 type Tx = Prisma.TransactionClient;
 
-export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote") {
-  const year = new Date().getFullYear();
-  const startsWith = `${prefix}-${year}-`;
+/** Scan existing documents of a type for the highest sequence in the given year. */
+async function currentMaxDocumentSequence(tx: Tx, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote", startsWith: string) {
   const numbers = countModel === "quotation"
     ? await tx.quotation.findMany({ where: { quoteNumber: { startsWith } }, select: { quoteNumber: true } })
     : countModel === "invoice"
@@ -14,7 +15,7 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "qu
         : countModel === "creditNote"
           ? await tx.creditNote.findMany({ where: { creditNoteNumber: { startsWith } }, select: { creditNoteNumber: true } })
           : await tx.receipt.findMany({ where: { receiptNumber: { startsWith } }, select: { receiptNumber: true } });
-  const max = numbers.reduce((highest, record) => {
+  return numbers.reduce((highest, record) => {
     const value = "quoteNumber" in record
       ? record.quoteNumber
       : "invoiceNumber" in record
@@ -27,7 +28,38 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "qu
     const sequence = Number(value.slice(startsWith.length));
     return Number.isFinite(sequence) ? Math.max(highest, sequence) : highest;
   }, 0);
-  return `${startsWith}${String(max + 1).padStart(4, "0")}`;
+}
+
+/**
+ * Allocate the next shared document number (INV/QT/RCT/CN/DN).
+ *
+ * Uses an atomic per-(type,year) counter (DocumentSequence) so concurrent
+ * creation can't compute the same number and P2002 (the old read-max-then-write
+ * race). Numbers stay globally sequential, matching the existing @unique columns.
+ * The counter is lazy-initialised from the current max so sequences continue
+ * rather than restarting.
+ */
+export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote") {
+  const year = new Date().getFullYear();
+  const startsWith = `${prefix}-${year}-`;
+
+  const existing = await tx.documentSequence.findUnique({ where: { type_year: { type: prefix, year } } });
+  if (!existing) {
+    const seed = await currentMaxDocumentSequence(tx, countModel, startsWith);
+    try {
+      await tx.documentSequence.create({ data: { type: prefix, year, value: seed } });
+    } catch (err) {
+      // A concurrent call seeded it first — fine, we'll increment below.
+      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
+    }
+  }
+
+  const updated = await tx.documentSequence.update({
+    where: { type_year: { type: prefix, year } },
+    data: { value: { increment: 1 } },
+    select: { value: true },
+  });
+  return `${startsWith}${String(updated.value).padStart(4, "0")}`;
 }
 
 export async function nextAvailableInvoiceNumber(tx: Tx, preferred?: string | null, excludeInvoiceId?: string | null) {
@@ -171,7 +203,9 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
                 description: item.description,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                discountAmount: item.discount,
+                // QuotationItem.discount is a percentage; InvoiceLine.discountAmount
+                // is an absolute currency value — convert instead of copying raw.
+                discountAmount: item.quantity * item.unitPrice * ((item.discount ?? 0) / 100),
                 taxAmount,
                 lineTotal: item.lineTotal,
               };
@@ -201,20 +235,47 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
 }
 
 export async function createReceiptForPayment(tx: Tx, params: { orgId: string; paymentId: string; invoiceId?: string | null; saleId?: string | null; clientId?: string | null; amount: number; currency: string; issuedById?: string | null }) {
-  const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
-  if (existing) return existing;
-  const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
-  return tx.receipt.create({
-    data: {
+  const receipt = await (async () => {
+    const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
+    if (existing) return existing;
+    const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
+    try {
+      return await tx.receipt.create({
+        data: {
+          orgId: params.orgId,
+          receiptNumber,
+          paymentId: params.paymentId,
+          invoiceId: params.invoiceId ?? null,
+          saleId: params.saleId ?? null,
+          clientId: params.clientId ?? null,
+          amount: params.amount,
+          currency: params.currency,
+          issuedById: params.issuedById ?? null,
+        },
+      });
+    } catch (err) {
+      // @@unique([orgId, paymentId]) — a concurrent create won the race; return it
+      // instead of surfacing a 500.
+      if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002") {
+        const winner = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
+        if (winner) return winner;
+      }
+      throw err;
+    }
+  })();
+
+  // C5: cash-basis ledger post for the customer payment. Idempotent on the
+  // payment id, so it fires exactly once even across the six payment paths
+  // that funnel through here. issuedById is the required journal author.
+  if (params.issuedById) {
+    await postSalePayment(tx, {
       orgId: params.orgId,
-      receiptNumber,
-      paymentId: params.paymentId,
-      invoiceId: params.invoiceId ?? null,
-      saleId: params.saleId ?? null,
-      clientId: params.clientId ?? null,
+      userId: params.issuedById,
       amount: params.amount,
-      currency: params.currency,
-      issuedById: params.issuedById ?? null,
-    },
-  });
+      reference: `pay:${params.paymentId}`,
+      description: `Payment received (receipt ${receipt.receiptNumber})`,
+    });
+  }
+
+  return receipt;
 }

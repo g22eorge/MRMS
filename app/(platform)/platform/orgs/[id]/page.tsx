@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBillingEventsByOrg } from "@/lib/billing-events";
+import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { formatEATMediumDate } from "@/lib/date-eat";
+import { PLATFORM_PLAN_CHIP, PLATFORM_ROUTES, PLATFORM_STATUS_CHIP } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import {
   setBillingStatusAction,
@@ -11,27 +14,19 @@ import {
   setOrgSmsSenderAction,
   setOrgAiModelAction,
   toggleOrgModuleAction,
+  resetOrgAdminPasswordAction,
 } from "../../actions";
+import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { getSmsUsage, SMS_PLAN_QUOTAS } from "@/lib/notifications/sms-quota";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_CHIP: Record<string, string> = {
-  TRIALING:  "bg-blue-500/10    text-blue-700    border-blue-400/30    dark:text-blue-400",
-  ACTIVE:    "bg-emerald-500/10 text-emerald-700 border-emerald-400/30 dark:text-emerald-400",
-  PAST_DUE:  "bg-red-500/10     text-red-700     border-red-400/30     dark:text-red-400",
-  CANCELLED: "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",
-};
-
-const PLAN_CHIP: Record<string, string> = {
-  STARTER:    "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",
-  STANDARD:   "bg-sky-500/10    text-sky-700    border-sky-400/30    dark:text-sky-400",
-  GROWTH:     "bg-amber-500/10  text-amber-700  border-amber-400/30  dark:text-amber-400",
-  PREMIUM:    "bg-violet-500/10 text-violet-700 border-violet-400/30 dark:text-violet-400",
-  ENTERPRISE: "bg-purple-500/10 text-purple-700 border-purple-400/30 dark:text-purple-400",
-};
+const STATUS_CHIP = PLATFORM_STATUS_CHIP;
+const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">{children}</p>;
@@ -87,16 +82,13 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     .filter((e) => e.status === "successful" && e.event === "charge.completed")
     .reduce((s, e) => s + e.amount, 0);
 
-  const fmt = (d: Date | null) =>
-    d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "—";
-  const fmtMoney = (n: number, currency = "UGX") =>
-    new Intl.NumberFormat("en-UG", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  const fmt = (d: Date | null) => (d ? formatEATMediumDate(d) : "—");
 
   return (
     <div className="space-y-6">
 
       {/* Back + breadcrumb */}
-      <Link href="/platform" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
+      <Link href={PLATFORM_ROUTES.home} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         Organisations
       </Link>
@@ -136,7 +128,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         {[
           { label: "Users",            value: org._count.users },
           { label: "Jobs",             value: org._count.jobs },
-          { label: "Total Paid",       value: fmtMoney(totalPaid) },
+          { label: "Total Paid",       value: formatMoney(totalPaid) },
           { label: `SMS ${smsUsed}/${smsLimit}`, value: `${smsPct}%` },
         ].map((m) => (
           <div key={m.label} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -166,7 +158,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setPlanAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Plan</label>
-            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="STARTER">Starter</option>
               <option value="STANDARD">Standard</option>
               <option value="GROWTH">Growth</option>
@@ -184,7 +176,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setBillingStatusAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Status</label>
-            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="TRIALING">Trialing</option>
               <option value="ACTIVE">Active</option>
               <option value="PAST_DUE">Past Due</option>
@@ -201,7 +193,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={extendTrialAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Trial</label>
-            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
               <option value="7">+7 days</option>
               <option value="14">+14 days</option>
               <option value="30">+30 days</option>
@@ -231,7 +223,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               defaultValue={orgWaCfg?.atSenderId ?? ""}
               placeholder="e.g. EagleInfo"
               maxLength={11} pattern="[A-Za-z0-9]*"
-              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
             />
             <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/30">
               Save
@@ -252,7 +244,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             <input type="hidden" name="orgId" value={org.id} />
             <select
               name="aiModel" defaultValue={org.aiModel ?? ""}
-              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
             >
               <option value="">Platform default</option>
               <option value="claude-haiku-4-5-20251001">Haiku 4.5 — fast / cheap</option>
@@ -274,79 +266,117 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div className="border-b border-[var(--line)] px-5 py-3">
           <SectionTitle>Users ({orgUsers.length})</SectionTitle>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-              <th className="px-4 py-2.5 text-left">Name</th>
-              <th className="px-4 py-2.5 text-left">Email</th>
-              <th className="px-4 py-2.5 text-left">Role</th>
-              <th className="px-4 py-2.5 text-left">Status</th>
-              <th className="px-4 py-2.5 text-left hidden sm:table-cell">Joined</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {orgUsers.map((u) => (
-              <tr key={u.id} className="hover:bg-[var(--gold)]/5">
-                <td className="px-4 py-2.5 font-medium text-[var(--ink)]">{u.name}</td>
-                <td className="px-4 py-2.5 text-[var(--ink-muted)]">{u.email}</td>
-                <td className="px-4 py-2.5">
-                  <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${u.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-                    {u.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="hidden px-4 py-2.5 text-[var(--ink-muted)] sm:table-cell">{fmt(u.createdAt)}</td>
-              </tr>
-            ))}
-            {orgUsers.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No users.</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          frameless
+          rows={orgUsers}
+          getRowKey={(u) => u.id}
+          empty="No users."
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              className: "font-medium text-[var(--ink)]",
+              cell: (u) => u.name,
+            },
+            {
+              key: "email",
+              header: "Email",
+              className: "text-[var(--ink-muted)]",
+              cell: (u) => u.email,
+            },
+            {
+              key: "role",
+              header: "Role",
+              cell: (u) => <StatusBadge tone="neutral">{u.role}</StatusBadge>,
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (u) => (
+                <StatusBadge tone={u.isActive ? "success" : "neutral"}>
+                  {u.isActive ? "Active" : "Inactive"}
+                </StatusBadge>
+              ),
+            },
+            {
+              key: "joined",
+              header: "Joined",
+              headerClassName: "hidden sm:table-cell",
+              className: "hidden text-[var(--ink-muted)] sm:table-cell",
+              cell: (u) => fmt(u.createdAt),
+            },
+          ]}
+        />
       </div>
+
+      {/* Admin access — reset a locked-out org administrator */}
+      {orgUsers.some((u) => u.role === "ADMIN") && (
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-5 py-3">
+            <SectionTitle>Admin Access</SectionTitle>
+          </div>
+          <div className="space-y-3 px-5 py-4">
+            <p className="text-[13px] text-[var(--ink-muted)]">
+              Reset a locked-out administrator. This sets a new password and signs them out of every device.
+            </p>
+            {orgUsers.filter((u) => u.role === "ADMIN").map((u) => (
+              <div key={u.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5">
+                <p className="mb-2 text-[13px] font-medium text-[var(--ink)]">
+                  {u.name} <span className="text-[var(--ink-muted)]">· {u.email}</span>
+                </p>
+                <UserPasswordResetForm userId={u.id} action={resetOrgAdminPasswordAction} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Payment history */}
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--line)] px-5 py-3">
           <SectionTitle>Payment History ({billingHistory.length})</SectionTitle>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--line)] text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                <th className="px-4 py-2.5 text-left">Date</th>
-                <th className="px-4 py-2.5 text-left">Event</th>
-                <th className="px-4 py-2.5 text-left">Status</th>
-                <th className="px-4 py-2.5 text-right">Amount</th>
-                <th className="px-4 py-2.5 text-left hidden md:table-cell">Reference</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {billingHistory.map((e) => (
-                <tr key={e.id} className="hover:bg-[var(--gold)]/5">
-                  <td className="px-4 py-2 text-[var(--ink-muted)]">{fmt(e.createdAt)}</td>
-                  <td className="px-4 py-2 text-[var(--ink)]">{e.event}</td>
-                  <td className="px-4 py-2">
-                    <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${e.status === "successful" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400"}`}>
-                      {e.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-[var(--ink)]">
-                    {e.amount > 0 ? fmtMoney(e.amount, e.currency) : "—"}
-                  </td>
-                  <td className="hidden px-4 py-2 font-mono text-xs text-[var(--ink-muted)] md:table-cell">{e.txRef ?? "—"}</td>
-                </tr>
-              ))}
-              {billingHistory.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No payment records yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          rows={billingHistory}
+          getRowKey={(e) => e.id}
+          empty="No payment records yet."
+          columns={[
+            {
+              key: "date",
+              header: "Date",
+              className: "text-[var(--ink-muted)]",
+              cell: (e) => fmt(e.createdAt),
+            },
+            {
+              key: "event",
+              header: "Event",
+              className: "text-[var(--ink)]",
+              cell: (e) => e.event,
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (e) => (
+                <StatusBadge tone={e.status === "successful" ? "success" : "danger"}>{e.status}</StatusBadge>
+              ),
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              align: "right",
+              className: "mono text-[var(--ink)]",
+              cell: (e) => (e.amount > 0 ? formatMoney(e.amount, normalizeCurrency(e.currency, "UGX")) : "—"),
+            },
+            {
+              key: "reference",
+              header: "Reference",
+              headerClassName: "hidden md:table-cell",
+              className: "hidden mono text-[12px] text-[var(--ink-muted)] md:table-cell",
+              cell: (e) => e.txRef ?? "—",
+            },
+          ]}
+        />
       </div>
 
       {/* Module access */}

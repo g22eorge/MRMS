@@ -7,7 +7,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
-import { revalidatePath } from "next/cache";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
 
 function supportsCommsTemplates() {
   return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
@@ -70,7 +71,7 @@ export default async function NotificationTemplatesPage({
       .catch(() => null);
     const companyName = (branding?.companyName ?? "").trim();
     if (!companyName) {
-      redirect("/settings/notifications/templates?error=Set+company+name+first+in+Settings+%E2%86%92+Branding");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Set+company+name+first+in+Settings+%E2%86%92+Branding`);
     }
 
     const rows = await prisma.communicationTemplate.findMany({
@@ -104,8 +105,8 @@ export default async function NotificationTemplatesPage({
       updated += 1;
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect(`/settings/notifications/templates?saved=${encodeURIComponent(`brand+replaced+(${updated})`)}`);
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=${encodeURIComponent(`brand+replaced+(${updated})`)}`);
   }
 
   if (!supportsCommsTemplates()) {
@@ -119,37 +120,28 @@ export default async function NotificationTemplatesPage({
     );
   }
 
-  // Top nav
+  // Top nav — Outbox/WhatsApp live in the Communications tab pills, so only the
+  // personal-preferences shortcut + the admin brand action remain here.
   const topNav = (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <Link
-        href="/settings/notifications"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+        href={COMMUNICATIONS_ROUTES.preferences}
+        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Notifications
+        My notification preferences
       </Link>
-      <div className="flex flex-wrap gap-2">
-        {user.role === "ADMIN" ? (
-          <form action={bulkReplaceBrandName}>
-            <button
-              className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm"
-              type="submit"
-              title='Replace "Eagle Info Solutions"/"Your Repair Team" with your company name'
-            >
-              Replace Brand Name
-            </button>
-          </form>
-        ) : null}
-        <Link href="/settings/notifications/outbox" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
-          Outbox
-        </Link>
-        {user.role === "ADMIN" ? (
-          <Link href="/settings/notifications/whatsapp" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">
-            WhatsApp
-          </Link>
-        ) : null}
-      </div>
+      {user.role === "ADMIN" ? (
+        <form action={bulkReplaceBrandName}>
+          <button
+            className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            type="submit"
+            title='Replace "Eagle Info Solutions"/"Your Repair Team" with your company name'
+          >
+            Replace brand name
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 
@@ -172,7 +164,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success) {
-      redirect("/settings/notifications/templates?error=Invalid+template+input");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+template+input`);
     }
 
     const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
@@ -195,13 +187,13 @@ export default async function NotificationTemplatesPage({
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("Unique constraint") || msg.includes("P2002")) {
-        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+key+already+exists+for+that+channel`);
       }
-      redirect("/settings/notifications/templates?error=Failed+to+create+template");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Failed+to+create+template`);
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=template");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=template`);
   }
 
   async function updateTemplate(formData: FormData) {
@@ -222,7 +214,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success || !parsed.data.id) {
-      redirect("/settings/notifications/templates?error=Invalid+template+update");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+template+update`);
     }
 
     const vars = extractTemplateVariables(`${parsed.data.subject ?? ""}\n${parsed.data.body}`);
@@ -235,7 +227,7 @@ export default async function NotificationTemplatesPage({
       select: { id: true },
     }).catch(() => null);
     if (!existing) {
-      redirect("/settings/notifications/templates?error=Template+not+found");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+not+found`);
     }
 
     // Try full update first; if meta columns are missing in DB, fall back to updating without them.
@@ -275,20 +267,20 @@ export default async function NotificationTemplatesPage({
             },
           });
         } catch {
-          redirect("/settings/notifications/templates?error=Failed+to+update+template");
+          redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Failed+to+update+template`);
         }
-        revalidatePath("/settings/notifications/templates");
-        redirect("/settings/notifications/templates?error=Template+saved+but+meta+fields+need+DB+migration+-+click+Apply+Migration");
+        revalidateCommunicationsTemplates();
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+saved+but+meta+fields+need+DB+migration+-+click+Apply+Migration`);
       }
       if (msg.includes("Unique constraint") || msg.includes("P2002")) {
-        redirect("/settings/notifications/templates?error=Template+key+already+exists+for+that+channel");
+        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+key+already+exists+for+that+channel`);
       }
-      redirect(`/settings/notifications/templates?error=${encodeURIComponent("Failed to update: " + msg.slice(0, 120))}`);
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=${encodeURIComponent("Failed to update: " + msg.slice(0, 120))}`);
     }
 
     if (saved) {
-      revalidatePath("/settings/notifications/templates");
-      redirect("/settings/notifications/templates?saved=template");
+      revalidateCommunicationsTemplates();
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=template`);
     }
   }
 
@@ -320,11 +312,11 @@ export default async function NotificationTemplatesPage({
       }
     }
 
-    revalidatePath("/settings/notifications/templates");
+    revalidateCommunicationsTemplates();
     if (errors.length > 0) {
-      redirect(`/settings/notifications/templates?error=${encodeURIComponent("Migration partial: " + errors.join("; "))}`);
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=${encodeURIComponent("Migration partial: " + errors.join("; "))}`);
     }
-    redirect(`/settings/notifications/templates?saved=Migration+applied+(${applied}+columns+added)`);
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=Migration+applied+(${applied}+columns+added)`);
   }
 
   async function deleteTemplate(formData: FormData) {
@@ -332,11 +324,11 @@ export default async function NotificationTemplatesPage({
     const { user: actor, orgId: deleteOrgId } = await requireOrgSession();
     if (actor.role !== "ADMIN") redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
-    if (!id) redirect("/settings/notifications/templates?error=Missing+template+id");
+    if (!id) redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Missing+template+id`);
 
     await prisma.communicationTemplate.deleteMany({ where: { id, orgId: deleteOrgId } }).catch(() => null);
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=deleted");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=deleted`);
   }
 
   async function deduplicateTemplates() {
@@ -365,8 +357,8 @@ export default async function NotificationTemplatesPage({
       await prisma.communicationTemplate.deleteMany({ where: { id: { in: toDelete }, orgId: dedupeOrgId } });
     }
 
-    revalidatePath("/settings/notifications/templates");
-    redirect(`/settings/notifications/templates?saved=Removed+${toDelete.length}+duplicate${toDelete.length !== 1 ? "s" : ""}`);
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=Removed+${toDelete.length}+duplicate${toDelete.length !== 1 ? "s" : ""}`);
   }
 
   async function upsertPolicy(formData: FormData) {
@@ -385,7 +377,7 @@ export default async function NotificationTemplatesPage({
     });
 
     if (!parsed.success) {
-      redirect("/settings/notifications/templates?error=Invalid+policy+input");
+      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Invalid+policy+input`);
     }
 
     const toIntOrNull = (value: string) => {
@@ -418,8 +410,8 @@ export default async function NotificationTemplatesPage({
       },
     });
 
-    revalidatePath("/settings/notifications/templates");
-    redirect("/settings/notifications/templates?saved=policy");
+    revalidateCommunicationsTemplates();
+    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=policy`);
   }
 
   let templates: Array<{
@@ -514,38 +506,43 @@ export default async function NotificationTemplatesPage({
   return (
     <div className="space-y-4">
       {topNav}
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-[13px] font-bold text-[var(--ink)]">Templates</p>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          Use <code>{"{customerName}"}</code> and <code>{"{jobNumber}"}</code>.
+      {/* Intro + admin maintenance */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] text-[var(--ink-muted)]">
+          Use{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 font-mono text-[12px] text-[var(--ink)]">{"{customerName}"}</code>{" "}
+          and{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 font-mono text-[12px] text-[var(--ink)]">{"{jobNumber}"}</code>{" "}
+          as placeholders.
         </p>
-        {saved ? <p className="mt-3 text-sm text-[var(--accent)]">Saved: {saved}</p> : null}
-        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {user.role === "ADMIN" ? (
+        {user.role === "ADMIN" ? (
+          <div className="flex flex-wrap gap-2">
             <form action={deduplicateTemplates}>
-              <button type="submit" className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-500/20 dark:text-red-400">
-                Remove Duplicates
+              <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
+                Remove duplicates
               </button>
             </form>
-          ) : null}
-          {user.role === "ADMIN" ? (
             <form action={applyMetaMigration}>
-              <button type="submit" className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-500/20 dark:text-blue-400">
-                Apply Migration
+              <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
+                Apply migration
               </button>
             </form>
-          ) : null}
-        </div>
-        {templates.length === 0 ? (
-          <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-400">
-            No templates found. Click <strong>Create Default Templates</strong> to populate all 8 WhatsApp and email templates.
           </div>
         ) : null}
-      </section>
+      </div>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create Template</p>
+      {saved ? (
+        <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">Saved: {saved}</div>
+      ) : null}
+      {error ? (
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-[13px] font-medium text-red-600 dark:text-red-400">{error}</div>
+      ) : null}
+
+      <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-[var(--ink)]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[var(--accent)]" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          New template
+        </summary>
         <form action={createTemplate} className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
           <div className="xl:col-span-2">
             <input
@@ -553,13 +550,13 @@ export default async function NotificationTemplatesPage({
               required
               placeholder="Template key (e.g. JOB_CREATED)"
               list="template-keys"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             <datalist id="template-keys">
               {knownKeys.map((k) => <option key={k} value={k} />)}
             </datalist>
           </div>
-          <select name="channel" defaultValue="WHATSAPP" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+          <select name="channel" defaultValue="WHATSAPP" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             <option value="WHATSAPP">WhatsApp</option>
             <option value="EMAIL">Email</option>
           </select>
@@ -567,12 +564,12 @@ export default async function NotificationTemplatesPage({
             name="label"
             required
             placeholder="Label"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <input
             name="subject"
             placeholder="Email subject (optional)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
           />
           <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">
             <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4 rounded border border-[var(--line)]" />
@@ -582,58 +579,46 @@ export default async function NotificationTemplatesPage({
             name="body"
             required
             placeholder="Message body. Use placeholders like {customerName}"
-            className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+            className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
           />
           <input
             name="metaTemplateName"
             placeholder="Meta template name (e.g. job_created)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
           />
           <input
             name="metaLanguageCode"
             placeholder="Language (e.g. en)"
             defaultValue="en"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
           />
           <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</button>
         </form>
-      </section>
+      </details>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Templates</p>
+      <section>
+        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message templates</p>
         {templates.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">No templates yet.</p>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-12 text-center text-sm text-[var(--ink-muted)]">No templates yet.</div>
         ) : (
-          <div className="mt-3 space-y-2">
-            {templates.map((t) => {
+          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            {templates.map((t, ti) => {
               const vars = safeJsonArray(t.variables);
               return (
-                <details key={t.id} className="group/details rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-3" open={false}>
-                  <summary className="cursor-pointer list-none">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${t.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)]"}`}>
-                        {t.isActive ? "Active" : "Inactive"}
-                      </span>
-                      <span className="font-mono text-[13px] text-[var(--ink)]">{t.key}</span>
-                      <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[13px] text-[var(--ink-muted)]">
-                        {t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}
-                      </span>
-                      <span className="text-sm font-semibold text-[var(--ink)]">{t.label}</span>
-                      {t.metaTemplateName ? (
-                        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[12px] font-mono text-emerald-700 dark:text-emerald-400">
-                          meta: {t.metaTemplateName}
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
-                          no meta name
-                        </span>
-                      )}
-                      <span className="ml-auto flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
-                        <span>Updated {t.updatedAt.toLocaleString()}</span>
-                        <svg className="h-4 w-4 transition-transform group-open/details:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                      </span>
-                    </div>
+                <details key={t.id} className={`group/details ${ti > 0 ? "border-t border-[var(--line)]/50" : ""}`} open={false}>
+                  <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[var(--panel-strong)]/40">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${t.isActive ? "bg-emerald-500" : "bg-[var(--ink-muted)]/40"}`} title={t.isActive ? "Active" : "Inactive"} />
+                    <span className="font-mono text-[13px] font-medium text-[var(--ink)]">{t.key}</span>
+                    <span className="text-[12px] text-[var(--ink-muted)]">{t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</span>
+                    <span className="truncate text-[13px] text-[var(--ink-muted)]">{t.label}</span>
+                    {t.metaTemplateName ? (
+                      <span className="hidden shrink-0 rounded-full bg-emerald-500/12 px-2 py-0.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 sm:inline">meta ✓</span>
+                    ) : t.channel === "WHATSAPP" ? (
+                      <span className="hidden shrink-0 rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 sm:inline">no meta</span>
+                    ) : null}
+                    <svg className="ml-auto h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-transform group-open/details:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </summary>
+                  <div className="px-4 pb-4">
 
                   {vars.length > 0 ? (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -657,10 +642,10 @@ export default async function NotificationTemplatesPage({
                         name="key"
                         required
                         defaultValue={t.key}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                       />
                     </div>
-                    <select name="channel" defaultValue={t.channel} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+                    <select name="channel" defaultValue={t.channel} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
                       <option value="WHATSAPP">WhatsApp</option>
                       <option value="EMAIL">Email</option>
                     </select>
@@ -668,13 +653,13 @@ export default async function NotificationTemplatesPage({
                       name="label"
                       required
                       defaultValue={t.label}
-                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                     />
                     <input
                       name="subject"
                       defaultValue={t.subject ?? ""}
                       placeholder="Email subject"
-                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
                     />
                     <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink-muted)]">
                       <input type="checkbox" name="isActive" defaultChecked={t.isActive} className="h-4 w-4 rounded border border-[var(--line)]" />
@@ -684,7 +669,7 @@ export default async function NotificationTemplatesPage({
                       name="body"
                       required
                       defaultValue={t.body}
-                      className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+                      className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
                     />
                     {t.channel === "WHATSAPP" ? (
                       <div className="rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-3 md:col-span-2 xl:col-span-6">
@@ -702,13 +687,13 @@ export default async function NotificationTemplatesPage({
                             name="metaTemplateName"
                             defaultValue={t.metaTemplateName ?? ""}
                             placeholder="Template name (e.g. repair_status_update)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                           <input
                             name="metaLanguageCode"
                             defaultValue={t.metaLanguageCode ?? "en"}
                             placeholder="Language code (e.g. en)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                         </div>
                         {t.metaTemplateName ? (
@@ -728,12 +713,13 @@ export default async function NotificationTemplatesPage({
                     </div>
                   </form>
 
-                  {user.role === "ADMIN" ? (
-                    <form action={deleteTemplate} className="mt-2">
-                      <input type="hidden" name="id" value={t.id} />
-                      <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Delete Template</button>
-                    </form>
-                  ) : null}
+                    {user.role === "ADMIN" ? (
+                      <form action={deleteTemplate} className="mt-2">
+                        <input type="hidden" name="id" value={t.id} />
+                        <button type="submit" className="rounded-lg px-3 py-2 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">Delete template</button>
+                      </form>
+                    ) : null}
+                  </div>
                 </details>
               );
             })}
@@ -741,14 +727,14 @@ export default async function NotificationTemplatesPage({
         )}
       </section>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Status Policy</p>
-        <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Controls which channels are enabled per job status and which template key is used. Nudges are in hours.
+      <section id="policies">
+        <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Status policy</p>
+        <p className="mb-2 px-1 text-[12px] text-[var(--ink-muted)]">
+          Which channels fire per job status, the template key used, and nudge delays (in hours).
         </p>
 
-        <div className="mt-3 space-y-2">
-          {UI_JOB_STATUSES.map((status) => {
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          {UI_JOB_STATUSES.map((status, si) => {
             const p = policyByStatus.get(status) ?? {
               status: status as unknown as JobStatus,
               dashboardEnabled: true,
@@ -760,7 +746,7 @@ export default async function NotificationTemplatesPage({
             };
 
             return (
-              <form key={status} action={upsertPolicy} className="grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-[1fr_auto_auto_auto_1fr_110px_110px_auto]">
+              <form key={status} action={upsertPolicy} className={`grid items-center gap-2 p-3 md:grid-cols-[1fr_auto_auto_auto_1fr_110px_110px_auto] ${si > 0 ? "border-t border-[var(--line)]/50" : ""}`}>
                 <input type="hidden" name="status" value={status} />
                 <div>
                   <p className="text-sm font-semibold text-[var(--ink)]">{status.replaceAll("_", " ")}</p>
@@ -778,7 +764,7 @@ export default async function NotificationTemplatesPage({
                   <input type="checkbox" name="emailEnabled" defaultChecked={p.emailEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
                   Email
                 </label>
-                <select name="templateKey" defaultValue={p.templateKey ?? ""} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
+                <select name="templateKey" defaultValue={p.templateKey ?? ""} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50">
                   <option value="">(no template)</option>
                   {templateKeys.map((k) => (
                     <option key={k} value={k}>{k}</option>
@@ -789,14 +775,14 @@ export default async function NotificationTemplatesPage({
                   defaultValue={p.nudge1Hours ?? ""}
                   placeholder="Nudge 1"
                   inputMode="numeric"
-                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
                 />
                 <input
                   name="nudge2Hours"
                   defaultValue={p.nudge2Hours ?? ""}
                   placeholder="Nudge 2"
                   inputMode="numeric"
-                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
                 />
                 <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save</button>
               </form>

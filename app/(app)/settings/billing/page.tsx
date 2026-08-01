@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { PLAN_LIMITS, PLAN_LABELS } from "@/lib/plan-limits";
+import { TRIAL_DAYS } from "@/lib/billing-access";
 import { submitOrder, getOrCreateIpnId, buildMerchantRef, PLAN_PRICES, CURRENCY } from "@/lib/pesapal";
 import { getOrgModules, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
 import { formatMoney } from "@/lib/currency";
@@ -164,7 +165,7 @@ export default async function BillingPage({
       ? "Subscribe to Growth or Enterprise to restore access to your workspace."
       : isPastDue
       ? "Your last payment failed. Re-subscribe below to restore full access."
-      : "Your 2-month free trial has expired. Choose a plan below to continue using your workspace.";
+      : `Your ${TRIAL_DAYS}-day free trial has expired. Choose a plan below to continue using your workspace.`;
 
     return (
       <div className="space-y-4">

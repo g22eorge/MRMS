@@ -63,7 +63,7 @@ export default async function PlatformSettingsPage() {
           {(["GROWTH", "ENTERPRISE"] as const).map((plan) => (
             <div key={plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3">
               <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{plan}</p>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--ink)]">UGX {formatMoney(PLAN_PRICES[plan])} / month</p>
+              <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--ink)]">{formatMoney(PLAN_PRICES[plan])} / month</p>
             </div>
           ))}
         </div>

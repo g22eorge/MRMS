@@ -48,7 +48,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="address"
           rows={2}
           defaultValue={supplier.address ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
         />
       </div>
       <div>
@@ -57,7 +57,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="notes"
           rows={2}
           defaultValue={supplier.notes ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ function Field({
         type={type}
         required={required}
         defaultValue={defaultValue}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
       />
     </div>
   );

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -17,9 +19,13 @@ async function requireInventoryManager() {
 }
 
 async function generateRequestNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.purchaseRequest.count({ where: { orgId } });
-  return `PR-${year}-${String(count + 1).padStart(4, "0")}`;
+  const inner = `PR-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.purchaseRequest.findMany({ where: { orgId, requestNumber: { contains: inner } }, select: { requestNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.requestNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 type RequestLine = { description: string; quantity: number; estimatedUnitCost?: number | null; partId?: string | null };
@@ -116,6 +122,10 @@ export async function reviewPurchaseRequestAction(formData: FormData): Promise<v
     },
   });
 
+  if (req) {
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseRequest", entityId: id, action: `PURCHASE_REQUEST_${action}`, summary: `${req.requestNumber} ${action.toLowerCase()}` });
+  }
+
   if (action === "APPROVED" && req) {
     const actor = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, email: true } });
     notifyPurchaseRequest({
@@ -132,17 +142,18 @@ export async function reviewPurchaseRequestAction(formData: FormData): Promise<v
 }
 
 export async function deletePurchaseRequestAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireInventoryManager();
+  const { orgId, session } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
   const request = await prisma.purchaseRequest.findFirst({
     where: { id, orgId },
-    select: { convertedPoId: true },
+    select: { convertedPoId: true, requestNumber: true },
   });
   if (!request) return;
 
   await prisma.purchaseRequest.delete({ where: { id } });
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseRequest", entityId: id, action: "PURCHASE_REQUEST_DELETED", summary: `${request.requestNumber} deleted` });
 
   revalidatePath("/inventory/purchase-requests");
   revalidatePath("/procurement");
@@ -166,14 +177,20 @@ export async function convertPurchaseRequestToPoAction(formData: FormData): Prom
   const supplier = await prisma.supplier.findFirst({ where: { id: supplierId, orgId, isActive: true }, select: { id: true } });
   if (!supplier) return;
 
+  // Don't issue (ORDERED) a PO with zero-cost lines — that bypasses the same
+  // guard createPurchaseOrderAction enforces and lets a receipt zero out the
+  // part's cost basis. Leave it DRAFT until costs are filled in.
+  const hasZeroCost = request.items.some((item) => !item.estimatedUnitCost || item.estimatedUnitCost <= 0);
+  const poStatus = hasZeroCost ? "DRAFT" : "ORDERED";
+
   const po = await prisma.$transaction(async (tx) => {
     const created = await tx.purchaseOrder.create({
       data: {
         orgId,
         supplierId,
-        status: "ORDERED",
+        status: poStatus,
         reference,
-        orderedAt: new Date(),
+        orderedAt: hasZeroCost ? null : new Date(),
         expectedAt: expectedAtRaw ? new Date(expectedAtRaw) : null,
         notes: `Converted from ${request.requestNumber}${request.reason ? `: ${request.reason}` : ""}`,
         items: {

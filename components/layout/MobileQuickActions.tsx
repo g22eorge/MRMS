@@ -5,63 +5,36 @@ import { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 
 import { can } from "@/lib/permissions";
+import { routeLabel } from "@/lib/nav/registry";
 
 type QuickAction = {
   href: string;
   label: string;
 };
 
+// Labels come from the canonical route registry — one name per route.
+const qa = (href: string): QuickAction => ({ href, label: routeLabel(href) });
+
 function roleActions(role: Role, permissions: string[]): QuickAction[] {
   const permissionUser = { role, permissions };
 
   if (role === "ADMIN") {
-    return [
-      { href: "/jobs/new",  label: "New Job" },
-      { href: "/intake",    label: "Requests" },
-      { href: "/reports",   label: "Reports" },
-    ];
+    return [qa("/jobs/new"), qa("/intake"), qa("/reports")];
   }
-  if (role === "OPS") {
-    return [
-      { href: "/jobs/new",  label: "New Job" },
-      { href: "/intake",    label: "Requests" },
-      { href: "/clients",   label: "Clients" },
-    ];
-  }
-  if (role === "FRONT_DESK" || role === "INTAKE") {
-    return [
-      { href: "/jobs/new",  label: "New Job" },
-      { href: "/intake",    label: "Requests" },
-      { href: "/clients",   label: "Clients" },
-    ];
+  if (role === "OPS" || role === "FRONT_DESK" || role === "INTAKE") {
+    return [qa("/jobs/new"), qa("/intake"), qa("/clients")];
   }
   if (role === "TECHNICIAN_INTERNAL" && can.viewClientInfo(permissionUser)) {
     // has can_intake
-    return [
-      { href: "/jobs/new",  label: "New Intake" },
-      { href: "/intake",    label: "Requests" },
-      { href: "/jobs",      label: "Work Queue" },
-    ];
+    return [qa("/jobs/new"), qa("/intake"), qa("/jobs")];
   }
   if (role === "TECHNICIAN_INTERNAL") {
-    return [
-      { href: "/jobs",        label: "Jobs" },
-      { href: "/technicians", label: "Technicians" },
-      { href: "/dashboard",   label: "Dashboard" },
-    ];
+    return [qa("/jobs"), qa("/technicians"), qa("/dashboard")];
   }
   if (role === "TECHNICIAN_EXTERNAL") {
-    return [
-      { href: "/jobs",                  label: "Jobs" },
-      { href: "/technicians/payouts",   label: "Payouts" },
-      { href: "/dashboard",             label: "Dashboard" },
-    ];
+    return [qa("/jobs"), qa("/technicians/payouts"), qa("/dashboard")];
   }
-  return [
-    { href: "/jobs",      label: "Jobs" },
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/technicians", label: "Technicians" },
-  ];
+  return [qa("/jobs"), qa("/dashboard"), qa("/technicians")];
 }
 
 function isActive(pathname: string, href: string) {

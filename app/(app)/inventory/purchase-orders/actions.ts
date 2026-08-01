@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { redirect } from "next/navigation";
@@ -16,9 +18,13 @@ async function requireAdmin() {
 }
 
 async function generateGrnNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.goodsReceived.count({ where: { orgId } });
-  return `GRN-${year}-${String(count + 1).padStart(4, "0")}`;
+  const inner = `GRN-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.goodsReceived.findMany({ where: { orgId, grnNumber: { contains: inner } }, select: { grnNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.grnNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 function parseOptionalDate(raw: FormDataEntryValue | null, label: string): { date: Date | null; error?: string } {
@@ -34,7 +40,7 @@ function parseOptionalDate(raw: FormDataEntryValue | null, label: string): { dat
 export async function createPurchaseOrderAction(
   formData: FormData,
 ): Promise<{ id?: string; error?: string }> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
 
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   if (!supplierId) return { error: "Supplier is required" };
@@ -108,6 +114,7 @@ export async function createPurchaseOrderAction(
         },
       },
     });
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: po.id, action: "PURCHASE_ORDER_CREATED", summary: `PO ${reference ?? po.id} created${issueNow ? " (issued)" : ""}` });
     revalidatePath("/procurement");
     revalidatePath("/inventory/purchase-orders");
     return { id: po.id };
@@ -161,7 +168,7 @@ export async function updatePurchaseOrderAction(
 }
 
 export async function setPurchaseOrderStatusAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
   if (!id || !["DRAFT", "ORDERED", "CANCELLED"].includes(status)) return;
@@ -184,13 +191,15 @@ export async function setPurchaseOrderStatusAction(formData: FormData): Promise<
     },
   });
 
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_STATUS_CHANGED", summary: `PO status set to ${status}` });
+
   revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
   revalidatePath(`/inventory/purchase-orders/${id}`);
 }
 
 export async function deletePurchaseOrderAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
@@ -198,11 +207,25 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
     where: { id, orgId },
     select: {
       id: true,
+      reference: true,
+      items: { select: { qtyReceived: true } },
+      _count: { select: { goodsReceivedNotes: true, supplierBills: true } },
     },
   });
   if (!po) return;
 
+  // Never hard-delete a PO once stock was received or a GRN/bill is linked —
+  // deletion would orphan those records and leave received stock unreversed.
+  if (
+    po.items.some((item) => item.qtyReceived > 0) ||
+    po._count.goodsReceivedNotes > 0 ||
+    po._count.supplierBills > 0
+  ) {
+    return;
+  }
+
   await prisma.purchaseOrder.delete({ where: { id } });
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_DELETED", summary: `PO ${po.reference ?? id} deleted` });
 
   revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
@@ -250,9 +273,10 @@ export async function receiveStockAction(
 
   if (!updates.length) return { error: "No changes to save" };
   const grnNumber = await generateGrnNumber(orgId);
+  let grnId = "";
 
   await prisma.$transaction(async (tx) => {
-    await tx.goodsReceived.create({
+    const grn = await tx.goodsReceived.create({
       data: {
         orgId,
         grnNumber,
@@ -270,7 +294,9 @@ export async function receiveStockAction(
           })),
         },
       },
+      select: { id: true },
     });
+    grnId = grn.id;
 
     for (const u of updates) {
       await tx.purchaseOrderItem.update({
@@ -286,19 +312,35 @@ export async function receiveStockAction(
         await tx.partStockTransaction.create({
           data: {
             partId: u.partId,
+            orgId,
+            locationId,
+            unitCost: u.unitCost,
+            sourceType: "GRN",
+            sourceId: grnId,
             type: "IN",
             quantity: u.delta,
             reason: `Received via ${grnNumber}`,
             createdById: session.user.id,
           },
         });
-        const aggregate = await tx.partLocationStock.aggregate({
-          where: { partId: u.partId },
-          _sum: { qtyOnHand: true },
+        const partBefore = await tx.part.findUnique({
+          where: { id: u.partId },
+          select: { qtyOnHand: true, unitCost: true },
         });
+        const oldQty = partBefore?.qtyOnHand ?? 0;
+        // Part.qtyOnHand is authoritative: increment by the received delta rather
+        // than recomputing from SUM(PartLocationStock), which would silently wipe
+        // stock recorded via manual adjustments or POS (C2 corruption fix).
+        // Weighted-average cost; never overwrite the cost basis with a zero/
+        // negative receipt price (which would destroy valuation and margins).
+        let nextCost = partBefore?.unitCost ?? 0;
+        if (u.unitCost > 0) {
+          const denom = oldQty + u.delta;
+          nextCost = denom > 0 ? (oldQty * nextCost + u.delta * u.unitCost) / denom : u.unitCost;
+        }
         await tx.part.update({
           where: { id: u.partId },
-          data: { qtyOnHand: aggregate._sum.qtyOnHand ?? 0, unitCost: u.unitCost },
+          data: { qtyOnHand: { increment: u.delta }, unitCost: nextCost },
         });
       }
     }
@@ -318,6 +360,15 @@ export async function receiveStockAction(
     });
   });
 
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "GoodsReceived",
+    entityId: grnId,
+    action: "GOODS_RECEIVED",
+    summary: `${grnNumber} received against PO ${po.reference ?? poId} (${updates.length} line${updates.length === 1 ? "" : "s"})`,
+  });
+
   revalidatePath(`/inventory/purchase-orders/${poId}`);
   revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
@@ -331,5 +382,106 @@ export async function receiveStockAction(
     itemCount: updates.length,
     actorName: actor?.name ?? actor?.email ?? "Unknown",
   }).catch(() => {});
+  return {};
+}
+
+/**
+ * M5: reverse (void) a posted goods-received note. Decrements the received
+ * stock, writes reversal ledger rows, rolls the PO status back, and marks the
+ * GRN CANCELLED. Blocked when the GRN is already billed, or when reversing
+ * would drive stock negative (the goods have since moved out).
+ */
+export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ error?: string }> {
+  const { orgId, session } = await requireAdmin();
+  const grnId = String(formData.get("grnId") ?? "").trim();
+  if (!grnId) return { error: "Missing goods-received note" };
+
+  const grn = await prisma.goodsReceived.findFirst({
+    where: { id: grnId, orgId, status: "POSTED" },
+    select: {
+      id: true, grnNumber: true, poId: true, locationId: true,
+      items: { select: { partId: true, poItemId: true, quantity: true } },
+    },
+  });
+  if (!grn) return { error: "Goods-received note not found or already reversed" };
+
+  const billed = await prisma.supplierBill.findFirst({
+    where: { orgId, grnId, status: { not: "CANCELLED" } },
+    select: { billNumber: true },
+  });
+  if (billed) return { error: `Cannot reverse — this GRN is billed on ${billed.billNumber}. Cancel the bill first.` };
+
+  const result = await prisma.$transaction(async (tx) => {
+    for (const item of grn.items) {
+      if (!item.partId || item.quantity <= 0) continue;
+
+      const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { qtyOnHand: true } });
+      if (!part) continue;
+      if (part.qtyOnHand - item.quantity < 0) {
+        return { error: "Cannot reverse — some received stock has already been sold or moved out." };
+      }
+
+      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: item.quantity } } });
+      const loc = await tx.partLocationStock.findUnique({
+        where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
+        select: { qtyOnHand: true },
+      });
+      if (loc) {
+        await tx.partLocationStock.update({
+          where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
+          data: { qtyOnHand: { decrement: Math.min(loc.qtyOnHand, item.quantity) } },
+        });
+      }
+      if (item.poItemId) {
+        await tx.purchaseOrderItem.update({
+          where: { id: item.poItemId },
+          data: { qtyReceived: { decrement: item.quantity } },
+        });
+      }
+      await tx.partStockTransaction.create({
+        data: {
+          partId: item.partId,
+          orgId,
+          locationId: grn.locationId,
+          sourceType: "GRN",
+          sourceId: grn.id,
+          type: "OUT",
+          quantity: item.quantity,
+          reason: `Reversal of ${grn.grnNumber}`,
+          createdById: session.user.id,
+        },
+      });
+    }
+
+    await tx.goodsReceived.update({ where: { id: grn.id }, data: { status: "CANCELLED" } });
+
+    // Roll the PO status back to match the reduced received quantities.
+    if (grn.poId) {
+      const allItems = await tx.purchaseOrderItem.findMany({ where: { poId: grn.poId }, select: { qtyOrdered: true, qtyReceived: true } });
+      const allReceived = allItems.length > 0 && allItems.every((i) => i.qtyReceived >= i.qtyOrdered);
+      const anyReceived = allItems.some((i) => i.qtyReceived > 0);
+      await tx.purchaseOrder.update({
+        where: { id: grn.poId },
+        data: { status: (allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED") as never },
+      });
+    }
+    return { ok: true as const };
+  });
+
+  if ("error" in result) return { error: result.error };
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "GoodsReceived",
+    entityId: grnId,
+    action: "GOODS_RECEIVED_REVERSED",
+    summary: `${grn.grnNumber} reversed (${grn.items.length} line${grn.items.length === 1 ? "" : "s"})`,
+  });
+
+  revalidatePath("/inventory/goods-received");
+  revalidatePath(`/inventory/goods-received/${grnId}`);
+  if (grn.poId) revalidatePath(`/inventory/purchase-orders/${grn.poId}`);
+  revalidatePath("/procurement");
   return {};
 }

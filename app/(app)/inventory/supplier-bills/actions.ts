@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { postSupplierPayment } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -16,9 +19,13 @@ async function requireInventoryManager() {
 }
 
 async function generateBillNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.supplierBill.count({ where: { orgId } });
-  return `SB-${year}-${String(count + 1).padStart(4, "0")}`;
+  const inner = `SB-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner } }, select: { billNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.billNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 type BillLine = { description: string; quantity: number; unitCost: number };
@@ -72,6 +79,29 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
 
   const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
   const totalAmount = subtotal + taxAmount;
+
+  // M4: over-/double-billing guard (basic 3-way match).
+  if (grnId) {
+    const dup = await prisma.supplierBill.findFirst({
+      where: { orgId, grnId, status: { not: "CANCELLED" } },
+      select: { billNumber: true },
+    });
+    if (dup) return { error: `This goods-received note is already billed on ${dup.billNumber}` };
+  }
+  if (poId) {
+    const [poItems, priorBills] = await Promise.all([
+      prisma.purchaseOrderItem.findMany({ where: { poId }, select: { qtyOrdered: true, unitCost: true } }),
+      prisma.supplierBill.findMany({ where: { orgId, poId, status: { not: "CANCELLED" } }, select: { subtotal: true } }),
+    ]);
+    const poValue = poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0);
+    const alreadyBilled = priorBills.reduce((sum, b) => sum + b.subtotal, 0);
+    if (poValue > 0 && alreadyBilled + subtotal > poValue + 0.01) {
+      return {
+        error: `Billing ${currency} ${(alreadyBilled + subtotal).toLocaleString()} would exceed the PO value of ${currency} ${poValue.toLocaleString()} (already billed ${currency} ${alreadyBilled.toLocaleString()})`,
+      };
+    }
+  }
+
   const billNumber = await generateBillNumber(orgId);
 
   const bill = await prisma.supplierBill.create({
@@ -102,6 +132,15 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     select: { id: true },
   });
 
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "SupplierBill",
+    entityId: bill.id,
+    action: "SUPPLIER_BILL_CREATED",
+    summary: `${billNumber} — ${currency} ${totalAmount.toLocaleString()}`,
+  });
+
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");
   revalidatePath(`/inventory/suppliers/${supplierId}`);
@@ -109,14 +148,17 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
 }
 
 export async function cancelSupplierBillAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireInventoryManager();
+  const { orgId, session } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.supplierBill.updateMany({
+  const result = await prisma.supplierBill.updateMany({
     where: { id, orgId, paidAmount: 0 },
     data: { status: "CANCELLED" },
   });
+  if (result.count > 0) {
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "SupplierBill", entityId: id, action: "SUPPLIER_BILL_CANCELLED", summary: `Supplier bill ${id} cancelled` });
+  }
 
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");
@@ -140,18 +182,18 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
 
   if (!billId || !Number.isFinite(amount) || amount <= 0) return;
 
-  await prisma.$transaction(async (tx) => {
+  const paid = await prisma.$transaction(async (tx) => {
     const bill = await tx.supplierBill.findFirst({
       where: { id: billId, orgId, status: { not: "CANCELLED" } },
       select: { id: true, totalAmount: true, paidAmount: true, currency: true },
     });
-    if (!bill) return;
+    if (!bill) return null;
 
     const balance = bill.totalAmount - bill.paidAmount;
-    if (amount > balance) return;
+    if (amount > balance) return null;
 
     const nextPaid = bill.paidAmount + amount;
-    await tx.supplierPayment.create({
+    const supplierPayment = await tx.supplierPayment.create({
       data: {
         orgId,
         billId,
@@ -163,6 +205,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         note,
         createdById: session.user.id,
       },
+      select: { id: true, paidAt: true },
     });
     await tx.supplierBill.update({
       where: { id: billId },
@@ -171,7 +214,28 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         status: nextBillStatus(bill.totalAmount, nextPaid),
       },
     });
+    // C5: cash-basis ledger post — Dr Cost of Sales, Cr Cash.
+    await postSupplierPayment(tx, {
+      orgId,
+      userId: session.user.id,
+      amount,
+      date: supplierPayment.paidAt ?? undefined,
+      reference: `supplier-pay:${supplierPayment.id}`,
+      description: `Supplier payment on bill ${billId}`,
+    });
+    return { currency: bill.currency || org.baseCurrency };
   });
+
+  if (paid) {
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: session.user.id,
+      entityType: "SupplierBill",
+      entityId: billId,
+      action: "SUPPLIER_PAYMENT_RECORDED",
+      summary: `Supplier payment ${paid.currency} ${amount.toLocaleString()} on bill ${billId}`,
+    });
+  }
 
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");

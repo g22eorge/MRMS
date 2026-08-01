@@ -7,6 +7,9 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { DataTable } from "@/components/ui/DataTable";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -121,17 +124,11 @@ export default async function TaxRatesPage({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">
-            Tax Rates{" "}
-            <span className="font-normal text-[var(--ink-muted)]">· {taxRates.length} configured</span>
-          </p>
-          <p className="text-[13px] text-[var(--ink-muted)]">
-            VAT, WHT, and other tax codes applied to invoices and purchases.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Tax Rates"
+        description={`${taxRates.length} configured — VAT, WHT, and other tax codes applied to invoices and purchases.`}
+        actions={
         <details className="group relative">
           <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
             + Add Tax Rate
@@ -173,7 +170,8 @@ export default async function TaxRatesPage({
             </form>
           </div>
         </details>
-      </div>
+        }
+      />
 
       {/* Search */}
       <form method="GET" className="flex gap-2">
@@ -184,109 +182,109 @@ export default async function TaxRatesPage({
       </form>
 
       {/* Tax rate table */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="doc-list overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Code</th>
-                <th className="px-4 py-2.5 text-left">Name</th>
-                <th className="px-4 py-2.5 text-right">Rate</th>
-                <th className="hidden px-4 py-2.5 text-center md:table-cell">Sales</th>
-                <th className="hidden px-4 py-2.5 text-center md:table-cell">Purchases</th>
-                <th className="px-4 py-2.5 text-center">Status</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTaxRates.map((rate) => (
-                <tr key={rate.id} className="border-t border-[var(--line)] align-middle hover:bg-[var(--panel-strong)]/40">
-                  <td className="px-4 py-3">
-                    <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-1 text-[12px] font-bold text-[var(--ink)]">
-                      {rate.code}
-                    </span>
-                    {rate.isDefault && (
-                      <span className="ml-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[12px] font-semibold text-emerald-700">
-                        Default
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-[var(--ink)]">{rate.name}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">
-                    {rate.rate}%
-                  </td>
-                  <td className="hidden px-4 py-3 text-center md:table-cell">
-                    {rate.appliesToSales ? (
-                      <span className="text-emerald-600">✓</span>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">—</span>
-                    )}
-                  </td>
-                  <td className="hidden px-4 py-3 text-center md:table-cell">
-                    {rate.appliesToPurchases ? (
-                      <span className="text-emerald-600">✓</span>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${
-                        rate.isActive
-                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-700"
-                          : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-                      }`}
-                    >
-                      {rate.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <RowActionsMenu label="Rate actions">
-                      <MenuSection label="Actions" />
-                      <div className="px-3 py-1">
-                        <form action={toggleTaxRateAction}>
-                          <input type="hidden" name="taxRateId" value={rate.id} />
-                          <input type="hidden" name="action" value="toggle" />
-                          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                            {rate.isActive ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
-                        {!rate.isDefault && (
-                          <form action={toggleTaxRateAction}>
-                            <input type="hidden" name="taxRateId" value={rate.id} />
-                            <input type="hidden" name="action" value="setDefault" />
-                            <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                              Set as Default
-                            </button>
-                          </form>
-                        )}
-                      </div>
-                      <MenuDestructiveRow>
-                        <form action={deleteTaxRateAction}>
-                          <input type="hidden" name="taxRateId" value={rate.id} />
-                          <ConfirmSubmitButton
-                            message={`Delete tax rate ${rate.code}? This cannot be undone.`}
-                            className="w-full text-left text-[12px] text-red-600"
-                          >
-                            Delete
-                          </ConfirmSubmitButton>
-                        </form>
-                      </MenuDestructiveRow>
-                    </RowActionsMenu>
-                  </td>
-                </tr>
-              ))}
-              {filteredTaxRates.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">
-                    No tax rates configured. Add VAT, WHT, or other rates above.
-                  </td>
-                </tr>
+      <DataTable
+        className="panel-shadow"
+        rows={filteredTaxRates}
+        getRowKey={(rate) => rate.id}
+        empty="No tax rates configured. Add VAT, WHT, or other rates above."
+        columns={[
+          {
+            key: "code",
+            header: "Code",
+            cell: (rate) => (
+              <span className="inline-flex items-center gap-2">
+                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-1 text-[12px] font-bold text-[var(--ink)]">
+                  {rate.code}
+                </span>
+                {rate.isDefault && <StatusBadge tone="success">Default</StatusBadge>}
+              </span>
+            ),
+          },
+          {
+            key: "name",
+            header: "Name",
+            className: "font-medium text-[var(--ink)]",
+            cell: (rate) => rate.name,
+          },
+          {
+            key: "rate",
+            header: "Rate",
+            align: "right",
+            className: "font-semibold tabular-nums text-[var(--ink)]",
+            cell: (rate) => `${rate.rate}%`,
+          },
+          {
+            key: "sales",
+            header: "Sales",
+            align: "center",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden md:table-cell",
+            cell: (rate) =>
+              rate.appliesToSales ? (
+                <span className="text-emerald-600">✓</span>
+              ) : (
+                <span className="text-[var(--ink-muted)]">—</span>
+              ),
+          },
+          {
+            key: "purchases",
+            header: "Purchases",
+            align: "center",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden md:table-cell",
+            cell: (rate) =>
+              rate.appliesToPurchases ? (
+                <span className="text-emerald-600">✓</span>
+              ) : (
+                <span className="text-[var(--ink-muted)]">—</span>
+              ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            align: "center",
+            cell: (rate) => (
+              <StatusBadge tone={rate.isActive ? "success" : "neutral"}>
+                {rate.isActive ? "Active" : "Inactive"}
+              </StatusBadge>
+            ),
+          },
+        ]}
+        actions={(rate) => (
+          <RowActionsMenu label="Rate actions">
+            <MenuSection label="Actions" />
+            <div className="px-3 py-1">
+              <form action={toggleTaxRateAction}>
+                <input type="hidden" name="taxRateId" value={rate.id} />
+                <input type="hidden" name="action" value="toggle" />
+                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+                  {rate.isActive ? "Deactivate" : "Activate"}
+                </button>
+              </form>
+              {!rate.isDefault && (
+                <form action={toggleTaxRateAction}>
+                  <input type="hidden" name="taxRateId" value={rate.id} />
+                  <input type="hidden" name="action" value="setDefault" />
+                  <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+                    Set as Default
+                  </button>
+                </form>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+            <MenuDestructiveRow>
+              <form action={deleteTaxRateAction}>
+                <input type="hidden" name="taxRateId" value={rate.id} />
+                <ConfirmSubmitButton
+                  message={`Delete tax rate ${rate.code}? This cannot be undone.`}
+                  className="w-full text-left text-[12px] text-red-600"
+                >
+                  Delete
+                </ConfirmSubmitButton>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
+        )}
+      />
     </div>
   );
 }

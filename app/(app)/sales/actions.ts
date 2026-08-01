@@ -318,9 +318,26 @@ export async function updateQuotationStatus(quotationId: string, status: Quotati
   };
   const quotation = await prisma.quotation.findFirst({
     where: accessWhere,
-    select: { id: true, leadId: true, quoteNumber: true, lead: { select: { fullName: true } } },
+    select: { id: true, status: true, convertedToInvoiceId: true, leadId: true, quoteNumber: true, lead: { select: { fullName: true } } },
   });
   if (!quotation) throw new Error("Quotation not found");
+
+  // Server-side state machine — a role check alone let any status jump to any
+  // other (e.g. revert ACCEPTED→DRAFT to edit an approved quote, or re-accept a
+  // rejected one). Enforce the allowed transitions here, not just in the UI.
+  const ALLOWED_TRANSITIONS: Record<QuotationStatus, QuotationStatus[]> = {
+    DRAFT: ["SENT", "ACCEPTED", "REJECTED", "EXPIRED", "VOID"],
+    SENT: ["ACCEPTED", "REJECTED", "EXPIRED", "DRAFT", "VOID"],
+    ACCEPTED: ["VOID"],
+    REJECTED: ["DRAFT", "SENT", "VOID"],
+    EXPIRED: ["DRAFT", "SENT", "VOID"],
+    VOID: [],
+  };
+  if (quotation.status === status) return; // idempotent no-op
+  if (quotation.convertedToInvoiceId) throw new Error("Quotation has already been converted to an invoice");
+  if (!ALLOWED_TRANSITIONS[quotation.status]?.includes(status)) {
+    throw new Error(`Cannot change quotation from ${quotation.status} to ${status}`);
+  }
 
   const now = new Date();
   const result = await prisma.quotation.updateMany({
@@ -377,7 +394,7 @@ export async function addQuotationItem(
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   await assertEditableQuotation(quotationId, orgId, user);
-  const discount = can.overrideDiscount(user) ? item.discount : 0;
+  const discount = can.overrideDiscount(user) ? Math.max(0, Math.min(100, item.discount)) : 0;
   const lineTotal = quotationLineTotal({ ...item, discount });
 
   await prisma.quotationItem.create({
@@ -431,7 +448,7 @@ export async function updateQuotationItem(
   if (!existing) throw new Error("Quotation item not found");
   await assertEditableQuotation(existing.quotationId, orgId, user);
 
-  const discount = can.overrideDiscount(user) ? item.discount : 0;
+  const discount = can.overrideDiscount(user) ? Math.max(0, Math.min(100, item.discount)) : 0;
   const lineTotal = quotationLineTotal({ ...item, discount });
 
   await prisma.quotationItem.update({

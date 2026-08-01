@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -17,42 +19,56 @@ function compactJson(value: string | null) {
 export default async function SettingsAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string }>;
+  searchParams: Promise<{ action?: string; page?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   if (user.role !== "ADMIN") redirect("/settings");
 
   const params = await searchParams;
   const action = typeof params.action === "string" ? params.action.trim() : "";
+  const page = parsePage(params.page);
   const exportHref = `/api/audit/export${action ? `?action=${encodeURIComponent(action)}` : ""}`;
 
-  const events = await prisma.systemAuditEvent
-    .findMany({
-      where: {
-        orgId,
-        ...(action ? { action } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: 150,
-      select: {
-        id: true,
-        actorUserId: true,
-        entityType: true,
-        entityId: true,
-        action: true,
-        summary: true,
-        afterJson: true,
-        createdAt: true,
-      },
-    })
-    .catch(() => []);
+  const eventsWhere = {
+    orgId,
+    ...(action ? { action } : {}),
+  };
+
+  const [eventsTotal, events, actionRows] = await Promise.all([
+    prisma.systemAuditEvent.count({ where: eventsWhere }).catch(() => 0),
+    prisma.systemAuditEvent
+      .findMany({
+        where: eventsWhere,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        select: {
+          id: true,
+          actorUserId: true,
+          entityType: true,
+          entityId: true,
+          action: true,
+          summary: true,
+          afterJson: true,
+          createdAt: true,
+        },
+      })
+      .catch(() => []),
+    // Filter dropdown must list every action for the org, not just the current page.
+    prisma.systemAuditEvent
+      .findMany({ where: { orgId }, select: { action: true }, distinct: ["action"], orderBy: { action: "asc" } })
+      .catch(() => []),
+  ]);
+
+  const pageView = paginationView(page, eventsTotal);
+  const auditHref = pageHrefBuilder("/settings/audit", { action });
 
   const actorIds = Array.from(new Set(events.map((event) => event.actorUserId).filter(Boolean))) as string[];
   const actors = actorIds.length
     ? await prisma.user.findMany({ where: { id: { in: actorIds }, orgId }, select: { id: true, name: true, email: true } }).catch(() => [])
     : [];
   const actorMap = new Map(actors.map((actor) => [actor.id, actor]));
-  const actionOptions = Array.from(new Set(events.map((event) => event.action))).sort();
+  const actionOptions = Array.from(new Set(actionRows.map((row) => row.action))).sort();
 
   const fmt = (d: Date) => d.toLocaleString("en-UG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -71,7 +87,7 @@ export default async function SettingsAuditPage({
 
       <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)]">
+          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
             <option value="">All actions</option>
             {actionOptions.map((item) => (
               <option key={item} value={item}>{item}</option>
@@ -83,48 +99,71 @@ export default async function SettingsAuditPage({
         </div>
       </form>
 
-      <div className="doc-list overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-              <th className="px-4 py-3">When</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Actor</th>
-              <th className="px-4 py-3">Entity</th>
-              <th className="px-4 py-3">After</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {events.map((event) => {
+      <DataTable
+        className="doc-list"
+        rows={events}
+        getRowKey={(event) => event.id}
+        empty="No audit events found. New commercial and admin actions will appear here once recorded."
+        columns={[
+          {
+            key: "when",
+            header: "When",
+            className: "whitespace-nowrap align-top text-[12px] text-[var(--ink-muted)]",
+            cell: (event) => fmt(event.createdAt),
+          },
+          {
+            key: "action",
+            header: "Action",
+            className: "align-top",
+            cell: (event) => (
+              <>
+                <p className="mono font-semibold text-[var(--ink)]">{event.action}</p>
+                <p className="mt-1 max-w-[240px] text-[12px] text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
+              </>
+            ),
+          },
+          {
+            key: "actor",
+            header: "Actor",
+            className: "align-top text-[12px] text-[var(--ink-muted)]",
+            cell: (event) => {
               const actor = event.actorUserId ? actorMap.get(event.actorUserId) : null;
-              return (
-                <tr key={event.id} className="align-top hover:bg-[var(--panel-strong)]/50">
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--ink-muted)]">{fmt(event.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-mono text-xs font-semibold text-[var(--ink)]">{event.action}</p>
-                    <p className="mt-1 max-w-[240px] text-xs text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-muted)]">
-                    {actor ? <span>{actor.name}<br /><span className="font-mono">{actor.email}</span></span> : event.actorUserId ?? "-"}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <p className="font-semibold text-[var(--ink)]">{event.entityType}</p>
-                    <p className="font-mono text-[var(--ink-muted)]">{event.entityId}</p>
-                  </td>
-                  <td className="max-w-[260px] px-4 py-3 font-mono text-xs text-[var(--ink-muted)]">{compactJson(event.afterJson)}</td>
-                </tr>
+              return actor ? (
+                <span>{actor.name}<br /><span className="mono">{actor.email}</span></span>
+              ) : (
+                event.actorUserId ?? "-"
               );
-            })}
-            {events.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-muted)]">
-                  No audit events found. New commercial and admin actions will appear here once recorded.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+            },
+          },
+          {
+            key: "entity",
+            header: "Entity",
+            className: "align-top",
+            cell: (event) => (
+              <>
+                <p className="font-semibold text-[var(--ink)]">{event.entityType}</p>
+                <p className="mono text-[var(--ink-muted)]">{event.entityId}</p>
+              </>
+            ),
+          },
+          {
+            key: "after",
+            header: "After",
+            className: "max-w-[260px] align-top mono text-[12px] text-[var(--ink-muted)]",
+            cell: (event) => compactJson(event.afterJson),
+          },
+        ]}
+      />
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="events"
+        hrefForPage={auditHref}
+      />
     </div>
   );
 }

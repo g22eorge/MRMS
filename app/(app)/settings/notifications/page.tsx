@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { getUserPreferences } from "@/lib/notifications";
 import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -31,17 +32,17 @@ export default async function NotificationSettingsPage() {
           {(canSeeOutbox || canSeeTemplates || canSeeWhatsApp) && (
             <div className="flex flex-wrap gap-1.5">
               {canSeeOutbox && (
-                <Link href="/settings/notifications/outbox" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                <Link href={COMMUNICATIONS_ROUTES.outbox} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
                   Outbox
                 </Link>
               )}
               {canSeeTemplates && (
-                <Link href="/settings/notifications/templates" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                <Link href={COMMUNICATIONS_ROUTES.templates} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
                   Templates
                 </Link>
               )}
               {canSeeWhatsApp && (
-                <Link href="/settings/notifications/whatsapp" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
+                <Link href={COMMUNICATIONS_ROUTES.whatsapp} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">
                   WhatsApp
                 </Link>
               )}
@@ -57,7 +58,7 @@ export default async function NotificationSettingsPage() {
             <p className="text-xs text-[var(--ink-muted)]">Delivery status for WhatsApp and email.</p>
           </div>
           <Link
-            href="/settings/notifications/outbox"
+            href={COMMUNICATIONS_ROUTES.outbox}
             className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-sm"
           >
             Open →

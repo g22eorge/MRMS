@@ -6,20 +6,15 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/Button";
+import { DataTable } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
 
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
   { label: "Orders", href: "/api/procurement/export?type=purchase-orders" },
   { label: "GRNs", href: "/api/procurement/export?type=goods-received" },
   { label: "Bills", href: "/api/procurement/export?type=supplier-bills" },
-] as const;
-
-const WORKFLOW_LINKS = [
-  { label: "Requests", href: "/inventory/purchase-requests", action: "Review demand" },
-  { label: "Purchase Orders", href: "/inventory/purchase-orders", action: "Issue and receive" },
-  { label: "Goods Received", href: "/inventory/goods-received", action: "Verify receipts" },
-  { label: "Supplier Bills", href: "/inventory/supplier-bills", action: "Match and pay" },
-  { label: "Suppliers", href: "/inventory/suppliers", action: "Manage vendors" },
 ] as const;
 
 function fmt(date: Date | null) {
@@ -120,172 +115,139 @@ export default async function ProcurementPage() {
   const openBills = billCount("POSTED") + billCount("PART_PAID");
   const dueBills = billQueue.filter((bill) => bill.dueAt && bill.dueAt <= inSevenDays).length;
 
-  const stages = [
-    { label: "Demand", value: submittedRequests, hint: "requests to review", href: "/inventory/purchase-requests" },
-    { label: "Approved", value: approvedRequests, hint: "ready for PO", href: "/inventory/purchase-requests" },
-    { label: "Ordered", value: openOrders, hint: "open POs", href: "/inventory/purchase-orders" },
-    { label: "Receiving", value: dueOrders, hint: "due soon", href: "/inventory/purchase-orders" },
-    { label: "Payables", value: openBills, hint: `${dueBills} due soon`, href: "/inventory/supplier-bills" },
-  ];
-
   return (
-    <div className="space-y-3">
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Procurement</p>
-            <h1 className="text-base font-bold text-[var(--ink)]">Control Desk</h1>
+    <ListPageLayout
+      header={{
+        eyebrow: "Procurement",
+        title: "Control Desk",
+        description: `${formatMoney(openOrderValue)} open PO value · ${formatMoney(payableBalance)} supplier balance`,
+        actions: (
+          <>
+            <Button href="/inventory/purchase-requests/new" size="sm" className="px-4 font-bold">New request</Button>
+            <Button href="/inventory/purchase-orders/new" variant="secondary" size="sm">New PO</Button>
+            <Button href="/inventory/supplier-bills/new" variant="secondary" size="sm">New bill</Button>
+          </>
+        ),
+        kpis: [
+          { key: "demand", label: "Demand", value: submittedRequests, sub: "requests to review", tone: submittedRequests > 0 ? "warn" : "neutral", muted: submittedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "approved", label: "Approved", value: approvedRequests, sub: "ready for PO", tone: "good", muted: approvedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "ordered", label: "Ordered", value: openOrders, sub: "open POs", tone: "accent", muted: openOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "receiving", label: "Receiving", value: dueOrders, sub: "due soon", tone: dueOrders > 0 ? "warn" : "neutral", muted: dueOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "payables", label: "Payables", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
+        ],
+      }}
+    >
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Review queue</p>
+            <Link href="/inventory/purchase-requests" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/inventory/purchase-requests/new" className="btn-premium rounded-md px-2.5 py-1.5 text-xs font-semibold">New request</Link>
-            <Link href="/inventory/purchase-orders/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New PO</Link>
-            <Link href="/inventory/supplier-bills/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New bill</Link>
+          <DataTable
+            frameless
+            dense
+            rows={reviewQueue}
+            getRowKey={(request) => request.id}
+            empty="No pending requests."
+            columns={[
+              {
+                key: "request",
+                header: "Request",
+                cell: (request) => (
+                  <>
+                    <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
+                  </>
+                ),
+              },
+              { key: "owner", header: "Owner", className: "text-[var(--ink-muted)]", cell: (request) => request.requestedBy.name ?? request.requestedBy.email },
+              { key: "supplier", header: "Supplier", className: "text-[var(--ink-muted)]", cell: (request) => request.supplier?.name ?? "No preference" },
+              { key: "items", header: "Items", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (request) => request._count.items },
+              {
+                key: "action",
+                header: "Action",
+                align: "right",
+                cell: (request) => (
+                  <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">
+                    {request.status === "APPROVED" ? "Convert" : "Review"}
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </section>
+
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Receiving queue</p>
+            <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All POs</Link>
           </div>
-        </div>
+          <DataTable
+            frameless
+            dense
+            rows={receivingQueue}
+            getRowKey={(order) => order.id}
+            empty="No open receiving work."
+            columns={[
+              {
+                key: "po",
+                header: "PO",
+                cell: (order) => (
+                  <>
+                    <Link href={`/inventory/purchase-orders/${order.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{order.status}</p>
+                  </>
+                ),
+              },
+              { key: "supplier", header: "Supplier", className: "text-[var(--ink-muted)]", cell: (order) => order.supplier.name },
+              {
+                key: "outstanding",
+                header: "Outstanding",
+                align: "right",
+                className: "text-[var(--ink-muted)]",
+                cell: (order) => {
+                  const outstandingQty = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived), 0);
+                  const outstandingValue = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived) * item.unitCost, 0);
+                  return (
+                    <>
+                      <span className="font-semibold tabular-nums text-[var(--ink)]">{outstandingQty}</span>
+                      <p className="">{formatMoney(outstandingValue)}</p>
+                    </>
+                  );
+                },
+              },
+              { key: "expected", header: "Expected", className: "text-[var(--ink-muted)]", cell: (order) => fmt(order.expectedAt) },
+              {
+                key: "action",
+                header: "Action",
+                align: "right",
+                cell: (order) => (
+                  <Button href={`/inventory/purchase-orders/${order.id}#receive`} variant="secondary" size="sm">Receive</Button>
+                ),
+              },
+            ]}
+          />
+        </section>
+
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] md:grid-cols-5 md:divide-y-0">
-          {stages.map((stage) => (
-            <Link key={stage.label} href={stage.href} className="px-3 py-2 hover:bg-[var(--panel-strong)]/45">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">{stage.label}</p>
-              <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{stage.value}</p>
-              <p className="text-[11px] text-[var(--ink-muted)]">{stage.hint}</p>
-            </Link>
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Exports</p>
+          <span className="text-[12px] text-[var(--ink-muted)]">CSV</span>
+        </div>
+        <div className="flex flex-wrap gap-2 p-3">
+          {EXPORTS.map((item) => (
+            <Button key={item.href} href={item.href} external variant="secondary" size="sm">{item.label}</Button>
           ))}
         </div>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Open PO Value</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoney(openOrderValue)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Supplier Balance</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoney(payableBalance)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Urgent</p>
-          <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{submittedRequests + dueOrders + dueBills}</p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Review queue</p>
-            <Link href="/inventory/purchase-requests" className="text-xs font-semibold text-[var(--accent)] hover:underline">All requests</Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-3 py-2 text-left">Request</th>
-                  <th className="px-3 py-2 text-left">Owner</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-right">Items</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {reviewQueue.map((request) => (
-                  <tr key={request.id} className="hover:bg-[var(--panel-strong)]/40">
-                    <td className="px-3 py-2">
-                      <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                      <p className="text-xs text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
-                    </td>
-                    <td className="px-3 py-2 text-[var(--ink-muted)]">{request.requestedBy.name ?? request.requestedBy.email}</td>
-                    <td className="px-3 py-2 text-[var(--ink-muted)]">{request.supplier?.name ?? "No preference"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-muted)]">{request._count.items}</td>
-                    <td className="px-3 py-2 text-right">
-                      <Link href={`/inventory/purchase-requests/${request.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
-                        {request.status === "APPROVED" ? "Convert" : "Review"}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {reviewQueue.length === 0 ? <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No pending requests.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Receiving queue</p>
-            <Link href="/inventory/purchase-orders" className="text-xs font-semibold text-[var(--accent)] hover:underline">All POs</Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-3 py-2 text-left">PO</th>
-                  <th className="px-3 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-right">Outstanding</th>
-                  <th className="px-3 py-2 text-left">Expected</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {receivingQueue.map((order) => {
-                  const outstandingQty = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived), 0);
-                  const outstandingValue = order.items.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived) * item.unitCost, 0);
-                  return (
-                    <tr key={order.id} className="hover:bg-[var(--panel-strong)]/40">
-                      <td className="px-3 py-2">
-                        <Link href={`/inventory/purchase-orders/${order.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
-                        <p className="text-xs text-[var(--ink-muted)]">{order.status}</p>
-                      </td>
-                      <td className="px-3 py-2 text-[var(--ink-muted)]">{order.supplier.name}</td>
-                      <td className="px-3 py-2 text-right text-[var(--ink-muted)]">
-                        <span className="font-semibold tabular-nums text-[var(--ink)]">{outstandingQty}</span>
-                        <p className="text-xs">{formatMoney(outstandingValue)}</p>
-                      </td>
-                      <td className="px-3 py-2 text-[var(--ink-muted)]">{fmt(order.expectedAt)}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Link href={`/inventory/purchase-orders/${order.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">Receive</Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {receivingQueue.length === 0 ? <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No open receiving work.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Exports</p>
-            <span className="text-xs text-[var(--ink-muted)]">CSV</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 p-3">
-            {EXPORTS.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div className="border-t border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Workflow</p>
-            <div className="mt-2 space-y-1.5">
-              {WORKFLOW_LINKS.map((item) => (
-                <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:border-[var(--accent)]/40">
-                  <span className="font-semibold text-[var(--ink)]">{item.label}</span>
-                  <span className="text-[var(--ink-muted)]">{item.action}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Supplier bills</p>
-            <Link href="/inventory/supplier-bills" className="text-xs font-semibold text-[var(--accent)] hover:underline">All bills</Link>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
+            <Link href="/inventory/supplier-bills" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All bills</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {billQueue.map((bill) => (
@@ -301,10 +263,10 @@ export default async function ProcurementPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Recent GRNs</p>
-            <Link href="/inventory/goods-received" className="text-xs font-semibold text-[var(--accent)] hover:underline">All GRNs</Link>
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recent GRNs</p>
+            <Link href="/inventory/goods-received" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All GRNs</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {recentGrns.map((grn) => (
@@ -320,6 +282,6 @@ export default async function ProcurementPage() {
           </div>
         </section>
       </div>
-    </div>
+    </ListPageLayout>
   );
 }

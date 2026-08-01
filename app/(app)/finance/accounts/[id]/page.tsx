@@ -3,9 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
 
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +17,12 @@ const MONTHS = [
   "July","August","September","October","November","December",
 ];
 
-const TYPE_COLOR: Record<string, string> = {
-  ASSET:     "bg-blue-500/10 text-blue-600",
-  LIABILITY: "bg-red-500/10 text-red-600",
-  EQUITY:    "bg-purple-500/10 text-purple-600",
-  REVENUE:   "bg-green-500/10 text-green-600",
-  EXPENSE:   "bg-amber-500/10 text-amber-700",
+const TYPE_TONES: Record<string, BadgeTone> = {
+  ASSET:     "info",
+  LIABILITY: "danger",
+  EQUITY:    "purple",
+  REVENUE:   "success",
+  EXPENSE:   "warning",
 };
 
 export default async function AccountLedgerPage({
@@ -142,9 +145,9 @@ export default async function AccountLedgerPage({
             {account.name}
           </p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide ${TYPE_COLOR[account.type] ?? ""}`}>
+            <StatusBadge tone={toneFor(TYPE_TONES, account.type)} className="uppercase tracking-wide">
               {account.type}
-            </span>
+            </StatusBadge>
             {account.parent && (
               <span className="text-[13px] text-[var(--ink-muted)]">
                 under {account.parent.code} {account.parent.name}
@@ -170,7 +173,7 @@ export default async function AccountLedgerPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           <option value="0">All months</option>
           {MONTHS.map((m, i) => (
@@ -180,7 +183,7 @@ export default async function AccountLedgerPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -188,7 +191,7 @@ export default async function AccountLedgerPage({
         </select>
         <button
           type="submit"
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
         >
           Filter
         </button>
@@ -244,113 +247,124 @@ export default async function AccountLedgerPage({
       </div>
 
       {/* ── LEDGER TABLE ─────────────────────────────────────────────────── */}
-      {lines.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-14 text-center">
-          <p className="text-sm text-[var(--ink-muted)]">No posted transactions for this period.</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-          <table className="w-full text-sm">
-            <thead className="border-b border-[var(--line)] bg-[var(--panel-strong)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Date</th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Entry</th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description</th>
-                <th className="hidden px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)] md:table-cell">Memo</th>
-                <th className="px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Debit</th>
-                <th className="px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Credit</th>
-                <th className="px-4 py-2.5 text-right text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Balance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)] bg-[var(--bg)]">
-              {/* Opening balance row */}
-              {openingBalance !== 0 && (
-                <tr className="bg-[var(--panel-strong)]/50">
-                  <td className="px-4 py-2 text-[13px] text-[var(--ink-muted)]">—</td>
-                  <td className="px-4 py-2 text-[13px] italic text-[var(--ink-muted)]" colSpan={4}>
-                    Opening balance
-                  </td>
-                  <td className="px-4 py-2 text-right text-[13px] font-semibold tabular-nums text-[var(--ink-muted)]" colSpan={2}>
-                    {formatMoney(openingBalance, currency)}
-                  </td>
-                </tr>
-              )}
-              {rows.map((row) => (
-                <tr key={row.id} className="hover:bg-[var(--panel)]">
-                  <td className="px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">
-                    {new Date(row.journalEntry.date).toLocaleDateString("en-UG", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span className="font-mono text-[13px] font-semibold text-[var(--accent)]">
-                      {row.journalEntry.entryNumber}
+      <DataTable
+        rows={lines.length === 0 ? [] : openingBalance !== 0 ? [{ id: "__opening__" }, ...rows] : rows}
+        getRowKey={(row) => row.id}
+        empty="No posted transactions for this period."
+        rowClassName={(row) => (row.id === "__opening__" ? "bg-[var(--panel-strong)]/50" : undefined)}
+        columns={[
+          {
+            key: "date",
+            header: "Date",
+            className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+            cell: (row) =>
+              row.id === "__opening__"
+                ? "—"
+                : new Date(row.journalEntry.date).toLocaleDateString("en-UG", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }),
+          },
+          {
+            key: "entry",
+            header: "Entry",
+            cell: (row) =>
+              row.id === "__opening__" ? null : (
+                <span className="mono font-semibold text-[var(--accent)]">
+                  {row.journalEntry.entryNumber}
+                </span>
+              ),
+          },
+          {
+            key: "description",
+            header: "Description",
+            cell: (row) =>
+              row.id === "__opening__" ? (
+                <span className="italic text-[var(--ink-muted)]">Opening balance</span>
+              ) : (
+                <span className="font-medium text-[var(--ink)]">
+                  {row.journalEntry.description}
+                  {row.journalEntry.reference && (
+                    <span className="ml-1.5 font-normal text-[var(--ink-muted)]">
+                      · {row.journalEntry.reference}
                     </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-[13px] font-medium text-[var(--ink)]">
-                    {row.journalEntry.description}
-                    {row.journalEntry.reference && (
-                      <span className="ml-1.5 text-[13px] text-[var(--ink-muted)]">
-                        · {row.journalEntry.reference}
-                      </span>
-                    )}
-                  </td>
-                  <td className="hidden px-4 py-2.5 text-[12px] text-[var(--ink-muted)] md:table-cell">
-                    {row.description || "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
-                    {row.debit > 0 ? (
-                      <span className="font-medium text-[var(--ink)]">
-                        {formatMoney(row.debit, currency)}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
-                    {row.credit > 0 ? (
-                      <span className="text-[var(--ink-muted)]">
-                        {formatMoney(row.credit, currency)}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--ink-muted)]">—</span>
-                    )}
-                  </td>
-                  <td
-                    className={`px-4 py-2.5 text-right text-[12px] font-semibold tabular-nums ${
-                      row.runningBalance >= 0 ? "text-[var(--ink)]" : "text-red-600"
-                    }`}
-                  >
-                    {row.runningBalance < 0 ? "−" : ""}
-                    {formatMoney(Math.abs(row.runningBalance), currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t-2 border-[var(--line)] bg-[var(--panel-strong)]">
-              <tr>
-                <td colSpan={4} className="px-4 py-3 text-sm font-bold text-[var(--ink)]">Totals</td>
-                <td className="px-4 py-3 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-                  {formatMoney(totalDebit, currency)}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-bold tabular-nums text-[var(--ink-muted)]">
-                  {formatMoney(totalCredit, currency)}
-                </td>
-                <td
-                  className={`px-4 py-3 text-right text-sm font-bold tabular-nums ${
-                    closingBalance >= 0 ? "text-emerald-600" : "text-red-600"
+                  )}
+                </span>
+              ),
+          },
+          {
+            key: "memo",
+            header: "Memo",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            cell: (row) => (row.id === "__opening__" ? null : row.description || "—"),
+          },
+          {
+            key: "debit",
+            header: "Debit",
+            align: "right",
+            className: "tabular-nums",
+            cell: (row) =>
+              row.id === "__opening__" ? null : row.debit > 0 ? (
+                <span className="font-medium text-[var(--ink)]">{formatMoney(row.debit, currency)}</span>
+              ) : (
+                <span className="text-[var(--ink-muted)]">—</span>
+              ),
+          },
+          {
+            key: "credit",
+            header: "Credit",
+            align: "right",
+            className: "tabular-nums",
+            cell: (row) =>
+              row.id === "__opening__" ? null : row.credit > 0 ? (
+                <span className="text-[var(--ink-muted)]">{formatMoney(row.credit, currency)}</span>
+              ) : (
+                <span className="text-[var(--ink-muted)]">—</span>
+              ),
+          },
+          {
+            key: "balance",
+            header: "Balance",
+            align: "right",
+            cell: (row) =>
+              row.id === "__opening__" ? (
+                <span className="font-semibold tabular-nums text-[var(--ink-muted)]">
+                  {formatMoney(openingBalance, currency)}
+                </span>
+              ) : (
+                <span
+                  className={`text-[12px] font-semibold tabular-nums ${
+                    row.runningBalance >= 0 ? "text-[var(--ink)]" : "text-red-600"
                   }`}
                 >
-                  {closingBalance < 0 ? "−" : ""}
-                  {formatMoney(Math.abs(closingBalance), currency)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
+                  {row.runningBalance < 0 ? "−" : ""}
+                  {formatMoney(Math.abs(row.runningBalance), currency)}
+                </span>
+              ),
+          },
+        ]}
+        tableFooter={
+          <tr>
+            <td colSpan={4} className="px-4 py-3 font-bold text-[var(--ink)]">Totals</td>
+            <td className="px-4 py-3 text-right font-bold tabular-nums text-[var(--ink)]">
+              {formatMoney(totalDebit, currency)}
+            </td>
+            <td className="px-4 py-3 text-right font-bold tabular-nums text-[var(--ink-muted)]">
+              {formatMoney(totalCredit, currency)}
+            </td>
+            <td
+              className={`px-4 py-3 text-right text-sm font-bold tabular-nums ${
+                closingBalance >= 0 ? "text-emerald-600" : "text-red-600"
+              }`}
+            >
+              {closingBalance < 0 ? "−" : ""}
+              {formatMoney(Math.abs(closingBalance), currency)}
+            </td>
+          </tr>
+        }
+      />
     </div>
   );
 }

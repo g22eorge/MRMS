@@ -12,6 +12,7 @@ import {
   updateRepairRequestDetailsAction,
 } from "@/app/(app)/intake/actions";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { DataTable } from "@/components/ui/DataTable";
 
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -279,43 +280,43 @@ function RequestDrawer({
                 <input
                   name="customerName"
                   defaultValue={req.customerName}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Customer name"
                 />
                 <input
                   name="phone"
                   defaultValue={req.phone}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Phone"
                 />
                 <input
                   name="email"
                   defaultValue={req.email ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Email"
                 />
                 <input
                   name="brand"
                   defaultValue={req.brand}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Brand"
                 />
                 <input
                   name="model"
                   defaultValue={req.model ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Model"
                 />
                 <input
                   name="serialNumber"
                   defaultValue={req.serialNumber ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Serial / IMEI"
                 />
                 <textarea
                   name="problemDescription"
                   defaultValue={req.problemDescription}
-                  className="rounded-md border border-[var(--line)] px-3 py-2 text-sm"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
                   placeholder="Problem description"
                   rows={4}
                 />
@@ -535,7 +536,7 @@ function MobileCard({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={(e) => e.key === "Enter" && onSelect()}
-      className="relative border-b border-[var(--line)] bg-[var(--panel)] last:border-b-0 transition-colors hover:bg-[var(--panel-strong)]/40 active:bg-[var(--panel-strong)]/55 cursor-pointer"
+      className="relative bg-[var(--panel)] transition-colors hover:bg-[var(--panel-strong)]/40 active:bg-[var(--panel-strong)]/55 cursor-pointer"
     >
       <span className={`absolute inset-y-0 left-0 w-[5px] ${requestStripClass(req.requestStatus)}`} aria-hidden="true" />
       <div className="px-4 py-3 pl-6">
@@ -650,7 +651,7 @@ export function IntakeClient({
       : "All incoming website repair requests appear here. Review each submission, approve or reject, then convert approved requests to jobs.";
 
   return (
-    <>
+    <div className="calm-scope">
       <ConfirmDialog
         open={pendingDelete !== null}
         title={`Delete ${pendingDelete?.requestNumber ?? "request"}?`}
@@ -664,7 +665,7 @@ export function IntakeClient({
         }}
       />
       {/* brief */}
-      <details className="panel-shadow mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open={pendingCount > 0}>
+      <details className="dc-card mb-4 p-3" open={pendingCount > 0}>
         <summary className="list-none">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>
@@ -685,15 +686,15 @@ export function IntakeClient({
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition
                 ${active
-                  ? "border border-[var(--accent)]/50 bg-[var(--accent)] text-black"
-                  : "bg-[var(--panel)] border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+                  ? "bg-[var(--accent)] text-[#1c1600]"
+                  : "bg-[var(--panel)] text-[var(--ink-muted)] shadow-[var(--dc-shadow)] hover:text-[var(--ink)]"
                 }`}
             >
               {tab.label}
               {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold ${active ? "bg-white/20" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold ${active ? "bg-black/10" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {count}
                 </span>
               )}
@@ -716,23 +717,93 @@ export function IntakeClient({
         </button>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-16 text-center text-[var(--ink-muted)] text-sm">
-          No requests in this category.
-        </div>
-      ) : (
-        <>
-          {/* ── MOBILE CARD VIEW ── */}
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] panel-shadow lg:hidden">
-            {filtered.map((req) => (
-              <MobileCard
-                key={req.id}
+      <DataTable
+        rows={filtered}
+        getRowKey={(req) => req.id}
+        frameless
+        className="dc-card overflow-hidden"
+        empty="No requests in this category."
+        onRowClick={(req) => setSelected(req)}
+        rowClassName={() => "group cursor-pointer"}
+        renderMobileCard={(req) => (
+          <MobileCard
+            req={req}
+            onStatusChange={handleStatusChange}
+            onSelect={() => {
+              setDrawerMode("view");
+              setSelected(req);
+            }}
+            onEdit={() => {
+              setDrawerMode("edit");
+              setSelected(req);
+            }}
+            onDelete={() => setPendingDelete(req)}
+            canManageIntake={canManageIntake}
+            isAdmin={isAdmin}
+          />
+        )}
+        columns={[
+          {
+            key: "requestNumber",
+            header: "Request #",
+            className: "mono font-semibold text-[var(--ink)] whitespace-nowrap",
+            cell: (req) => req.requestNumber,
+          },
+          {
+            key: "customer",
+            header: "Customer",
+            className: "whitespace-nowrap",
+            cell: (req) => (
+              <>
+                <div className="font-medium text-[var(--ink)]">{req.customerName}</div>
+                <div className="text-[12px] text-[var(--ink-muted)] md:hidden">{req.phone}</div>
+              </>
+            ),
+          },
+          {
+            key: "device",
+            header: "Device",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden whitespace-nowrap md:table-cell",
+            cell: (req) => (
+              <>
+                <div className="max-w-[16rem] truncate font-medium text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
+                <div className="max-w-[16rem] truncate text-[12px] text-[var(--ink-muted)]">{req.problemDescription || (DEVICE_LABEL[req.deviceType] ?? req.deviceType)}</div>
+              </>
+            ),
+          },
+          {
+            key: "handover",
+            header: "Handover",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden whitespace-nowrap lg:table-cell",
+            cell: (req) => (
+              <span className="text-[12px] text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            className: "whitespace-nowrap",
+            cell: (req) => <StatusBadge status={req.requestStatus} />,
+          },
+          {
+            key: "date",
+            header: "Date",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] lg:table-cell",
+            cell: (req) => fmt(req.createdAt),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            align: "right",
+            headerClassName: "hidden lg:table-cell",
+            className: "hidden whitespace-nowrap lg:table-cell",
+            cell: (req) => (
+              <RowActions
                 req={req}
                 onStatusChange={handleStatusChange}
-                onSelect={() => {
-                  setDrawerMode("view");
-                  setSelected(req);
-                }}
                 onEdit={() => {
                   setDrawerMode("edit");
                   setSelected(req);
@@ -741,70 +812,10 @@ export function IntakeClient({
                 canManageIntake={canManageIntake}
                 isAdmin={isAdmin}
               />
-            ))}
-          </div>
-
-          {/* ── DESKTOP TABLE VIEW ── */}
-          <div className="hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden panel-shadow lg:block">
-            <table className="min-w-full text-[13px]">
-              <thead className="bg-[var(--panel-strong)]/50 text-left text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-2.5">Request #</th>
-                  <th className="px-4 py-2.5">Customer</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">Device</th>
-                  <th className="hidden px-4 py-2.5 lg:table-cell">Handover</th>
-                  <th className="px-4 py-2.5">Status</th>
-                  <th className="hidden px-4 py-2.5 lg:table-cell">Date</th>
-                  <th className="hidden px-4 py-2.5 text-right lg:table-cell">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {filtered.map((req) => (
-                  <tr
-                    key={req.id}
-                    onClick={() => setSelected(req)}
-                    className="cursor-pointer transition-colors hover:bg-[var(--panel-strong)]/40 group"
-                  >
-                    <td className="px-4 py-3 text-sm font-mono font-semibold text-[var(--ink)] whitespace-nowrap">
-                      {req.requestNumber}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[var(--ink)]">{req.customerName}</div>
-                      <div className="text-xs text-[var(--ink-muted)] md:hidden">{req.phone}</div>
-                    </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
-                      <div className="text-sm text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
-                      <div className="text-xs text-[var(--ink-muted)]">{DEVICE_LABEL[req.deviceType] ?? req.deviceType}</div>
-                    </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">
-                      <span className="text-xs text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <StatusBadge status={req.requestStatus} />
-                    </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap text-xs text-[var(--ink-muted)] lg:table-cell">
-                      {fmt(req.createdAt)}
-                    </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap text-right lg:table-cell">
-                      <RowActions
-                        req={req}
-                        onStatusChange={handleStatusChange}
-                        onEdit={() => {
-                          setDrawerMode("edit");
-                          setSelected(req);
-                        }}
-                        onDelete={() => setPendingDelete(req)}
-                        canManageIntake={canManageIntake}
-                        isAdmin={isAdmin}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+            ),
+          },
+        ]}
+      />
 
       {selected && (
         <RequestDrawer
@@ -817,6 +828,6 @@ export function IntakeClient({
           defaultEditMode={drawerMode === "edit"}
         />
       )}
-    </>
+    </div>
   );
 }

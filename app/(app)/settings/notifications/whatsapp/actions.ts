@@ -1,12 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { requireOrgSession } from "@/lib/org-context";
+import { revalidateCommunicationsWhatsapp } from "@/lib/communications/revalidate";
 import { getWhatsAppConfigForOrg, sendWhatsAppTemplateMessage } from "@/lib/notifications/whatsapp";
 import { getOrgWhatsAppConfig, saveOrgWhatsAppConfig, deleteOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { prisma } from "@/lib/prisma";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 export type SendTestResult =
   | { ok: true; messageId: string; to: string; from: string }
@@ -48,7 +47,7 @@ export async function sendTestWhatsAppAction(
     select: { id: true },
   });
 
-  revalidatePath("/settings/notifications/whatsapp");
+  revalidateCommunicationsWhatsapp();
 
   if (!result.success) return { ok: false, error: result.error ?? "Send failed." };
   return { ok: true, messageId: result.messageId!, to, from: whatsappCfg.businessNumber };
@@ -92,7 +91,7 @@ export async function saveWhatsAppConfigAction(
       atSenderId: existing?.atSenderId ?? null,
       smsFallback: existing?.smsFallback ?? false,
     });
-    revalidatePath("/settings/notifications/whatsapp");
+    revalidateCommunicationsWhatsapp();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
@@ -106,7 +105,7 @@ export async function deleteWhatsAppConfigAction(): Promise<{ ok: boolean; error
 
   try {
     await deleteOrgWhatsAppConfig(orgId);
-    revalidatePath("/settings/notifications/whatsapp");
+    revalidateCommunicationsWhatsapp();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed" };
@@ -135,7 +134,7 @@ export async function saveATConfigAction(
       atSenderId: existing?.atSenderId ?? null,
       smsFallback,
     });
-    revalidatePath("/settings/notifications/whatsapp");
+    revalidateCommunicationsWhatsapp();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };

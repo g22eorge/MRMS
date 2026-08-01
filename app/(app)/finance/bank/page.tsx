@@ -6,11 +6,18 @@ import { revalidatePath } from "next/cache";
 import type { BankTransactionType } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { can } from "@/lib/permissions";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +34,7 @@ export default async function BankPage({
   const selectedAccountId = sp.account ?? null;
   const q = sp.q?.trim() ?? "";
   const txperiod = sp.txperiod ?? "";
+  const page = parsePage(sp.page);
   const currency = "UGX";
 
   const now = new Date();
@@ -152,6 +160,22 @@ export default async function BankPage({
   // Map for lookup by ID
   const balanceById = new Map(txWithBalance.map((t) => [t.id, t.runningBalance]));
 
+  // Newest-first view of the filtered transactions + ledger totals
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  const txCreditsTotal = transactions.filter((t) => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0);
+  const txDebitsTotal = transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
+
+  // Paginate the displayed transactions; KPIs/totals above stay whole-dataset.
+  const txPageView = paginationView(page, sortedTransactions.length);
+  const pageTransactions = sortedTransactions.slice(txPageView.skip, txPageView.skip + txPageView.take);
+  const bankHref = pageHrefBuilder("/finance/bank", {
+    account: activeAccount?.id,
+    q,
+    txperiod: txperiod || "",
+  });
+
   // Period analysis for active account
   const thisMonthTx = allTransactions.filter(
     (t) => t.date >= thisMonthStart && t.date <= thisMonthEnd,
@@ -171,53 +195,45 @@ export default async function BankPage({
   return (
     <div className="space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Bank Accounts</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">Manage accounts, record transactions, and reconcile</p>
-          </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Bank Accounts"
+        description="Manage accounts, record transactions, and reconcile"
+        actions={
           <Link
             href="/finance/accounts"
             className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
           >
             Chart of Accounts
           </Link>
-        </div>
-      </div>
+        }
+      />
 
-      {/* ── SUMMARY STRIP ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Total Accounts</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">
-            {bankAccounts.filter((a) => a.isActive).length}
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">active bank accounts</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Bank Position</p>
-          <p className={`mt-1 text-xl font-bold tabular-nums ${totalBalance >= 0 ? "text-[var(--ink)]" : "text-red-500"}`}>
-            {totalBalance < 0 ? "−" : ""}{formatMoneyCompact(Math.abs(totalBalance), currency)}
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">across all accounts</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Credits This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600">
-            {formatMoneyCompact(globalCreditsThisMonth, currency)}
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all accounts</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Debits This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-red-500">
-            {formatMoneyCompact(globalDebitsThisMonth, currency)}
-          </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all accounts</p>
-        </div>
-      </div>
+      <StatCards columns={4} cards={[
+          {
+            label: "Total Accounts",
+            value: bankAccounts.filter((a) => a.isActive).length,
+            sub: "active bank accounts",
+          },
+          {
+            label: "Net Bank Position",
+            value: `${totalBalance < 0 ? "−" : ""}${formatMoneyCompact(Math.abs(totalBalance), currency)}`,
+            valueClass: totalBalance >= 0 ? undefined : "text-red-500",
+            sub: "across all accounts",
+          },
+          {
+            label: "Credits This Month",
+            value: formatMoneyCompact(globalCreditsThisMonth, currency),
+            valueClass: "text-emerald-600",
+            sub: "all accounts",
+          },
+          {
+            label: "Debits This Month",
+            value: formatMoneyCompact(globalDebitsThisMonth, currency),
+            valueClass: "text-red-500",
+            sub: "all accounts",
+          },
+        ]} />
 
       {/* ── ADD BANK ACCOUNT ─────────────────────────────────────────────── */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -234,7 +250,7 @@ export default async function BankPage({
               name="name"
               required
               placeholder="Main Operations"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -243,7 +259,7 @@ export default async function BankPage({
               name="bankName"
               required
               placeholder="Stanbic Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -251,7 +267,7 @@ export default async function BankPage({
             <input
               name="accountNumber"
               placeholder="9030012345"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -262,7 +278,7 @@ export default async function BankPage({
               min="0"
               step="0.01"
               placeholder="0.00"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div className="flex justify-end sm:col-span-4">
@@ -277,9 +293,7 @@ export default async function BankPage({
       </details>
 
       {bankAccounts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-14 text-center text-sm text-[var(--ink-muted)]">
-          Add your first bank account to start recording transactions.
-        </div>
+        <PageEmptyState title="No bank accounts yet" description="Add your first bank account to start recording transactions." />
       ) : (
         <div className="grid grid-cols-12 gap-5">
           {/* ── ACCOUNT SIDEBAR ──────────────────────────────────────────── */}
@@ -391,14 +405,14 @@ export default async function BankPage({
                         type="date"
                         required
                         defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Type *</label>
                       <select
                         name="type"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       >
                         <option value="CREDIT">Credit (Money In)</option>
                         <option value="DEBIT">Debit (Money Out)</option>
@@ -410,7 +424,7 @@ export default async function BankPage({
                         name="description"
                         required
                         placeholder="Payment received..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
@@ -422,7 +436,7 @@ export default async function BankPage({
                         step="0.01"
                         required
                         placeholder="0.00"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div>
@@ -430,13 +444,13 @@ export default async function BankPage({
                       <input
                         name="reference"
                         placeholder="Cheque #, transfer ref..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
                       />
                     </div>
                     <div className="flex items-end">
                       <button
                         type="submit"
-                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
                       >
                         Add
                       </button>
@@ -470,130 +484,146 @@ export default async function BankPage({
                 </div>
 
                 {/* ── TRANSACTION TABLE ───────────────────────────────── */}
-                {transactions.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--line)] py-10 text-center text-sm text-[var(--ink-muted)]">
-                    {q ? "No transactions match your search." : "No transactions yet."}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-[var(--line)]">
-                    {/* ── Mobile transaction cards ── */}
-                    <div className="divide-y divide-[var(--line)] lg:hidden">
-                      {[...transactions]
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map((tx) => {
-                          const rb = balanceById.get(tx.id);
-                          return (
-                            <div key={`m-${tx.id}`} className={`px-4 py-3 ${tx.reconciledAt ? "opacity-60" : ""}`}>
-                              <div className="mb-0.5 flex items-start justify-between gap-2">
-                                <p className="text-[13px] font-medium text-[var(--ink)]">{tx.description}</p>
-                                <span className={`shrink-0 text-[13px] font-bold tabular-nums ${tx.type === "CREDIT" ? "text-emerald-700" : "text-red-600"}`}>
-                                  {tx.type === "CREDIT" ? "+" : "−"}{formatMoney(tx.amount, currency)}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
-                                  <span>{new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}</span>
-                                  {tx.reference && <><span className="opacity-40">·</span><span>{tx.reference}</span></>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {rb !== undefined && (
-                                    <span className={`text-[13px] tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink-muted)]" : "text-red-600"}`}>
-                                      bal {rb < 0 ? "−" : ""}{formatMoney(Math.abs(rb), currency)}
-                                    </span>
-                                  )}
-                                  <form action={reconcile}>
-                                    <input type="hidden" name="id" value={tx.id} />
-                                    <button type="submit" className="text-[13px] text-[var(--accent)] hover:underline">
-                                      {tx.reconciledAt ? "Unmark" : "Reconcile"}
-                                    </button>
-                                  </form>
-                                </div>
-                              </div>
+                <DataTable
+                  rows={pageTransactions}
+                  getRowKey={(tx) => tx.id}
+                  empty={q ? "No transactions match your search." : "No transactions yet."}
+                  rowClassName={(tx) => (tx.reconciledAt ? "opacity-60" : undefined)}
+                  columns={[
+                    {
+                      key: "date",
+                      header: "Date",
+                      className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+                      cell: (tx) =>
+                        new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }),
+                    },
+                    {
+                      key: "description",
+                      header: "Description",
+                      cell: (tx) => (
+                        <>
+                          <p className="font-medium text-[var(--ink)]">{tx.description}</p>
+                          {tx.reference && <p className="text-[12px] text-[var(--ink-muted)]">{tx.reference}</p>}
+                        </>
+                      ),
+                    },
+                    {
+                      key: "in",
+                      header: "In",
+                      align: "right",
+                      headerClassName: "text-emerald-700",
+                      className: "font-medium text-emerald-700",
+                      cell: (tx) => (tx.type === "CREDIT" ? formatMoney(tx.amount, currency) : ""),
+                    },
+                    {
+                      key: "out",
+                      header: "Out",
+                      align: "right",
+                      headerClassName: "text-red-700",
+                      className: "font-medium text-red-600",
+                      cell: (tx) => (tx.type === "DEBIT" ? formatMoney(tx.amount, currency) : ""),
+                    },
+                    {
+                      key: "balance",
+                      header: "Balance",
+                      align: "right",
+                      cell: (tx) => {
+                        const rb = balanceById.get(tx.id);
+                        return (
+                          <span className={`text-[12px] font-semibold tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}>
+                            {rb !== undefined ? `${rb < 0 ? "−" : ""}${formatMoney(Math.abs(rb), currency)}` : "—"}
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: "reconciled",
+                      header: "Reconciled",
+                      align: "center",
+                      cell: (tx) =>
+                        tx.reconciledAt ? (
+                          <StatusBadge tone="success">✓ Done</StatusBadge>
+                        ) : (
+                          <StatusBadge tone="warning">Pending</StatusBadge>
+                        ),
+                    },
+                  ]}
+                  actions={(tx) => (
+                    <form action={reconcile}>
+                      <input type="hidden" name="id" value={tx.id} />
+                      <button type="submit" className="text-[var(--accent)] hover:underline">
+                        {tx.reconciledAt ? "Unmark" : "Reconcile"}
+                      </button>
+                    </form>
+                  )}
+                  tableFooter={
+                    <tr>
+                      <td colSpan={2} className="px-4 py-2.5 text-[12px] font-bold text-[var(--ink-muted)]">
+                        {transactions.length} transactions{q ? " (filtered)" : ""}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700">
+                        {formatMoney(txCreditsTotal, currency)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-red-600">
+                        {formatMoney(txDebitsTotal, currency)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-[var(--ink)]">
+                        {formatMoney(activeAccount.currentBalance, currency)}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  }
+                  renderMobileCard={(tx, i) => {
+                    const rb = balanceById.get(tx.id);
+                    return (
+                      <>
+                        <div className={`px-4 py-3 ${tx.reconciledAt ? "opacity-60" : ""}`}>
+                          <div className="mb-0.5 flex items-start justify-between gap-2">
+                            <p className="font-medium text-[var(--ink)]">{tx.description}</p>
+                            <span className={`shrink-0 font-bold tabular-nums ${tx.type ==="CREDIT" ? "text-emerald-700" : "text-red-600"}`}>
+                              {tx.type === "CREDIT" ? "+" : "−"}{formatMoney(tx.amount, currency)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
+                              <span>{new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}</span>
+                              {tx.reference && <><span className="opacity-40">·</span><span>{tx.reference}</span></>}
                             </div>
-                          );
-                        })}
-                      <div className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2.5 text-xs font-semibold">
-                        <span className="text-[var(--ink-muted)]">{transactions.length} transactions{q ? " (filtered)" : ""}</span>
-                        <span className="text-[var(--ink)]">{formatMoney(activeAccount.currentBalance, currency)}</span>
-                      </div>
-                    </div>
-                    {/* ── Desktop transaction table ── */}
-                    <div className="hidden overflow-x-auto lg:block">
-                      <table className="w-full min-w-[500px] text-sm">
-                        <thead className="border-b border-[var(--line)] bg-[var(--panel)]">
-                          <tr>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Date</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Description</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-emerald-700">In</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700">Out</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-[var(--ink-muted)]">Balance</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-semibold text-[var(--ink-muted)]">Reconciled</th>
-                            <th className="px-4 py-2.5" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--line)] bg-[var(--bg)]">
-                          {[...transactions]
-                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                            .map((tx) => {
-                              const rb = balanceById.get(tx.id);
-                              return (
-                                <tr key={`d-${tx.id}`} className={`hover:bg-[var(--panel)] ${tx.reconciledAt ? "opacity-60" : ""}`}>
-                                  <td className="px-4 py-2.5 text-xs text-[var(--ink-muted)]">
-                                    {new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
-                                  </td>
-                                  <td className="px-4 py-2.5">
-                                    <p className="font-medium text-[var(--ink)]">{tx.description}</p>
-                                    {tx.reference && <p className="text-xs text-[var(--ink-muted)]">{tx.reference}</p>}
-                                  </td>
-                                  <td className="px-4 py-2.5 text-right font-medium text-emerald-700">
-                                    {tx.type === "CREDIT" ? formatMoney(tx.amount, currency) : ""}
-                                  </td>
-                                  <td className="px-4 py-2.5 text-right font-medium text-red-600">
-                                    {tx.type === "DEBIT" ? formatMoney(tx.amount, currency) : ""}
-                                  </td>
-                                  <td className={`px-4 py-2.5 text-right text-[12px] font-semibold tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}>
-                                    {rb !== undefined ? `${rb < 0 ? "−" : ""}${formatMoney(Math.abs(rb), currency)}` : "—"}
-                                  </td>
-                                  <td className="px-4 py-2.5 text-center">
-                                    {tx.reconciledAt ? (
-                                      <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[12px] font-medium text-green-700">✓ Done</span>
-                                    ) : (
-                                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[12px] font-medium text-amber-700">Pending</span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-right">
-                                    <form action={reconcile}>
-                                      <input type="hidden" name="id" value={tx.id} />
-                                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
-                                        {tx.reconciledAt ? "Unmark" : "Reconcile"}
-                                      </button>
-                                    </form>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                        <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]">
-                          <tr>
-                            <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-[var(--ink-muted)]">
-                              {transactions.length} transactions{q ? " (filtered)" : ""}
-                            </td>
-                            <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-emerald-700">
-                              {formatMoney(transactions.filter((t) => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0), currency)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-red-600">
-                              {formatMoney(transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0), currency)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right text-xs font-bold tabular-nums text-[var(--ink)]">
-                              {formatMoney(activeAccount.currentBalance, currency)}
-                            </td>
-                            <td colSpan={2} />
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                            <div className="flex items-center gap-2">
+                              {rb !== undefined && (
+                                <span className={`text-[13px] tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink-muted)]" : "text-red-600"}`}>
+                                  bal {rb < 0 ? "−" : ""}{formatMoney(Math.abs(rb), currency)}
+                                </span>
+                              )}
+                              <form action={reconcile}>
+                                <input type="hidden" name="id" value={tx.id} />
+                                <button type="submit" className="text-[13px] text-[var(--accent)] hover:underline">
+                                  {tx.reconciledAt ? "Unmark" : "Reconcile"}
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </div>
+                        {i === pageTransactions.length - 1 && (
+                          <div className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2.5 text-xs font-semibold">
+                            <span className="text-[var(--ink-muted)]">{transactions.length} transactions{q ? " (filtered)" : ""}</span>
+                            <span className="text-[var(--ink)]">{formatMoney(activeAccount.currentBalance, currency)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  }}
+                />
+
+                <TablePagination
+                  page={txPageView.page}
+                  totalPages={txPageView.totalPages}
+                  rangeStart={txPageView.rangeStart}
+                  rangeEnd={txPageView.rangeEnd}
+                  total={txPageView.total}
+                  unit="transactions"
+                  hrefForPage={bankHref}
+                />
               </>
             )}
           </div>

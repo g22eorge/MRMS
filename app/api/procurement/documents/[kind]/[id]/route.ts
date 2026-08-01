@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { getDocumentBrandingSettings } from "@/lib/document-branding";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,10 @@ function documentShell(input: {
   total: number;
   currency?: string;
   notes?: string | null;
+  companyName?: string;
 }) {
   const currency = input.currency ?? "UGX";
+  const companyName = input.companyName?.trim() || "Eagle Info Repair Manager";
   const generatedAt = new Date().toLocaleString("en-UG", { dateStyle: "medium", timeStyle: "short" });
   return `<!doctype html>
 <html>
@@ -94,7 +97,7 @@ function documentShell(input: {
   <main class="sheet">
     <header>
       <div>
-        <div class="brand">Eagle Info Repair Manager</div>
+        <div class="brand">${esc(companyName)}</div>
         <div class="subtitle">Procurement document export</div>
       </div>
       <div class="subtitle">Generated ${esc(generatedAt)}</div>
@@ -116,7 +119,7 @@ function documentShell(input: {
       <tfoot><tr><td colspan="3" class="num">Document Total</td><td class="num">${esc(money(input.total, currency))}</td></tr></tfoot>
     </table>
     ${input.notes ? `<section class="notes"><div class="label">Notes</div><div>${esc(input.notes)}</div></section>` : ""}
-    <footer><span>Prepared by Eagle Info Repair Manager</span><span>${esc(input.number)}</span></footer>
+    <footer><span>Prepared by ${esc(companyName)}</span><span>${esc(input.number)}</span></footer>
   </main>
 </body>
 </html>`;
@@ -128,6 +131,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { kind, id } = await params;
   const documentKind = kind as Kind;
+
+  // Resolve org branding so each tenant's procurement PDFs carry their own name,
+  // not a hardcoded "Eagle Info" header.
+  const branding = await getDocumentBrandingSettings(orgId).catch(() => null);
+  const companyName = branding?.companyName?.trim() || "Eagle Info Repair Manager";
 
   if (documentKind === "purchase-request") {
     const request = await prisma.purchaseRequest.findFirst({
@@ -142,6 +150,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       total: item.quantity * (item.estimatedUnitCost ?? 0),
     }));
     return new NextResponse(documentShell({
+      companyName,
       title: "Purchase Request",
       number: request.requestNumber,
       status: request.status,
@@ -166,6 +175,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       total: item.qtyOrdered * item.unitCost,
     }));
     return new NextResponse(documentShell({
+      companyName,
       title: "Purchase Order",
       number: order.reference ?? `PO-${order.id.slice(-6).toUpperCase()}`,
       status: order.status,
@@ -190,6 +200,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       total: item.quantity * item.unitCost,
     }));
     return new NextResponse(documentShell({
+      companyName,
       title: "Goods Received Note",
       number: grn.grnNumber,
       status: grn.status,
@@ -214,6 +225,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       total: item.lineTotal,
     }));
     return new NextResponse(documentShell({
+      companyName,
       title: "Supplier Bill",
       number: bill.billNumber,
       status: bill.status,

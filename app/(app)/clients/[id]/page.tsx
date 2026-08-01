@@ -9,9 +9,13 @@ import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBad
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/currency";
+import { getClientStatement } from "@/lib/commercial/statements";
+import { createPortalUserAction, togglePortalUserAction } from "./portal-actions";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { formatPhoneDisplay, phoneTelHref } from "@/lib/phone";
 
 const updateClientSchema = z.object({
   fullName: z.string().min(2),
@@ -45,8 +49,9 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const filters = await searchParams;
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   const canEdit = user.role === "ADMIN" || user.role === "OPS";
+  const canSeeFinancials = can.viewFinancials(user);
 
   if (!can.viewClientInfo(user)) {
     redirect("/dashboard");
@@ -73,6 +78,7 @@ export default async function ClientDetailPage({
               : {}),
           },
           orderBy: { receivedAt: "desc" },
+          take: 25,
         },
         notesEntries: {
           include: { author: { select: { name: true } } },
@@ -99,6 +105,7 @@ export default async function ClientDetailPage({
               : {}),
           },
           orderBy: { receivedAt: "desc" },
+          take: 25,
         },
       },
     });
@@ -119,6 +126,18 @@ export default async function ClientDetailPage({
     ...(clientData as ClientDetail),
     notesEntries: notesFeatureAvailable ? (clientData as ClientDetail).notesEntries : [],
   } as ClientDetail;
+
+  // M20: statement of account (receivables) — only for finance-capable roles.
+  const statement = canSeeFinancials ? await getClientStatement(orgId, id, org.baseCurrency) : null;
+
+  // Portal access (Phase 4): corporate-client logins this shop has provisioned.
+  const portalUsers = canEdit
+    ? await prisma.portalUser.findMany({
+        where: { orgId, clientId: id },
+        select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
 
   async function updateClient(formData: FormData) {
     "use server";
@@ -185,7 +204,7 @@ export default async function ClientDetailPage({
     ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
     : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
   const controlClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
   return (
     <div className="space-y-5">
@@ -207,7 +226,7 @@ export default async function ClientDetailPage({
           <div className="min-w-0">
             <p className="truncate text-[13px] font-bold text-[var(--ink)]">{client.fullName}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <a href={`tel:${client.phone}`} className="transition hover:text-[var(--accent)]">{client.phone}</a>
+              <a href={phoneTelHref(client.phone) ?? `tel:${client.phone}`} className="transition hover:text-[var(--accent)]">{formatPhoneDisplay(client.phone)}</a>
               {client.email ? <><span className="opacity-40">·</span><span>{client.email}</span></> : null}
               {client.organization ? <><span className="opacity-40">·</span><span className="truncate">{client.organization}</span></> : null}
               {client.address ? <><span className="opacity-40">·</span><span className="truncate">{client.address}</span></> : null}
@@ -291,13 +310,102 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="notes"
               defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
+              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
             />
           </label>
         </div>
 
         {canEdit ? <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-white">Save Client</button> : null}
       </form>
+
+      {statement ? (
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
+            <div className="flex items-center gap-4 text-[13px]">
+              <span className="text-[var(--ink-muted)]">Billed <span className="font-semibold text-[var(--ink)] tabular-nums">{formatMoney(statement.totals.billed, statement.currency)}</span></span>
+              <span className="text-[var(--ink-muted)]">Paid <span className="font-semibold text-emerald-600 tabular-nums">{formatMoney(statement.totals.paid, statement.currency)}</span></span>
+              <span className="text-[var(--ink-muted)]">Outstanding <span className={`font-black tabular-nums ${statement.totals.outstanding > 0 ? "text-red-500" : "text-emerald-600"}`}>{formatMoney(statement.totals.outstanding, statement.currency)}</span></span>
+            </div>
+          </div>
+          {statement.lines.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No billed documents yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+              <table className="w-full min-w-[520px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">
+                    <th className="px-3 py-2 text-left font-bold">Document</th>
+                    <th className="px-3 py-2 text-left font-bold">Date</th>
+                    <th className="px-3 py-2 text-right font-bold">Billed</th>
+                    <th className="px-3 py-2 text-right font-bold">Paid</th>
+                    <th className="px-3 py-2 text-right font-bold">Balance</th>
+                    <th className="px-3 py-2 text-right font-bold">Running</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statement.lines.map((l) => (
+                    <tr key={`${l.type}-${l.number}`} className="border-b border-[var(--line)]/60 last:border-0">
+                      <td className="px-3 py-2">
+                        <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
+                        <span className="font-mono text-[var(--ink)]">{l.number}</span>
+                      </td>
+                      <td className="px-3 py-2 text-[var(--ink-muted)]">{l.date.toISOString().slice(0, 10)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatMoney(l.billed, statement.currency)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{l.paid ? formatMoney(l.paid, statement.currency) : "—"}</td>
+                      <td className={`px-3 py-2 text-right tabular-nums ${l.balance > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(l.balance, statement.currency)}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatMoney(l.running, statement.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {canEdit ? (
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="mb-3">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
+          </div>
+
+          {portalUsers.length > 0 && (
+            <div className="mb-3 space-y-1.5">
+              {portalUsers.map((pu) => (
+                <div key={pu.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[13px]">
+                  <div>
+                    <span className="font-medium text-[var(--ink)]">{pu.name}</span>
+                    <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
+                    {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">revoked</span>}
+                  </div>
+                  <form action={togglePortalUserAction}>
+                    <input type="hidden" name="portalUserId" value={pu.id} />
+                    <input type="hidden" name="clientId" value={client.id} />
+                    <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
+                      {pu.isActive ? "Revoke" : "Restore"}
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form action={createPortalUserAction} className="grid gap-2 sm:grid-cols-2">
+            <input type="hidden" name="clientId" value={client.id} />
+            <input name="name" required placeholder="Full name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <input name="email" type="email" required placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <select name="role" defaultValue="IT_OFFICER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]">
+              <option value="IT_OFFICER">IT Officer</option>
+              <option value="ORG_ADMIN">Organization Administrator</option>
+              <option value="MEMBER">Member</option>
+            </select>
+            <input name="password" type="text" required minLength={8} placeholder="Temporary password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white sm:col-span-2">Create portal login</button>
+          </form>
+        </div>
+      ) : null}
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -307,7 +415,7 @@ export default async function ClientDetailPage({
             <div className="flex items-center gap-1">
               <Link
                 href={`/clients/${id}`}
-                className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
               >
                 All
               </Link>
@@ -315,7 +423,7 @@ export default async function ClientDetailPage({
                 <Link
                   key={status}
                   href={`/clients/${id}?${new URLSearchParams({ ...(filters.q ? { q: filters.q } : {}), status }).toString()}`}
-                  className={`hidden rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                  className={`hidden rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
                 >
                   {statusOptionLabel[status]}
                 </Link>
@@ -365,7 +473,7 @@ export default async function ClientDetailPage({
           <p className="text-[13px] text-[var(--ink-muted)]">Internal notes visible to your team only</p>
         </div>
         <form action={addClientNote} className="flex flex-col gap-2 p-4">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
           <button type="submit" disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 

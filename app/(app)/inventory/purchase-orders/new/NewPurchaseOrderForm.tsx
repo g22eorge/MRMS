@@ -3,21 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+
+import { PartSelect, lineItemInputClass } from "@/components/forms";
+import { DataTable } from "@/components/ui/DataTable";
+import { useLineItemsState } from "@/hooks/useLineItemsState";
+import { parseFormNumber } from "@/lib/forms/line-items";
+
 import { createPurchaseOrderAction } from "../actions";
 
 type Supplier = { id: string; name: string };
 type Part = { id: string; name: string; sku: string; unitCost: number | null };
-type LineItem = { key: number; description: string; qtyOrdered: number; unitCost: number; partId: string };
+type LineData = { description: string; qtyOrdered: number; unitCost: number; partId: string };
 
-let keyCounter = 0;
-function nextKey() { return ++keyCounter; }
-
-function parseNumber(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-const fieldClass = "mt-1 w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/10";
+const fieldClass = "mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
 const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]";
 
 export function NewPurchaseOrderForm({
@@ -33,9 +31,12 @@ export function NewPurchaseOrderForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState(defaultSupplierId ?? "");
-  const [lines, setLines] = useState<LineItem[]>([
-    { key: nextKey(), description: "", qtyOrdered: 1, unitCost: 0, partId: "" },
-  ]);
+  const { lines, addLine, removeLine, updateLine, appendToFormData } = useLineItemsState<LineData>(() => ({
+    description: "",
+    qtyOrdered: 1,
+    unitCost: 0,
+    partId: "",
+  }));
 
   const selectedSupplier = suppliers.find((supplier) => supplier.id === supplierId);
   const canSubmit = suppliers.length > 0;
@@ -46,18 +47,6 @@ export function NewPurchaseOrderForm({
     const zeroCostLines = lines.filter((line) => line.description.trim() && line.unitCost <= 0).length;
     return { subtotal, quantity, readyLines, zeroCostLines };
   }, [lines]);
-
-  function addLine() {
-    setLines((prev) => [...prev, { key: nextKey(), description: "", qtyOrdered: 1, unitCost: 0, partId: "" }]);
-  }
-
-  function removeLine(key: number) {
-    setLines((prev) => (prev.length > 1 ? prev.filter((line) => line.key !== key) : prev));
-  }
-
-  function updateLine(key: number, patch: Partial<LineItem>) {
-    setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
-  }
 
   function onPartSelect(key: number, partId: string) {
     const part = parts.find((candidate) => candidate.id === partId);
@@ -71,12 +60,12 @@ export function NewPurchaseOrderForm({
     const fd = new FormData(e.currentTarget);
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     if (submitter?.name) fd.set(submitter.name, submitter.value);
-    fd.set("items", JSON.stringify(lines.map(({ description, qtyOrdered, unitCost, partId }) => ({
+    appendToFormData(fd, "items", ({ description, qtyOrdered, unitCost, partId }) => ({
       description,
       qtyOrdered,
       unitCost,
       partId: partId || undefined,
-    }))));
+    }));
 
     startTransition(async () => {
       const result = await createPurchaseOrderAction(fd);
@@ -148,65 +137,88 @@ export function NewPurchaseOrderForm({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="bg-[var(--panel-strong)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-              <tr>
-                <th className="w-10 px-3 py-2 text-left">#</th>
-                <th className="px-3 py-2 text-left">Inventory item</th>
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="w-24 px-3 py-2 text-right">Qty</th>
-                <th className="w-32 px-3 py-2 text-right">Unit cost</th>
-                <th className="w-32 px-3 py-2 text-right">Total</th>
-                <th className="w-20 px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
-              {lines.map((line, index) => {
-                const lineTotal = line.qtyOrdered * line.unitCost;
-                return (
-                  <tr key={line.key} className="align-top">
-                    <td className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">{index + 1}</td>
-                    <td className="px-3 py-2">
-                      <select value={line.partId} onChange={(event) => onPartSelect(line.key, event.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none">
-                        <option value="">Custom item</option>
-                        {parts.map((part) => (
-                          <option key={part.id} value={part.id}>{part.sku} - {part.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseNumber(event.target.value))) })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-sm tabular-nums text-[var(--ink)] outline-none" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseNumber(event.target.value)) })} className="w-full rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-right text-sm tabular-nums text-[var(--ink)] outline-none" />
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-[var(--ink)]">{lineTotal.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right">
-                      <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]">
-              <tr>
-                <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">
-                  Supplier: {selectedSupplier?.name ?? "Not selected"}
-                </td>
-                <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
-                <td className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
-                <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <DataTable
+          frameless
+          dense
+          rows={lines}
+          getRowKey={(line) => String(line.key)}
+          empty="No order lines yet."
+          columns={[
+            {
+              key: "index",
+              header: "#",
+              headerClassName: "w-10",
+              className: "w-10 align-top text-[12px] font-semibold text-[var(--ink-muted)]",
+              cell: (_line, index) => index + 1,
+            },
+            {
+              key: "item",
+              header: "Inventory item",
+              className: "align-top",
+              cell: (line) => (
+                <PartSelect
+                  value={line.partId}
+                  parts={parts}
+                  onChange={(partId) => onPartSelect(line.key, partId)}
+                  customLabel="Custom item"
+                  className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+                />
+              ),
+            },
+            {
+              key: "description",
+              header: "Description",
+              className: "align-top",
+              cell: (line) => (
+                <input value={line.description} onChange={(event) => updateLine(line.key, { description: event.target.value })} required placeholder="Description" className={`${lineItemInputClass}`} />
+              ),
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              align: "right",
+              headerClassName: "w-24",
+              className: "w-24 align-top",
+              cell: (line) => (
+                <input type="number" min={1} value={line.qtyOrdered} onChange={(event) => updateLine(line.key, { qtyOrdered: Math.max(1, Math.floor(parseFormNumber(event.target.value, 1))) })} className={`${lineItemInputClass} text-right tabular-nums`} />
+              ),
+            },
+            {
+              key: "unitCost",
+              header: "Unit cost",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 align-top",
+              cell: (line) => (
+                <input type="number" min={0} step={0.01} value={line.unitCost} onChange={(event) => updateLine(line.key, { unitCost: Math.max(0, parseFormNumber(event.target.value)) })} className={`${lineItemInputClass} text-right tabular-nums`} />
+              ),
+            },
+            {
+              key: "total",
+              header: "Total",
+              align: "right",
+              headerClassName: "w-32",
+              className: "w-32 align-top font-semibold tabular-nums text-[var(--ink)]",
+              cell: (line) => (line.qtyOrdered * line.unitCost).toLocaleString(),
+            },
+          ]}
+          actions={(line) => (
+            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
+              Remove
+            </button>
+          )}
+          tableFooter={
+            <tr className="bg-[var(--panel-strong)]">
+              <td colSpan={3} className="px-3 py-2 text-[12px] font-semibold text-[var(--ink-muted)]">
+                Supplier: {selectedSupplier?.name ?? "Not selected"}
+              </td>
+              <td className="px-3 py-2 text-right font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
+              <td className="px-3 py-2 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
+              <td />
+            </tr>
+          }
+        />
       </div>
 
       {error ? <p className="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}

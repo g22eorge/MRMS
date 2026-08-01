@@ -1,5 +1,6 @@
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
 import { AiGuideBubble } from "@/components/ai-guide/AiGuideBubble";
+import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
@@ -9,15 +10,14 @@ import { SpeedDialFAB } from "@/components/layout/SpeedDialFAB";
 import type { SpeedDialAction } from "@/components/layout/SpeedDialFAB";
 import { JobStatus, Prisma, PurchaseOrderStatus, PurchaseRequestStatus } from "@prisma/client";
 import { can } from "@/lib/permissions";
+import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
-import { sendTrialExpiryWarning } from "@/lib/email";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getOrgModules } from "@/lib/module-access";
+import { getActiveAnnouncements } from "@/lib/announcements";
+import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
 import Link from "next/link";
-
-// Module-level dedup: only send trial warning email once per server instance per org.
-const trialWarningSent = new Set<string>();
 
 export default async function AppLayout({
   children,
@@ -65,29 +65,11 @@ export default async function AppLayout({
   const isPastDue = org?.billingStatus === "PAST_DUE";
   const isSuspended = trialExpired || isPastDue;
 
-  // Read-only mode: allow navigation + downloads. Mutations are blocked server-side.
+  const announcements = await getActiveAnnouncements(now);
 
-  // ── Trial expiry warning email (fire-and-forget, once per server instance) ─
-  if (org?.billingStatus === "TRIALING" && org.trialEndsAt) {
-    const daysLeft = Math.ceil((org.trialEndsAt.getTime() - now.getTime()) / 86_400_000);
-    if (daysLeft <= 3 && daysLeft > 0 && !trialWarningSent.has(orgId)) {
-      trialWarningSent.add(orgId);
-      prisma.user
-        .findFirst({ where: { orgId, role: "ADMIN" }, select: { email: true, name: true } })
-        .then((admin) => {
-          if (admin) {
-            void sendTrialExpiryWarning(
-              admin.email,
-              admin.name,
-              org.name,
-              daysLeft,
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  }
-  // ─────────────────────────────────────────────────────────────────────────
+  // Read-only mode: allow navigation + downloads. Mutations are blocked server-side.
+  // Trial-expiry reminders (14/7/3/1 days) are sent reliably by the
+  // /api/cron/subscription-lifecycle cron, not from this render path.
 
   const paymentWhere: Prisma.JobWhereInput = {
     orgId,
@@ -128,7 +110,9 @@ export default async function AppLayout({
     orgUsers,
   ] = await Promise.all([
     prisma.part.findMany({
-      where: { orgId, isActive: true, reorderLevel: { gt: 0 } },
+      // Include parts with a reorder level set, OR any part at/below zero on hand
+      // (a part left at the default reorderLevel 0 was never flagged even at 0 stock).
+      where: { orgId, isActive: true, OR: [{ reorderLevel: { gt: 0 } }, { qtyOnHand: { lte: 0 } }] },
       select: { qtyOnHand: true, reorderLevel: true },
     }).catch(() => []),
     (can.reviewExternalBills(user) || can.approveInvoices(user)) ? prisma.job.count({ where: paymentWhere }) : Promise.resolve(0),
@@ -189,7 +173,7 @@ export default async function AppLayout({
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(212,175,55,0.04),transparent_40%)]" />
         <Header userName={user.name} userEmail={user.email} userPhone={user.phone} role={user.role} permissions={user.permissions} isPlatformAdmin={isPlatformAdmin} orgName={org?.name ?? null} orgUsers={orgUsers} />
         <main className="fade-in flex-1 overflow-x-hidden px-4 pb-[var(--mobile-shell-bottom)] pt-[var(--mobile-shell-top)] md:min-h-0 md:overflow-y-auto md:px-6 md:pb-8">
-          <div className="mobile-page-shell mx-auto w-full max-w-lg md:max-w-[1240px] md:space-y-5 xl:max-w-[1360px]">
+          <div className="calm-scope mobile-page-shell mx-auto w-full max-w-lg md:max-w-[1240px] md:space-y-5 xl:max-w-[1360px]">
             {/* PageThemeHeader:
                 • Mobile root pages (/dashboard, /jobs, /finance, /reports, /more):
                   hidden — each has its own custom native header
@@ -212,6 +196,7 @@ export default async function AppLayout({
                 <p className="mt-1 text-xs text-amber-100/90">Admins can still record payments to recover revenue.</p>
               </div>
             ) : null}
+            <AnnouncementBanner announcements={announcements} />
             {children}
           </div>
         </main>
@@ -243,6 +228,7 @@ export default async function AppLayout({
       <div className="hidden lg:block">
         <QuickActionFAB actions={isSuspended ? [] : buildFabActions(user)} />
       </div>
+      <CommandPalette role={user.role} />
     </div>
   );
 }
@@ -256,7 +242,7 @@ function buildFabActions(user: { role: string; permissions?: string[] }): FabAct
   const u = user as Parameters<typeof can.createJob>[0];
   if (!can.createJob(u)) return [];
   return [{
-    label: "New Job",
+    label: routeLabel("/jobs/new"),
     href: "/jobs/new",
     color: "bg-[var(--accent)]",
     icon: (
@@ -278,7 +264,7 @@ function buildSpeedDialActions(
   const actions: SpeedDialAction[] = [];
   if (can.viewAccountsSummary(u) && (!enabledModules || enabledModules.has("REPORTS"))) {
     actions.push({
-      label: "AI Guide",
+      label: routeLabel("/ai-insights"),
       href: "/ai-insights",
       color: "bg-[var(--panel)] border border-[var(--line)] text-[var(--accent)]",
       icon: (
@@ -292,7 +278,7 @@ function buildSpeedDialActions(
   }
   if (can.createJob(u)) {
     actions.push({
-      label: "New Job",
+      label: routeLabel("/jobs/new"),
       href: "/jobs/new",
       color: "bg-[var(--accent)]",
       icon: (

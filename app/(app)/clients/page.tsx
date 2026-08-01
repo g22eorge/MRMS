@@ -9,10 +9,20 @@ import { z } from "zod";
 
 
 import { can } from "@/lib/permissions";
-import { orgDb } from "@/lib/prisma";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { StatCards } from "@/components/ui/StatCards";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { orgDb } from "@/lib/db";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { formatEATDate } from "@/lib/date-eat";
+import {
+  formatPhoneDisplay,
+  normalizePhoneForStorage,
+  phoneLookupVariants,
+  phoneTelHref,
+  phoneWhatsAppHref,
+} from "@/lib/phone";
 
 const createClientSchema = z.object({
   fullName: z.string().min(2),
@@ -42,8 +52,8 @@ export default async function ClientsPage({
   }
 
   const filters = await searchParams;
-  const page = Math.max(Number(filters.page ?? "1") || 1, 1);
-  const pageSize = 20;
+  const page = parsePage(filters.page);
+  const pageSize = PAGE_SIZE;
   const segment = filters.segment ?? "all";
 
   const where: Prisma.ClientWhereInput = {
@@ -85,7 +95,15 @@ export default async function ClientsPage({
     db.client.count({ where: { jobs: { some: {} } } }).catch(() => 0),
     db.client.count({ where: { jobs: { none: {} } } }).catch(() => 0),
     db.client.count({ where: { jobs: { some: {} } } }).catch(() => 0), // approx for "high" tab badge
-    db.client.count({ where: { createdAt: { gte: monthStart } } }).catch(() => 0),
+    // "New this month" = created this month AND no job history from before this month.
+    // Guards against bulk-imported clients whose createdAt was set at import time
+    // but who came with historical jobs (they aren't "new").
+    db.client.count({
+      where: {
+        createdAt: { gte: monthStart },
+        jobs: { none: { receivedAt: { lt: monthStart } } },
+      },
+    }).catch(() => 0),
     db.client.count({ where: { jobs: { some: { status: { notIn: [JobStatus.COMPLETED, JobStatus.CLOSED] } } } } }).catch(() => 0),
     db.client.count({ where: { organization: { not: null } } }).catch(() => 0),
   ]);
@@ -99,13 +117,7 @@ export default async function ClientsPage({
     ? (matchingClients as ClientRow[]).filter((c) => c._count.jobs >= 3)
     : (matchingClients as ClientRow[]);
 
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const pageEnd = Math.min(page * pageSize, total);
-  const prevPage = Math.max(page - 1, 1);
-  const nextPage = Math.min(page + 1, totalPages);
-  const isPrevDisabled = page <= 1;
-  const isNextDisabled = page >= totalPages;
+  const pageView = paginationView(page, total);
   const clients = filteredClients;
   // kpiTotal is the same as totalClients (total count across all segments for the KPI bar)
   const kpiTotal = totalClients;
@@ -133,10 +145,10 @@ export default async function ClientsPage({
       redirect(`/clients?createError=${encodeURIComponent(msg)}`);
     }
 
-    const normalizedPhone = sanitizeText(parsed.data.phone);
+    const normalizedPhone = normalizePhoneForStorage(sanitizeText(parsed.data.phone));
     const orgClient = orgDb(currentUser.orgId);
     const existingByPhone = await orgClient.client.findFirst({
-      where: { phone: normalizedPhone },
+      where: { phone: { in: phoneLookupVariants(normalizedPhone) } },
       select: { id: true },
     });
 
@@ -196,33 +208,10 @@ export default async function ClientsPage({
     return query ? `/clients?${query}` : "/clients";
   }
 
-  const paginationBar = totalPages > 1 ? (
-    <div className="flex items-center gap-1.5">
-      <Link
-        href={`?${new URLSearchParams({ ...preserved, page: String(prevPage) }).toString()}`}
-        aria-disabled={isPrevDisabled}
-        className={`rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium transition-colors ${
-          isPrevDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        ← Prev
-      </Link>
-      <span className="min-w-[3rem] text-center text-xs tabular-nums text-[var(--ink-muted)]">{page} / {totalPages}</span>
-      <Link
-        href={`?${new URLSearchParams({ ...preserved, page: String(nextPage) }).toString()}`}
-        aria-disabled={isNextDisabled}
-        className={`rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium transition-colors ${
-          isNextDisabled
-            ? "pointer-events-none opacity-30 text-[var(--ink-muted)]"
-            : "text-[var(--ink)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/6"
-        }`}
-      >
-        Next →
-      </Link>
-    </div>
-  ) : null;
+  const clientsHref = pageHrefBuilder("/clients", {
+    q: filters.q,
+    segment: segment !== "all" ? segment : "",
+  });
 
   return (
     <div className="space-y-4">
@@ -299,29 +288,16 @@ export default async function ClientsPage({
         </form>
       </div>
 
-      {/* ══ DESKTOP: KPI tiles (unchanged) ══ */}
-      <div className="hidden lg:grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Total Clients</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiTotal}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all time</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">New This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiNewThisMonth}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">+{kpiNewThisMonth} this month</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">With Active Jobs</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiWithActiveJobs}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">open repairs</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Organisations</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiWithOrg}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">with org name</p>
-        </div>
-      </div>
+      {/* ══ DESKTOP: KPI cards ══ */}
+      <StatCards
+        columns={4}
+        cards={[
+          { key: "total",  label: "Total clients",   value: kpiTotal,          sub: "all time",              muted: kpiTotal === 0 },
+          { key: "new",    label: "New this month",  value: kpiNewThisMonth,   sub: "first seen this month", tone: "good",   muted: kpiNewThisMonth === 0 },
+          { key: "active", label: "With active jobs", value: kpiWithActiveJobs, sub: "open repairs",          tone: "accent", muted: kpiWithActiveJobs === 0 },
+          { key: "orgs",   label: "Organisations",   value: kpiWithOrg,        sub: "with org name",         muted: kpiWithOrg === 0 },
+        ]}
+      />
 
       {/* ══ DESKTOP: Stat chips + New Client ══ */}
       <div className="panel-shadow hidden lg:flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -415,184 +391,155 @@ export default async function ClientsPage({
       ) : (
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
 
-          {/* Table header bar — desktop shows pagination, mobile shows count only */}
-          <div className="hidden lg:flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-xs text-[var(--ink-muted)]">
-              <span className="font-bold text-[var(--ink)]">{pageStart}–{pageEnd}</span>
-              {" of "}
-              <span className="font-bold text-[var(--ink)]">{total}</span>
-              {" clients"}
-            </p>
-            {paginationBar}
-          </div>
-
-          {/* ── Mobile cards ── */}
-          <div className="lg:hidden">
-              {(clients as ClientRow[]).map((client) => (
-                <div key={client.id} className="border-b border-[var(--line)] last:border-b-0">
-                  {/* Single-row card: avatar + content + inline action icons */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    {/* Avatar */}
+          {/* ── Rows: shared DataTable (desktop table + mobile cards) ── */}
+          <DataTable
+            frameless
+            rows={clients as ClientRow[]}
+            getRowKey={(client) => client.id}
+            renderMobileCard={(client) => (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Link href={`/clients/${client.id}`} className="shrink-0">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
+                    client._count.jobs >= 3 ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+                    : client._count.jobs > 0 ? "bg-sky-500/15 text-sky-600"
+                    : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                  }`}>
+                    {client.fullName[0]?.toUpperCase() ?? "?"}
+                  </div>
+                </Link>
+                <Link href={`/clients/${client.id}`} className="min-w-0 flex-1 active:opacity-70">
+                  <p className="truncate font-bold text-[var(--ink)]">{client.fullName}</p>
+                  <p className="mt-0.5 truncate text-[var(--ink-muted)]">
+                    {formatPhoneDisplay(client.phone)}
+                    {client.organization ? <> · <span className="opacity-80">{client.organization}</span></> : null}
+                    {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
+                    {client._count.jobs > 0
+                      ? <> · <span className={client._count.jobs >= 3 ? "text-[var(--accent)] font-semibold" : ""}>{client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}</span></>
+                      : null}
+                  </p>
+                </Link>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <a href={phoneTelHref(client.phone) ?? `tel:${client.phone}`} aria-label={`Call ${client.fullName}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] active:bg-[var(--panel-strong)]/60">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.5a19.79 19.79 0 01-3-8.72A2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+                  </a>
+                  <a href={phoneWhatsAppHref(client.phone) ?? "#"} target="_blank" rel="noreferrer" aria-label={`WhatsApp ${client.fullName}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/8 text-emerald-600 active:bg-emerald-500/15">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  </a>
+                  {user.role === "ADMIN" && client._count.jobs === 0 ? (
+                    <form action={deleteClientAction}>
+                      <input type="hidden" name="id" value={client.id} />
+                      <button type="submit" aria-label="Delete client"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]/50 active:text-red-500">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              </div>
+            )}
+            columns={[
+              {
+                key: "client",
+                header: "Client",
+                cell: (client) => (
+                  <div className="flex items-center gap-3">
                     <Link href={`/clients/${client.id}`} className="shrink-0">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
-                        client._count.jobs >= 3 ? "bg-[var(--accent)]/15 text-[var(--accent)]"
-                        : client._count.jobs > 0 ? "bg-sky-500/15 text-sky-600"
-                        : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-[13px] font-black ${
+                        client._count.jobs >= 3
+                          ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+                          : client._count.jobs > 0
+                            ? "bg-sky-500/15 text-sky-600"
+                            : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
                       }`}>
                         {client.fullName[0]?.toUpperCase() ?? "?"}
                       </div>
                     </Link>
-                    {/* Content — tappable to open detail */}
-                    <Link href={`/clients/${client.id}`} className="min-w-0 flex-1 active:opacity-70">
-                      <p className="truncate text-[14px] font-bold text-[var(--ink)]">{client.fullName}</p>
-                      <p className="mt-0.5 truncate text-[13px] text-[var(--ink-muted)]">
-                        {client.phone}
+                    <div className="min-w-0">
+                      <Link href={`/clients/${client.id}`} className="block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
+                        {client.fullName}
+                      </Link>
+                      <p className="truncate text-[12px] text-[var(--ink-muted)]">
+                        {formatPhoneDisplay(client.phone)}
                         {client.organization ? <> · <span className="opacity-80">{client.organization}</span></> : null}
                         {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
-                        {client._count.jobs > 0
-                          ? <> · <span className={client._count.jobs >= 3 ? "text-[var(--accent)] font-semibold" : ""}>{client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}</span></>
-                          : null}
                       </p>
-                    </Link>
-                    {/* Inline action icons — compact, no separate row */}
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <a href={`tel:${client.phone}`} aria-label={`Call ${client.fullName}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] active:bg-[var(--panel-strong)]/60">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.5a19.79 19.79 0 01-3-8.72A2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
-                      </a>
-                      <a href={`https://wa.me/${client.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp ${client.fullName}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/8 text-emerald-600 active:bg-emerald-500/15">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      </a>
-                      {user.role === "ADMIN" && client._count.jobs === 0 ? (
-                        <form action={deleteClientAction}>
-                          <input type="hidden" name="id" value={client.id} />
-                          <button type="submit" aria-label="Delete client"
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]/50 active:text-red-500">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                          </button>
-                        </form>
-                      ) : null}
                     </div>
                   </div>
-                </div>
-              ))}
-
-            {totalPages > 1 ? (
-              <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-3">
-                <span className="text-xs text-[var(--ink-muted)]">
-                  <span className="font-semibold text-[var(--ink)]">{pageStart}–{pageEnd}</span> of {total}
-                </span>
-                {paginationBar}
-              </div>
-            ) : null}
-          </div>
-
-          {/* ── Desktop table ── */}
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full border-collapse text-[13px]">
-              <thead className="bg-[var(--panel-strong)] text-left text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                <tr className="border-b border-[var(--line)]">
-                  <th className="px-4 py-2.5">Client</th>
-                  <th className="hidden px-4 py-2.5 xl:table-cell">Email</th>
-                  <th className="px-4 py-2.5">Jobs</th>
-                  <th className="hidden px-4 py-2.5 xl:table-cell">Joined</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {(clients as ClientRow[]).map((client) => (
-                  <tr key={`desktop-${client.id}`} className="group transition-colors hover:bg-[var(--panel-strong)]/40">
-
-                    {/* Client — avatar + name + phone + org */}
-                    <td className="px-4 py-2.5 align-middle">
-                      <div className="flex items-center gap-3">
-                        {/* Avatar */}
-                        <Link href={`/clients/${client.id}`} className="shrink-0">
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-[13px] font-black ${
-                            client._count.jobs >= 3
-                              ? "bg-[var(--accent)]/15 text-[var(--accent)]"
-                              : client._count.jobs > 0
-                                ? "bg-sky-500/15 text-sky-600"
-                                : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-                          }`}>
-                            {client.fullName[0]?.toUpperCase() ?? "?"}
-                          </div>
-                        </Link>
-                        {/* Name + meta */}
-                        <div className="min-w-0">
-                          <Link href={`/clients/${client.id}`} className="block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
-                            {client.fullName}
-                          </Link>
-                          <p className="truncate text-[12px] text-[var(--ink-muted)]">
-                            {client.phone}
-                            {client.organization ? <> · <span className="opacity-80">{client.organization}</span></> : null}
-                            {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Email */}
-                    <td className="hidden px-4 py-2.5 align-middle text-[12px] text-[var(--ink-muted)] xl:table-cell">
-                      {client.email ?? <span className="opacity-30">—</span>}
-                    </td>
-
-                    {/* Jobs badge */}
-                    <td className="px-4 py-2.5 align-middle">
-                      {client._count.jobs > 0 ? (
-                        <Link href={`/jobs?client=${client.id}`}
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold transition hover:opacity-80 ${
-                            client._count.jobs >= 3
-                              ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
-                              : "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
-                          }`}>
-                          {client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}
-                        </Link>
-                      ) : (
-                        <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>
-                      )}
-                    </td>
-
-                    {/* Joined */}
-                    <td className="hidden whitespace-nowrap px-4 py-2.5 align-middle text-[12px] text-[var(--ink-muted)] xl:table-cell">
-                      {formatEATDate(client.createdAt)}
-                    </td>
-
-                    {/* Actions — icon buttons */}
-                    <td className="px-4 py-2.5 align-middle">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link href={`/clients/${client.id}`} title="View profile"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        </Link>
-                        <a href={`tel:${client.phone}`} title={`Call ${client.fullName}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-sky-400/40 hover:text-sky-600">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.5a19.79 19.79 0 01-3-8.72A2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
-                        </a>
-                        <a href={`https://wa.me/${client.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" title={`WhatsApp ${client.fullName}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/8 text-emerald-600 transition hover:bg-emerald-500/15">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        </a>
-                        {user.role === "ADMIN" && client._count.jobs === 0 ? (
-                          <form action={deleteClientAction} className="inline">
-                            <input type="hidden" name="id" value={client.id} />
-                            <button type="submit" title="Delete client"
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ),
+              },
+              {
+                key: "email",
+                header: "Email",
+                headerClassName: "hidden xl:table-cell",
+                className: "hidden text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                cell: (client) => client.email ?? <span className="opacity-30">—</span>,
+              },
+              {
+                key: "jobs",
+                header: "Jobs",
+                cell: (client) =>
+                  client._count.jobs > 0 ? (
+                    <Link href={`/jobs?client=${client.id}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold transition hover:opacity-80 ${
+                        client._count.jobs >= 3
+                          ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                          : "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
+                      }`}>
+                      {client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}
+                    </Link>
+                  ) : (
+                    <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>
+                  ),
+              },
+              {
+                key: "joined",
+                header: "Joined",
+                headerClassName: "hidden xl:table-cell",
+                className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                cell: (client) => formatEATDate(client.createdAt),
+              },
+            ]}
+            actions={(client) => (
+              <>
+                <Link href={`/clients/${client.id}`} title="View profile"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </Link>
+                <a href={phoneTelHref(client.phone) ?? `tel:${client.phone}`} title={`Call ${client.fullName}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-sky-400/40 hover:text-sky-600">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.5a19.79 19.79 0 01-3-8.72A2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+                </a>
+                <a href={phoneWhatsAppHref(client.phone) ?? "#"} target="_blank" rel="noreferrer" title={`WhatsApp ${client.fullName}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/8 text-emerald-600 transition hover:bg-emerald-500/15">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </a>
+                {user.role === "ADMIN" && client._count.jobs === 0 ? (
+                  <form action={deleteClientAction} className="inline">
+                    <input type="hidden" name="id" value={client.id} />
+                    <button type="submit" title="Delete client"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                  </form>
+                ) : null}
+              </>
+            )}
+          />
 
         </div>
       )}
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="clients"
+        hrefForPage={clientsHref}
+      />
 
     </div>
   );

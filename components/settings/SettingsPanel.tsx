@@ -3,17 +3,16 @@
 import Link from "next/link";
 import { useEffect, useRef, useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
   adminChangeUserPasswordAction,
   changePasswordAction,
-  updateProfileAction,
   type AdminChangePasswordState,
   type ChangePasswordState,
-  type UpdateProfileState,
 } from "@/app/(app)/settings/profile/actions";
+import { ProfileForm } from "@/components/settings/ProfileForm";
+import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 
 type QuickLink = {
   label: string;
@@ -60,13 +59,13 @@ const adminLinks: QuickLink[] = [
   },
   {
     label: "WhatsApp Notifications",
-    href: "/settings/notifications/whatsapp",
+    href: COMMUNICATIONS_ROUTES.whatsapp,
     desc: "Provider credentials, test sends",
     icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   },
   {
     label: "Message Templates",
-    href: "/settings/notifications/templates",
+    href: COMMUNICATIONS_ROUTES.templates,
     desc: "Per-status notification messages",
     icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
   },
@@ -87,7 +86,7 @@ const adminLinks: QuickLink[] = [
 const opsLinks: QuickLink[] = [
   {
     label: "Message Templates",
-    href: "/settings/notifications/templates",
+    href: COMMUNICATIONS_ROUTES.templates,
     desc: "Per-status notification messages",
     icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
   },
@@ -127,23 +126,12 @@ export function SettingsPanel({
   initialSection?: "profile" | "password";
   orgUsers?: OrgUserOption[];
 }) {
-  const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
   const passwordSectionRef = useRef<HTMLDetailsElement>(null);
-  const initialState: UpdateProfileState = {};
-  const [state, formAction] = useActionState(updateProfileAction, initialState);
   const passwordInitialState: ChangePasswordState = {};
   const [passwordState, passwordFormAction] = useActionState(changePasswordAction, passwordInitialState);
   const adminPasswordInitialState: AdminChangePasswordState = {};
   const [adminPasswordState, adminPasswordFormAction] = useActionState(adminChangeUserPasswordAction, adminPasswordInitialState);
-
-  useEffect(() => {
-    if (state.success) {
-      toast.success("Profile updated");
-      router.refresh();
-    }
-    if (state.error) toast.error(state.error);
-  }, [state, router]);
 
   useEffect(() => {
     if (passwordState.success) toast.success("Password changed");
@@ -230,30 +218,14 @@ export function SettingsPanel({
             <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Your Profile
             </summary>
-            <form action={formAction} className="mt-3 space-y-2">
-              <div>
-                <label htmlFor="sp-name" className="mb-1 block text-xs text-[var(--ink-muted)]">Name</label>
-                <input id="sp-name" name="name" defaultValue={userName} required minLength={2} maxLength={80} className={fieldClass()} />
-              </div>
-              <div>
-                <label htmlFor="sp-phone" className="mb-1 block text-xs text-[var(--ink-muted)]">Phone</label>
-                <input id="sp-phone" name="phone" defaultValue={userPhone ?? ""} maxLength={30} placeholder="+256…" className={fieldClass()} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                  <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Email</p>
-                  <p className="mt-0.5 truncate text-xs font-medium text-[var(--ink)]">{userEmail}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                  <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Role</p>
-                  <p className="mt-0.5 text-xs font-medium text-[var(--ink)]">{userRole}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <SaveBtn />
-                <span className="text-[13px] text-[var(--ink-muted)]">Manage password below</span>
-              </div>
-            </form>
+            <ProfileForm
+              name={userName}
+              email={userEmail}
+              role={userRole}
+              phone={userPhone}
+              variant="compact"
+              footerHint={<span className="text-[13px] text-[var(--ink-muted)]">Manage password below</span>}
+            />
           </details>
 
           {/* Password section */}

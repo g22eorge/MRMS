@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
 import { createRepairRequest } from "@/lib/repairs/request";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { notifyRepairRequestReceived } from "@/lib/notifications";
 

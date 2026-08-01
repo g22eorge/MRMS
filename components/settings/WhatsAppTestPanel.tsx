@@ -70,7 +70,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
             type="tel"
             placeholder="+256 7XX XXX XXX"
             required
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
             Use the real phone number of the WhatsApp account you want to test delivery to.

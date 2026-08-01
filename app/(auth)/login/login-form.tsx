@@ -30,7 +30,7 @@ export function LoginForm() {
         return;
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = response.headers.get("x-login-redirect") ?? "/dashboard";
     } catch {
       toast.error("Sign in failed. Please try again.");
     } finally {

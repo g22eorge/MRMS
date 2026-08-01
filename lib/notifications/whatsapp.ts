@@ -1,6 +1,7 @@
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { getAtConfig, sendSms } from "@/lib/notifications/sms";
+import { normalizeUgPhone } from "@/lib/phone";
 
 async function sendRenderedWhatsApp(
   phone: string,
@@ -418,13 +419,7 @@ async function sendWhatsAppMessageInternal({
 }
 
 function normalizeWhatsAppRecipient(input: string): string {
-  const digits = input.replace(/\D+/g, "");
-
-  // Uganda convenience: allow 0xxxxxxxxx or +256xxxxxxxxx inputs.
-  if (digits.startsWith("256")) return digits;
-  if (digits.length === 10 && digits.startsWith("0")) return `256${digits.slice(1)}`;
-
-  return digits;
+  return normalizeUgPhone(input, { format: "whatsapp" }) ?? input.replace(/\D+/g, "");
 }
 
 export async function uploadWhatsAppMedia(
@@ -468,7 +463,7 @@ export async function sendWhatsAppDocument(
   filename: string,
   caption?: string,
   cfg?: WhatsAppConfig,
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
   const config = cfg ?? getConfig();
   if (!config) return { success: false, error: "WhatsApp not configured" };
 
@@ -493,8 +488,20 @@ export async function sendWhatsAppDocument(
       },
     );
     if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `Document send failed: ${res.status} ${text.slice(0, 200)}` };
+      const errorText = await res.text();
+      let metaCode: string | undefined;
+      try {
+        const parsed = JSON.parse(errorText);
+        const code = parsed?.error?.code;
+        if (typeof code === "number" || typeof code === "string") metaCode = String(code);
+      } catch {
+        // ignore
+      }
+      return {
+        success: false,
+        errorCode: metaCode,
+        error: `Document send failed: ${res.status} ${errorText.slice(0, 200)}`,
+      };
     }
     const data = await res.json();
     const messageId = data.messages?.[0]?.id;

@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
+import QRCode from "qrcode";
 
 import { formatEATDocDate } from "@/lib/date-eat";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
@@ -11,12 +12,17 @@ export type GenerateJobCardResult =
   | { ok: true; buffer: Buffer; filename: string; documentNumber: string; clientPhone: string }
   | { ok: false; error: string };
 
+export type GenerateJobCardOptions = {
+  logAudit?: boolean;
+};
+
 export async function generateJobCardBuffer(
   jobId: string,
   staffName: string,
   staffRole: string,
   staffUserId?: string,
   expectedOrgId?: string,
+  options: GenerateJobCardOptions = {},
 ): Promise<GenerateJobCardResult> {
   const job = await prisma.job.findUnique({
     where: expectedOrgId ? { id: jobId, orgId: expectedOrgId } : { id: jobId },
@@ -46,8 +52,12 @@ export async function generateJobCardBuffer(
   const JobCardDoc = JobCardTemplateComponent(templateKey);
   const logoUrl = await resolvePdfLogo();
   const documentNumber = `JC-${job.jobNumber}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const statusQrDataUrl = baseUrl
+    ? await QRCode.toDataURL(`${baseUrl}/status/${job.jobNumber}`, { width: 120, margin: 1 }).catch(() => undefined)
+    : undefined;
 
-  if (staffUserId) {
+  if (staffUserId && options.logAudit !== false) {
     await prisma.auditLog.create({
       data: {
         jobId: job.id, userId: staffUserId,
@@ -89,6 +99,7 @@ export async function generateJobCardBuffer(
     footerText: branding.footerText,
     signatureCompanyLabel: branding.signatureCompanyLabel,
     signatureClientLabel: branding.signatureClientLabel,
+    statusQrDataUrl,
   });
 
   const pdf = await renderToBuffer(docElement as never);

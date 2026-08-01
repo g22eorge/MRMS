@@ -1,4 +1,5 @@
 import { checkSmsQuota, incrementSmsUsage } from "@/lib/notifications/sms-quota";
+import { normalizeUgPhone } from "@/lib/phone";
 
 export interface AtSmsConfig {
   apiKey: string;
@@ -47,7 +48,8 @@ export async function sendSms(
   const config = cfg ?? getAtConfig();
   if (!config) return { success: false, error: "SMS not configured" };
 
-  const to = normalizePhone(phone);
+  const to = normalizeUgPhone(phone, { format: "e164" });
+  if (!to) return { success: false, error: "Invalid phone" };
   const params = new URLSearchParams({ username: config.username, to, message });
   if (config.senderId) params.set("from", config.senderId);
 
@@ -100,11 +102,4 @@ export async function smsHealthCheck(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
-}
-
-function normalizePhone(input: string): string {
-  const digits = input.replace(/\D+/g, "");
-  if (digits.startsWith("256")) return `+${digits}`;
-  if (digits.length === 10 && digits.startsWith("0")) return `+256${digits.slice(1)}`;
-  return `+${digits}`;
 }

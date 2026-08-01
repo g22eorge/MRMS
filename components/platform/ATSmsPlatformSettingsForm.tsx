@@ -75,7 +75,7 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
                   type={f.type ?? "text"}
                   autoComplete="off"
                   placeholder={isSet ? "Leave blank to keep existing value" : f.placeholder}
-                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
                   <form action={clearAction}>

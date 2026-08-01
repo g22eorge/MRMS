@@ -358,6 +358,43 @@ async function sendClientWhatsAppForStatusChange(input: {
   }
 }
 
+/**
+ * Send the client a WhatsApp confirmation when their payment is recorded.
+ * Enqueues through the outbox (so it's visible on the job Messages tab even if
+ * delivery fails) and links to the job/org. Best-effort — never throws.
+ */
+async function sendClientPaymentConfirmation(input: {
+  orgId: string;
+  jobId: string;
+  jobNumber: string;
+  amount: number;
+  currency: string;
+}) {
+  const client = await prisma.client
+    .findFirst({
+      where: { orgId: input.orgId, jobs: { some: { id: input.jobId } } },
+      select: { phone: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.phone) return;
+
+  const body = `Hi ${client.fullName}, we've received your payment of ${input.currency} ${input.amount.toLocaleString()} for job ${input.jobNumber}. Thank you! — Your Repair Team`;
+
+  const enqueueResult = await enqueueWhatsAppMessage({
+    orgId: input.orgId,
+    to: client.phone,
+    body,
+    type: OutboundMessageType.JOB_STATUS_UPDATE,
+    jobId: input.jobId,
+    provider: "meta",
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+  }
+}
+
 async function cancelReadyForPickupNudges(jobId: string, scope: "WHATSAPP" | "EMAIL" | "BOTH") {
   try {
     await prisma.outboundMessage.updateMany({
@@ -888,8 +925,8 @@ async function notifyAdmins({
 // Payment received
 // ---------------------------------------------------------------------------
 export async function notifyPaymentReceived({
-  orgId, jobNumber, amount, currency, actorName,
-}: { orgId: string; jobNumber: string; amount: number; currency: string; actorName: string }) {
+  orgId, jobId, jobNumber, amount, currency, actorName,
+}: { orgId: string; jobId?: string; jobNumber: string; amount: number; currency: string; actorName: string }) {
   await notifyAdmins({
     orgId,
     type: NotificationType.PAYMENT_RECEIVED,
@@ -897,6 +934,12 @@ export async function notifyPaymentReceived({
     message: `${currency} ${amount.toLocaleString()} recorded on job ${jobNumber} by ${actorName}.`,
     prefField: "notifyPaymentReceived",
   });
+
+  // Client-facing confirmation (best-effort). Only when a jobId is supplied —
+  // callers omit it for refunds so a refund never sends a "payment received".
+  if (jobId) {
+    await sendClientPaymentConfirmation({ orgId, jobId, jobNumber, amount, currency }).catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------------------

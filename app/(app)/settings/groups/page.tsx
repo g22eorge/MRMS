@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { DataTable } from "@/components/ui/DataTable";
 
 type SearchParams = { groupId?: string; new?: string };
 
@@ -206,7 +207,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Groups</p>
             <Link
               href={params.new === "1" ? `/settings/groups${params.groupId ? `?groupId=${params.groupId}` : ""}` : `/settings/groups?${new URLSearchParams({ ...(params.groupId ? { groupId: params.groupId } : {}), new: "1" }).toString()}`}
-              className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${params.new === "1" ? "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]" : "border-[var(--accent)]/40 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90"}`}
+              className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${params.new === "1" ? "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]" : "border-[var(--accent)]/40 bg-[var(--accent)] text-black hover:bg-[var(--accent)]/90"}`}
             >
               {params.new === "1" ? "✕ Cancel" : "+ New"}
             </Link>
@@ -214,8 +215,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
           {params.new === "1" ? (
             <div className="mt-3 border-t border-[var(--line)] pt-3">
               <form action={createGroupAction} className="space-y-2">
-                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
-                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
+                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] text-white">Create Group</button>
               </form>
             </div>
@@ -246,8 +247,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
                   <form action={updateGroupAction} className="md:col-span-2 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={selected.id} />
-                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none" required />
-                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none" placeholder="Description" />
+                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" required />
+                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" placeholder="Description" />
                     <div className="md:col-span-2 flex items-center justify-between gap-2">
                       <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Save</button>
                     </div>
@@ -265,7 +266,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Members</p>
                 <form action={addMemberAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
-                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none">
+                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none">
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                     ))}
@@ -274,36 +275,36 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 </form>
 
                 <div className="mt-3 overflow-hidden rounded-lg border border-[var(--line)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--panel-strong)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-                      <tr>
-                        <th className="px-3 py-2">User</th>
-                        <th className="px-3 py-2">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedMembers.map((m) => (
-                        <tr key={m.id} className="border-t border-[var(--line)]">
-                          <td className="px-3 py-2">
+                  <DataTable
+                    frameless
+                    dense
+                    rows={selectedMembers}
+                    getRowKey={(m) => m.id}
+                    empty="No members yet."
+                    columns={[
+                      {
+                        key: "user",
+                        header: "User",
+                        cell: (m) => (
+                          <>
                             <p className="font-medium">{m.user.name}</p>
-                            <p className="text-xs text-[var(--ink-muted)]">{m.user.email}</p>
-                          </td>
-                          <td className="px-3 py-2">
-                            <form action={removeMemberAction}>
-                              <input type="hidden" name="id" value={selected.id} />
-                              <input type="hidden" name="memberId" value={m.id} />
-                              <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs font-semibold hover:border-[var(--accent)]/40">Remove</button>
-                            </form>
-                          </td>
-                        </tr>
-                      ))}
-                      {selectedMembers.length === 0 ? (
-                        <tr className="border-t border-[var(--line)]">
-                          <td colSpan={2} className="px-3 py-6 text-sm text-[var(--ink-muted)]">No members yet.</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
+                            <p className="text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
+                          </>
+                        ),
+                      },
+                      {
+                        key: "action",
+                        header: "Action",
+                        cell: (m) => (
+                          <form action={removeMemberAction}>
+                            <input type="hidden" name="id" value={selected.id} />
+                            <input type="hidden" name="memberId" value={m.id} />
+                            <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 font-semibold hover:border-[var(--accent)]/40">Remove</button>
+                          </form>
+                        ),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
 

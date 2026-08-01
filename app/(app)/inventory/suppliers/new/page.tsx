@@ -40,7 +40,7 @@ export default function NewSupplierPage() {
           <textarea
             name="address"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
           />
         </div>
         <div>
@@ -48,7 +48,7 @@ export default function NewSupplierPage() {
           <textarea
             name="notes"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
           />
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
@@ -75,7 +75,7 @@ function Field({ name, label, required, type = "text" }: { name: string; label: 
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
       />
     </div>
   );

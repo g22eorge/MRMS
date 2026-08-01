@@ -5,6 +5,8 @@ import { Prisma } from "@prisma/client";
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
+import { canViewJobDocumentTimeline } from "@/lib/documents/routes";
+import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -159,6 +161,7 @@ export default async function JobDetailPage({
     can.assignJobs(user)
       ? await prisma.user.findMany({
           where: {
+            orgId,
             isActive: true,
             role: { in: [Role.TECHNICIAN_INTERNAL, Role.TECHNICIAN_EXTERNAL] },
           },
@@ -267,6 +270,15 @@ export default async function JobDetailPage({
     }).catch(() => []);
   }
 
+  const documentTimeline = canViewJobDocumentTimeline(user)
+    ? await loadJobDocumentTimeline({
+        orgId,
+        jobId: job.id,
+        jobNumber: job.jobNumber,
+        receivedAt: job.receivedAt,
+      }).catch(() => [])
+    : [];
+
   return (
     <JobDetailTabs
       role={user.role}
@@ -279,6 +291,7 @@ export default async function JobDetailPage({
       returnTo={safeReturnTo}
       returnLabel={returnLabel}
       initialTab={tab}
+      documentTimeline={documentTimeline}
     />
   );
 }

@@ -2,32 +2,35 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { reverseGoodsReceivedAction } from "@/app/(app)/inventory/purchase-orders/actions";
 
 export const dynamic = "force-dynamic";
 
-const GRN_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  POSTED: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const GRN_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "success",
+  CANCELLED: "danger",
 };
 
-const PO_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  ORDERED: "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  PARTIAL: "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  RECEIVED: "border border-green-400/30 bg-green-500/10 text-green-700 dark:text-green-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const PO_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
+  ORDERED: "info",
+  PARTIAL: "warning",
+  RECEIVED: "success",
+  CANCELLED: "danger",
 };
 
-const BILL_STATUS_COLORS: Record<string, string> = {
-  POSTED: "border border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  PART_PAID: "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  PAID: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  CANCELLED: "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
+const BILL_STATUS_TONES: Record<string, BadgeTone> = {
+  POSTED: "sky",
+  PART_PAID: "warning",
+  PAID: "success",
+  CANCELLED: "danger",
 };
 
 export default async function GoodsReceivedDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -93,6 +96,10 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
   if (grn.po) billParams.set("poId", grn.po.id);
   const newBillHref = `/inventory/supplier-bills/new?${billParams.toString()}`;
 
+  // M5: a POSTED, unbilled GRN can be reversed (voided) to undo the stock receipt.
+  const hasActiveBill = grn.supplierBills.some((b) => b.status !== "CANCELLED");
+  const canReverse = grn.status === "POSTED" && !hasActiveBill;
+
   return (
     <div className="space-y-4">
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
@@ -101,9 +108,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory · GRN</p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <h1 className="font-mono text-lg font-black leading-tight text-[var(--ink)]">{grn.grnNumber}</h1>
-              <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${GRN_STATUS_COLORS[grn.status] ?? GRN_STATUS_COLORS.POSTED}`}>
-                {grn.status}
-              </span>
+              <StatusBadge tone={toneFor(GRN_STATUS_TONES, grn.status, "success")}>{grn.status}</StatusBadge>
             </div>
             <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
               Received from <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="font-semibold text-[var(--gold)] hover:underline">{grn.supplier.name}</Link> into {locationLabel}
@@ -113,6 +118,19 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             <Link href="/inventory/goods-received" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">All GRNs</Link>
             <Link href={`/api/procurement/documents/goods-received/${grn.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Print / PDF</Link>
             <Link href={newBillHref} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">Create Bill</Link>
+            {canReverse && (
+              <form
+                action={async (fd: FormData) => {
+                  "use server";
+                  await reverseGoodsReceivedAction(fd);
+                }}
+              >
+                <input type="hidden" name="grnId" value={grn.id} />
+                <button type="submit" className="rounded-lg border border-red-400/40 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">
+                  Reverse GRN
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
@@ -140,7 +158,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                 {grn.po ? (
                   <span className="flex flex-wrap items-center gap-2">
                     <Link href={`/inventory/purchase-orders/${grn.po.id}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{poLabel}</Link>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${PO_STATUS_COLORS[grn.po.status] ?? PO_STATUS_COLORS.DRAFT}`}>{grn.po.status}</span>
+                    <StatusBadge tone={toneFor(PO_STATUS_TONES, grn.po.status)}>{grn.po.status}</StatusBadge>
                   </span>
                 ) : "-"}
               </InfoRow>
@@ -191,7 +209,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                           <p className="font-mono text-xs font-bold text-[var(--ink)]">{bill.billNumber}</p>
                           <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}{bill.supplierRef ? ` · ref ${bill.supplierRef}` : ""}</p>
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BILL_STATUS_COLORS[bill.status] ?? BILL_STATUS_COLORS.POSTED}`}>{bill.status}</span>
+                        <StatusBadge tone={toneFor(BILL_STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
                         <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</span>
@@ -220,50 +238,72 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             </div>
             <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]">{formatMoney(total)}</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                  <th className="px-4 py-2.5 text-left">Description</th>
-                  <th className="px-4 py-2.5 text-left">Inventory Item</th>
-                  <th className="px-4 py-2.5 text-right">Qty</th>
-                  <th className="px-4 py-2.5 text-right">Unit Cost</th>
-                  <th className="px-4 py-2.5 text-right">Line Total</th>
-                  <th className="px-4 py-2.5 text-right">On Hand</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {grn.items.map((item) => (
-                  <tr key={item.id} className="align-top hover:bg-[var(--gold)]/5">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-[var(--ink)]">{item.description}</p>
-                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      {item.part ? (
-                        <Link href={`/inventory/${item.part.id}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{item.part.sku} · {item.part.name}</Link>
-                      ) : (
-                        <span className="text-[var(--ink-muted)]">Not linked</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">{item.quantity.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-[var(--ink-muted)]">{formatMoney(item.unitCost)}</td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--ink)]">{formatMoney(item.quantity * item.unitCost)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-[var(--ink-muted)]">{item.part ? item.part.qtyOnHand.toLocaleString() : "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-[var(--line)] bg-[var(--panel-strong)]">
-                  <td colSpan={2} className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
-                  <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{totalQty.toLocaleString()}</td>
-                  <td className="px-4 py-3" />
-                  <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(total)}</td>
-                  <td className="px-4 py-3" />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <DataTable
+            frameless
+            rows={grn.items}
+            getRowKey={(item) => item.id}
+            rowClassName={() => "align-top"}
+            empty="No items on this GRN."
+            columns={[
+              {
+                key: "description",
+                header: "Description",
+                cell: (item) => (
+                  <>
+                    <p className="font-semibold text-[var(--ink)]">{item.description}</p>
+                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
+                  </>
+                ),
+              },
+              {
+                key: "part",
+                header: "Inventory Item",
+                cell: (item) =>
+                  item.part ? (
+                    <Link href={`/inventory/${item.part.id}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{item.part.sku} · {item.part.name}</Link>
+                  ) : (
+                    <span className="text-[var(--ink-muted)]">Not linked</span>
+                  ),
+              },
+              {
+                key: "qty",
+                header: "Qty",
+                align: "right",
+                className: "font-semibold tabular-nums text-[var(--ink)]",
+                cell: (item) => item.quantity.toLocaleString(),
+              },
+              {
+                key: "unitCost",
+                header: "Unit Cost",
+                align: "right",
+                className: "tabular-nums text-[var(--ink-muted)]",
+                cell: (item) => formatMoney(item.unitCost),
+              },
+              {
+                key: "lineTotal",
+                header: "Line Total",
+                align: "right",
+                className: "font-semibold tabular-nums text-[var(--ink)]",
+                cell: (item) => formatMoney(item.quantity * item.unitCost),
+              },
+              {
+                key: "onHand",
+                header: "On Hand",
+                align: "right",
+                className: "tabular-nums text-[var(--ink-muted)]",
+                cell: (item) => (item.part ? item.part.qtyOnHand.toLocaleString() : "-"),
+              },
+            ]}
+            tableFooter={
+              <tr>
+                <td colSpan={2} className="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
+                <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{totalQty.toLocaleString()}</td>
+                <td className="px-4 py-3" />
+                <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(total)}</td>
+                <td className="px-4 py-3" />
+              </tr>
+            }
+          />
         </section>
       </div>
     </div>

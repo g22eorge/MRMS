@@ -6,21 +6,27 @@ import { revalidatePath } from "next/cache";
 import type { AccountType } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
-import { orgDb, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { orgDb } from "@/lib/db";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { can } from "@/lib/permissions";
 import { DEFAULT_COA } from "@/lib/default-coa";
+import { DataTable } from "@/components/ui/DataTable";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
-const TYPE_COLOR: Record<AccountType, string> = {
-  ASSET:     "bg-blue-500/10 text-blue-600",
-  LIABILITY: "bg-red-500/10 text-red-600",
-  EQUITY:    "bg-purple-500/10 text-purple-600",
-  REVENUE:   "bg-green-500/10 text-green-600",
-  EXPENSE:   "bg-amber-500/10 text-amber-700",
+const TYPE_TONES: Record<AccountType, BadgeTone> = {
+  ASSET:     "info",
+  LIABILITY: "danger",
+  EQUITY:    "purple",
+  REVENUE:   "success",
+  EXPENSE:   "warning",
 };
 
 const TYPE_HEADER: Record<AccountType, string> = {
@@ -122,13 +128,14 @@ export default async function ChartOfAccountsPage() {
     }),
     // All posted lines for running balance
     prisma.journalLine.findMany({
-      where: { journalEntry: { status: "POSTED" } },
+      where: { journalEntry: { orgId: user.orgId, status: "POSTED" } },
       select: { accountId: true, debit: true, credit: true },
     }),
     // This month's lines for activity
     prisma.journalLine.findMany({
       where: {
         journalEntry: {
+          orgId: user.orgId,
           status: "POSTED",
           date: { gte: thisMonthStart, lte: thisMonthEnd },
         },
@@ -172,45 +179,55 @@ export default async function ChartOfAccountsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Chart of Accounts</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">Double-entry accounting structure — click any account to view its ledger</p>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/finance/reports/pl"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-            >
-              P&amp;L →
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Finance"
+        title="Chart of Accounts"
+        description="Double-entry accounting structure — click any account to view its ledger"
+        actions={
+          <Link
+            href="/finance/reports/pl"
+            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+          >
+            P&amp;L →
+          </Link>
+        }
+      />
+
+      <StatCards columns={4} cards={(
+          [
+            { type: "ASSET" as AccountType, label: "Total Assets", colorVal: "text-blue-600" },
+            { type: "LIABILITY" as AccountType, label: "Total Liabilities", colorVal: "text-red-600" },
+            { type: "EQUITY" as AccountType, label: "Total Equity", colorVal: "text-purple-600" },
+            { type: "REVENUE" as AccountType, label: "Total Revenue", colorVal: "text-green-600" },
+            { type: "EXPENSE" as AccountType, label: "Total Expenses", colorVal: "text-amber-700" },
+          ] as const
+        ).map(({ type, label, colorVal }) => {
+          const bal = byType.find((b) => b.type === type)!.totalBalance;
+          return {
+            label,
+            value: bal !== 0 ? formatMoneyCompact(Math.abs(bal), currency) : "—",
+            valueClass: colorVal,
+            sub: `${totals[type]} account${totals[type] !== 1 ? "s" : ""}`,
+          };
+        })} />
 
       {/* ── DEFAULT ACCOUNTS BANNER ─────────────────────────────────────── */}
       {accounts.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-[var(--accent)]/40 bg-[var(--accent)]/5 px-6 py-8 text-center">
-          <div className="text-xl">📒</div>
-          <div>
-            <p className="text-sm font-semibold text-[var(--ink)]">No accounts yet</p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">
-              Load the standard chart of accounts to get started instantly —
-              40 accounts covering assets, liabilities, equity, revenue, and expenses.
-              You can edit or delete them afterwards.
-            </p>
-          </div>
-          <form action={seedDefaults}>
-            <button
-              type="submit"
-              className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold"
-            >
-              Load standard accounts
-            </button>
-          </form>
-        </div>
+        <PageEmptyState
+          variant="dashed"
+          title="No accounts yet"
+          description="Load the standard chart of accounts to get started instantly — 40 accounts covering assets, liabilities, equity, revenue, and expenses. You can edit or delete them afterwards."
+          action={
+            <form action={seedDefaults}>
+              <button
+                type="submit"
+                className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold"
+              >
+                Load standard accounts
+              </button>
+            </form>
+          }
+        />
       ) : (
         <form action={seedDefaults} className="flex justify-end">
           <button
@@ -222,32 +239,6 @@ export default async function ChartOfAccountsPage() {
           </button>
         </form>
       )}
-
-      {/* ── ACCOUNT TYPE KPI STRIP ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {(
-          [
-            { type: "ASSET" as AccountType, label: "Total Assets", colorVal: "text-blue-600", borderClass: "border-blue-500/20" },
-            { type: "LIABILITY" as AccountType, label: "Total Liabilities", colorVal: "text-red-600", borderClass: "border-red-500/20" },
-            { type: "EQUITY" as AccountType, label: "Total Equity", colorVal: "text-purple-600", borderClass: "border-purple-500/20" },
-            { type: "REVENUE" as AccountType, label: "Total Revenue", colorVal: "text-green-600", borderClass: "border-green-500/20" },
-            { type: "EXPENSE" as AccountType, label: "Total Expenses", colorVal: "text-amber-700", borderClass: "border-amber-500/20" },
-          ] as const
-        ).map(({ type, label, colorVal, borderClass }) => {
-          const bal = byType.find((b) => b.type === type)!.totalBalance;
-          return (
-            <div key={type} className={`panel-shadow rounded-xl border bg-[var(--panel)] px-4 py-3 ${borderClass}`}>
-              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
-              <p className={`mt-1 text-xl font-bold tabular-nums ${colorVal}`}>
-                {bal !== 0 ? formatMoneyCompact(Math.abs(bal), currency) : "—"}
-              </p>
-              <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-                {totals[type]} account{totals[type] !== 1 ? "s" : ""}
-              </p>
-            </div>
-          );
-        })}
-      </div>
 
       {/* ── CREATE FORM ──────────────────────────────────────────────────── */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -264,7 +255,7 @@ export default async function ChartOfAccountsPage() {
               name="code"
               required
               placeholder="e.g. 1000"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -273,7 +264,7 @@ export default async function ChartOfAccountsPage() {
               name="name"
               required
               placeholder="Cash & Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -281,7 +272,7 @@ export default async function ChartOfAccountsPage() {
             <select
               name="type"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             >
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t} value={t}>{t}</option>
@@ -292,7 +283,7 @@ export default async function ChartOfAccountsPage() {
             <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Parent account</label>
             <select
               name="parentId"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             >
               <option value="">— None —</option>
               {accounts.map((a) => (
@@ -305,7 +296,7 @@ export default async function ChartOfAccountsPage() {
             <input
               name="description"
               placeholder="Optional"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div className="flex justify-end sm:col-span-3">
@@ -324,9 +315,7 @@ export default async function ChartOfAccountsPage() {
         <div key={type}>
           <div className={`mb-2 flex items-center justify-between rounded-lg px-3 py-2 ${TYPE_HEADER[type]}`}>
             <div className="flex items-center gap-2">
-              <span className={`rounded-md px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide ${TYPE_COLOR[type]}`}>
-                {type}
-              </span>
+              <StatusBadge tone={toneFor(TYPE_TONES, type)}>{type}</StatusBadge>
               <span className="text-xs text-[var(--ink-muted)]">
                 {items.length} account{items.length !== 1 ? "s" : ""}
               </span>
@@ -343,130 +332,147 @@ export default async function ChartOfAccountsPage() {
               No {type.toLowerCase()} accounts yet.
             </p>
           ) : (
-            <div className="doc-list overflow-x-auto rounded-xl border border-[var(--line)]">
-              <table className="w-full text-sm">
-                <thead className="border-b border-[var(--line)] bg-[var(--panel)]">
-                  <tr>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Code</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Name</th>
-                    <th className="hidden px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)] md:table-cell">Parent</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-[var(--ink-muted)]">Balance</th>
-                    <th className="hidden px-4 py-2.5 text-right text-xs font-semibold text-[var(--ink-muted)] lg:table-cell">This Month</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--ink-muted)]">Status</th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)] bg-[var(--bg)]">
-                  {items.map((acc) => {
+            <DataTable
+              rows={items}
+              getRowKey={(acc) => acc.id}
+              columns={[
+                {
+                  key: "code",
+                  header: "Code",
+                  cell: (acc) => (
+                    <span className="mono font-semibold text-[var(--accent)]">
+                      {acc.code}
+                    </span>
+                  ),
+                },
+                {
+                  key: "name",
+                  header: "Name",
+                  cell: (acc) => {
                     const balance = balanceMap.get(acc.id) ?? 0;
                     const monthly = monthlyMap.get(acc.id) ?? 0;
                     const hasActivity = balance !== 0 || monthly !== 0;
                     return (
-                      <tr key={acc.id} className="hover:bg-[var(--panel)]">
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-xs font-semibold text-[var(--accent)]">
-                            {acc.code}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {hasActivity ? (
-                            <Link
-                              href={`/finance/accounts/${acc.id}`}
-                              className="font-medium text-[var(--ink)] hover:text-[var(--accent)] hover:underline"
-                            >
-                              {acc.name}
-                            </Link>
-                          ) : (
-                            <span className="font-medium text-[var(--ink)]">{acc.name}</span>
-                          )}
-                          {acc.description && (
-                            <p className="text-[13px] text-[var(--ink-muted)]">{acc.description}</p>
-                          )}
-                        </td>
-                        <td className="hidden px-4 py-3 text-xs text-[var(--ink-muted)] md:table-cell">
-                          {acc.parent ? `${acc.parent.code} ${acc.parent.name}` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {balance !== 0 ? (
-                            <Link
-                              href={`/finance/accounts/${acc.id}`}
-                              className={`font-semibold tabular-nums hover:underline ${balance >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}
-                            >
-                              {balance < 0 ? "−" : ""}
-                              {formatMoneyCompact(Math.abs(balance), currency)}
-                            </Link>
-                          ) : (
-                            <span className="text-[var(--ink-muted)]">—</span>
-                          )}
-                        </td>
-                        <td className="hidden px-4 py-3 text-right lg:table-cell">
-                          {monthly !== 0 ? (
-                            <span
-                              className={`text-[13px] font-semibold tabular-nums ${monthly >= 0 ? "text-emerald-600" : "text-red-500"}`}
-                            >
-                              {monthly >= 0 ? "+" : "−"}
-                              {formatMoneyCompact(Math.abs(monthly), currency)}
-                            </span>
-                          ) : (
-                            <span className="text-[13px] text-[var(--ink-muted)]">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {acc.isSystem ? (
-                            <span className="text-xs text-[var(--ink-muted)]">System</span>
-                          ) : acc.isActive ? (
-                            <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[13px] font-medium text-green-700">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-medium text-[var(--ink-muted)]">
-                              Inactive
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {hasActivity && (
-                              <Link
-                                href={`/finance/accounts/${acc.id}`}
-                                className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-                              >
-                                Ledger →
-                              </Link>
-                            )}
-                            {!acc.isSystem && (
-                              <RowActionsMenu label="Account actions">
-                                <MenuSection label="Actions" />
-                                <form action={toggleActive}>
-                                  <input type="hidden" name="id" value={acc.id} />
-                                  <button
-                                    type="submit"
-                                    className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
-                                  >
-                                    {acc.isActive ? "Deactivate" : "Activate"}
-                                  </button>
-                                </form>
-                                <MenuDestructiveRow>
-                                  <form action={deleteAccount}>
-                                    <input type="hidden" name="id" value={acc.id} />
-                                    <ConfirmSubmitButton
-                                      message="Delete this account? Cannot be undone if it has no transactions."
-                                      className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                                    >
-                                      Delete
-                                    </ConfirmSubmitButton>
-                                  </form>
-                                </MenuDestructiveRow>
-                              </RowActionsMenu>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                      <>
+                        {hasActivity ? (
+                          <Link
+                            href={`/finance/accounts/${acc.id}`}
+                            className="font-medium text-[var(--ink)] hover:text-[var(--accent)] hover:underline"
+                          >
+                            {acc.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-[var(--ink)]">{acc.name}</span>
+                        )}
+                        {acc.description && (
+                          <p className="text-[var(--ink-muted)]">{acc.description}</p>
+                        )}
+                      </>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  },
+                },
+                {
+                  key: "parent",
+                  header: "Parent",
+                  headerClassName: "hidden md:table-cell",
+                  className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+                  cell: (acc) => (acc.parent ? `${acc.parent.code} ${acc.parent.name}` : "—"),
+                },
+                {
+                  key: "balance",
+                  header: "Balance",
+                  align: "right",
+                  cell: (acc) => {
+                    const balance = balanceMap.get(acc.id) ?? 0;
+                    return balance !== 0 ? (
+                      <Link
+                        href={`/finance/accounts/${acc.id}`}
+                        className={`font-semibold tabular-nums hover:underline ${balance >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}
+                      >
+                        {balance < 0 ? "−" : ""}
+                        {formatMoneyCompact(Math.abs(balance), currency)}
+                      </Link>
+                    ) : (
+                      <span className="text-[var(--ink-muted)]">—</span>
+                    );
+                  },
+                },
+                {
+                  key: "month",
+                  header: "This Month",
+                  align: "right",
+                  headerClassName: "hidden lg:table-cell",
+                  className: "hidden lg:table-cell",
+                  cell: (acc) => {
+                    const monthly = monthlyMap.get(acc.id) ?? 0;
+                    return monthly !== 0 ? (
+                      <span
+                        className={`font-semibold tabular-nums ${monthly >= 0 ?"text-emerald-600" : "text-red-500"}`}
+                      >
+                        {monthly >= 0 ? "+" : "−"}
+                        {formatMoneyCompact(Math.abs(monthly), currency)}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--ink-muted)]">—</span>
+                    );
+                  },
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  cell: (acc) =>
+                    acc.isSystem ? (
+                      <span className="text-[12px] text-[var(--ink-muted)]">System</span>
+                    ) : (
+                      <StatusBadge tone={acc.isActive ? "success" : "neutral"}>
+                        {acc.isActive ? "Active" : "Inactive"}
+                      </StatusBadge>
+                    ),
+                },
+              ]}
+              actions={(acc) => {
+                const balance = balanceMap.get(acc.id) ?? 0;
+                const monthly = monthlyMap.get(acc.id) ?? 0;
+                const hasActivity = balance !== 0 || monthly !== 0;
+                return (
+                  <>
+                    {hasActivity && (
+                      <Link
+                        href={`/finance/accounts/${acc.id}`}
+                        className="rounded-lg border border-[var(--line)] px-2 py-1 font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+                      >
+                        Ledger →
+                      </Link>
+                    )}
+                    {!acc.isSystem && (
+                      <RowActionsMenu label="Account actions">
+                        <MenuSection label="Actions" />
+                        <form action={toggleActive}>
+                          <input type="hidden" name="id" value={acc.id} />
+                          <button
+                            type="submit"
+                            className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
+                          >
+                            {acc.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                        </form>
+                        <MenuDestructiveRow>
+                          <form action={deleteAccount}>
+                            <input type="hidden" name="id" value={acc.id} />
+                            <ConfirmSubmitButton
+                              message="Delete this account? Cannot be undone if it has no transactions."
+                              className="w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                            >
+                              Delete
+                            </ConfirmSubmitButton>
+                          </form>
+                        </MenuDestructiveRow>
+                      </RowActionsMenu>
+                    )}
+                  </>
+                );
+              }}
+            />
           )}
         </div>
       ))}

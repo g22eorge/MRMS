@@ -8,16 +8,27 @@ import type { ComplaintStatus } from "@prisma/client";
 import {
   COMPLAINT_CATEGORY_LABELS,
   COMPLAINT_STATUS_LABELS,
-  COMPLAINT_STATUS_STYLES,
   COMPLAINT_STATUSES,
   SLA_HOURS,
 } from "@/lib/complaints";
 import { RowActionsMenu, MenuSection } from "@/components/shared/RowActionsMenu";
+import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
 const STATUSES = COMPLAINT_STATUSES as unknown as ComplaintStatus[];
 const ALLOWED_ROLES = ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] as const;
+
+const STATUS_TONES: Record<string, BadgeTone> = {
+  RECEIVED: "warning",
+  ACKNOWLEDGED: "sky",
+  INVESTIGATING: "violet",
+  RESOLVED: "success",
+  CLOSED: "neutral",
+};
 
 export default async function ComplaintsPage({
   searchParams,
@@ -31,6 +42,7 @@ export default async function ComplaintsPage({
   }
 
   const params = await searchParams;
+  const page = parsePage(params.page);
   const filterStatus = STATUSES.includes(params.status as ComplaintStatus)
     ? (params.status as ComplaintStatus)
     : null;
@@ -64,21 +76,24 @@ export default async function ComplaintsPage({
   }
 
   const qSearch = params.q?.trim() ?? "";
-  const [complaints, counts] = await Promise.all([
+  const complaintsWhere = {
+    orgId,
+    ...(filterStatus ? { status: filterStatus } : {}),
+    ...(qSearch ? {
+      OR: [
+        { clientName: { contains: qSearch } },
+        { description: { contains: qSearch } },
+        { complaintNumber: { contains: qSearch } },
+      ],
+    } : {}),
+  };
+  const [complaintsTotal, complaints, counts] = await Promise.all([
+    prisma.complaint.count({ where: complaintsWhere }).catch(() => 0),
     prisma.complaint.findMany({
-      where: {
-        orgId,
-        ...(filterStatus ? { status: filterStatus } : {}),
-        ...(qSearch ? {
-          OR: [
-            { clientName: { contains: qSearch } },
-            { description: { contains: qSearch } },
-            { complaintNumber: { contains: qSearch } },
-          ],
-        } : {}),
-      },
+      where: complaintsWhere,
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         complaintNumber: true,
@@ -104,6 +119,9 @@ export default async function ComplaintsPage({
     }).catch(() => [] as Array<{ status: ComplaintStatus; _count: { status: number } }>),
   ]);
 
+  const pageView = paginationView(page, complaintsTotal);
+  const complaintsHref = pageHrefBuilder("/complaints", { status: filterStatus ?? "", q: qSearch });
+
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count?.status ?? 0]));
   const now = new Date();
 
@@ -124,195 +142,188 @@ export default async function ComplaintsPage({
     .filter((c) => c.status !== "CLOSED" && c.status !== "RESOLVED")
     .reduce((sum, c) => sum + (c._count?.status ?? 0), 0);
 
+  const updateMenu = (c: (typeof complaints)[0]) => (
+    <RowActionsMenu label="Update complaint">
+      <MenuSection label="Update Status" />
+      <form action={updateStatusAction} className="space-y-2 p-3">
+        <input type="hidden" name="id" value={c.id} />
+        <select name="status" defaultValue={c.status} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none">
+          {STATUSES.map((s) => <option key={s} value={s}>{COMPLAINT_STATUS_LABELS[s]}</option>)}
+        </select>
+        <textarea name="resolution" defaultValue={c.resolution ?? ""} placeholder="Resolution (shown to client)" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
+        <textarea name="internalNotes" defaultValue={c.internalNotes ?? ""} placeholder="Internal notes" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
+        <button type="submit" className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</button>
+      </form>
+    </RowActionsMenu>
+  );
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Support</p>
-            <div className="flex items-center gap-2">
-              <p className="text-[13px] font-bold text-[var(--ink)]">Complaints</p>
-              {totalOpen > 0 && (
-                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
-                  {totalOpen} open
-                </span>
-              )}
-            </div>
-          </div>
-          <a
-            href="/feedback"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs"
-          >
-            Client Portal ↗
-          </a>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          { label: "Total", value: complaints.length + (complaints.length < 100 ? "" : "+"), sub: "loaded" },
-          { label: "Open", value: totalOpen, sub: "active cases", tone: totalOpen > 0 ? "text-amber-600" : "text-[var(--ink)]" },
-          { label: "Resolved", value: (byStatus["RESOLVED"] ?? 0) + (byStatus["CLOSED"] ?? 0), sub: "resolved + closed", tone: "text-emerald-600" },
-          { label: "Acknowledged", value: byStatus["ACKNOWLEDGED"] ?? 0, sub: "in progress" },
-        ].map(({ label, value, sub, tone = "text-[var(--ink)]" }) => (
-          <div key={label} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
-            <p className={`mt-1 text-lg font-bold tabular-nums ${tone}`}>{value}</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Status filter chips + search */}
-      <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        {[
-          { label: "All", key: "" },
-          ...STATUSES.map((s) => ({ label: COMPLAINT_STATUS_LABELS[s], key: s })),
-        ].map(({ label, key }) => {
-          const active = (filterStatus ?? "") === key;
-          return (
-            <Link
-              key={key || "all"}
-              href={key ? `/complaints?status=${key}` : "/complaints"}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
-                active
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                  : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
-              }`}
+    <ListPageLayout
+      header={{
+        eyebrow: "Support",
+        title: "Complaints",
+        actions: (
+          <>
+            {totalOpen > 0 ? <StatusBadge tone="warning">{totalOpen} open</StatusBadge> : null}
+            <a
+              href="/feedback"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs"
             >
-              {label}
-              {key ? ` · ${byStatus[key] ?? 0}` : ""}
-            </Link>
+              Client Portal ↗
+            </a>
+          </>
+        ),
+        kpis: [
+          { label: "Total", value: complaintsTotal, sub: "all matching" },
+          { label: "Open", value: totalOpen, sub: "active cases", valueClass: totalOpen > 0 ? "text-amber-600" : undefined },
+          { label: "Resolved", value: (byStatus["RESOLVED"] ?? 0) + (byStatus["CLOSED"] ?? 0), sub: "resolved + closed", valueClass: "text-emerald-600" },
+          { label: "Acknowledged", value: byStatus["ACKNOWLEDGED"] ?? 0, sub: "in progress" },
+        ],
+      }}
+      filters={
+        <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          {[
+            { label: "All", key: "" },
+            ...STATUSES.map((s) => ({ label: COMPLAINT_STATUS_LABELS[s], key: s })),
+          ].map(({ label, key }) => {
+            const active = (filterStatus ?? "") === key;
+            return (
+              <Link
+                key={key || "all"}
+                href={key ? `/complaints?status=${key}` : "/complaints"}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
+                  active
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
+                }`}
+              >
+                {label}
+                {key ? ` · ${byStatus[key] ?? 0}` : ""}
+              </Link>
+            );
+          })}
+          <form method="GET" className="ml-auto flex gap-1.5">
+            {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
+            <input name="q" defaultValue={params.q ?? ""} placeholder="Search client, description…"
+              className="h-7 min-w-[160px] rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+            <button type="submit" className="h-7 rounded-full border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+          </form>
+        </div>
+      }
+    >
+      <DataTable
+        rows={complaints}
+        getRowKey={(c) => c.id}
+        empty="No complaints yet."
+        className="panel-shadow"
+        renderMobileCard={(c) => {
+          const sla = slaStatus(c);
+          return (
+            <div className="px-4 py-3">
+              <div className="mb-1.5 flex items-start justify-between gap-2">
+                <div>
+                  <p className="mono text-[12px] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
+                  <p className="text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
+                </div>
+                <StatusBadge tone={toneFor(STATUS_TONES, c.status)} className="shrink-0">
+                  {COMPLAINT_STATUS_LABELS[c.status]}
+                </StatusBadge>
+              </div>
+              <p className="mb-1 font-semibold text-[var(--ink)]">{c.clientName}
+                <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{c.clientPhone}</span>
+              </p>
+              <p className="mb-1.5 line-clamp-2 text-[12px] text-[var(--ink-muted)]">{c.description}</p>
+              <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
+                <span>{COMPLAINT_CATEGORY_LABELS[c.category]}</span>
+                {(sla === "overdue-ack" || sla === "overdue-res") && (
+                  <span className={`font-semibold ${sla === "overdue-ack" ? "text-red-600" : "text-amber-600"}`}>
+                    {sla === "overdue-ack" ? "Ack overdue" : "Resolution overdue"}
+                  </span>
+                )}
+                {c.job && (
+                  <Link href={`/jobs/${c.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
+                )}
+              </div>
+              <div className="mt-2">{updateMenu(c)}</div>
+            </div>
           );
-        })}
-        <form method="GET" className="ml-auto flex gap-1.5">
-          {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Search client, description…"
-            className="h-7 min-w-[160px] rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-          <button type="submit" className="h-7 rounded-full border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
-        </form>
-      </div>
-
-      {/* Table */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        {complaints.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-[var(--ink-muted)]">
-            No complaints yet.
-          </div>
-        ) : (<>
-          {/* ── Mobile complaint cards ── */}
-          <div className="divide-y divide-[var(--line)] lg:hidden">
-            {complaints.map((c) => {
+        }}
+        columns={[
+          {
+            key: "ref",
+            header: "Ref",
+            cell: (c) => (
+              <>
+                <p className="mono font-bold text-[var(--ink)]">{c.complaintNumber}</p>
+                <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
+              </>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status / SLA",
+            cell: (c) => {
               const sla = slaStatus(c);
               return (
-                <div key={`m-${c.id}`} className="px-4 py-3">
-                  <div className="mb-1.5 flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-mono text-[12px] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
-                      <p className="text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <span className={`shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${COMPLAINT_STATUS_STYLES[c.status]}`}>
-                      {COMPLAINT_STATUS_LABELS[c.status]}
-                    </span>
-                  </div>
-                  <p className="mb-1 text-[13px] font-semibold text-[var(--ink)]">{c.clientName}
-                    <span className="ml-1.5 text-[13px] font-normal text-[var(--ink-muted)]">{c.clientPhone}</span>
-                  </p>
-                  <p className="mb-1.5 line-clamp-2 text-[12px] text-[var(--ink-muted)]">{c.description}</p>
-                  <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
-                    <span>{COMPLAINT_CATEGORY_LABELS[c.category]}</span>
-                    {(sla === "overdue-ack" || sla === "overdue-res") && (
-                      <span className={`font-semibold ${sla === "overdue-ack" ? "text-red-600" : "text-amber-600"}`}>
-                        {sla === "overdue-ack" ? "Ack overdue" : "Resolution overdue"}
-                      </span>
-                    )}
-                    {c.job && (
-                      <Link href={`/jobs/${c.job.id}`} className="font-mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    <RowActionsMenu label="Update complaint">
-                      <MenuSection label="Update Status" />
-                      <form action={updateStatusAction} className="space-y-2 p-3">
-                        <input type="hidden" name="id" value={c.id} />
-                        <select name="status" defaultValue={c.status} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none">
-                          {STATUSES.map((s) => <option key={s} value={s}>{COMPLAINT_STATUS_LABELS[s]}</option>)}
-                        </select>
-                        <textarea name="resolution" defaultValue={c.resolution ?? ""} placeholder="Resolution (shown to client)" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-                        <textarea name="internalNotes" defaultValue={c.internalNotes ?? ""} placeholder="Internal notes" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-                        <button type="submit" className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</button>
-                      </form>
-                    </RowActionsMenu>
-                  </div>
-                </div>
+                <>
+                  <StatusBadge tone={toneFor(STATUS_TONES, c.status)}>{COMPLAINT_STATUS_LABELS[c.status]}</StatusBadge>
+                  {sla === "overdue-ack" && <p className="mt-1 text-[12px] font-semibold text-red-600">Ack overdue</p>}
+                  {sla === "overdue-res" && <p className="mt-1 text-[12px] font-semibold text-amber-600">Resolution overdue</p>}
+                </>
               );
-            })}
-          </div>
-          {/* ── Desktop complaints table ── */}
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full min-w-[700px] text-left">
-              <thead>
-                <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60">
-                  {["Ref", "Status / SLA", "Category", "Client", "Description", "Job", "Actions"].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {complaints.map((c) => {
-                  const sla = slaStatus(c);
-                  return (
-                    <tr key={`d-${c.id}`} className="group align-top transition-colors hover:bg-[var(--panel-strong)]/40">
-                      <td className="px-4 py-3">
-                        <p className="font-mono text-xs font-bold text-[var(--ink)]">{c.complaintNumber}</p>
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${COMPLAINT_STATUS_STYLES[c.status]}`}>{COMPLAINT_STATUS_LABELS[c.status]}</span>
-                        {sla === "overdue-ack" && <p className="mt-1 text-[12px] font-semibold text-red-600">Ack overdue</p>}
-                        {sla === "overdue-res" && <p className="mt-1 text-[12px] font-semibold text-amber-600">Resolution overdue</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-[13px] text-[var(--ink)]">{COMPLAINT_CATEGORY_LABELS[c.category]}</p>
-                        <p className="text-[12px] text-[var(--ink-muted)]">{c.channel}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-xs font-semibold text-[var(--ink)]">{c.clientName}</p>
-                        <p className="text-[12px] text-[var(--ink-muted)]">{c.clientPhone}</p>
-                      </td>
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <p className="line-clamp-3 text-[13px] text-[var(--ink-muted)]" title={c.description}>{c.description}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        {c.job ? <Link href={`/jobs/${c.job.id}`} className="font-mono text-[13px] font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link> : <span className="text-[13px] text-[var(--ink-muted)]">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <RowActionsMenu label="Update complaint">
-                          <MenuSection label="Update Status" />
-                          <form action={updateStatusAction} className="space-y-2 p-3">
-                            <input type="hidden" name="id" value={c.id} />
-                            <select name="status" defaultValue={c.status} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none">
-                              {STATUSES.map((s) => <option key={s} value={s}>{COMPLAINT_STATUS_LABELS[s]}</option>)}
-                            </select>
-                            <textarea name="resolution" defaultValue={c.resolution ?? ""} placeholder="Resolution (shown to client)" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-                            <textarea name="internalNotes" defaultValue={c.internalNotes ?? ""} placeholder="Internal notes" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-                            <button type="submit" className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</button>
-                          </form>
-                        </RowActionsMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-        )}
-      </div>
-    </div>
+            },
+          },
+          {
+            key: "category",
+            header: "Category",
+            cell: (c) => (
+              <>
+                <p className="text-[var(--ink)]">{COMPLAINT_CATEGORY_LABELS[c.category]}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{c.channel}</p>
+              </>
+            ),
+          },
+          {
+            key: "client",
+            header: "Client",
+            cell: (c) => (
+              <>
+                <p className="font-semibold text-[var(--ink)]">{c.clientName}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{c.clientPhone}</p>
+              </>
+            ),
+          },
+          {
+            key: "description",
+            header: "Description",
+            className: "max-w-[200px]",
+            cell: (c) => (
+              <p className="line-clamp-3 text-[var(--ink-muted)]" title={c.description}>{c.description}</p>
+            ),
+          },
+          {
+            key: "job",
+            header: "Job",
+            cell: (c) =>
+              c.job
+                ? <Link href={`/jobs/${c.job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">{c.job.jobNumber}</Link>
+                : <span className="text-[var(--ink-muted)]">—</span>,
+          },
+        ]}
+        actions={(c) => updateMenu(c)}
+      />
+
+      <TablePagination
+        page={pageView.page}
+        totalPages={pageView.totalPages}
+        rangeStart={pageView.rangeStart}
+        rangeEnd={pageView.rangeEnd}
+        total={pageView.total}
+        unit="complaints"
+        hrefForPage={complaintsHref}
+      />
+    </ListPageLayout>
   );
 }

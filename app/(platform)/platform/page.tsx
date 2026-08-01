@@ -1,16 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
+import { formatMoney } from "@/lib/currency";
+import { PLATFORM_PLAN_CHIP, PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { runCommercialSeedAction } from "./actions";
 import { OrgTable } from "./OrgTable";
 import type { OrgRow } from "./OrgTable";
 
-const PLAN_CHIP: Record<string, string> = {
-  STARTER:    "bg-[var(--panel-strong)] text-[var(--ink-muted)] border-[var(--line)]",
-  STANDARD:   "bg-sky-500/10    text-sky-700    border-sky-400/30    dark:text-sky-400",
-  GROWTH:     "bg-amber-500/10  text-amber-700  border-amber-400/30  dark:text-amber-400",
-  PREMIUM:    "bg-violet-500/10 text-violet-700 border-violet-400/30 dark:text-violet-400",
-  ENTERPRISE: "bg-purple-500/10 text-purple-700 border-purple-400/30 dark:text-purple-400",
-};
+const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
 export const dynamic = "force-dynamic";
 
@@ -62,9 +58,6 @@ export default async function PlatformPage() {
   );
   const pastDueOrgs = orgs.filter((o) => o.billingStatus === "PAST_DUE");
 
-  const fmtMoney = (n: number) =>
-    new Intl.NumberFormat("en-UG", { style: "currency", currency: "UGX", maximumFractionDigits: 0 }).format(n);
-
   return (
     <div className="space-y-6">
 
@@ -78,7 +71,7 @@ export default async function PlatformPage() {
                 <span className="font-semibold text-red-800 dark:text-red-300">{org.name}</span>
                 <span className="text-red-600 dark:text-red-400">is past due</span>
               </div>
-              <a href={`/platform/orgs/${org.id}`} className="rounded-lg border border-red-400/30 bg-red-500/5 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-500/15 dark:text-red-400">
+              <a href={PLATFORM_ROUTES.org(org.id)} className="rounded-lg border border-red-400/30 bg-red-500/5 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-500/15 dark:text-red-400">
                 Fix →
               </a>
             </div>
@@ -92,7 +85,7 @@ export default async function PlatformPage() {
                   <span className="font-semibold text-amber-800 dark:text-amber-300">{org.name}</span>
                   <span className="text-amber-700 dark:text-amber-400">trial expires in {days} day{days !== 1 ? "s" : ""}</span>
                 </div>
-                <a href={`/platform/orgs/${org.id}`} className="rounded-lg border border-amber-400/30 bg-amber-500/5 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-500/15 dark:text-amber-400">
+                <a href={PLATFORM_ROUTES.org(org.id)} className="rounded-lg border border-amber-400/30 bg-amber-500/5 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-500/15 dark:text-amber-400">
                   Extend →
                 </a>
               </div>
@@ -135,11 +128,11 @@ export default async function PlatformPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         <div className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">This Month</p>
-          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{fmtMoney(monthRevenue)}</p>
+          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{formatMoney(monthRevenue)}</p>
         </div>
         <div className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">All-Time Revenue</p>
-          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{fmtMoney(totalRevenue)}</p>
+          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{formatMoney(totalRevenue)}</p>
         </div>
         {(["STARTER","STANDARD","GROWTH","PREMIUM","ENTERPRISE"] as const).map((plan) => (
           <div key={plan} className={`rounded-xl border px-4 py-3 ${PLAN_CHIP[plan]}`}>

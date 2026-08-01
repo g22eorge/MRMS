@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { resolveLoginRedirect } from "@/lib/platform/login-redirect";
+import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -31,8 +33,7 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? "").trim();
 
     // Platform super admin is never rate-limited.
-    const platformAdmin = process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase();
-    const isSuperAdmin = platformAdmin && email.toLowerCase() === platformAdmin;
+    const isSuperAdmin = checkIsPlatformAdmin(email);
 
     if (!isSuperAdmin) {
       const rl = checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
@@ -114,6 +115,11 @@ export async function POST(request: NextRequest) {
         "content-type": upstream.headers.get("content-type") ?? "application/json",
       },
     });
+
+    if (upstream.ok) {
+      const redirectTo = await resolveLoginRedirect(resolved.email, callbackURL);
+      response.headers.set("x-login-redirect", redirectTo);
+    }
 
     const setCookies = upstream.headers.getSetCookie?.() ?? [];
     if (setCookies.length > 0) {

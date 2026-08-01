@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -104,18 +105,25 @@ function parseDevices(devicesJson: string) {
 }
 
 export async function generateJobNumber(orgId?: string) {
-  const year = new Date().getFullYear();
-  const prefix = `EI-${year}-`;
-  const latest = await prisma.job.findFirst({
-    where: { jobNumber: { startsWith: prefix }, ...(orgId ? { orgId } : {}) },
-    orderBy: { jobNumber: "desc" },
-    select: { jobNumber: true },
-  });
-
-  const latestSeq = latest?.jobNumber.slice(prefix.length) ?? "0";
-  const numeric = Number(latestSeq);
-  const next = Number.isFinite(numeric) ? numeric + 1 : 1;
-  return `${prefix}${String(next).padStart(4, "0")}`;
+  const inner = `EI-${new Date().getFullYear()}-`;
+  // Without an org we can't tag; keep the legacy global sequence (build/seed paths).
+  if (!orgId) {
+    const rows = await prisma.job.findMany({
+      where: { jobNumber: { contains: inner } },
+      select: { jobNumber: true },
+    });
+    const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
+    return `${inner}${String(next).padStart(4, "0")}`;
+  }
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.job.findMany({
+      where: { orgId, jobNumber: { contains: inner } },
+      select: { jobNumber: true },
+    }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 export async function createJobAction(
@@ -211,20 +219,30 @@ export async function createJobAction(
     // are kept in sync as a fallback for environments where the Device table is absent.
     let deviceId: string | null = null;
     try {
-      const createdDevice = await prisma.device.create({
-        data: {
-          orgId,
-          clientId: client.id,
-          deviceType: device.deviceType,
-          brand: sanitizeText(device.brand),
-          model: sanitizeText(device.model),
-          serialOrImei: serial,
-          accessories: sanitizeOptionalText(device.accessories),
-          physicalNotes: sanitizeOptionalText(device.physicalNotes),
-        },
-        select: { id: true },
-      });
-      deviceId = createdDevice.id;
+      // Reuse the existing Device for a returning unit (same org + serial/IMEI) so
+      // repair history accumulates on one record instead of spawning a new Device
+      // every visit. Only dedup when a serial/IMEI was actually captured.
+      const existingDevice = serial
+        ? await prisma.device.findFirst({ where: { orgId, serialOrImei: serial }, select: { id: true } })
+        : null;
+      const deviceData = {
+        clientId: client.id,
+        deviceType: device.deviceType,
+        brand: sanitizeText(device.brand),
+        model: sanitizeText(device.model),
+        accessories: sanitizeOptionalText(device.accessories),
+        physicalNotes: sanitizeOptionalText(device.physicalNotes),
+      };
+      if (existingDevice) {
+        await prisma.device.update({ where: { id: existingDevice.id }, data: deviceData });
+        deviceId = existingDevice.id;
+      } else {
+        const createdDevice = await prisma.device.create({
+          data: { orgId, serialOrImei: serial, ...deviceData },
+          select: { id: true },
+        });
+        deviceId = createdDevice.id;
+      }
     } catch (error) {
       // If Device table isn't migrated in a given environment, fall back to legacy Job-only storage.
       if (
