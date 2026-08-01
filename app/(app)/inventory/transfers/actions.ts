@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -140,6 +141,7 @@ export async function dispatchStockTransferAction(formData: FormData) {
   const dispatched = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
   if (dispatched) {
     notifyStockTransferUpdated({ orgId, transferNumber: dispatched.transferNumber, status: "DISPATCHED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_DISPATCHED", summary: `${dispatched.transferNumber} dispatched` });
   }
   revalidatePath("/inventory/transfers");
 }
@@ -179,6 +181,7 @@ export async function receiveStockTransferAction(formData: FormData) {
   });
 
   const received = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
+  if (received) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_RECEIVED", summary: `${received.transferNumber} received` });
   if (received) {
     notifyStockTransferUpdated({ orgId, transferNumber: received.transferNumber, status: "RECEIVED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
   }

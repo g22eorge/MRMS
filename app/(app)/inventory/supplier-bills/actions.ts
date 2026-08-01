@@ -108,6 +108,15 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     select: { id: true },
   });
 
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "SupplierBill",
+    entityId: bill.id,
+    action: "SUPPLIER_BILL_CREATED",
+    summary: `${billNumber} — ${currency} ${totalAmount.toLocaleString()}`,
+  });
+
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");
   revalidatePath(`/inventory/suppliers/${supplierId}`);

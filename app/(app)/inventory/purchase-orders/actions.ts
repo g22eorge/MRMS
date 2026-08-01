@@ -167,7 +167,7 @@ export async function updatePurchaseOrderAction(
 }
 
 export async function setPurchaseOrderStatusAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId, session } = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
   if (!id || !["DRAFT", "ORDERED", "CANCELLED"].includes(status)) return;
@@ -189,6 +189,8 @@ export async function setPurchaseOrderStatusAction(formData: FormData): Promise<
       receivedAt: null,
     },
   });
+
+  await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_STATUS_CHANGED", summary: `PO status set to ${status}` });
 
   revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
