@@ -13,27 +13,27 @@ const RULE = "#333333";
 const LIGHT = "#E5E7EB";
 
 const s = StyleSheet.create({
-  page: { paddingHorizontal: 48, paddingVertical: 40, fontSize: 10, fontFamily: "Helvetica", color: INK, lineHeight: 1.5 },
+  page: { paddingHorizontal: 48, paddingVertical: 38, fontSize: 10, fontFamily: "Helvetica", color: INK, lineHeight: 1.4 },
 
-  header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 6 },
+  header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
   logo: { width: 54, height: 54, marginRight: 12, objectFit: "contain" },
   companyName: { fontSize: 15, fontFamily: "Helvetica-Bold", color: "#1f3a5f" },
   companyNameSuffix: { fontSize: 15, fontFamily: "Helvetica-Bold", color: INK },
   companyTagline: { fontSize: 8, fontFamily: "Helvetica-Oblique", color: MUTED, marginTop: 3 },
   companyAddress: { fontSize: 8, color: MUTED, marginTop: 1.5 },
 
-  topRule: { borderTopWidth: 1.5, borderTopColor: GOLD, marginTop: 8, marginBottom: 12 },
+  topRule: { borderTopWidth: 1.5, borderTopColor: GOLD, marginTop: 6, marginBottom: 9 },
 
   officialLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", color: GOLD, textAlign: "center", letterSpacing: 1, textTransform: "uppercase" },
-  title: { fontSize: 16, fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 4, letterSpacing: 0.5 },
-  titleRule: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 12, marginBottom: 12 },
+  title: { fontSize: 16, fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 3, letterSpacing: 0.5 },
+  titleRule: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 9, marginBottom: 9 },
 
-  metaRow: { marginBottom: 4 },
+  metaRow: { marginBottom: 3 },
   metaLabel: { fontFamily: "Helvetica-Bold" },
 
-  sectionRuleTop: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 10, marginBottom: 6 },
-  sectionTitle: { fontSize: 10.5, fontFamily: "Helvetica-Bold", marginBottom: 5 },
-  para: { fontSize: 10, marginBottom: 5, textAlign: "justify" },
+  sectionRuleTop: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 8, marginBottom: 5 },
+  sectionTitle: { fontSize: 10.5, fontFamily: "Helvetica-Bold", marginBottom: 4 },
+  para: { fontSize: 10, marginBottom: 3, textAlign: "justify" },
   subLabel: { fontSize: 9.5, fontFamily: "Helvetica-Bold", marginTop: 4, marginBottom: 3 },
 
   table: { borderWidth: 1, borderColor: LIGHT, marginTop: 2, marginBottom: 4 },
@@ -48,11 +48,11 @@ const s = StyleSheet.create({
   totalLine: { fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 4 },
   totalValue: { color: GOLD },
 
-  prepared: { marginTop: 16 },
+  prepared: { marginTop: 10 },
   preparedLabel: { fontSize: 9.5, fontFamily: "Helvetica-Bold", marginBottom: 3 },
   preparedLine: { fontSize: 9, color: MUTED },
 
-  footerRule: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 22, marginBottom: 8 },
+  footerRule: { borderTopWidth: 1, borderTopColor: RULE, marginTop: 12, marginBottom: 8 },
   footer: { fontSize: 8, color: MUTED, textAlign: "center" },
 });
 

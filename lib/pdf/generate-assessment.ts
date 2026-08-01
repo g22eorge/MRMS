@@ -16,6 +16,31 @@ const paras = (t?: string | null) =>
   (t ?? "").split(/\n{2,}|\r?\n/).map((p) => p.trim()).filter(Boolean);
 
 /**
+ * Keep whole sentences from `items` up to a character budget, without cutting
+ * mid-word. Used to hold a single-component report to one page while still
+ * reading as complete prose. Multi-component reports skip this and run full.
+ */
+function clampParas(items: string[], maxChars: number): string[] {
+  const out: string[] = [];
+  let used = 0;
+  for (const p of items) {
+    if (used >= maxChars) break;
+    const remaining = maxChars - used;
+    if (p.length <= remaining) {
+      out.push(p);
+      used += p.length + 1;
+      continue;
+    }
+    const slice = p.slice(0, remaining);
+    const stop = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
+    const cut = stop > 40 ? slice.slice(0, stop + 1) : slice.replace(/\s+\S*$/, "").trim();
+    if (cut) out.push(cut);
+    break;
+  }
+  return out.length ? out : items.slice(0, 1);
+}
+
+/**
  * Render the branded Hardware Assessment & Repair Report PDF for a job.
  * `requireClientVisible` gates it to a published (CLIENT) report — used by the
  * portal so a customer can only download a report staff have approved.
@@ -31,7 +56,7 @@ export async function generateAssessmentBuffer(params: {
     where: { id: jobId, orgId },
     select: {
       jobNumber: true, issueDescription: true, brand: true, model: true, deviceType: true,
-      partsNeeded: true, recommendedRepair: true, clientBill: true,
+      diagnosisNotes: true, partsNeeded: true, recommendedRepair: true, clientBill: true,
       warrantyMonths: true, warrantyExpiresAt: true,
       quotations: {
         orderBy: { createdAt: "desc" }, take: 1,
@@ -40,6 +65,14 @@ export async function generateAssessmentBuffer(params: {
     },
   });
   if (!job) return { ok: false, error: "Repair not found" };
+
+  // The report requires the diagnosis and repair details to be completed first.
+  // Parts are optional — a report can still be produced without them.
+  const hasDiagnosis = Boolean((job.diagnosisNotes ?? "").trim());
+  const hasRepairDetails = Boolean((job.recommendedRepair ?? "").trim());
+  if (!hasDiagnosis || !hasRepairDetails) {
+    return { ok: false, error: "Complete the diagnosis and repair details before the report can be downloaded (parts are optional)." };
+  }
 
   const report = await prisma.diagnosisReport.findFirst({
     where: {
@@ -58,22 +91,34 @@ export async function generateAssessmentBuffer(params: {
   const currency = normalizeCurrency(org?.baseCurrency, "UGX");
   const logoUrl = await resolvePdfLogo();
 
-  // ── Section 1: findings (fall back to summary if empty) ──
-  const findings = paras(report.findings).length > 0 ? paras(report.findings) : paras(report.summary);
-
-  // ── Section 2: repair scope (from parts, else a single derived row) ──
+  // Component count drives length: the report is held to a single page for a
+  // single-component estimate, and only allowed to run longer when the estimate
+  // spans more than one component (multiple quote line items or parts).
   const partLines = (job.partsNeeded ?? "").split(/\r?\n|,/).map((p) => p.trim()).filter(Boolean);
+  const quote = job.quotations[0];
+  const componentCount = quote && quote.items.length > 0 ? quote.items.length : partLines.length;
+  const multiComponent = componentCount > 1;
+
+  // ── Section 1: findings (fall back to summary if empty) ──
+  const findingsRaw = paras(report.findings).length > 0 ? paras(report.findings) : paras(report.summary);
+  const findings = multiComponent ? findingsRaw : clampParas(findingsRaw, 560);
+
+  // ── Section 2: repair scope (from parts, else a single derived row) + lead ──
   const repairScope: ScopeRow[] = partLines.length > 0
     ? partLines.map((p) => ({ component: p, specification: "Replacement / repair as assessed" }))
     : (report.recommendedWork
-        ? [{ component: `${job.brand} ${job.model}`.trim() || "Device", specification: compactText(report.recommendedWork, 90) }]
+        ? [{ component: `${job.brand} ${job.model}`.trim() || "Device", specification: "Repair as detailed in the recommended solution above." }]
         : []);
+  const recommendedSolution = multiComponent
+    ? compactText(report.recommendedWork, 600)
+    : clampParas(paras(report.recommendedWork), 320).join(" ");
 
-  // ── Section 3: repair recommendation (only if distinct from findings) ──
-  const repairRecommendation = paras(report.findings).length > 0 ? compactText(report.summary, 400) || undefined : undefined;
+  // ── Section 3: repair recommendation — shown only on multi-component reports (kept off the single page) ──
+  const repairRecommendation = multiComponent && paras(report.findings).length > 0
+    ? compactText(report.summary, 400) || undefined
+    : undefined;
 
   // ── Section 4: estimated cost ──
-  const quote = job.quotations[0];
   let costRows: CostRow[];
   let totalCostValue: string;
   const qCurrency = normalizeCurrency(quote?.currency, currency);
@@ -95,7 +140,7 @@ export async function generateAssessmentBuffer(params: {
   }
 
   // ── Section 5: warranty & support ──
-  const warranty = paras(report.riskNotes);
+  const warranty = multiComponent ? paras(report.riskNotes) : clampParas(paras(report.riskNotes), 300);
   if (job.warrantyExpiresAt && job.warrantyMonths) {
     warranty.push(`This repair carries a ${job.warrantyMonths}-month warranty, valid until ${formatEATDocDate(job.warrantyExpiresAt)}.`);
   } else if (warranty.length === 0) {
@@ -114,7 +159,7 @@ export async function generateAssessmentBuffer(params: {
     jobNumber: job.jobNumber,
     deviceIssue: compactText(job.issueDescription, 120) || `${prettyEnum(job.deviceType)} repair`,
     findings: findings.length > 0 ? findings : ["Assessment completed. Details available on request."],
-    recommendedSolution: compactText(report.recommendedWork, 400) || "",
+    recommendedSolution,
     repairScope,
     repairRecommendation,
     costRows,

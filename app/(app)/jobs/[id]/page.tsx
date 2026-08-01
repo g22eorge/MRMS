@@ -293,8 +293,10 @@ export default async function JobDetailPage({
       orderBy: { createdAt: "desc" },
       select: { id: true, visibility: true, summary: true, findings: true, recommendedWork: true, riskNotes: true },
     }).catch(() => []),
-    prisma.job.findFirst({ where: { id, orgId }, select: { warrantyMonths: true, warrantyExpiresAt: true } }),
+    prisma.job.findFirst({ where: { id, orgId }, select: { warrantyMonths: true, warrantyExpiresAt: true, diagnosisNotes: true, recommendedRepair: true } }),
   ]);
+  // The assessment report needs diagnosis + repair details first (parts optional).
+  const canAssess = Boolean((warrantyInfo?.diagnosisNotes ?? "").trim()) && Boolean((warrantyInfo?.recommendedRepair ?? "").trim());
   const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50";
 
   return (
@@ -341,16 +343,22 @@ export default async function JobDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
           <div className="flex items-center gap-2">
-            {assessments.length > 0 ? (
+            {assessments.length > 0 && canAssess ? (
               <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
             ) : null}
-            <form action={generateAssessmentAction}>
-              <input type="hidden" name="jobId" value={id} />
-              <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
-            </form>
+            {canAssess ? (
+              <form action={generateAssessmentAction}>
+                <input type="hidden" name="jobId" value={id} />
+                <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
+              </form>
+            ) : (
+              <button type="button" disabled title="Add the diagnosis and repair details first" className="cursor-not-allowed rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] opacity-60">✨ Generate AI draft</button>
+            )}
           </div>
         </div>
-        {assessments.length === 0 ? (
+        {!canAssess ? (
+          <p className="text-[13px] text-[var(--ink-muted)]">Complete the <span className="font-semibold">diagnosis</span> and <span className="font-semibold">repair details</span> first (parts optional). The report can then be generated and downloaded.</p>
+        ) : assessments.length === 0 ? (
           <p className="text-[13px] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>
         ) : (
           assessments.map((r) => {

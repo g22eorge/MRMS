@@ -29,6 +29,9 @@ export async function generateAssessmentAction(formData: FormData): Promise<void
   });
   if (!job) return;
 
+  // Require diagnosis + repair details before drafting (parts are optional).
+  if (!(job.diagnosisNotes ?? "").trim() || !(job.recommendedRepair ?? "").trim()) return;
+
   const ai = await generateAssessmentDraft({
     orgId,
     userId: user.id,
