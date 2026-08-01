@@ -516,6 +516,16 @@ export default async function InvoicesPage({
   const where: Prisma.InvoiceWhereInput = {};
   if (typeFilter !== "all") where.invoiceType = typeFilter as InvoiceType;
   if (statusFilter !== "all") where.status = statusFilter as InvoiceStatus;
+  // Search in the DB, not in-memory over the top-150, so older invoices are findable.
+  if (q) {
+    where.OR = [
+      { invoiceNumber: { contains: q } },
+      { subject: { contains: q } },
+      { job: { jobNumber: { contains: q } } },
+      { job: { client: { fullName: { contains: q } } } },
+      { client: { fullName: { contains: q } } },
+    ];
+  }
 
   type InvoiceRow = {
     id: string;
@@ -590,18 +600,8 @@ export default async function InvoicesPage({
 
   // Apply aging filter
   const filtered = (() => {
-    let base = withAging;
-    if (q) {
-      const s = q.toLowerCase();
-      base = base.filter(
-        (inv) =>
-          inv.invoiceNumber.toLowerCase().includes(s) ||
-          inv.subject?.toLowerCase().includes(s) ||
-          inv.job?.client.fullName.toLowerCase().includes(s) ||
-          inv.client?.fullName.toLowerCase().includes(s) ||
-          inv.job?.jobNumber.toLowerCase().includes(s),
-      );
-    }
+    // Text search is applied in the DB query above (where.OR); only aging is JS.
+    const base = withAging;
     if (agingFilter === "current") return base.filter((i) => !i.isVoid && !i.isPaid && i.daysOverdue <= 0);
     if (agingFilter === "1-30") return base.filter((i) => !i.isVoid && !i.isPaid && i.daysOverdue >= 1 && i.daysOverdue <= 30);
     if (agingFilter === "31-60") return base.filter((i) => !i.isVoid && !i.isPaid && i.daysOverdue >= 31 && i.daysOverdue <= 60);
