@@ -1168,6 +1168,7 @@ enum NotificationType {
   CREDIT_NOTE_ISSUED
   REFUND_ISSUED
   BILLING
+  PORTAL_MESSAGE
 }
 
 enum NotificationChannel {
@@ -3242,4 +3243,22 @@ model PortalSession {
   createdAt    DateTime   @default(now())
 
   @@index([portalUserId])
+}
+
+/// Two-way message thread on a repair, shared between shop staff and the
+/// corporate client's portal users. Not org-scoped in ORG_SCOPED_MODELS —
+/// both sides query it with explicit orgId + jobId scoping.
+model RepairMessage {
+  id         String   @id @default(cuid())
+  orgId      String
+  jobId      String
+  clientId   String?
+  authorType String // STAFF | CUSTOMER
+  authorId   String? // staff userId or portalUserId
+  authorName String
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([orgId, jobId])
 }

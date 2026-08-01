@@ -140,3 +140,9 @@ the job status-change action so `JobStatusHistory` populates (drives the portal
 repair timeline).
 
 - Production: add the two columns; regenerate the client.
+
+## 12. Portal Phase 4c-writes — `RepairMessage` + notif types — SAFE (additive)
+
+New `RepairMessage` table (two-way repair thread between staff and portal users;
+not org-scoped, queried with explicit orgId+jobId). `NotificationType` gains
+`PORTAL_MESSAGE`. Additive, no backfill; regenerate the client in production.

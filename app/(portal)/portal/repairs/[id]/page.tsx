@@ -5,6 +5,7 @@ import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { PortalHeader } from "@/components/portal/PortalHeader";
+import { approveQuotationAction, postRepairMessageAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
   if (!job) notFound();
 
   // Assessment report — only customer-visible ones (INTERNAL drafts never show).
-  const [reports, warranties, history] = await Promise.all([
+  const [reports, warranties, history, messages] = await Promise.all([
     prisma.diagnosisReport.findMany({
       where: { orgId: org.id, jobId: job.id, NOT: { visibility: "INTERNAL" } },
       orderBy: { createdAt: "desc" },
@@ -67,6 +68,11 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       where: { orgId: org.id, jobId: job.id },
       orderBy: { changedAt: "asc" },
       select: { toStatus: true, changedAt: true, reason: true },
+    }),
+    prisma.repairMessage.findMany({
+      where: { orgId: org.id, jobId: job.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, authorType: true, authorName: true, body: true, createdAt: true },
     }),
   ]);
 
@@ -157,6 +163,15 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
               <div className="flex items-center gap-2">
                 <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
+                {q.status === "SENT" ? (
+                  <form action={approveQuotationAction}>
+                    <input type="hidden" name="quotationId" value={q.id} />
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-emerald-700">
+                      Approve
+                    </button>
+                  </form>
+                ) : null}
               </div>
             </div>
           ))}
@@ -174,6 +189,41 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           </div>
         </div>
       ) : null}
+
+      {/* Messages / notes */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Messages</p>
+        {messages.length === 0 ? (
+          <p className="mb-3 text-[13px] text-[var(--ink-muted)]">No messages yet. Ask a question or leave a note for the team.</p>
+        ) : (
+          <ul className="mb-3 space-y-2">
+            {messages.map((m) => {
+              const mine = m.authorType === "CUSTOMER";
+              return (
+                <li key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${mine ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>
+                    {m.body}
+                  </div>
+                  <span className="mt-0.5 text-[11px] text-[var(--ink-muted)]">
+                    {mine ? "You" : m.authorName} · {m.createdAt.toISOString().slice(0, 10)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <form action={postRepairMessageAction} className="flex gap-2">
+          <input type="hidden" name="jobId" value={job.id} />
+          <input
+            name="body"
+            required
+            maxLength={4000}
+            placeholder="Write a message…"
+            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
+          />
+          <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[13px] text-white">Send</button>
+        </form>
+      </div>
 
       {/* Warranty */}
       {warranties.length > 0 ? (
