@@ -8,6 +8,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { orgDb } from "@/lib/db";
 import { maxNumberSequence } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
@@ -100,7 +101,7 @@ export default async function JournalPage({
     const existingNumbers = await db.journalEntry.findMany({ where: { entryNumber: { contains: inner } }, select: { entryNumber: true } });
     const entryNumber = `${inner}${String(maxNumberSequence(inner, existingNumbers.map((e) => e.entryNumber)) + 1).padStart(4, "0")}`;
 
-    await db.journalEntry.create({
+    const entry = await db.journalEntry.create({
       data: {
         orgId: _u.orgId,
         entryNumber,
@@ -112,6 +113,15 @@ export default async function JournalPage({
         createdById: _u.id,
         lines: { create: lines },
       },
+      select: { id: true },
+    });
+    await writeSystemAuditEvent({
+      orgId: _u.orgId,
+      actorUserId: _u.id,
+      entityType: "JournalEntry",
+      entityId: entry.id,
+      action: "JOURNAL_ENTRY_CREATED",
+      summary: `${entryNumber} — ${description} (${totalDebit.toLocaleString()})`,
     });
     revalidatePath("/finance/journal");
     return { ok: true };
@@ -126,6 +136,14 @@ export default async function JournalPage({
     const entry = await _db.journalEntry.findFirst({ where: { id, status: "DRAFT" } });
     if (!entry) return;
     await _db.journalEntry.update({ where: { id }, data: { status: "POSTED", postedAt: new Date() } });
+    await writeSystemAuditEvent({
+      orgId: _u.orgId,
+      actorUserId: _u.id,
+      entityType: "JournalEntry",
+      entityId: id,
+      action: "JOURNAL_ENTRY_POSTED",
+      summary: `${entry.entryNumber} posted`,
+    });
     revalidatePath("/finance/journal");
     redirect("/finance/journal");
   }
