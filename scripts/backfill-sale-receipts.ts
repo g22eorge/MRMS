@@ -1,9 +1,11 @@
-// Backfill Receipt documents for sale (POS) payments that never got one.
+// Backfill Receipt documents for payments that never got one.
 //
-// POS payments previously did not call createReceiptForPayment, so historical
-// paid sales have Payment rows but no Receipt. New payments create receipts;
-// this generates them for the existing ones. Idempotent (skips payments that
-// already have a receipt).
+// Both POS sale payments (addPaymentAction) and repair/job payments
+// (recordClientPaymentAction) previously did not call createReceiptForPayment,
+// so historical paid sales and repair invoices have Payment rows but no Receipt.
+// New payments now create receipts; this generates them for the existing ones.
+// Idempotent (skips payments that already have a receipt) and skips REFUND-kind
+// payments (which never get a receipt). Supports --dry-run.
 //
 // Usage:
 //   DATABASE_URL=... bun scripts/backfill-sale-receipts.ts --dry-run
@@ -16,15 +18,20 @@ const prisma = new PrismaClient();
 const dryRun = process.argv.includes("--dry-run");
 
 const payments = await prisma.payment.findMany({
-  where: { saleId: { not: null } },
+  where: {
+    OR: [{ saleId: { not: null } }, { invoiceId: { not: null } }],
+    kind: { not: "REFUND" },
+  },
   select: {
     id: true,
     orgId: true,
     saleId: true,
+    invoiceId: true,
     amount: true,
     currency: true,
     createdById: true,
     sale: { select: { clientId: true } },
+    invoice: { select: { clientId: true, job: { select: { clientId: true } } } },
   },
 });
 
@@ -43,12 +50,14 @@ for (const p of payments) {
     created++;
     continue;
   }
+  const clientId = p.sale?.clientId ?? p.invoice?.clientId ?? p.invoice?.job?.clientId ?? null;
   await prisma.$transaction(async (tx) => {
     await createReceiptForPayment(tx, {
       orgId: p.orgId,
       paymentId: p.id,
       saleId: p.saleId,
-      clientId: p.sale?.clientId ?? null,
+      invoiceId: p.invoiceId,
+      clientId,
       amount: p.amount,
       currency: p.currency,
       issuedById: p.createdById ?? null,
@@ -58,6 +67,6 @@ for (const p of payments) {
 }
 
 console.log(
-  `${dryRun ? "[dry-run] would create" : "created"} ${created} receipt(s); ${skipped} sale payment(s) already had one.`,
+  `${dryRun ? "[dry-run] would create" : "created"} ${created} receipt(s); ${skipped} payment(s) already had one.`,
 );
 await prisma.$disconnect();

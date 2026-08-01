@@ -34,7 +34,7 @@ import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
-import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
+import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
@@ -779,6 +779,7 @@ export async function recordClientPaymentAction(formData: FormData) {
       jobNumber: true,
       status: true,
       clientBill: true,
+      clientId: true,
       invoiceNumber: true,
       invoiceIssuedAt: true,
       externalTechBill: true,
@@ -868,7 +869,7 @@ export async function recordClientPaymentAction(formData: FormData) {
         throw new Error("This payment will overpay the client bill. Tick confirm overpayment if this is intentional.");
       }
 
-      await tx.payment.create({
+      const payment = await tx.payment.create({
         data: {
           orgId,
           invoiceId: invoice.id,
@@ -882,7 +883,23 @@ export async function recordClientPaymentAction(formData: FormData) {
           note,
           createdById: session.user.id,
         },
+        select: { id: true },
       });
+
+      // Generate a receipt for real payments (not refunds), like the invoice and
+      // POS flows. The job payment path previously created none, so most repair
+      // payments had no receipt document.
+      if (payload.kind !== "REFUND") {
+        await createReceiptForPayment(tx, {
+          orgId,
+          paymentId: payment.id,
+          invoiceId: invoice.id,
+          clientId: job.clientId ?? null,
+          amount: payload.amount,
+          currency,
+          issuedById: session.user.id,
+        });
+      }
 
       const { paidAmount, isPaid } = await syncInvoicePaymentState(tx, {
         orgId,
