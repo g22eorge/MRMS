@@ -36,6 +36,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
+import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 
 const workflowReasonValues = [
@@ -651,6 +652,15 @@ export async function updateJobAction(formData: FormData) {
       detail: JSON.stringify({ requestedStatus: payload.nextStatus ?? null, fromStatus: existing.status, toStatus: data.status ?? existing.status }),
     },
   });
+
+  // On completion, decrement stock for the parts on the accepted quotation.
+  // Best-effort + idempotent: a stock-write failure must not block the repair
+  // from completing, and re-entering COMPLETED never double-consumes.
+  if (payload.nextStatus === JobStatus.COMPLETED && existing.status !== JobStatus.COMPLETED) {
+    await consumeRepairPartsForJob({ orgId, jobId: payload.jobId, userId: session.user.id }).catch((error) => {
+      console.error("[jobs] repair parts consumption failed", error);
+    });
+  }
 
   const job =
     user.role === "TECHNICIAN_EXTERNAL"
