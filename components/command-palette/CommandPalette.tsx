@@ -15,6 +15,9 @@ const KIND_LABELS: Record<CommandPaletteSearchHit["kind"], string> = {
   job: "Job",
   client: "Client",
   invoice: "Invoice",
+  quotation: "Quotation",
+  product: "Product",
+  supplier: "Supplier",
 };
 
 function groupLabel(row: PaletteRow) {
@@ -171,7 +174,7 @@ export function CommandPalette({ role }: { role: string }) {
             ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search jobs, clients, invoices…"
+            placeholder="Search jobs, clients, invoices, quotations, products…"
             className="w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)]"
             aria-label="Command palette search"
             autoComplete="off"

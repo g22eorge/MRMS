@@ -190,7 +190,65 @@ export async function searchCommandPalette(params: {
         href: `${DOCUMENTS_ROUTES.invoices}?q=${encodeURIComponent(invoice.invoiceNumber)}`,
       });
     }
+
+    const quotations = await prisma.quotation.findMany({
+      where: {
+        orgId: params.orgId,
+        OR: [
+          { quoteNumber: { contains: q } },
+          { client: { fullName: { contains: q } } },
+          { job: { jobNumber: { contains: q } } },
+        ],
+      },
+      select: { id: true, quoteNumber: true, status: true, client: { select: { fullName: true } }, job: { select: { jobNumber: true } } },
+      orderBy: { createdAt: "desc" },
+      take: RESULT_LIMIT,
+    });
+    for (const quotation of quotations) {
+      hits.push({
+        id: `quotation-${quotation.id}`,
+        kind: "quotation",
+        label: quotation.quoteNumber,
+        description: quotation.job?.jobNumber ?? quotation.client?.fullName ?? quotation.status,
+        href: `${DOCUMENTS_ROUTES.quotations}?q=${encodeURIComponent(quotation.quoteNumber)}`,
+      });
+    }
   }
 
-  return hits.slice(0, RESULT_LIMIT * 3);
+  if (can.manageInventory(params.user)) {
+    const [products, suppliers] = await Promise.all([
+      prisma.part.findMany({
+        where: { orgId: params.orgId, isActive: true, OR: [{ sku: { contains: q } }, { name: { contains: q } }] },
+        select: { id: true, sku: true, name: true, qtyOnHand: true },
+        orderBy: { name: "asc" },
+        take: RESULT_LIMIT,
+      }),
+      prisma.supplier.findMany({
+        where: { orgId: params.orgId, OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] },
+        select: { id: true, name: true, phone: true },
+        orderBy: { name: "asc" },
+        take: RESULT_LIMIT,
+      }),
+    ]);
+    for (const product of products) {
+      hits.push({
+        id: `product-${product.id}`,
+        kind: "product",
+        label: product.name,
+        description: `${product.sku} · ${product.qtyOnHand} in stock`,
+        href: `/inventory/${product.id}`,
+      });
+    }
+    for (const supplier of suppliers) {
+      hits.push({
+        id: `supplier-${supplier.id}`,
+        kind: "supplier",
+        label: supplier.name,
+        description: supplier.phone ?? "Supplier",
+        href: `/inventory/suppliers/${supplier.id}`,
+      });
+    }
+  }
+
+  return hits.slice(0, RESULT_LIMIT * 4);
 }

@@ -9,7 +9,7 @@ export type CommandPaletteAction = {
 
 export type CommandPaletteSearchHit = {
   id: string;
-  kind: "job" | "client" | "invoice";
+  kind: "job" | "client" | "invoice" | "quotation" | "product" | "supplier";
   label: string;
   description: string;
   href: string;
