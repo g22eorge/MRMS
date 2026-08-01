@@ -14,7 +14,9 @@ import {
   setOrgSmsSenderAction,
   setOrgAiModelAction,
   toggleOrgModuleAction,
+  resetOrgAdminPasswordAction,
 } from "../../actions";
+import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { getSmsUsage, SMS_PLAN_QUOTAS } from "@/lib/notifications/sms-quota";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
@@ -306,6 +308,28 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           ]}
         />
       </div>
+
+      {/* Admin access — reset a locked-out org administrator */}
+      {orgUsers.some((u) => u.role === "ADMIN") && (
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-5 py-3">
+            <SectionTitle>Admin Access</SectionTitle>
+          </div>
+          <div className="space-y-3 px-5 py-4">
+            <p className="text-[13px] text-[var(--ink-muted)]">
+              Reset a locked-out administrator. This sets a new password and signs them out of every device.
+            </p>
+            {orgUsers.filter((u) => u.role === "ADMIN").map((u) => (
+              <div key={u.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5">
+                <p className="mb-2 text-[13px] font-medium text-[var(--ink)]">
+                  {u.name} <span className="text-[var(--ink-muted)]">· {u.email}</span>
+                </p>
+                <UserPasswordResetForm userId={u.id} action={resetOrgAdminPasswordAction} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Payment history */}
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">

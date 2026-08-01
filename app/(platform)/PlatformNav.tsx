@@ -8,6 +8,7 @@ import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 const NAV = [
   { href: PLATFORM_ROUTES.home, label: "Organisations", exact: true },
   { href: PLATFORM_ROUTES.payments, label: "Payments" },
+  { href: PLATFORM_ROUTES.announcements, label: "Announcements" },
   { href: PLATFORM_ROUTES.audit, label: "Audit Log" },
   { href: PLATFORM_ROUTES.settings, label: "Settings" },
 ];

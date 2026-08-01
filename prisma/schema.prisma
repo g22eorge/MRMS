@@ -3169,3 +3169,20 @@ model AiOrgSettings {
   model              String?
   updatedAt          DateTime @updatedAt
 }
+
+/// Platform-wide announcement published by a platform admin, shown as a banner
+/// to every organization's users. Not org-scoped (cross-tenant by design).
+model SystemAnnouncement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  level       String    @default("INFO") // INFO | WARNING | CRITICAL
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive, startsAt, endsAt])
+}

@@ -3,6 +3,7 @@ import type { BadgeTone } from "@/components/ui/StatusBadge";
 export const PLATFORM_ROUTES = {
   home: "/platform",
   payments: "/platform/payments",
+  announcements: "/platform/announcements",
   audit: "/platform/audit",
   settings: "/platform/settings",
   org: (orgId: string) => `/platform/orgs/${orgId}`,

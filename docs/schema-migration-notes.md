@@ -110,3 +110,12 @@ with their payment instead of orphaning. `DocumentTaxLine` and PaymentAllocation
 
 - Production: adding the FK constraint fails if orphan allocations reference a missing
   payment — check/clean first (dev had none).
+
+## 9. Portal/SaaS Phase 2 — `SystemAnnouncement` + `NotificationType.BILLING` — SAFE (additive)
+
+- New table `SystemAnnouncement` (platform-wide, not org-scoped): additive, no
+  backfill. `getActiveAnnouncements()` fails soft if the table is absent.
+- `NotificationType` gains `BILLING`. SQLite stores enums as TEXT with no CHECK
+  constraint, so adding the value is a no-op at the DB level — only the Prisma
+  client needs regenerating.
+- Production: create the `SystemAnnouncement` table; regenerate the client.

@@ -15,6 +15,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getOrgModules } from "@/lib/module-access";
+import { getActiveAnnouncements } from "@/lib/announcements";
+import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
 import Link from "next/link";
 
 export default async function AppLayout({
@@ -62,6 +64,8 @@ export default async function AppLayout({
     org.trialEndsAt < now;
   const isPastDue = org?.billingStatus === "PAST_DUE";
   const isSuspended = trialExpired || isPastDue;
+
+  const announcements = await getActiveAnnouncements(now);
 
   // Read-only mode: allow navigation + downloads. Mutations are blocked server-side.
   // Trial-expiry reminders (14/7/3/1 days) are sent reliably by the
@@ -192,6 +196,7 @@ export default async function AppLayout({
                 <p className="mt-1 text-xs text-amber-100/90">Admins can still record payments to recover revenue.</p>
               </div>
             ) : null}
+            <AnnouncementBanner announcements={announcements} />
             {children}
           </div>
         </main>

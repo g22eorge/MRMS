@@ -2,9 +2,62 @@
 
 import { prisma } from "@/lib/prisma";
 import { OrgPlan, OrgModule } from "@prisma/client";
+import { hashPassword } from "better-auth/crypto";
 import { setOrgAtSenderId } from "@/lib/org-whatsapp-config";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { revalidatePlatformHome, revalidatePlatformOrg, revalidatePlatformOrgAndHome } from "@/lib/platform/revalidate";
+
+export type PlatformResetState = { error?: string; success?: string };
+
+/**
+ * Reset an organization's admin (or any user's) password from the platform
+ * console — for when an org admin is locked out. Sets a new credential and
+ * signs the target out everywhere. Platform-admin gated.
+ */
+export async function resetOrgAdminPasswordAction(
+  _state: PlatformResetState,
+  formData: FormData,
+): Promise<PlatformResetState> {
+  const admin = await requirePlatformAdmin();
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) return { error: "Password must be at least 8 characters" };
+  if (password !== confirm) return { error: "Passwords do not match" };
+  if (!userId) return { error: "No user specified" };
+
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, orgId: true, email: true } });
+  if (!target) return { error: "User not found" };
+
+  const hashed = await hashPassword(password);
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.account.updateMany({
+      where: { userId, providerId: "credential" },
+      data: { password: hashed },
+    });
+    if (updated.count === 0) {
+      await tx.account.create({
+        data: { accountId: userId, providerId: "credential", userId, password: hashed },
+      });
+    }
+    // Force re-login everywhere after a platform reset.
+    await tx.session.deleteMany({ where: { userId } });
+  });
+
+  await writeSystemAuditEvent({
+    orgId: target.orgId,
+    actorUserId: admin.id,
+    entityType: "User",
+    entityId: userId,
+    action: "ORG_ADMIN_PASSWORD_RESET",
+    summary: `Platform admin reset password for ${target.email} and signed out all sessions`,
+  });
+
+  if (target.orgId) revalidatePlatformOrg(target.orgId);
+  return { success: `Password reset — ${target.email} signed out everywhere` };
+}
 
 export async function setPlanAction(formData: FormData) {
   await requirePlatformAdmin();
