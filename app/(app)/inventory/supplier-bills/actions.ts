@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -16,9 +17,13 @@ async function requireInventoryManager() {
 }
 
 async function generateBillNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.supplierBill.count({ where: { orgId } });
-  return `SB-${year}-${String(count + 1).padStart(4, "0")}`;
+  const inner = `SB-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner } }, select: { billNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.billNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 type BillLine = { description: string; quantity: number; unitCost: number };

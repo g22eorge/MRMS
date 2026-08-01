@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -18,10 +19,13 @@ async function requireInventoryManager() {
 }
 
 async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
-  const year = new Date().getFullYear();
-  const prefix = `ST-${year}-`;
-  const count = await tx.stockTransfer.count({ where: { orgId, transferNumber: { startsWith: prefix } } });
-  return `${prefix}${String(count + 1).padStart(4, "0")}`;
+  const inner = `ST-${new Date().getFullYear()}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.transferNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 async function syncPartAggregate(tx: Prisma.TransactionClient, partId: string) {

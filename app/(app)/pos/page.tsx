@@ -7,6 +7,7 @@ import { formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
@@ -27,17 +28,17 @@ function monthKey(d: Date) {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-async function nextSaleNumber(db: ReturnType<typeof orgDb>) {
-  const prefix = `S-${monthKey(new Date())}-`;
-  const last = await db.sale.findFirst({
-    where: { saleNumber: { startsWith: prefix } },
-    orderBy: { saleNumber: "desc" },
-    select: { saleNumber: true },
-  });
-  const lastSeq = last?.saleNumber.slice(prefix.length);
-  const n = lastSeq ? Number.parseInt(lastSeq, 10) : 0;
-  const next = Number.isFinite(n) ? n + 1 : 1;
-  return `${prefix}${String(next).padStart(4, "0")}`;
+async function nextSaleNumber(db: ReturnType<typeof orgDb>, orgId: string) {
+  const inner = `S-${monthKey(new Date())}-`;
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    db.sale.findMany({
+      where: { saleNumber: { contains: inner } },
+      select: { saleNumber: true },
+    }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.saleNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 export default async function PosPage({ searchParams }: { searchParams: Promise<{ period?: string; page?: string }> }) {
@@ -82,7 +83,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     });
     if (!_shift) redirect("/pos/shifts?reason=no-shift");
 
-    const saleNumber = await nextSaleNumber(db);
+    const saleNumber = await nextSaleNumber(db, _orgId2);
     const sale = await db.sale.create({
       data: {
         saleNumber,

@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -104,18 +105,25 @@ function parseDevices(devicesJson: string) {
 }
 
 export async function generateJobNumber(orgId?: string) {
-  const year = new Date().getFullYear();
-  const prefix = `EI-${year}-`;
-  const latest = await prisma.job.findFirst({
-    where: { jobNumber: { startsWith: prefix }, ...(orgId ? { orgId } : {}) },
-    orderBy: { jobNumber: "desc" },
-    select: { jobNumber: true },
-  });
-
-  const latestSeq = latest?.jobNumber.slice(prefix.length) ?? "0";
-  const numeric = Number(latestSeq);
-  const next = Number.isFinite(numeric) ? numeric + 1 : 1;
-  return `${prefix}${String(next).padStart(4, "0")}`;
+  const inner = `EI-${new Date().getFullYear()}-`;
+  // Without an org we can't tag; keep the legacy global sequence (build/seed paths).
+  if (!orgId) {
+    const rows = await prisma.job.findMany({
+      where: { jobNumber: { contains: inner } },
+      select: { jobNumber: true },
+    });
+    const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
+    return `${inner}${String(next).padStart(4, "0")}`;
+  }
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    prisma.job.findMany({
+      where: { orgId, jobNumber: { contains: inner } },
+      select: { jobNumber: true },
+    }),
+  ]);
+  const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
+  return composeOrgNumber(tag, inner, next);
 }
 
 export async function createJobAction(

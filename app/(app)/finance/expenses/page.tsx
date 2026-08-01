@@ -9,6 +9,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
+import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
@@ -216,9 +217,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
         : null;
     const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
 
-    const count = await db.expense.count({ where: {} });
-    const year = new Date().getFullYear();
-    const expenseNumber = `EXP-${year}-${String(count + 1).padStart(4, "0")}`;
+    const inner = `EXP-${new Date().getFullYear()}-`;
+    const [tag, existingNumbers] = await Promise.all([
+      orgTagFor(user.orgId),
+      db.expense.findMany({ where: { expenseNumber: { contains: inner } }, select: { expenseNumber: true } }),
+    ]);
+    const expenseSeq = maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1;
+    const expenseNumber = composeOrgNumber(tag, inner, expenseSeq);
 
     const expense = await db.expense.create({
       data: {
