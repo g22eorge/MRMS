@@ -1,9 +1,8 @@
+// @ts-nocheck
 export const dynamic = "force-dynamic";
-
 
 /* Edit handled via ?edit=1 inline form */
 
-// @ts-nocheck
 import { orgDb } from "@/lib/db";
 import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -14,7 +13,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatStrip } from "@/components/ui/StatStrip";
+import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
 
@@ -84,6 +83,27 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     redirect("/documents/quotations");
   }
 
+  async function editQuotationAction(formData: FormData) {
+    "use server";
+    const { user } = await getCurrentUserRole();
+    if (!can.createQuotations(user)) redirect("/dashboard");
+    const db = orgDb(user.orgId);
+    const quotationId = String(formData.get("id") ?? "").trim();
+    if (!quotationId) return;
+    const validUntilRaw = String(formData.get("validUntil") ?? "").trim();
+    const notes = sanitizeText(String(formData.get("notes") ?? "")).trim();
+    await db.quotation.updateMany({
+      where: { id: quotationId },
+      data: {
+        validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
+        notes: notes || null,
+      },
+    });
+    revalidatePath(`/documents/quotations/${quotationId}`);
+    revalidatePath("/documents/quotations");
+    redirect(`/documents/quotations/${quotationId}`);
+  }
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `/* print styles injected at runtime */` }} />
@@ -100,17 +120,14 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
             </div>
           }
         />
-        <StatStrip
-          variant="cards"
-          tiles={[
+        <StatCards columns={5} cards={[
             { label: "Quote #", value: (quotation as any).quoteNumber },
             { label: "Date", value: formatEATDate(quotation.createdAt) },
             { label: "Valid Until", value: ((quotation as any).validUntil) ? formatEATDate((quotation as any).validUntil) : "—" },
             { label: "Status", value: <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status] ?? "neutral"}>{STATUS_LABEL[quotation.status] ?? quotation.status}</StatusBadge> },
             { label: "Total", value: formatMoney(quotation.totalAmount, currency) },
-        ]}
-      />
-      <div className="max-w-6xl mx-auto">
+        ]} />
+      <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 action-bar">
           {canSend && quotation.client?.phone && (
             <form action={`/api/quotations/${quotation.id}/whatsapp`} method="POST" className="inline">
@@ -160,11 +177,11 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
           <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Line Items</p></div>
           {quotation.items.length ? (
             <>
-              <DataTable rows={quotation.items} getRowKey={(l: any) => l.id} dense columns={[
-                { key: "description", header: "Description", cell: (row: any) => <span className="text-[13px] font-medium">{row.description}</span> },
-                { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row: any) => <span className="text-[13px]">{row.quantity}</span> },
-{ key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono text-[13px] tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
-{ key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono text-[13px] font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
+              <DataTable frameless rows={quotation.items} getRowKey={(l: any) => l.id} dense columns={[
+                { key: "description", header: "Description", cell: (row: any) => <span className="font-medium">{row.description}</span> },
+                { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row: any) => <span className="">{row.quantity}</span> },
+{ key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
+{ key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
               ]} />
               <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
                 <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
@@ -186,24 +203,6 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
           </div>
         )}
 
-        {(quotation.taxRate || quotation.taxLabel) && (
-      <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Tax</p>
-        </div>
-        <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Rate</p>
-            <p className="text-[13px] font-medium">{typeof quotation.taxRate === "number" ? `${quotation.taxRate}%` : "—"}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Label</p>
-            <p className="text-[13px] font-medium">{quotation.taxLabel ?? "—"}</p>
-          </div>
-        </div>
-      </div>
-    )}
-
     {quotation.notes && (
           <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Notes</p></div>
@@ -212,8 +211,8 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
         )}
         </div>
     </section>
-    {isEdit ? (
-      <section className="max-w-xl mx-auto space-y-4 pb-20">
+      {isEdit ? (
+      <section className="space-y-4 pb-20">
         <PageHeader
           title={`Edit Quotation ${(quotation as any).quoteNumber}`}
           eyebrow="Documents · Quotations"

@@ -233,7 +233,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                 cell: (item) => (
                   <>
                     <p className="font-semibold text-[var(--ink)]">{item.description}</p>
-                    <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
+                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
                   </>
                 ),
               },
@@ -278,7 +278,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             ]}
             tableFooter={
               <tr>
-                <td colSpan={2} className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
+                <td colSpan={2} className="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
                 <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{totalQty.toLocaleString()}</td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(total)}</td>

@@ -131,7 +131,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
               {label}
             </label>
           ))}
-          <input name="model" defaultValue={settings?.model ?? ""} placeholder="Model override, e.g. gemini-1.5-flash" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none md:col-span-2" />
+          <input name="model" defaultValue={settings?.model ?? ""} placeholder="Model override, e.g. gemini-1.5-flash" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none md:col-span-2" />
           <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm">Save AI Settings</button>
         </div>
       </form>
@@ -145,10 +145,10 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <form action={createArticleAction} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <p className="text-sm font-bold text-[var(--ink)]">Add Knowledge Article</p>
-          <input name="title" required placeholder="Title" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none" />
-          <input name="module" placeholder="Module, e.g. JOBS, FINANCE, AI" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none" />
-          <textarea name="content" required rows={8} placeholder="Clear instructions the AI can cite when answering staff questions." className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none" />
-          <select name="scope" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none">
+          <input name="title" required placeholder="Title" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+          <input name="module" placeholder="Module, e.g. JOBS, FINANCE, AI" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+          <textarea name="content" required rows={8} placeholder="Clear instructions the AI can cite when answering staff questions." className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+          <select name="scope" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none">
             <option value="org">This workspace only</option>
             <option value="global">Global default</option>
           </select>

@@ -932,59 +932,86 @@ export default async function ReportsPage({
               </div>
               <Link href="/finance/reports/pl" className="text-xs font-semibold text-[var(--accent)] hover:underline">Full P&amp;L →</Link>
             </div>
-            {/* Header row */}
-            <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 border-b border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2">
-              <span />
-              <span className="w-24 text-right text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{period === "year" ? String(selectedYear) : selectedMonthString}</span>
-              <span className="w-24 text-right text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{new Date().getFullYear()} YTD</span>
-            </div>
-            <div className="divide-y divide-[var(--line)]">
-              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--ink)]">Total Revenue</p>
-                  <p className="text-xs text-[var(--ink-muted)]">Repairs · POS · Invoices</p>
-                </div>
-                <p className="w-24 text-right text-sm font-bold text-[var(--ink)]">{formatMoneyCompact(totalAllChannels, currency)}</p>
-                <p className="w-24 text-right text-sm font-bold text-[var(--ink)]">{formatMoneyCompact(ytdRevenue, currency)}</p>
-              </div>
-              {(cashOutExternal > 0 || ytdCashOutExternal > 0) && (
-                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 px-4 py-3">
-                  <p className="text-sm text-[var(--ink-muted)]">Cost of External Repairs</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(cashOutExternal, currency)}</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(ytdCashOutExternal, currency)}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 bg-[var(--panel-strong)] px-4 py-3">
-                <div>
-                  <p className="text-sm font-bold text-[var(--ink)]">Gross Profit</p>
-                  <p className="text-xs text-[var(--ink-muted)]">Margin: {grossMarginPct}% period · {ytdGrossMarginPct}% YTD</p>
-                </div>
-                <p className={`w-24 text-right text-sm font-bold ${grossProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{formatMoneyCompact(grossProfit, currency)}</p>
-                <p className={`w-24 text-right text-sm font-bold ${ytdGrossProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{formatMoneyCompact(ytdGrossProfit, currency)}</p>
-              </div>
-              {(expensesTotal > 0 || ytdExpensesTotal > 0) && (
-                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 px-4 py-3">
-                  <p className="text-sm text-[var(--ink-muted)]">Operating Expenses</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(expensesTotal, currency)}</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(ytdExpensesTotal, currency)}</p>
-                </div>
-              )}
-              {(cashOutRefunds > 0 || ytdCashOutRefunds > 0) && (
-                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 px-4 py-3">
-                  <p className="text-sm text-[var(--ink-muted)]">Refunds Issued</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(cashOutRefunds, currency)}</p>
-                  <p className="w-24 text-right text-sm text-red-500">− {formatMoneyCompact(ytdCashOutRefunds, currency)}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-t-2 border-[var(--line)] px-4 py-4">
-                <div>
-                  <p className="text-sm font-bold text-[var(--ink)]">Net Profit</p>
-                  <p className="text-xs text-[var(--ink-muted)]">Revenue − costs − expenses − refunds</p>
-                </div>
-                <p className={`w-24 text-right text-lg font-black tabular-nums ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{formatMoneyCompact(netProfit, currency)}</p>
-                <p className={`w-24 text-right text-lg font-black tabular-nums ${ytdNetProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{formatMoneyCompact(ytdNetProfit, currency)}</p>
-              </div>
-            </div>
+            {(() => {
+              type PlRow = {
+                key: string;
+                label: string;
+                hint?: string;
+                period: number;
+                ytd: number;
+                kind: "negative" | "subtotal" | "total";
+              };
+              const plRows: PlRow[] = [
+                { key: "revenue", label: "Total Revenue", hint: "Repairs · POS · Invoices", period: totalAllChannels, ytd: ytdRevenue, kind: "subtotal" },
+                ...(cashOutExternal > 0 || ytdCashOutExternal > 0
+                  ? [{ key: "externalCost", label: "Cost of External Repairs", period: cashOutExternal, ytd: ytdCashOutExternal, kind: "negative" } as PlRow]
+                  : []),
+                { key: "grossProfit", label: "Gross Profit", hint: `Margin: ${grossMarginPct}% period · ${ytdGrossMarginPct}% YTD`, period: grossProfit, ytd: ytdGrossProfit, kind: "subtotal" },
+                ...(expensesTotal > 0 || ytdExpensesTotal > 0
+                  ? [{ key: "expenses", label: "Operating Expenses", period: expensesTotal, ytd: ytdExpensesTotal, kind: "negative" } as PlRow]
+                  : []),
+                ...(cashOutRefunds > 0 || ytdCashOutRefunds > 0
+                  ? [{ key: "refunds", label: "Refunds Issued", period: cashOutRefunds, ytd: ytdCashOutRefunds, kind: "negative" } as PlRow]
+                  : []),
+                { key: "netProfit", label: "Net Profit", hint: "Revenue − costs − expenses − refunds", period: netProfit, ytd: ytdNetProfit, kind: "total" },
+              ];
+
+              function amountCell(row: PlRow, value: number) {
+                if (row.kind === "negative") {
+                  return <span className="text-red-500">− {formatMoneyCompact(value, currency)}</span>;
+                }
+                const tone = value >= 0 ? "text-emerald-600" : "text-red-500";
+                if (row.kind === "total") {
+                  return <span className={`font-black tabular-nums ${tone}`}>{formatMoneyCompact(value, currency)}</span>;
+                }
+                return (
+                  <span className={`font-bold tabular-nums ${row.key === "revenue" ? "text-[var(--ink)]" : tone}`}>
+                    {formatMoneyCompact(value, currency)}
+                  </span>
+                );
+              }
+
+              return (
+                <DataTable
+                  frameless
+                  rows={plRows}
+                  getRowKey={(row) => row.key}
+                  rowClassName={(row) =>
+                    row.kind === "subtotal" && row.key !== "revenue"
+                      ? "bg-[var(--panel-strong)]/50"
+                      : row.kind === "total"
+                        ? "border-t-2 border-[var(--line)]"
+                        : undefined
+                  }
+                  columns={[
+                    {
+                      key: "label",
+                      header: "",
+                      cell: (row) => (
+                        <>
+                          <p className={`${row.kind ==="negative" ? "text-[var(--ink-muted)]" : "font-bold text-[var(--ink)]"}`}>{row.label}</p>
+                          {row.hint ? <p className="text-[12px] text-[var(--ink-muted)]">{row.hint}</p> : null}
+                        </>
+                      ),
+                    },
+                    {
+                      key: "period",
+                      header: period === "year" ? String(selectedYear) : selectedMonthString,
+                      align: "right",
+                      className: "w-32 whitespace-nowrap",
+                      cell: (row) => amountCell(row, row.period),
+                    },
+                    {
+                      key: "ytd",
+                      header: `${new Date().getFullYear()} YTD`,
+                      align: "right",
+                      className: "w-32 whitespace-nowrap",
+                      cell: (row) => amountCell(row, row.ytd),
+                    },
+                  ]}
+                />
+              );
+            })()}
           </section>
 
           {/* Business KPI strip */}
@@ -1219,11 +1246,11 @@ export default async function ReportsPage({
                   getRowKey={(row) => row.device}
                   empty="No jobs in this period"
                   columns={[
-                    { key: "device", header: "Device", className: "text-sm font-medium text-[var(--ink)]", cell: (row) => row.device },
-                    { key: "total", header: "Total", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => row.total },
-                    { key: "done", header: "Done", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => row.completed },
-                    { key: "rate", header: "Rate", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => `${Math.round(row.completionRate)}%` },
-                    { key: "revenue", header: "Revenue", align: "right", className: "text-sm text-[var(--ink)]", cell: (row) => (row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—") },
+                    { key: "device", header: "Device", className: "font-medium text-[var(--ink)]", cell: (row) => row.device },
+                    { key: "total", header: "Total", align: "right", className: "text-[var(--ink)]", cell: (row) => row.total },
+                    { key: "done", header: "Done", align: "right", className: "text-[var(--ink)]", cell: (row) => row.completed },
+                    { key: "rate", header: "Rate", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => `${Math.round(row.completionRate)}%` },
+                    { key: "revenue", header: "Revenue", align: "right", className: "text-[var(--ink)]", cell: (row) => (row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—") },
                   ]}
                 />
               </div>
@@ -1263,13 +1290,13 @@ export default async function ReportsPage({
                       key: "job",
                       header: "Job",
                       cell: (job) => (
-                        <Link href={`/jobs/${job.jobNumber}`} className="text-sm font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
+                        <Link href={`/jobs/${job.jobNumber}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
                       ),
                     },
                     {
                       key: "status",
                       header: "Status",
-                      className: "text-sm text-[var(--ink-muted)]",
+                      className: "text-[var(--ink-muted)]",
                       cell: (job) => statusLabel[normalizeJobStatus(job.status as JobStatus)],
                     },
                     {
@@ -1308,8 +1335,8 @@ export default async function ReportsPage({
                   getRowKey={(part) => part.sku ?? part.name}
                   empty="All inventory items stocked above reorder level"
                   columns={[
-                    { key: "item", header: "Item", className: "text-sm font-medium text-[var(--ink)]", cell: (part) => part.name },
-                    { key: "onHand", header: "On Hand", align: "right", className: "text-sm text-[var(--ink)]", cell: (part) => part.qtyOnHand },
+                    { key: "item", header: "Item", className: "font-medium text-[var(--ink)]", cell: (part) => part.name },
+                    { key: "onHand", header: "On Hand", align: "right", className: "text-[var(--ink)]", cell: (part) => part.qtyOnHand },
                     {
                       key: "status",
                       header: "Status",
@@ -1469,11 +1496,11 @@ export default async function ReportsPage({
                   rows={staffRevRows}
                   getRowKey={(row) => row.name}
                   columns={[
-                    { key: "name", header: "Name", className: "text-sm font-medium text-[var(--ink)]", cell: (row) => row.name },
-                    { key: "repairs", header: "Repairs", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.repairRev, currency) },
-                    { key: "pos", header: "POS", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.posRev, currency) },
-                    { key: "total", header: "Total", align: "right", className: "text-sm font-semibold text-[var(--ink)]", cell: (row) => formatMoneyCompact(row.total, currency) },
-                    { key: "target", header: "Target", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (row) => (row.target > 0 ? formatMoneyCompact(row.target, currency) : "—") },
+                    { key: "name", header: "Name", className: "font-medium text-[var(--ink)]", cell: (row) => row.name },
+                    { key: "repairs", header: "Repairs", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.repairRev, currency) },
+                    { key: "pos", header: "POS", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.posRev, currency) },
+                    { key: "total", header: "Total", align: "right", className: "font-semibold text-[var(--ink)]", cell: (row) => formatMoneyCompact(row.total, currency) },
+                    { key: "target", header: "Target", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => (row.target > 0 ? formatMoneyCompact(row.target, currency) : "—") },
                     {
                       key: "pct",
                       header: "%",
@@ -1483,7 +1510,7 @@ export default async function ReportsPage({
                         return pct !== null ? (
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-bold ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>{pct}%</span>
                         ) : (
-                          <span className="text-xs text-[var(--ink-muted)]">—</span>
+                          <span className="text-[12px] text-[var(--ink-muted)]">—</span>
                         );
                       },
                     },
@@ -1530,10 +1557,10 @@ export default async function ReportsPage({
                     rows={techPerf}
                     getRowKey={(t) => t.name}
                     columns={[
-                      { key: "name", header: "Name", className: "text-sm font-medium text-[var(--ink)]", cell: (t) => t.name },
-                      { key: "role", header: "Role", className: "text-xs text-[var(--ink-muted)]", cell: (t) => (t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal") },
-                      { key: "total", header: "Total", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => t.total },
-                      { key: "done", header: "Done", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => t.completed },
+                      { key: "name", header: "Name", className: "font-medium text-[var(--ink)]", cell: (t) => t.name },
+                      { key: "role", header: "Role", className: "text-[12px] text-[var(--ink-muted)]", cell: (t) => (t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal") },
+                      { key: "total", header: "Total", align: "right", className: "text-[var(--ink)]", cell: (t) => t.total },
+                      { key: "done", header: "Done", align: "right", className: "text-[var(--ink)]", cell: (t) => t.completed },
                       {
                         key: "rate",
                         header: "Rate",
@@ -1544,8 +1571,8 @@ export default async function ReportsPage({
                           </span>
                         ),
                       },
-                      { key: "avgTime", header: "Avg Time", align: "right", className: "text-sm text-[var(--ink-muted)]", cell: (t) => (t.avgTurnaround > 0 ? turnaroundLabel(t.avgTurnaround) : "—") },
-                      { key: "revenue", header: "Revenue", align: "right", className: "text-sm text-[var(--ink)]", cell: (t) => (t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—") },
+                      { key: "avgTime", header: "Avg Time", align: "right", className: "text-[var(--ink-muted)]", cell: (t) => (t.avgTurnaround > 0 ? turnaroundLabel(t.avgTurnaround) : "—") },
+                      { key: "revenue", header: "Revenue", align: "right", className: "text-[var(--ink)]", cell: (t) => (t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—") },
                     ]}
                   />
                 </div>
@@ -1571,13 +1598,13 @@ export default async function ReportsPage({
                       key: "job",
                       header: "Job",
                       cell: (job) => (
-                        <Link href={`/jobs/${job.jobNumber}`} className="text-sm font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
+                        <Link href={`/jobs/${job.jobNumber}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
                       ),
                     },
                     {
                       key: "device",
                       header: "Device",
-                      className: "text-sm text-[var(--ink-muted)]",
+                      className: "text-[var(--ink-muted)]",
                       cell: (job) => `${deviceLabel[job.deviceType] ?? job.deviceType} · ${job.brand} ${job.model}`,
                     },
                     {

@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
@@ -84,21 +86,18 @@ export default async function StockOpsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-24 lg:pb-6">
+    <div className="space-y-4 pb-24 lg:pb-8">
 
-      {/* Page header */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="px-4 py-4">
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Stock & Supply</p>
-          <p className="text-[15px] font-bold text-[var(--ink)]">Stock Operations</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Locations, suppliers, counts, and goods received</p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Stock &amp; Supply"
+        title="Stock Operations"
+        description="Locations, suppliers, counts, and goods received"
+        actions={<Button href="/inventory" variant="secondary" size="sm">Inventory items →</Button>}
+      />
 
       {/* Quick links back to daily items */}
       <div className="flex flex-wrap gap-2">
         {[
-          { label: "← Inventory Items", href: "/inventory" },
           { label: "Procurement Desk", href: "/procurement" },
           { label: "Purchase Requests", href: "/inventory/purchase-requests" },
           { label: "Purchase Orders",  href: "/inventory/purchase-orders"  },
@@ -126,14 +125,14 @@ export default async function StockOpsPage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-2xl bg-[var(--panel)] px-4 py-3.5 transition-all active:opacity-75"
+                  className="dc-card flex items-center gap-3 px-4 py-3.5 transition active:opacity-75"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--panel-strong)]">
                     <NavIcon d={item.icon} color={item.color} />
                   </span>
                   <div>
                     <p className="text-[13px] font-semibold text-[var(--ink)]">{item.label}</p>
-                    <p className="text-[11px] text-[var(--ink-muted)]">{item.description}</p>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{item.description}</p>
                   </div>
                 </Link>
               ))}
@@ -144,7 +143,7 @@ export default async function StockOpsPage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-4 transition-all hover:border-[var(--accent)]/30 hover:bg-[var(--panel-strong)] active:scale-[0.97]"
+                  className="dc-card flex flex-col gap-3 px-4 py-4 transition hover:shadow-[var(--dc-shadow-hover)]"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-strong)]">
                     <NavIcon d={item.icon} color={item.color} />

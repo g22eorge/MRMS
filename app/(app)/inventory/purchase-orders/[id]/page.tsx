@@ -155,7 +155,7 @@ export default async function PurchaseOrderDetailPage({
             {
               key: "item",
               header: "Item",
-              className: "font-mono text-xs text-[var(--ink-muted)]",
+              className: "mono text-[12px] text-[var(--ink-muted)]",
               cell: (item) => (item.part ? item.part.sku : "-"),
             },
             {
@@ -196,8 +196,8 @@ export default async function PurchaseOrderDetailPage({
           ]}
           tableFooter={
             <tr>
-              <td colSpan={6} className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
-              <td className="px-3 py-2 text-right text-sm font-black tabular-nums text-[var(--ink)]">{formatMoney(totalOrdered)}</td>
+              <td colSpan={6} className="px-3 py-2 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(totalOrdered)}</td>
             </tr>
           }
         />

@@ -285,7 +285,7 @@ export function JobCompletionFlowModal({
                       defaultValue={defaultPaymentAmount}
                       inputMode="decimal"
                       required
-                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
                     />
                   </div>
                   <div>
@@ -295,7 +295,7 @@ export function JobCompletionFlowModal({
                     <select
                       name="method"
                       defaultValue="CASH"
-                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
                     >
                       {PAYMENT_METHODS.map((method) => (
                         <option key={method} value={method}>
@@ -313,7 +313,7 @@ export function JobCompletionFlowModal({
                   <input
                     name="reference"
                     placeholder="Optional"
-                    className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
                   />
                 </div>
                 <button

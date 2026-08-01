@@ -22,6 +22,7 @@ import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -438,13 +439,14 @@ export default async function RefundsPage({
             </Link>
           ) : undefined
         }
-        kpis={[
+      />
+
+      <StatCards columns={4} cards={[
           { label: "Total Refunds", value: totalRefunds, sub: "all time" },
           { label: "Total Refunded", value: formatMoneyCompact(totalAmount, currency), sub: "amount returned" },
           { label: "Invoice Refunds", value: formatMoneyCompact(invoiceAmount, currency), sub: "from invoices" },
           { label: "Sale Refunds", value: formatMoneyCompact(saleAmount, currency), sub: "from sales" },
-        ]}
-      />
+        ]} />
 
       {showNewRefundForm && ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-sm">
@@ -546,7 +548,7 @@ export default async function RefundsPage({
               />
             </div>
             <div className="flex justify-end gap-2 sm:col-span-2 lg:col-span-3">
-              <button type="submit" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-white hover:opacity-90">
+              <button type="submit" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90">
                 Issue Refund
               </button>
             </div>
@@ -611,9 +613,9 @@ export default async function RefundsPage({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   {sourceHref ? (
-                    <Link href={sourceHref} className="font-mono text-xs font-semibold text-[var(--accent)] hover:underline">{sourceLabel}</Link>
+                    <Link href={sourceHref} className="mono text-xs font-semibold text-[var(--accent)] hover:underline">{sourceLabel}</Link>
                   ) : (
-                    <span className="font-mono text-xs font-semibold text-[var(--ink)]">{sourceLabel}</span>
+                    <span className="mono text-xs font-semibold text-[var(--ink)]">{sourceLabel}</span>
                   )}
                   <StatusBadge tone={r.invoiceId ? "info" : "violet"}>{r.invoiceId ? "Invoice" : "Sale"}</StatusBadge>
                 </div>
@@ -625,8 +627,8 @@ export default async function RefundsPage({
                 <span className="text-[var(--ink-muted)]">{formatEATDate(r.refundedAt)}</span>
               </div>
               {(r.reference || r.note) && (
-                <div className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
-                  {r.reference && <span>Ref: <span className="font-mono">{r.reference}</span></span>}
+                <div className="mt-0.5 flex flex-wrap gap-x-3 text-[var(--ink-muted)]">
+                  {r.reference && <span>Ref: <span className="mono">{r.reference}</span></span>}
                   {r.note && <span className="line-clamp-1">{r.note}</span>}
                 </div>
               )}
@@ -652,11 +654,11 @@ export default async function RefundsPage({
               return (
                 <div className="flex flex-col gap-0.5">
                   {sourceHref ? (
-                    <Link href={sourceHref} className="font-mono text-xs font-semibold text-[var(--accent)] hover:underline">
+                    <Link href={sourceHref} className="mono font-semibold text-[var(--accent)] hover:underline">
                       {sourceLabel}
                     </Link>
                   ) : (
-                    <span className="font-mono text-xs font-semibold">{sourceLabel}</span>
+                    <span className="mono font-semibold">{sourceLabel}</span>
                   )}
                   {r.creditNote && (
                     <span className="text-[12px] text-[var(--ink-muted)]">
@@ -691,7 +693,7 @@ export default async function RefundsPage({
           {
             key: "reference",
             header: "Reference",
-            className: "font-mono text-xs text-[var(--ink-muted)]",
+            className: "mono text-[var(--ink-muted)]",
             cell: (r) => r.reference || "—",
           },
           {

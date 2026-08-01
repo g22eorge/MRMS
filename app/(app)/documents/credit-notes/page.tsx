@@ -23,6 +23,7 @@ import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -435,16 +436,16 @@ export default async function CreditNotesPage({
                 <input type="hidden" name="creditNoteId" value={cn.id} />
                 <div>
                   <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Amount</label>
-                  <input name="amount" type="number" step="0.01" max={outstanding} defaultValue={outstanding} className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]" />
+                  <input name="amount" type="number" step="0.01" max={outstanding} defaultValue={outstanding} className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]" />
                   <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Max: {formatMoney(outstanding, cn.currency)}</p>
                 </div>
                 <div>
                   <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Method</label>
-                  <select name="method" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]">
+                  <select name="method" className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]">
                     {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                   </select>
                 </div>
-                <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--ink)]" />
+                <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]" />
                 <button type="submit" className="w-full rounded bg-[var(--gold)]/20 py-1.5 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/30">Issue Refund</button>
               </form>
             </div>
@@ -483,13 +484,14 @@ export default async function CreditNotesPage({
             )}
           </>
         }
-        kpis={[
+      />
+
+      <StatCards columns={4} cards={[
           { label: "Total", value: creditNotesTotal, sub: "credit notes" },
           { label: "Total Value", value: formatMoneyCompact(totalValue, currency), sub: "issued" },
           { label: "Pending Return", value: pendingReturn, sub: "items not received back", valueClass: pendingReturn > 0 ? "text-amber-600" : undefined },
           { label: "Settled", value: creditNotesTotal - pendingReturn, sub: "items returned", valueClass: "text-emerald-600" },
-        ]}
-      />
+        ]} />
 
       {/* Filters: period chips + return-state chips + search */}
       <DocumentFilterBar
@@ -523,21 +525,21 @@ export default async function CreditNotesPage({
           return (
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-mono text-xs font-semibold text-[var(--ink)]">{cn.creditNoteNumber}</p>
+                <p className="mono text-xs font-semibold text-[var(--ink)]">{cn.creditNoteNumber}</p>
                 {cn.itemsReceivedBackAt ? (
                   <StatusBadge tone="success" className="shrink-0">Received</StatusBadge>
                 ) : (
                   <StatusBadge tone="warning" className="shrink-0">Pending Return</StatusBadge>
                 )}
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-[var(--ink-muted)]">
-                {cn.sale?.saleNumber && <span>Sale: <span className="font-mono text-[var(--accent)]">{cn.sale.saleNumber}</span></span>}
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[var(--ink-muted)]">
+                {cn.sale?.saleNumber && <span>Sale: <span className="mono text-[var(--accent)]">{cn.sale.saleNumber}</span></span>}
                 <span>Client: <span className="text-[var(--ink)]">{cn.sale?.client?.fullName ?? "Walk-in"}</span></span>
               </div>
-              <p className="mt-1 line-clamp-2 text-[13px] text-[var(--ink-muted)]">{cn.reason}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
-                <span className="font-mono font-semibold text-[var(--ink)]">{formatMoney(cn.totalAmount, cn.currency)}</span>
-                {refundedTotal > 0 && <span className="text-emerald-700">Refunded: <span className="font-mono">{formatMoney(refundedTotal, cn.currency)}</span></span>}
+              <p className="mt-1 line-clamp-2 text-[var(--ink-muted)]">{cn.reason}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(cn.totalAmount, cn.currency)}</span>
+                {refundedTotal > 0 && <span className="text-emerald-700">Refunded: <span className="tabular-nums">{formatMoney(refundedTotal, cn.currency)}</span></span>}
                 <span className="text-[var(--ink-muted)]">Issued {fmt(cn.issuedAt)}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -551,7 +553,7 @@ export default async function CreditNotesPage({
           {
             key: "number",
             header: "Credit Note #",
-            className: "font-mono text-xs font-semibold text-[var(--ink)]",
+            className: "mono font-semibold text-[var(--ink)]",
             cell: (cn) => cn.creditNoteNumber,
           },
           {
@@ -576,14 +578,14 @@ export default async function CreditNotesPage({
             key: "value",
             header: "Value",
             align: "right",
-            className: "font-mono font-semibold text-[var(--ink)]",
+            className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]",
             cell: (cn) => formatMoney(cn.totalAmount, cn.currency),
           },
           {
             key: "refunded",
             header: "Refunded",
             align: "right",
-            className: "font-mono text-emerald-700",
+            className: "whitespace-nowrap tabular-nums text-emerald-700",
             cell: (cn) => {
               const { refundedTotal } = creditNoteDerived(cn);
               return refundedTotal > 0 ? formatMoney(refundedTotal, cn.currency) : "—";

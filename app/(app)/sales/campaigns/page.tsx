@@ -1,4 +1,5 @@
 // @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { CampaignType, CampaignStatus, CampaignContactStatus } from "@prisma/client";
@@ -6,17 +7,22 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
-import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuSection, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SendCampaignButton } from "@/components/shared/SendCampaignButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { Button } from "@/components/ui/Button";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
+const CONTACT_STATUSES: CampaignContactStatus[] = ["PENDING", "SENT", "OPENED", "RESPONDED", "OPTED_OUT"];
 
 const STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT:     "neutral",
@@ -25,6 +31,24 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   COMPLETED: "info",
   CANCELLED: "danger",
 };
+
+const STATUS_TILE_TONES: Record<string, string> = {
+  DRAFT:     "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  ACTIVE:    "bg-emerald-500/15 text-emerald-600",
+  PAUSED:    "bg-amber-500/15 text-amber-600",
+  COMPLETED: "bg-sky-500/15 text-sky-600",
+  CANCELLED: "bg-red-500/15 text-red-600",
+};
+
+const CONTACT_STATUS_TONES: Record<string, BadgeTone> = {
+  PENDING:   "neutral",
+  SENT:      "info",
+  OPENED:    "success",
+  RESPONDED: "purple",
+  OPTED_OUT: "danger",
+};
+
+const SENT_LIKE = ["SENT", "OPENED", "RESPONDED"];
 
 function CampaignTypeIcon({ type, className = "h-4 w-4" }: { type: CampaignType; className?: string }) {
   const cls = `${className} shrink-0`;
@@ -56,14 +80,6 @@ function CampaignTypeIcon({ type, className = "h-4 w-4" }: { type: CampaignType;
   }
 }
 
-const CONTACT_STATUS_TONES: Record<string, BadgeTone> = {
-  PENDING:   "neutral",
-  SENT:      "info",
-  OPENED:    "success",
-  RESPONDED: "purple",
-  OPTED_OUT: "danger",
-};
-
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -74,6 +90,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const selectedId = sp.id ?? null;
   const page = parsePage(sp.page);
+  const statusFilter = CAMPAIGN_STATUSES.includes(sp.status as CampaignStatus) ? (sp.status as CampaignStatus) : null;
+  const q = (sp.q ?? "").trim();
+  const showNew = sp.new === "1";
 
   async function createCampaign(fd: FormData) {
     "use server";
@@ -179,122 +198,287 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     ? await prisma.campaignContact.findMany({
         where: { campaignId: selected.id },
         orderBy: { createdAt: "asc" },
+        // NOTE: CampaignContact has no OutboundMessage relation in the schema —
+        // including one here threw PrismaClientValidationError and 500'd the
+        // page for every selected campaign. Delivery state comes from `status`.
         include: {
           lead: { select: { fullName: true, phone: true, email: true, status: true } },
           client: { select: { fullName: true, phone: true, email: true } },
-          outboundMessages: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: { id: true, status: true, providerDeliveryStatus: true, sentAt: true, createdAt: true },
-          },
         },
       })
     : [];
 
+  // ── KPIs stay whole-dataset; only the campaign list is filtered/paginated ──
   const totalActive    = campaigns.filter((c) => c.status === "ACTIVE").length;
   const totalContacts  = campaigns.reduce((s, c) => s + c._count.contacts, 0);
-  const totalSent      = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => ["SENT","OPENED","RESPONDED"].includes(cc.status)).length, 0);
-  const totalOpened    = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => ["OPENED","RESPONDED"].includes(cc.status)).length, 0);
+  const totalSent      = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => SENT_LIKE.includes(cc.status)).length, 0);
+  const totalOpened    = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => ["OPENED", "RESPONDED"].includes(cc.status)).length, 0);
   const totalResponded = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => cc.status === "RESPONDED").length, 0);
-  const _overallOpenRate     = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
-  const _overallResponseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
+  const overallResponseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
 
-  // KPIs and the selected-campaign lookup stay whole-dataset; only the sidebar
-  // list of campaigns is paginated.
-  const pageView = paginationView(page, campaigns.length);
-  const pageCampaigns = campaigns.slice(pageView.skip, pageView.skip + pageView.take);
-  const campaignsHref = pageHrefBuilder("/sales/campaigns", { id: selectedId ?? "" });
+  const statusCounts: Record<string, number> = {};
+  for (const c of campaigns) statusCounts[c.status] = (statusCounts[c.status] ?? 0) + 1;
+
+  const filtered = campaigns.filter((c) => {
+    if (statusFilter && c.status !== statusFilter) return false;
+    if (q && !c.name.toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
+
+  const pageView = paginationView(page, filtered.length);
+  const pageCampaigns = filtered.slice(pageView.skip, pageView.skip + pageView.take);
+  const campaignsHref = pageHrefBuilder("/sales/campaigns", {
+    id: selectedId ?? "",
+    status: statusFilter ?? "",
+    q,
+  });
+
+  function href(next: { id?: string | null; status?: CampaignStatus | null; q?: string; showNew?: boolean }) {
+    const params = new URLSearchParams();
+    const id = next.id === undefined ? selectedId : next.id;
+    const status = next.status === undefined ? statusFilter : next.status;
+    const search = next.q === undefined ? q : next.q;
+    if (id) params.set("id", id);
+    if (status) params.set("status", status);
+    if (search) params.set("q", search);
+    if (next.showNew) params.set("new", "1");
+    const query = params.toString();
+    return query ? `/sales/campaigns?${query}` : "/sales/campaigns";
+  }
+
+  const hasFilters = Boolean(statusFilter) || Boolean(q);
+  const field =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+
+  const statusChips = [
+    { key: "all", short: "All", long: `${campaigns.length} all`, count: campaigns.length, url: href({ status: null }), active: !statusFilter },
+    ...CAMPAIGN_STATUSES.map((s) => ({
+      key: s,
+      short: s.charAt(0) + s.slice(1).toLowerCase(),
+      long: `${statusCounts[s] ?? 0} ${s.toLowerCase()}`,
+      count: statusCounts[s] ?? 0,
+      url: href({ status: s }),
+      active: statusFilter === s,
+    })),
+  ];
+
+  const selectedSent      = selected ? contacts.filter((c) => SENT_LIKE.includes(c.status)).length : 0;
+  const selectedOpened    = selected ? contacts.filter((c) => ["OPENED", "RESPONDED"].includes(c.status)).length : 0;
+  const selectedReplied   = selected ? contacts.filter((c) => c.status === "RESPONDED").length : 0;
+  const selectedPending   = selected ? contacts.filter((c) => c.status === "PENDING").length : 0;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <PageHeader
-        eyebrow="Sales"
-        title="Campaigns"
-        description="Outreach campaigns for leads and clients"
-      />
+    <ListPageLayout
+      headerNode={
+        <>
+          {/* ══ MOBILE HEADER ══ */}
+          <div className="space-y-3 lg:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-black text-[var(--ink)]">Campaigns</h1>
+                <p className="text-[13px] text-[var(--ink-muted)]">{campaigns.length} total · {totalActive} active</p>
+              </div>
+              <Button href={showNew ? href({}) : href({ showNew: true })} size="md" className="rounded-xl font-bold">
+                {showNew ? "Close" : "+ New"}
+              </Button>
+            </div>
 
-      {/* KPI */}
-      <StatStrip
-        variant="cards"
-        tiles={[
-          { label: "Total Campaigns", value: campaigns.length, sub: "all time" },
-          { label: "Active", value: totalActive, sub: "currently running", valueClass: "text-green-600 dark:text-green-400" },
-          { label: "Contacts Reached", value: totalSent, sub: `of ${totalContacts} total` },
-          { label: "Avg Contacts / Campaign", value: campaigns.length > 0 ? Math.round(totalContacts / campaigns.length) : 0, sub: "per campaign" },
+            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+              {([
+                { label: "Total", value: campaigns.length },
+                { label: "Active", value: totalActive },
+                { label: "Sent", value: totalSent },
+                { label: "Replies", value: totalResponded },
+              ] as const).map(({ label, value }) => (
+                <div key={label} className="min-w-0 px-1.5 py-3 text-center">
+                  <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+                  <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              {statusChips.map(({ key, short, count, url, active }) => (
+                <Link
+                  key={key}
+                  href={url}
+                  className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                    active
+                      ? "bg-[var(--accent)] text-black"
+                      : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+                  }`}
+                >
+                  {short}{count > 0 && !active ? ` ${count}` : ""}
+                </Link>
+              ))}
+            </div>
+
+            <form method="GET">
+              {selectedId ? <input type="hidden" name="id" value={selectedId} /> : null}
+              {statusFilter ? <input type="hidden" name="status" value={statusFilter} /> : null}
+              <div className="relative">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50" aria-hidden>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Campaign name..."
+                  className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                />
+                {q ? (
+                  <Link href={href({ q: "" })} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </Link>
+                ) : null}
+              </div>
+            </form>
+          </div>
+
+          {/* ══ DESKTOP HEADER ══ */}
+          <div className="hidden lg:block">
+            <PageHeader
+              eyebrow="Sales"
+              title="Campaigns"
+              description="Outreach campaigns for leads and clients"
+              actions={
+                <Button href={showNew ? href({}) : href({ showNew: true })} size="sm" className="px-4 font-bold">
+                  {showNew ? "Close" : "+ New Campaign"}
+                </Button>
+              }
+            />
+          </div>
+        </>
+      }
+    >
+      {/* ══ DESKTOP: KPI cards ══ */}
+      <StatCards
+        columns={4}
+        cards={[
+          { key: "total", label: "Campaigns", value: campaigns.length, sub: "all time", muted: campaigns.length === 0 },
+          { key: "active", label: "Active", value: totalActive, sub: "currently running", tone: "good", muted: totalActive === 0 },
+          { key: "reached", label: "Contacts reached", value: totalSent, sub: `of ${totalContacts} added`, tone: "accent", muted: totalSent === 0 },
+          { key: "replies", label: "Reply rate", value: `${overallResponseRate}%`, sub: `${totalResponded} replied · ${totalOpened} opened`, tone: "warn", muted: totalResponded === 0 },
         ]}
       />
 
-      {/* Create campaign */}
-      <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <summary className="cursor-pointer px-5 py-3 text-sm font-semibold">+ New Campaign</summary>
-        <form action={createCampaign} className="grid grid-cols-2 gap-4 border-t border-[var(--line)] p-5">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Campaign Name *</label>
-            <input name="name" required placeholder="May Promo — Android Repairs" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Type *</label>
-            <select name="type" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm">
-              {CAMPAIGN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Subject (email)</label>
-            <input name="subject" placeholder="Special offer this month..." className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Schedule date</label>
-            <input name="scheduledAt" type="datetime-local" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" />
-          </div>
-          <div className="col-span-2">
-            <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Message body *</label>
-            <textarea name="body" required rows={4} placeholder="Hi {name}, we have a special offer for you..."
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" />
-          </div>
-          <div className="col-span-2 flex justify-end">
-            <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Create Campaign</button>
-          </div>
+      {/* ══ DESKTOP: Status chips + search ══ */}
+      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
+          {statusChips.map(({ key, long, url, active }) => (
+            <Link
+              key={key}
+              href={url}
+              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                active
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                  : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
+              }`}
+            >
+              {long}
+            </Link>
+          ))}
+        </div>
+        <form className="flex items-center gap-2 p-3">
+          {selectedId ? <input type="hidden" name="id" value={selectedId} /> : null}
+          {statusFilter ? <input type="hidden" name="status" value={statusFilter} /> : null}
+          <input
+            name="q"
+            defaultValue={q}
+            aria-label="Search campaigns"
+            placeholder="Search by campaign name..."
+            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+          />
+          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          {hasFilters ? (
+            <Link href={href({ status: null, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+          ) : null}
         </form>
-      </details>
+      </div>
+
+      {/* ── New campaign ── */}
+      {showNew ? (
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5">
+            <p className={cardLabel}>New Campaign</p>
+          </div>
+          <form action={createCampaign} className="p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input name="name" required placeholder="Campaign name *" aria-label="Campaign name" className={field} />
+              <select name="type" aria-label="Type" className={field}>
+                {CAMPAIGN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <input name="subject" placeholder="Subject (email)" aria-label="Subject" className={field} />
+              <input name="scheduledAt" type="datetime-local" title="Schedule date" aria-label="Schedule date" className={field} />
+              <textarea
+                name="body"
+                required
+                rows={3}
+                placeholder="Message body * — use {name} to insert the contact name"
+                aria-label="Message body"
+                className={`${field} sm:col-span-2`}
+              />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Button type="submit" size="sm" className="px-4 font-bold">Create Campaign</Button>
+              <Link href={href({})} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       {campaigns.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-14 text-center text-sm text-[var(--ink-muted)]">No campaigns yet. Create one above.</div>
+        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+          <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
+            <path d="M5 12h20l10-5v26l-10-5H5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+            <path d="M11 22v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <p className="text-sm font-medium text-[var(--ink-muted)]">No campaigns yet</p>
+          <Link href={href({ showNew: true })} className="text-xs text-[var(--accent)] hover:underline">Create the first one</Link>
+        </div>
       ) : (
-        <div className="grid grid-cols-12 gap-6">
-          {/* Campaign list */}
-          <div className="col-span-5 space-y-2">
-            {pageCampaigns.map((c) => {
-              const sentCount     = c.contacts.filter((cc) => ["SENT","OPENED","RESPONDED"].includes(cc.status)).length;
-              const respondedCount = c.contacts.filter((cc) => cc.status === "RESPONDED").length;
-              const responseRate  = sentCount > 0 ? Math.round((respondedCount / sentCount) * 100) : 0;
-              return (
-                <a key={c.id} href={`/sales/campaigns?id=${c.id}`}
-                  className={`block rounded-xl border p-4 transition-colors ${selected?.id === c.id ? "border-[var(--accent)] bg-[var(--accent-muted)]" : "border-[var(--line)] bg-[var(--panel)] hover:bg-[var(--panel-strong)]"}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[var(--ink-muted)]"><CampaignTypeIcon type={c.type} /></span>
-                        <p className="font-semibold text-sm text-[var(--ink)] truncate">{c.name}</p>
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+          {/* ── Campaign list ── */}
+          <div className="space-y-4">
+            {pageCampaigns.length === 0 ? (
+              <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-10 text-center">
+                <p className="text-sm font-medium text-[var(--ink-muted)]">No campaigns match this view</p>
+                {hasFilters ? (
+                  <Link href={href({ status: null, q: "" })} className="text-xs text-[var(--accent)] hover:underline">Clear filters</Link>
+                ) : null}
+              </div>
+            ) : (
+              <div className="panel-shadow divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+                {pageCampaigns.map((c) => {
+                  const sentCount = c.contacts.filter((cc) => SENT_LIKE.includes(cc.status)).length;
+                  const repliedCount = c.contacts.filter((cc) => cc.status === "RESPONDED").length;
+                  const rate = sentCount > 0 ? Math.round((repliedCount / sentCount) * 100) : 0;
+                  const isActive = selected?.id === c.id;
+                  return (
+                    <Link
+                      key={c.id}
+                      href={href({ id: c.id })}
+                      className={`relative flex items-center gap-3 px-4 py-3 transition ${isActive ? "bg-[var(--panel-strong)]/60" : "hover:bg-[var(--panel-strong)]/40"}`}
+                    >
+                      {isActive ? <span className="absolute inset-y-0 left-0 w-[3px] bg-[var(--accent)]" aria-hidden="true" /> : null}
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${STATUS_TILE_TONES[c.status] ?? STATUS_TILE_TONES.DRAFT}`}>
+                        <CampaignTypeIcon type={c.type} />
                       </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <StatusBadge tone={toneFor(STATUS_TONES, c.status)} className="uppercase">{c.status}</StatusBadge>
-                        <span className="text-xs text-[var(--ink-muted)]">{c._count.contacts} contacts</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-bold text-[var(--ink)]">{c.name}</p>
+                        <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                          {c._count.contacts} contacts
+                          {sentCount > 0 ? ` · ${sentCount} sent · ${rate}% replied` : ""}
+                          {c.scheduledAt ? ` · ${formatEATDate(c.scheduledAt)}` : ""}
+                        </p>
                       </div>
-                    </div>
-                  </div>
-                  {c._count.contacts > 0 && (
-                    <div className="mt-2">
-                      <div className="flex justify-between text-[12px] text-[var(--ink-muted)] mb-0.5">
-                        <span>Response rate</span><span>{responseRate}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-[var(--line)]">
-                        <div className="h-1.5 rounded-full bg-purple-500" style={{ width: `${responseRate}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </a>
-              );
-            })}
+                      <StatusBadge tone={toneFor(STATUS_TONES, c.status)}>{c.status}</StatusBadge>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
 
             <TablePagination
               page={pageView.page}
@@ -307,110 +491,129 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             />
           </div>
 
-          {/* Campaign detail */}
-          <div className="col-span-7">
-            {!selected ? (
-              <div className="rounded-xl border border-dashed border-[var(--line)] py-14 text-center text-sm text-[var(--ink-muted)]">
-                Select a campaign to view contacts
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div>
-                    <h2 className="font-semibold text-[var(--ink)]">{selected.name}</h2>
-                    <p className="flex items-center gap-1.5 text-xs text-[var(--ink-muted)]"><CampaignTypeIcon type={selected.type} className="h-3.5 w-3.5" />{selected.type} · {selected._count.contacts} contacts</p>
+          {/* ── Selected campaign ── */}
+          {!selected ? (
+            <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+              <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
+                <circle cx="14" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
+                <path d="M19 19l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <p className="text-sm font-medium text-[var(--ink-muted)]">Pick a campaign to see its contacts</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[13px] font-bold text-[var(--ink)]">{selected.name}</p>
+                      <StatusBadge tone={toneFor(STATUS_TONES, selected.status)}>{selected.status}</StatusBadge>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
+                      <span className="flex items-center gap-1.5">
+                        <CampaignTypeIcon type={selected.type} className="h-3.5 w-3.5" />
+                        {selected.type}
+                      </span>
+                      <span className="opacity-40">·</span>
+                      <span>{selected._count.contacts} contacts</span>
+                      {selected.subject ? <><span className="opacity-40">·</span><span className="truncate">{selected.subject}</span></> : null}
+                    </div>
+                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
+                      Created {formatEATDate(selected.createdAt)}
+                      {selected.scheduledAt ? ` · scheduled ${formatEATDateTime(selected.scheduledAt)}` : ""}
+                      {selected.startedAt ? ` · started ${formatEATDate(selected.startedAt)}` : ""}
+                      {selected.completedAt ? ` · completed ${formatEATDate(selected.completedAt)}` : ""}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {selected.type === "WHATSAPP" && (
-                      <SendCampaignButton
-                        campaignId={selected.id}
-                        pendingCount={contacts.filter((c) => c.status === "PENDING").length}
-                      />
-                    )}
-                  <RowActionsMenu label="Campaign actions">
-                    <MenuSection label="Status" />
-                    {CAMPAIGN_STATUSES.filter((s) => s !== selected.status).map((s) => (
-                      <form key={s} action={updateStatus}>
-                        <input type="hidden" name="id" value={selected.id} />
-                        <input type="hidden" name="status" value={s} />
-                        <button type="submit" className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]">
-                          Set {s}
-                        </button>
-                      </form>
-                    ))}
-                    <MenuDestructiveRow>
-                      <form action={deleteCampaign}>
-                        <input type="hidden" name="id" value={selected.id} />
-                        <ConfirmSubmitButton message="Delete this campaign and all contact records?" className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-500/10 dark:text-red-400">
-                          Delete Campaign
-                        </ConfirmSubmitButton>
-                      </form>
-                    </MenuDestructiveRow>
-                  </RowActionsMenu>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {selected.type === "WHATSAPP" ? (
+                      <SendCampaignButton campaignId={selected.id} pendingCount={selectedPending} />
+                    ) : null}
+                    <RowActionsMenu label="Campaign actions">
+                      <MenuSection label="Status" />
+                      <div className="py-1">
+                        {CAMPAIGN_STATUSES.filter((s) => s !== selected.status).map((s) => (
+                          <form key={s} action={updateStatus}>
+                            <input type="hidden" name="id" value={selected.id} />
+                            <input type="hidden" name="status" value={s} />
+                            <MenuActionButton icon="save" tone={s === "CANCELLED" ? "danger" : s === "ACTIVE" ? "success" : "default"}>
+                              Set {s.charAt(0) + s.slice(1).toLowerCase()}
+                            </MenuActionButton>
+                          </form>
+                        ))}
+                      </div>
+                      <MenuDestructiveRow>
+                        <form action={deleteCampaign}>
+                          <input type="hidden" name="id" value={selected.id} />
+                          <ConfirmSubmitButton
+                            message="Delete this campaign and all contact records?"
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                          >
+                            Delete Campaign
+                          </ConfirmSubmitButton>
+                        </form>
+                      </MenuDestructiveRow>
+                    </RowActionsMenu>
                   </div>
                 </div>
 
-                {/* Body preview */}
-                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-xs text-[var(--ink-muted)] whitespace-pre-wrap">
-                  {selected.body}
+                <StatStrip
+                  columns={4}
+                  tiles={[
+                    { label: "Contacts", value: selected._count.contacts },
+                    { label: "Sent", value: selectedSent, sub: selectedPending > 0 ? `${selectedPending} pending` : undefined },
+                    { label: "Opened", value: selectedOpened },
+                    { label: "Replied", value: selectedReplied, valueClass: selectedReplied > 0 ? "text-emerald-600" : undefined },
+                  ]}
+                />
+
+                <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)] [overflow-wrap:anywhere]">{selected.body}</p>
                 </div>
 
-                {/* Add contacts */}
-                <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-                  <summary className="cursor-pointer px-4 py-2.5 text-sm font-semibold">+ Add Contacts</summary>
-                  <div className="border-t border-[var(--line)] p-4 flex gap-3">
-                    <form action={addLeadsToCampaign}>
-                      <input type="hidden" name="campaignId" value={selected.id} />
-                      <input type="hidden" name="source" value="all_leads" />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--panel-strong)]">
-                        Add All Active Leads
-                      </button>
-                    </form>
-                    <form action={addLeadsToCampaign}>
-                      <input type="hidden" name="campaignId" value={selected.id} />
-                      <input type="hidden" name="source" value="all_clients" />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--panel-strong)]">
-                        Add All Clients
-                      </button>
-                    </form>
-                  </div>
-                </details>
+                <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] p-3">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Add contacts</span>
+                  <form action={addLeadsToCampaign}>
+                    <input type="hidden" name="campaignId" value={selected.id} />
+                    <input type="hidden" name="source" value="all_leads" />
+                    <Button type="submit" variant="secondary" size="sm">All active leads</Button>
+                  </form>
+                  <form action={addLeadsToCampaign}>
+                    <input type="hidden" name="campaignId" value={selected.id} />
+                    <input type="hidden" name="source" value="all_clients" />
+                    <Button type="submit" variant="secondary" size="sm">All clients</Button>
+                  </form>
+                </div>
+              </section>
 
-                {/* Contact list */}
+              <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+                  <p className={cardLabel}>Contacts</p>
+                  <p className="text-[12px] text-[var(--ink-muted)]">
+                    {contacts.length} total{selectedPending > 0 ? ` · ${selectedPending} pending` : ""}
+                  </p>
+                </div>
                 <DataTable
+                  frameless
+                  dense
                   rows={contacts}
                   getRowKey={(cc) => cc.id}
                   empty="No contacts added yet."
                   renderMobileCard={(cc) => {
                     const person = cc.lead ?? cc.client;
                     if (!person) return null;
-                    const latestMsg = cc.outboundMessages?.[0];
                     return (
-                      <div className="px-4 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
-                            <p className="text-[13px] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end gap-0.5">
-                            <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)} className="uppercase">{cc.status}</StatusBadge>
-                            {latestMsg?.providerDeliveryStatus && <span className="text-[13px] uppercase text-[var(--ink-muted)]">{latestMsg.providerDeliveryStatus}</span>}
-                          </div>
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-bold text-[var(--ink)]">{person.fullName}</p>
+                          <p className="mt-0.5 truncate text-[var(--ink-muted)]">
+                            {person.phone} · {cc.lead ? "Lead" : "Client"}
+                            {cc.sentAt ? ` · sent ${formatEATDate(cc.sentAt)}` : ""}
+                            {cc.repliedAt ? ` · replied ${formatEATDate(cc.repliedAt)}` : ""}
+                          </p>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-x-3 text-[13px] text-[var(--ink-muted)]">
-                          {cc.sentAt && <span>Sent: {new Date(cc.sentAt).toLocaleDateString("en-GB")}</span>}
-                          {cc.openedAt && <span>Opened: {new Date(cc.openedAt).toLocaleDateString("en-GB")}</span>}
-                          {cc.repliedAt && <span className="text-purple-700 dark:text-purple-400">Replied: {new Date(cc.repliedAt).toLocaleDateString("en-GB")}</span>}
-                        </div>
-                        <form action={updateContactStatus} className="mt-2 flex gap-1">
-                          <input type="hidden" name="id" value={cc.id} />
-                          <select name="status" defaultValue={cc.status} className="flex-1 rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
-                            {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                          <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]">→</button>
-                        </form>
+                        <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)}>{cc.status}</StatusBadge>
                       </div>
                     );
                   }}
@@ -422,64 +625,53 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         const person = cc.lead ?? cc.client;
                         if (!person) return null;
                         return (
-                          <>
-                            <p className="font-medium text-[var(--ink)]">{person.fullName}</p>
-                            <p className="text-xs text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
-                          </>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="truncate text-[12px] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
+                          </div>
                         );
                       },
                     },
                     {
                       key: "status",
                       header: "Status",
-                      cell: (cc) => {
-                        const latestMsg = cc.outboundMessages?.[0];
-                        return (
-                          <>
-                            <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)} className="uppercase">{cc.status}</StatusBadge>
-                            {latestMsg?.providerDeliveryStatus
-                              ? <span className="text-[13px] uppercase text-[var(--ink-muted)] ml-1">({latestMsg.providerDeliveryStatus})</span>
-                              : null}
-                          </>
-                        );
-                      },
+                      cell: (cc) => <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)}>{cc.status}</StatusBadge>,
                     },
                     {
                       key: "sent",
                       header: "Sent",
-                      className: "text-xs text-[var(--ink-muted)]",
-                      cell: (cc) => cc.sentAt ? new Date(cc.sentAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>,
-                    },
-                    {
-                      key: "opened",
-                      header: "Opened",
-                      className: "text-xs text-[var(--ink-muted)]",
-                      cell: (cc) => cc.openedAt ? new Date(cc.openedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" }) : <span className="text-[var(--line)]">—</span>,
+                      headerClassName: "hidden xl:table-cell",
+                      className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                      cell: (cc) => cc.sentAt ? formatEATDate(cc.sentAt) : <span className="opacity-30">—</span>,
                     },
                     {
                       key: "replied",
                       header: "Replied",
-                      className: "text-xs text-[var(--ink-muted)]",
-                      cell: (cc) => cc.repliedAt ? <span className="font-medium text-purple-700 dark:text-purple-400">{new Date(cc.repliedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}</span> : <span className="text-[var(--line)]">—</span>,
+                      className: "whitespace-nowrap text-[12px]",
+                      cell: (cc) => cc.repliedAt
+                        ? <span className="font-semibold text-emerald-600">{formatEATDate(cc.repliedAt)}</span>
+                        : <span className="text-[var(--ink-muted)]/30">—</span>,
                     },
                   ]}
                   actions={(cc) => (
-                    <form action={updateContactStatus} className="flex gap-1">
+                    <form action={updateContactStatus} className="flex items-center justify-end gap-1.5">
                       <input type="hidden" name="id" value={cc.id} />
-                      <select name="status" defaultValue={cc.status} className="rounded border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-xs">
-                        {(["PENDING","SENT","OPENED","RESPONDED","OPTED_OUT"] as CampaignContactStatus[]).map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
+                      <select name="status" defaultValue={cc.status} aria-label={`Status for ${(cc.lead ?? cc.client)?.fullName ?? "contact"}`}
+                        className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] outline-none focus:border-[var(--accent)]/50">
+                        {CONTACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
-                      <button type="submit" className="rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--panel-strong)]" title="Override status">→</button>
+                      <button type="submit" title="Apply status"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                      </button>
                     </form>
                   )}
                 />
-              </div>
-            )}
-          </div>
+              </section>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </ListPageLayout>
   );
 }

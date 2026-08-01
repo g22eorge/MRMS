@@ -85,7 +85,7 @@ export default async function GoodsReceivedPage({
             key: "po",
             header: "PO",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-xs text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
             cell: (grn) => grn.po ? (
               <Link href={`/inventory/purchase-orders/${grn.po.id}`} className="hover:text-[var(--accent)]">
                 {grn.po.reference ?? `PO-${grn.po.id.slice(-6).toUpperCase()}`}
@@ -96,7 +96,7 @@ export default async function GoodsReceivedPage({
             key: "location",
             header: "Location",
             headerClassName: "hidden sm:table-cell",
-            className: "hidden text-xs text-[var(--ink-muted)] sm:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] sm:table-cell",
             cell: (grn) => `${grn.location.name}${grn.location.code ? ` (${grn.location.code})` : ""}`,
           },
           {
@@ -110,7 +110,7 @@ export default async function GoodsReceivedPage({
             key: "received",
             header: "Received",
             align: "right",
-            className: "whitespace-nowrap text-xs text-[var(--ink-muted)]",
+            className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
             cell: (grn) => fmt(grn.receivedAt),
           },
         ]}

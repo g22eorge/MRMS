@@ -15,6 +15,7 @@ import { can } from "@/lib/permissions";
 import { DEFAULT_COA } from "@/lib/default-coa";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 
@@ -182,7 +183,17 @@ export default async function ChartOfAccountsPage() {
         eyebrow="Finance"
         title="Chart of Accounts"
         description="Double-entry accounting structure — click any account to view its ledger"
-        kpis={(
+        actions={
+          <Link
+            href="/finance/reports/pl"
+            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+          >
+            P&amp;L →
+          </Link>
+        }
+      />
+
+      <StatCards columns={4} cards={(
           [
             { type: "ASSET" as AccountType, label: "Total Assets", colorVal: "text-blue-600" },
             { type: "LIABILITY" as AccountType, label: "Total Liabilities", colorVal: "text-red-600" },
@@ -198,16 +209,7 @@ export default async function ChartOfAccountsPage() {
             valueClass: colorVal,
             sub: `${totals[type]} account${totals[type] !== 1 ? "s" : ""}`,
           };
-        })}
-        actions={
-          <Link
-            href="/finance/reports/pl"
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-          >
-            P&amp;L →
-          </Link>
-        }
-      />
+        })} />
 
       {/* ── DEFAULT ACCOUNTS BANNER ─────────────────────────────────────── */}
       {accounts.length === 0 ? (
@@ -253,7 +255,7 @@ export default async function ChartOfAccountsPage() {
               name="code"
               required
               placeholder="e.g. 1000"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -262,7 +264,7 @@ export default async function ChartOfAccountsPage() {
               name="name"
               required
               placeholder="Cash & Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div>
@@ -270,7 +272,7 @@ export default async function ChartOfAccountsPage() {
             <select
               name="type"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             >
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t} value={t}>{t}</option>
@@ -281,7 +283,7 @@ export default async function ChartOfAccountsPage() {
             <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Parent account</label>
             <select
               name="parentId"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             >
               <option value="">— None —</option>
               {accounts.map((a) => (
@@ -294,7 +296,7 @@ export default async function ChartOfAccountsPage() {
             <input
               name="description"
               placeholder="Optional"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             />
           </div>
           <div className="flex justify-end sm:col-span-3">
@@ -338,7 +340,7 @@ export default async function ChartOfAccountsPage() {
                   key: "code",
                   header: "Code",
                   cell: (acc) => (
-                    <span className="font-mono text-xs font-semibold text-[var(--accent)]">
+                    <span className="mono font-semibold text-[var(--accent)]">
                       {acc.code}
                     </span>
                   ),
@@ -363,7 +365,7 @@ export default async function ChartOfAccountsPage() {
                           <span className="font-medium text-[var(--ink)]">{acc.name}</span>
                         )}
                         {acc.description && (
-                          <p className="text-[13px] text-[var(--ink-muted)]">{acc.description}</p>
+                          <p className="text-[var(--ink-muted)]">{acc.description}</p>
                         )}
                       </>
                     );
@@ -373,7 +375,7 @@ export default async function ChartOfAccountsPage() {
                   key: "parent",
                   header: "Parent",
                   headerClassName: "hidden md:table-cell",
-                  className: "hidden text-xs text-[var(--ink-muted)] md:table-cell",
+                  className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
                   cell: (acc) => (acc.parent ? `${acc.parent.code} ${acc.parent.name}` : "—"),
                 },
                 {
@@ -405,13 +407,13 @@ export default async function ChartOfAccountsPage() {
                     const monthly = monthlyMap.get(acc.id) ?? 0;
                     return monthly !== 0 ? (
                       <span
-                        className={`text-[13px] font-semibold tabular-nums ${monthly >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                        className={`font-semibold tabular-nums ${monthly >= 0 ?"text-emerald-600" : "text-red-500"}`}
                       >
                         {monthly >= 0 ? "+" : "−"}
                         {formatMoneyCompact(Math.abs(monthly), currency)}
                       </span>
                     ) : (
-                      <span className="text-[13px] text-[var(--ink-muted)]">—</span>
+                      <span className="text-[var(--ink-muted)]">—</span>
                     );
                   },
                 },
@@ -420,7 +422,7 @@ export default async function ChartOfAccountsPage() {
                   header: "Status",
                   cell: (acc) =>
                     acc.isSystem ? (
-                      <span className="text-xs text-[var(--ink-muted)]">System</span>
+                      <span className="text-[12px] text-[var(--ink-muted)]">System</span>
                     ) : (
                       <StatusBadge tone={acc.isActive ? "success" : "neutral"}>
                         {acc.isActive ? "Active" : "Inactive"}
@@ -437,7 +439,7 @@ export default async function ChartOfAccountsPage() {
                     {hasActivity && (
                       <Link
                         href={`/finance/accounts/${acc.id}`}
-                        className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+                        className="rounded-lg border border-[var(--line)] px-2 py-1 font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
                       >
                         Ledger →
                       </Link>
@@ -449,7 +451,7 @@ export default async function ChartOfAccountsPage() {
                           <input type="hidden" name="id" value={acc.id} />
                           <button
                             type="submit"
-                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
+                            className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
                           >
                             {acc.isActive ? "Deactivate" : "Activate"}
                           </button>
@@ -459,7 +461,7 @@ export default async function ChartOfAccountsPage() {
                             <input type="hidden" name="id" value={acc.id} />
                             <ConfirmSubmitButton
                               message="Delete this account? Cannot be undone if it has no transactions."
-                              className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                              className="w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-500/10 dark:text-red-400"
                             >
                               Delete
                             </ConfirmSubmitButton>

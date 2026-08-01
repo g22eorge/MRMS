@@ -7,6 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
+import { Button } from "@/components/ui/Button";
+import { StatStrip } from "@/components/ui/StatStrip";
+import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { updateLeadStatus, addLeadActivity, updateLeadDetails } from "../../actions";
 
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -19,14 +22,22 @@ const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   STALE: "Stale",
 };
 
-const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  NEW:           "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  CONTACTED:     "border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
-  QUALIFIED:     "border-yellow-400/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  PROPOSAL_SENT: "border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  WON:           "border-green-400/30 bg-green-500/10 text-green-700 dark:text-green-400",
-  LOST:          "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  STALE:         "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+const LEAD_STATUS_TONES: Record<string, BadgeTone> = {
+  NEW:           "info",
+  CONTACTED:     "purple",
+  QUALIFIED:     "warning",
+  PROPOSAL_SENT: "orange",
+  WON:           "success",
+  LOST:          "danger",
+  STALE:         "neutral",
+};
+
+const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT:    "neutral",
+  SENT:     "info",
+  ACCEPTED: "success",
+  REJECTED: "danger",
+  EXPIRED:  "slate",
 };
 
 const ACTIVITY_TYPE_LABELS: Record<string, string> = {
@@ -37,18 +48,11 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   STATUS_CHANGE: "Status Change",
 };
 
-const QUOTATION_STATUS_COLORS: Record<string, string> = {
-  DRAFT:    "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  SENT:     "border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  ACCEPTED: "border-green-400/30 bg-green-500/10 text-green-700 dark:text-green-400",
-  REJECTED: "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  EXPIRED:  "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-};
-
 type SearchParams = {
   statusError?: string;
   activityError?: string;
   editError?: string;
+  edit?: string;
 };
 
 export default async function LeadDetailPage({
@@ -76,7 +80,7 @@ export default async function LeadDetailPage({
         orderBy: { createdAt: "desc" },
       },
       quotations: {
-        include: { createdBy: { select: { id: true, name: true } } },
+        select: { id: true, quoteNumber: true, status: true, totalAmount: true, currency: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -87,6 +91,7 @@ export default async function LeadDetailPage({
 
   const canEdit = can.createLeads(user);
   const currency = getAppCurrency();
+  const showEdit = filters.edit === "1" || Boolean(filters.editError);
 
   const orgUsers = can.viewAllSales(user)
     ? await prisma.user.findMany({
@@ -129,7 +134,7 @@ export default async function LeadDetailPage({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to update lead";
-      redirect(`/sales/leads/${id}?editError=${encodeURIComponent(msg)}`);
+      redirect(`/sales/leads/${id}?edit=1&editError=${encodeURIComponent(msg)}`);
     }
     redirect(`/sales/leads/${id}`);
   }
@@ -150,257 +155,214 @@ export default async function LeadDetailPage({
     redirect(`/sales/leads/${id}`);
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Lead</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">{lead.fullName}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-muted)]">
-              <span>{lead.phone}</span>
-              {lead.email ? <><span className="opacity-40">·</span><span>{lead.email}</span></> : null}
-              {lead.organization ? <><span className="opacity-40">·</span><span>{lead.organization}</span></> : null}
-              <span className="opacity-40">·</span>
-              <span>Source: {lead.source.replace("_", " ")}</span>
-              {lead.assignedTo ? <><span className="opacity-40">·</span><span>Assigned to {lead.assignedTo.name}</span></> : null}
-            </div>
-          </div>
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[13px] font-semibold ${LEAD_STATUS_COLORS[lead.status]}`}>
-            {LEAD_STATUS_LABELS[lead.status]}
-          </span>
-        </div>
+  const isTerminal = ["WON", "LOST", "STALE"].includes(lead.status);
+  const isOverdue = lead.followUpAt != null && lead.followUpAt <= new Date() && !isTerminal;
+  const quotedTotal = lead.quotations.reduce((sum, q) => sum + q.totalAmount, 0);
 
-        {lead.interest ? (
-          <p className="mt-2 text-[12px] text-[var(--ink-muted)]">
-            <span className="font-semibold text-[var(--ink)]">Interest:</span> {lead.interest}
-          </p>
-        ) : null}
-        {lead.estimatedValue != null ? (
-          <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-            <span className="font-semibold text-[var(--ink)]">Est. value:</span> {formatMoney(lead.estimatedValue, currency)}
-          </p>
-        ) : null}
-        {lead.notes ? (
-          <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-            <span className="font-semibold text-[var(--ink)]">Notes:</span> {lead.notes}
-          </p>
-        ) : null}
+  const field =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+  const errorBox = "mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400";
+
+  return (
+    <div className="space-y-4 pb-24 lg:pb-8">
+      <div>
+        <Link href="/sales" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All leads
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          {canEdit ? (
-            <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <summary className="cursor-pointer list-none text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] [&::-webkit-details-marker]:hidden">
-                Edit Lead Details
-              </summary>
-              {filters.editError ? (
-                <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{filters.editError}</p>
-              ) : null}
-              <form action={updateLeadDetailsAction} className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Name
-                  <input name="fullName" required defaultValue={lead.fullName} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Phone
-                  <input name="phone" required defaultValue={lead.phone} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Email
-                  <input name="email" type="email" defaultValue={lead.email ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Organization
-                  <input name="organization" defaultValue={lead.organization ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Source
-                  <select name="source" defaultValue={lead.source} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50">
-                    <option value="WALK_IN">Walk in</option>
-                    <option value="REFERRAL">Referral</option>
-                    <option value="PHONE">Phone</option>
-                    <option value="SOCIAL_MEDIA">Social media</option>
-                    <option value="WEBSITE">Website</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Estimated Value
-                  <input name="estimatedValue" type="number" min="0" step="1" defaultValue={lead.estimatedValue ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                  Follow-up
-                  <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? lead.followUpAt.toISOString().slice(0, 10) : ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                {orgUsers.length > 0 ? (
-                  <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-                    Assigned To
-                    <select name="assignedToId" defaultValue={lead.assignedToId ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50">
-                      <option value="">Unassigned</option>
-                      {orgUsers.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)] md:col-span-2">
-                  Interest
-                  <input name="interest" defaultValue={lead.interest ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)] md:col-span-2">
-                  Notes
-                  <textarea name="notes" rows={3} defaultValue={lead.notes ?? ""} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                </label>
-                <div className="md:col-span-2">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[12px] font-bold">
-                    Save Lead
-                  </button>
-                </div>
-              </form>
-            </details>
-          ) : null}
-
-          {canEdit ? (
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-              <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Update Status</p>
-              {filters.statusError ? (
-                <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{filters.statusError}</p>
-              ) : null}
-              <form action={updateStatusAction} className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  <select name="status" defaultValue={lead.status} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
-                    {(Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((s) => (
-                      <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-                    ))}
-                  </select>
-                  <input name="note" placeholder="Optional note…" className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[12px] font-bold">
-                    Update
-                  </button>
-                </div>
-              </form>
+      {/* ── Identity + stats ── */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-[13px] font-bold text-[var(--ink)]">{lead.fullName}</p>
+              <StatusBadge tone={toneFor(LEAD_STATUS_TONES, lead.status)}>{LEAD_STATUS_LABELS[lead.status]}</StatusBadge>
             </div>
-          ) : null}
-
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-              <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Activity Timeline</p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
+              <a href={`tel:${lead.phone}`} className="transition hover:text-[var(--accent)]">{lead.phone}</a>
+              {lead.email ? <><span className="opacity-40">·</span><span className="truncate">{lead.email}</span></> : null}
+              {lead.organization ? <><span className="opacity-40">·</span><span className="truncate">{lead.organization}</span></> : null}
+              <span className="opacity-40">·</span>
+              <span>{lead.source.replace(/_/g, " ").toLowerCase()}</span>
             </div>
-
-            {canEdit ? (
-              <div className="border-b border-[var(--line)] px-4 py-3">
-                {filters.activityError ? (
-                  <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{filters.activityError}</p>
-                ) : null}
-                <form action={addActivityAction} className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    <select name="type" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
-                      <option value="NOTE">Note</option>
-                      <option value="CALL">Call</option>
-                      <option value="EMAIL">Email</option>
-                      <option value="MEETING">Meeting</option>
-                    </select>
-                    <textarea name="note" required placeholder="Activity note…" rows={2} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                  </div>
-                  <button type="submit" className="btn-premium-secondary rounded-lg px-4 py-2 text-[12px] font-semibold">
-                    Add Activity
-                  </button>
-                </form>
-              </div>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
+              Created {formatEATDate(lead.createdAt)} by {lead.createdBy?.name ?? "unknown"}
+              {lead.assignedTo ? ` · assigned to ${lead.assignedTo.name}` : " · unassigned"}
+              {lead.convertedAt ? ` · converted ${formatEATDate(lead.convertedAt)}` : ""}
+              {lead.closedAt ? ` · closed ${formatEATDate(lead.closedAt)}` : ""}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {can.createQuotations(user) ? (
+              <Button href={`/sales/quotations/new?leadId=${lead.id}`} variant="secondary" size="sm">New Quotation</Button>
             ) : null}
-
-            {lead.activities.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No activity yet</p>
-            ) : (
-              <div className="divide-y divide-[var(--line)]">
-                {lead.activities.map((activity) => (
-                  <div key={activity.id} className="flex gap-3 px-4 py-3">
-                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--panel-strong)] text-[12px] font-bold text-[var(--ink-muted)]">
-                      {activity.type.charAt(0)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-[var(--ink)]">{ACTIVITY_TYPE_LABELS[activity.type] ?? activity.type}</span>
-                        <span className="text-[13px] text-[var(--ink-muted)]">by {activity.user.name}</span>
-                        <span className="ml-auto text-[12px] text-[var(--ink-muted)]">{formatEATDateTime(activity.createdAt)}</span>
-                      </div>
-                      {activity.note ? <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{activity.note}</p> : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {canEdit ? (
+              <Button href={showEdit ? `/sales/leads/${lead.id}` : `/sales/leads/${lead.id}?edit=1`} variant={showEdit ? "ghost" : "secondary"} size="sm">
+                {showEdit ? "Close" : "Edit"}
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-              <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Quotations</p>
-              {can.createQuotations(user) ? (
-                <Link
-                  href={`/sales/quotations/new?leadId=${lead.id}`}
-                  className="text-[13px] font-semibold text-[var(--accent)] hover:underline"
-                >
-                  + Create
-                </Link>
-              ) : null}
+        <StatStrip
+          columns={4}
+          tiles={[
+            { label: "Est. Value", value: lead.estimatedValue != null ? formatMoney(lead.estimatedValue, currency) : "—" },
+            { label: "Quoted", value: quotedTotal > 0 ? formatMoney(quotedTotal, currency) : "—", sub: lead.quotations.length > 0 ? `${lead.quotations.length} quotation${lead.quotations.length === 1 ? "" : "s"}` : undefined },
+            {
+              label: "Follow-up",
+              value: lead.followUpAt ? formatEATDate(lead.followUpAt) : "None",
+              valueClass: isOverdue ? "text-amber-600" : undefined,
+              sub: isOverdue ? "overdue" : undefined,
+            },
+            { label: "Activities", value: lead.activities.length },
+          ]}
+        />
+
+        {lead.interest || lead.notes ? (
+          <div className="space-y-1 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px]">
+            {lead.interest ? (
+              <p className="text-[var(--ink-muted)]"><span className="font-semibold text-[var(--ink)]">Interest</span> · {lead.interest}</p>
+            ) : null}
+            {lead.notes ? (
+              <p className="text-[var(--ink-muted)] [overflow-wrap:anywhere]"><span className="font-semibold text-[var(--ink)]">Notes</span> · {lead.notes}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Stage update — inline bar, no separate card */}
+        {canEdit ? (
+          <form action={updateStatusAction} className="border-t border-[var(--line)] p-3">
+            {filters.statusError ? <p className={errorBox}>{filters.statusError}</p> : null}
+            <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+              <select name="status" defaultValue={lead.status} aria-label="Stage" className={field}>
+                {(Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((s) => (
+                  <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+              <input name="note" placeholder="Optional note" className={field} />
+              <Button type="submit" variant="secondary" size="sm">Update Stage</Button>
             </div>
-            {lead.quotations.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-[var(--ink-muted)]">No quotations linked</p>
-            ) : (
-              <div className="divide-y divide-[var(--line)]">
-                {lead.quotations.map((q) => (
-                  <div key={q.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                    <div>
-                      <Link href={`/sales/quotations/${q.id}`} className="text-[12px] font-semibold text-[var(--ink)] hover:text-[var(--accent)] hover:underline">
-                        {q.quoteNumber}
-                      </Link>
-                      <p className="text-[13px] text-[var(--ink-muted)]">{formatMoney(q.totalAmount, q.currency)}</p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-semibold ${QUOTATION_STATUS_COLORS[q.status] ?? ""}`}>
-                      {q.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+          </form>
+        ) : null}
+      </section>
+
+      {/* ── Edit details (opened from the header) ── */}
+      {canEdit && showEdit ? (
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5">
+            <p className={cardLabel}>Edit Lead</p>
+          </div>
+          <form action={updateLeadDetailsAction} className="p-3">
+            {filters.editError ? <p className={errorBox}>{filters.editError}</p> : null}
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <input name="fullName" required defaultValue={lead.fullName} placeholder="Full name *" aria-label="Full name" className={field} />
+              <input name="phone" required defaultValue={lead.phone} placeholder="Phone *" aria-label="Phone" className={field} />
+              <input name="email" type="email" defaultValue={lead.email ?? ""} placeholder="Email" aria-label="Email" className={field} />
+              <input name="organization" defaultValue={lead.organization ?? ""} placeholder="Organization" aria-label="Organization" className={field} />
+              <select name="source" defaultValue={lead.source} aria-label="Source" className={field}>
+                <option value="WALK_IN">Walk-in</option>
+                <option value="REFERRAL">Referral</option>
+                <option value="PHONE">Phone</option>
+                <option value="SOCIAL_MEDIA">Social media</option>
+                <option value="WEBSITE">Website</option>
+                <option value="OTHER">Other</option>
+              </select>
+              <input name="estimatedValue" type="number" min="0" step="1" defaultValue={lead.estimatedValue ?? ""} placeholder={`Est. value (${currency})`} aria-label="Estimated value" className={field} />
+              <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? lead.followUpAt.toISOString().slice(0, 10) : ""} aria-label="Follow-up date" className={field} />
+              {orgUsers.length > 0 ? (
+                <select name="assignedToId" defaultValue={lead.assignedToId ?? ""} aria-label="Assigned to" className={field}>
+                  <option value="">Unassigned</option>
+                  {orgUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              ) : null}
+              <input name="interest" defaultValue={lead.interest ?? ""} placeholder="Interest / product" aria-label="Interest" className={field} />
+              <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} placeholder="Notes" aria-label="Notes" className={`${field} sm:col-span-2 lg:col-span-3`} />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Button type="submit" size="sm" className="px-4 font-bold">Save Lead</Button>
+              <Link href={`/sales/leads/${lead.id}`} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+            </div>
+          </form>
+        </section>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* ── Activity ── */}
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className={cardLabel}>Activity</p>
+            <p className="text-[12px] text-[var(--ink-muted)]">
+              {lead.activities.length} entr{lead.activities.length === 1 ? "y" : "ies"}
+            </p>
           </div>
 
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="mb-2 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Details</p>
-            <dl className="space-y-1 text-[12px]">
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--ink-muted)]">Created</dt>
-                <dd className="font-medium text-[var(--ink)]">{formatEATDate(lead.createdAt)}</dd>
+          {canEdit ? (
+            <form action={addActivityAction} className="border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
+              {filters.activityError ? <p className={errorBox}>{filters.activityError}</p> : null}
+              <div className="grid gap-2 md:grid-cols-[140px_minmax(0,1fr)_auto]">
+                <select name="type" aria-label="Activity type" className={field}>
+                  <option value="NOTE">Note</option>
+                  <option value="CALL">Call</option>
+                  <option value="EMAIL">Email</option>
+                  <option value="MEETING">Meeting</option>
+                </select>
+                <input name="note" required placeholder="Activity note" className={field} />
+                <Button type="submit" variant="secondary" size="sm">Add</Button>
               </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-[var(--ink-muted)]">Created by</dt>
-                <dd className="font-medium text-[var(--ink)]">{lead.createdBy?.name ?? "Unknown"}</dd>
-              </div>
-              {lead.followUpAt ? (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-[var(--ink-muted)]">Follow-up</dt>
-                  <dd className="font-medium text-[var(--ink)]">{formatEATDate(lead.followUpAt)}</dd>
+            </form>
+          ) : null}
+
+          {lead.activities.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">No activity yet</p>
+          ) : (
+            <div className="divide-y divide-[var(--line)]">
+              {lead.activities.map((activity) => (
+                <div key={activity.id} className="px-4 py-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-[var(--ink)]">
+                      {ACTIVITY_TYPE_LABELS[activity.type] ?? activity.type}
+                      <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{activity.user.name}</span>
+                    </p>
+                    <p className="shrink-0 text-[12px] text-[var(--ink-muted)]/60">{formatEATDateTime(activity.createdAt)}</p>
+                  </div>
+                  {activity.note ? <p className="mt-0.5 text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere]">{activity.note}</p> : null}
                 </div>
-              ) : null}
-              {lead.convertedAt ? (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-[var(--ink-muted)]">Converted</dt>
-                  <dd className="font-medium text-green-700">{formatEATDate(lead.convertedAt)}</dd>
-                </div>
-              ) : null}
-              {lead.closedAt ? (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-[var(--ink-muted)]">Closed</dt>
-                  <dd className="font-medium text-[var(--ink)]">{formatEATDate(lead.closedAt)}</dd>
-                </div>
-              ) : null}
-            </dl>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Quotations ── */}
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className={cardLabel}>Quotations</p>
+            <p className="text-[12px] text-[var(--ink-muted)]">{lead.quotations.length}</p>
           </div>
-        </div>
+          {lead.quotations.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">None linked yet</p>
+          ) : (
+            <div className="divide-y divide-[var(--line)]">
+              {lead.quotations.map((q) => (
+                <Link key={q.id} href={`/sales/quotations/${q.id}`} className="flex items-center justify-between gap-2 px-4 py-2.5 transition hover:bg-[var(--panel-strong)]/40">
+                  <div className="min-w-0">
+                    <p className="mono truncate text-[13px] font-semibold text-[var(--ink)]">{q.quoteNumber}</p>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(q.createdAt)}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <p className="text-[13px] font-bold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</p>
+                    <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

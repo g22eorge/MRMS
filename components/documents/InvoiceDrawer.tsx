@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate } from "@/lib/date-eat";
+import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneForInvoice, type BadgeTone } from "@/components/ui/StatusBadge";
 
 type Line = {
@@ -241,35 +242,36 @@ export function InvoiceDrawer({ invoice, currency, onClose, open = true }: Invoi
                   <div className="border-b border-[var(--line)] px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Line Items</p>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[13px]">
-                      <thead>
-                        <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)] text-[11px] uppercase tracking-wider text-[var(--ink-muted)]">
-                          <th className="px-3 py-2 font-semibold min-w-[200px]">Description</th>
-                          <th className="px-3 py-2 font-semibold w-[50px] text-center">Qty</th>
-                          <th className="px-3 py-2 font-semibold w-[90px] text-right">Unit Price</th>
-                          <th className="px-3 py-2 font-semibold w-[80px] text-right">Discount</th>
-                          <th className="px-3 py-2 font-semibold w-[90px] text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--line)]">
-                        {data.lines.map((line) => (
-                          <tr key={`${line.id}-${refreshKey}`} className="hover:bg-[var(--panel-strong)]">
-                            <td className="px-3 py-2">
-          <p className="font-medium text-[var(--ink)]">{line.description}</p>
-                          {line.sourceId && <p className="text-[11px] text-[var(--ink-muted)]">Ref: {line.sourceId}</p>}
-                            </td>
-                            <td className="px-3 py-2 text-center mono">{line.quantity}</td>
-                            <td className="px-3 py-2 text-right mono">{formatMoney(line.unitPrice, currency)}</td>
-                            <td className="px-3 py-2 text-right mono text-[var(--ink-muted)]">
-                              {line.discountAmount > 0 ? formatMoney(line.discountAmount, currency) : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right mono font-bold">{formatMoney(line.lineTotal, currency)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <DataTable
+                    frameless
+                    dense
+                    rows={data.lines}
+                    getRowKey={(line) => `${line.id}-${refreshKey}`}
+                    empty="No line items."
+                    columns={[
+                      {
+                        key: "description",
+                        header: "Description",
+                        className: "min-w-[200px]",
+                        cell: (line) => (
+                          <>
+                            <p className="font-medium text-[var(--ink)]">{line.description}</p>
+                            {line.sourceId ? <p className="text-[11px] text-[var(--ink-muted)]">Ref: {line.sourceId}</p> : null}
+                          </>
+                        ),
+                      },
+                      { key: "qty", header: "Qty", align: "center", className: "mono w-[50px]", cell: (line) => line.quantity },
+                      { key: "unitPrice", header: "Unit Price", align: "right", className: "mono w-[90px] whitespace-nowrap", cell: (line) => formatMoney(line.unitPrice, currency) },
+                      {
+                        key: "discount",
+                        header: "Discount",
+                        align: "right",
+                        className: "mono w-[80px] whitespace-nowrap text-[var(--ink-muted)]",
+                        cell: (line) => (line.discountAmount > 0 ? formatMoney(line.discountAmount, currency) : "—"),
+                      },
+                      { key: "total", header: "Total", align: "right", className: "mono w-[90px] whitespace-nowrap font-bold", cell: (line) => formatMoney(line.lineTotal, currency) },
+                    ]}
+                  />
                   <div className="flex flex-col items-end gap-0.5 border-t border-[var(--line)] px-3 py-2">
                     <div className="flex w-full max-w-[220px] justify-between text-[12px]">
                       <span className="text-[var(--ink-muted)]">Subtotal</span>
@@ -310,30 +312,20 @@ export function InvoiceDrawer({ invoice, currency, onClose, open = true }: Invoi
                     <div className="border-b border-[var(--line)] px-3 py-2">
                       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payments</p>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-[13px]">
-                        <thead>
-                          <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)] text-[11px] uppercase tracking-wider text-[var(--ink-muted)]">
-                            <th className="px-3 py-2 font-semibold">Date</th>
-                            <th className="px-3 py-2 font-semibold">Method</th>
-                            <th className="px-3 py-2 font-semibold">Reference</th>
-                            <th className="px-3 py-2 font-semibold">By</th>
-                            <th className="px-3 py-2 font-semibold text-right">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--line)]">
-                          {data.payments.map((p) => (
-                            <tr key={p.id}>
-                              <td className="px-3 py-2">{formatEATDate(p.receivedAt)}</td>
-                              <td className="px-3 py-2">{p.method}</td>
-                              <td className="px-3 py-2 mono text-[12px]">{p.reference ?? "—"}</td>
-                              <td className="px-3 py-2">{p.createdBy?.fullName ?? "—"}</td>
-                              <td className="px-3 py-2 text-right mono">{formatMoney(p.amount, currency)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable
+                      frameless
+                      dense
+                      rows={data.payments}
+                      getRowKey={(p) => p.id}
+                      empty="No payments."
+                      columns={[
+                        { key: "date", header: "Date", className: "whitespace-nowrap", cell: (p) => formatEATDate(p.receivedAt) },
+                        { key: "method", header: "Method", cell: (p) => p.method },
+                        { key: "reference", header: "Reference", className: "mono text-[12px]", cell: (p) => p.reference ?? "—" },
+                        { key: "by", header: "By", cell: (p) => p.createdBy?.fullName ?? "—" },
+                        { key: "amount", header: "Amount", align: "right", className: "mono whitespace-nowrap", cell: (p) => formatMoney(p.amount, currency) },
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -342,30 +334,20 @@ export function InvoiceDrawer({ invoice, currency, onClose, open = true }: Invoi
                     <div className="border-b border-[var(--line)] px-3 py-2">
                       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Delivery Notes</p>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-[13px]">
-                        <thead>
-                          <tr className="border-b border-[var(--line)] bg-[var(--panel-strong)] text-[11px] uppercase tracking-wider text-[var(--ink-muted)]">
-                            <th className="px-3 py-2 font-semibold">#</th>
-                            <th className="px-3 py-2 font-semibold">Date</th>
-                            <th className="px-3 py-2 font-semibold">Method</th>
-                            <th className="px-3 py-2 font-semibold">Delivered By</th>
-                            <th className="px-3 py-2 font-semibold">Received By</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--line)]">
-                          {data.deliveryNotes.map((n) => (
-                            <tr key={n.id}>
-                              <td className="px-3 py-2 mono font-bold">{n.deliveryNoteNumber}</td>
-                              <td className="px-3 py-2">{formatEATDate(n.deliveredAt)}</td>
-                              <td className="px-3 py-2">{n.deliveryMethod}</td>
-                              <td className="px-3 py-2">{n.deliveredByName}</td>
-                              <td className="px-3 py-2">{n.receivedByName}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable
+                      frameless
+                      dense
+                      rows={data.deliveryNotes}
+                      getRowKey={(n) => n.id}
+                      empty="No delivery notes."
+                      columns={[
+                        { key: "number", header: "#", className: "mono font-bold whitespace-nowrap", cell: (n) => n.deliveryNoteNumber },
+                        { key: "date", header: "Date", className: "whitespace-nowrap", cell: (n) => formatEATDate(n.deliveredAt) },
+                        { key: "method", header: "Method", cell: (n) => n.deliveryMethod },
+                        { key: "deliveredBy", header: "Delivered By", cell: (n) => n.deliveredByName },
+                        { key: "receivedBy", header: "Received By", cell: (n) => n.receivedByName },
+                      ]}
+                    />
                   </div>
                 )}
 

@@ -266,7 +266,7 @@ export default async function OutboxPage({
           <div className="flex items-center gap-3 px-4 py-2.5">
             <StatusPill status={r.status} />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-[13px] font-medium text-[var(--ink)]">{r.to}</p>
+              <p className="truncate mono text-[13px] font-medium text-[var(--ink)]">{r.to}</p>
               <p className="truncate text-[12px] text-[var(--ink-muted)]">
                 {CHANNEL_LABEL[r.channel] ?? r.channel} · {r.type.replaceAll("_", " ").toLowerCase()}
                 {r.lastError ? <span className="text-red-600 dark:text-red-400"> · failed</span> : r.sentAt ? ` · ${fmtDate(r.sentAt)}` : ""}
@@ -289,7 +289,7 @@ export default async function OutboxPage({
           {
             key: "recipient",
             header: "Recipient",
-            className: "whitespace-nowrap font-mono font-medium text-[var(--ink)]",
+            className: "whitespace-nowrap mono font-medium text-[var(--ink)]",
             cell: (r) => r.to,
           },
           {

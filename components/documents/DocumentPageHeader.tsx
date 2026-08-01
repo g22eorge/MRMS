@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatStrip } from "@/components/ui/StatStrip";
+import { StatCards } from "@/components/ui/StatCards";
 import type { DocumentKpiTile } from "./DocumentKpiStrip";
 
 /** @deprecated Thin wrapper around the app-wide PageHeader — import
@@ -32,7 +32,7 @@ export function DocumentPageHeader({
         kpis={kpiLayout === "embedded" ? kpis : undefined}
       />
       {kpis && kpis.length > 0 && kpiLayout === "cards" ? (
-        <StatStrip tiles={kpis} variant="cards" columns={4} />
+        <StatCards cards={kpis} columns={4} />
       ) : null}
     </>
   );

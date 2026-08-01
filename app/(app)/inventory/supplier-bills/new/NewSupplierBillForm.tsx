@@ -200,7 +200,7 @@ export function NewSupplierBillForm({
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Supplier invoice/reference
-            <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+            <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Purchase order
@@ -226,22 +226,22 @@ export function NewSupplierBillForm({
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Issued date
-            <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+            <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Due date
-            <input name="dueAt" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+            <input name="dueAt" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Currency
-            <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm uppercase text-[var(--ink)]" />
+            <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Tax amount
-            <input name="taxAmount" type="number" min={0} step={0.01} defaultValue={0} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-right text-sm text-[var(--ink)]" />
+            <input name="taxAmount" type="number" min={0} step={0.01} defaultValue={0} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-right text-sm text-[var(--ink)]" />
           </label>
         </div>
-        <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]" />
+        <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
       </div>
 
       <LineItemsPanel
@@ -288,19 +288,19 @@ export function NewSupplierBillForm({
               header: "Total",
               align: "right",
               headerClassName: "w-32",
-              className: "w-32 text-xs tabular-nums text-[var(--ink-muted)]",
+              className: "w-32 text-[12px] tabular-nums text-[var(--ink-muted)]",
               cell: (line) => (line.quantity * line.unitCost).toLocaleString(),
             },
           ]}
           actions={(line) =>
             lines.length > 1 ? (
-              <button type="button" onClick={() => removeLine(line.key)} className="text-xs font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+              <button type="button" onClick={() => removeLine(line.key)} className="text-[12px] font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
             ) : null
           }
           tableFooter={
             <tr className="bg-[var(--gold)]/5">
-              <td colSpan={3} className="px-3 py-2 text-right text-xs font-semibold text-[var(--ink-muted)]">Subtotal</td>
-              <td className="px-3 py-2 text-right text-sm font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td>
+              <td colSpan={3} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Subtotal</td>
+              <td className="px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td>
               <td />
             </tr>
           }

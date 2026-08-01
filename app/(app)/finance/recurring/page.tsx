@@ -376,7 +376,7 @@ export default async function RecurringInvoicesPage({
             cell: (rec) => (
               <>
                 <p className="font-medium text-[var(--ink)]">{rec.subject}</p>
-                <p className="text-[13px] text-[var(--ink-muted)]">
+                <p className="text-[var(--ink-muted)]">
                   {rec.items.length} line{rec.items.length !== 1 ? "s" : ""}
                 </p>
                 <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] md:hidden">
@@ -388,7 +388,7 @@ export default async function RecurringInvoicesPage({
           {
             key: "client",
             header: "Client",
-            className: "text-[13px] text-[var(--ink)]",
+            className: "text-[var(--ink)]",
             cell: (rec) => rec.client.fullName,
           },
           {

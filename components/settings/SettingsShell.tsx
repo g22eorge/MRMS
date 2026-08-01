@@ -74,7 +74,7 @@ export function SettingsShell({
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:rounded-[1.75rem] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--accent)] text-base font-black text-[var(--accent-contrast)] sm:h-11 sm:w-11 sm:rounded-2xl sm:text-lg">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--accent)] text-base font-black text-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-lg">
               {workspaceName.trim().slice(0, 1).toUpperCase() || "S"}
             </div>
             <div className="min-w-0">
@@ -124,7 +124,7 @@ export function SettingsShell({
                 href={item.href}
                 className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
                   active
-                    ? "border-[var(--accent)]/70 bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm"
+                    ? "border-[var(--accent)]/70 bg-[var(--accent)] text-black shadow-sm"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--panel)] hover:text-[var(--ink)]"
                 }`}
               >

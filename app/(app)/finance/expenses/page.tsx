@@ -16,6 +16,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
@@ -189,7 +190,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     };
   }).filter((x) => x.count > 0);
 
-
   async function createExpenseAction(formData: FormData) {
     "use server";
     const { user } = await getCurrentUserRole();
@@ -311,41 +311,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
         eyebrow="Finance"
         title="Expenses"
         description={`${total} record${total !== 1 ? "s" : ""}`}
-        kpis={[
-          {
-            label: "This Month",
-            value: formatMoneyCompact(thisMonthAmount, currency),
-            sub:
-              prevMonthTotal > 0
-                ? `${momDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(momDelta), currency)} vs last month`
-                : undefined,
-          },
-          {
-            label: `YTD ${thisYear}`,
-            value: formatMoneyCompact(ytdTotal, currency),
-            sub:
-              prevYtdTotal > 0
-                ? `${ytdDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(ytdDelta), currency)} vs ${thisYear - 1} YTD`
-                : undefined,
-          },
-          {
-            label: "Avg / Month",
-            value:
-              trendData.filter((d) => d.amount > 0).length > 0
-                ? formatMoneyCompact(
-                    trendData.reduce((s, d) => s + d.amount, 0) /
-                      Math.max(1, trendData.filter((d) => d.amount > 0).length),
-                    currency,
-                  )
-                : "—",
-            sub: "Last 6 months",
-          },
-          {
-            label: "Top Category",
-            value: topCategory ? formatMoneyCompact(topCategory.total, currency) : "—",
-            sub: topCategory ? CATEGORY_LABELS[topCategory.cat] : undefined,
-          },
-        ]}
         actions={
           <>
             <Link
@@ -378,6 +343,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     placeholder="What was this expense for?"
                     className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
                   />
+
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -484,6 +450,42 @@ export default async function ExpensesPage({ searchParams }: Props) {
         }
       />
 
+      <StatCards columns={4} cards={[
+          {
+            label: "This Month",
+            value: formatMoneyCompact(thisMonthAmount, currency),
+            sub:
+              prevMonthTotal > 0
+                ? `${momDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(momDelta), currency)} vs last month`
+                : undefined,
+          },
+          {
+            label: `YTD ${thisYear}`,
+            value: formatMoneyCompact(ytdTotal, currency),
+            sub:
+              prevYtdTotal > 0
+                ? `${ytdDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(ytdDelta), currency)} vs ${thisYear - 1} YTD`
+                : undefined,
+          },
+          {
+            label: "Avg / Month",
+            value:
+              trendData.filter((d) => d.amount > 0).length > 0
+                ? formatMoneyCompact(
+                    trendData.reduce((s, d) => s + d.amount, 0) /
+                      Math.max(1, trendData.filter((d) => d.amount > 0).length),
+                    currency,
+                  )
+                : "—",
+            sub: "Last 6 months",
+          },
+          {
+            label: "Top Category",
+            value: topCategory ? formatMoneyCompact(topCategory.total, currency) : "—",
+            sub: topCategory ? CATEGORY_LABELS[topCategory.cat] : undefined,
+          },
+        ]} />
+
       {/* ── PERIOD CHIPS ─────────────────────────────────────────────────── */}
       <div className="flex gap-2">
         {([
@@ -555,7 +557,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               cell: (expense) => (
                 <>
                   <p className="mono text-[12px] font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
-                  <p className="text-[13px] text-[var(--ink-muted)]">{fmt(expense.createdAt)}</p>
+                  <p className="text-[var(--ink-muted)]">{fmt(expense.createdAt)}</p>
                 </>
               ),
             },
@@ -564,12 +566,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
               header: "Description",
               cell: (expense) => (
                 <>
-                  <p className="text-[13px] font-medium text-[var(--ink)]">{expense.description}</p>
+                  <p className="font-medium text-[var(--ink)]">{expense.description}</p>
                   {expense.reference && (
-                    <p className="text-[13px] text-[var(--ink-muted)]">Ref: {expense.reference}</p>
+                    <p className="text-[var(--ink-muted)]">Ref: {expense.reference}</p>
                   )}
                   {expense.notes && (
-                    <p className="text-[13px] italic text-[var(--ink-muted)]">{expense.notes}</p>
+                    <p className="italic text-[var(--ink-muted)]">{expense.notes}</p>
                   )}
                 </>
               ),
@@ -618,7 +620,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               key: "by",
               header: "By",
               headerClassName: "hidden sm:table-cell",
-              className: "hidden text-[13px] text-[var(--ink-muted)] sm:table-cell",
+              className: "hidden text-[var(--ink-muted)] sm:table-cell",
               cell: (expense) => expense.createdBy.name,
             },
           ]}

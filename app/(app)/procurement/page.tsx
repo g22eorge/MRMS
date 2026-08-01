@@ -6,23 +6,15 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { StatStrip } from "@/components/ui/StatStrip";
 
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
   { label: "Orders", href: "/api/procurement/export?type=purchase-orders" },
   { label: "GRNs", href: "/api/procurement/export?type=goods-received" },
   { label: "Bills", href: "/api/procurement/export?type=supplier-bills" },
-] as const;
-
-const WORKFLOW_LINKS = [
-  { label: "Requests", href: "/inventory/purchase-requests", action: "Review demand" },
-  { label: "Purchase Orders", href: "/inventory/purchase-orders", action: "Issue and receive" },
-  { label: "Goods Received", href: "/inventory/goods-received", action: "Verify receipts" },
-  { label: "Supplier Bills", href: "/inventory/supplier-bills", action: "Match and pay" },
-  { label: "Suppliers", href: "/inventory/suppliers", action: "Manage vendors" },
 ] as const;
 
 function fmt(date: Date | null) {
@@ -123,55 +115,33 @@ export default async function ProcurementPage() {
   const openBills = billCount("POSTED") + billCount("PART_PAID");
   const dueBills = billQueue.filter((bill) => bill.dueAt && bill.dueAt <= inSevenDays).length;
 
-  const stages = [
-    { label: "Demand", value: submittedRequests, hint: "requests to review", href: "/inventory/purchase-requests" },
-    { label: "Approved", value: approvedRequests, hint: "ready for PO", href: "/inventory/purchase-requests" },
-    { label: "Ordered", value: openOrders, hint: "open POs", href: "/inventory/purchase-orders" },
-    { label: "Receiving", value: dueOrders, hint: "due soon", href: "/inventory/purchase-orders" },
-    { label: "Payables", value: openBills, hint: `${dueBills} due soon`, href: "/inventory/supplier-bills" },
-  ];
-
   return (
     <ListPageLayout
       header={{
         eyebrow: "Procurement",
         title: "Control Desk",
+        description: `${formatMoney(openOrderValue)} open PO value · ${formatMoney(payableBalance)} supplier balance`,
         actions: (
           <>
-            <Link href="/inventory/purchase-requests/new" className="btn-premium rounded-md px-2.5 py-1.5 text-xs font-semibold">New request</Link>
-            <Link href="/inventory/purchase-orders/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New PO</Link>
-            <Link href="/inventory/supplier-bills/new" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">New bill</Link>
+            <Button href="/inventory/purchase-requests/new" size="sm" className="px-4 font-bold">New request</Button>
+            <Button href="/inventory/purchase-orders/new" variant="secondary" size="sm">New PO</Button>
+            <Button href="/inventory/supplier-bills/new" variant="secondary" size="sm">New bill</Button>
           </>
         ),
+        kpis: [
+          { key: "demand", label: "Demand", value: submittedRequests, sub: "requests to review", tone: submittedRequests > 0 ? "warn" : "neutral", muted: submittedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "approved", label: "Approved", value: approvedRequests, sub: "ready for PO", tone: "good", muted: approvedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "ordered", label: "Ordered", value: openOrders, sub: "open POs", tone: "accent", muted: openOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "receiving", label: "Receiving", value: dueOrders, sub: "due soon", tone: dueOrders > 0 ? "warn" : "neutral", muted: dueOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "payables", label: "Payables", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
+        ],
       }}
     >
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] md:grid-cols-5 md:divide-y-0">
-          {stages.map((stage) => (
-            <Link key={stage.label} href={stage.href} className="px-3 py-2 hover:bg-[var(--panel-strong)]/45">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">{stage.label}</p>
-              <p className="text-sm font-bold tabular-nums text-[var(--ink)]">{stage.value}</p>
-              <p className="text-[11px] text-[var(--ink-muted)]">{stage.hint}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <StatStrip
-        variant="cards"
-        columns={3}
-        tiles={[
-          { label: "Open PO Value", value: formatMoney(openOrderValue) },
-          { label: "Supplier Balance", value: formatMoney(payableBalance) },
-          { label: "Urgent", value: submittedRequests + dueOrders + dueBills },
-        ]}
-      />
-
-      <div className="grid gap-3 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Review queue</p>
-            <Link href="/inventory/purchase-requests" className="text-xs font-semibold text-[var(--accent)] hover:underline">All requests</Link>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Review queue</p>
+            <Link href="/inventory/purchase-requests" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
           <DataTable
             frameless
@@ -185,8 +155,8 @@ export default async function ProcurementPage() {
                 header: "Request",
                 cell: (request) => (
                   <>
-                    <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                    <p className="text-xs text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
+                    <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
                   </>
                 ),
               },
@@ -198,19 +168,19 @@ export default async function ProcurementPage() {
                 header: "Action",
                 align: "right",
                 cell: (request) => (
-                  <Link href={`/inventory/purchase-requests/${request.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                  <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">
                     {request.status === "APPROVED" ? "Convert" : "Review"}
-                  </Link>
+                  </Button>
                 ),
               },
             ]}
           />
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Receiving queue</p>
-            <Link href="/inventory/purchase-orders" className="text-xs font-semibold text-[var(--accent)] hover:underline">All POs</Link>
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Receiving queue</p>
+            <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All POs</Link>
           </div>
           <DataTable
             frameless
@@ -224,8 +194,8 @@ export default async function ProcurementPage() {
                 header: "PO",
                 cell: (order) => (
                   <>
-                    <Link href={`/inventory/purchase-orders/${order.id}`} className="font-mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
-                    <p className="text-xs text-[var(--ink-muted)]">{order.status}</p>
+                    <Link href={`/inventory/purchase-orders/${order.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
+                    <p className="text-[12px] text-[var(--ink-muted)]">{order.status}</p>
                   </>
                 ),
               },
@@ -241,7 +211,7 @@ export default async function ProcurementPage() {
                   return (
                     <>
                       <span className="font-semibold tabular-nums text-[var(--ink)]">{outstandingQty}</span>
-                      <p className="text-xs">{formatMoney(outstandingValue)}</p>
+                      <p className="">{formatMoney(outstandingValue)}</p>
                     </>
                   );
                 },
@@ -252,44 +222,32 @@ export default async function ProcurementPage() {
                 header: "Action",
                 align: "right",
                 cell: (order) => (
-                  <Link href={`/inventory/purchase-orders/${order.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700">Receive</Link>
+                  <Button href={`/inventory/purchase-orders/${order.id}#receive`} variant="secondary" size="sm">Receive</Button>
                 ),
               },
             ]}
           />
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Exports</p>
-            <span className="text-xs text-[var(--ink-muted)]">CSV</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 p-3">
-            {EXPORTS.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div className="border-t border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Workflow</p>
-            <div className="mt-2 space-y-1.5">
-              {WORKFLOW_LINKS.map((item) => (
-                <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:border-[var(--accent)]/40">
-                  <span className="font-semibold text-[var(--ink)]">{item.label}</span>
-                  <span className="text-[var(--ink-muted)]">{item.action}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Supplier bills</p>
-            <Link href="/inventory/supplier-bills" className="text-xs font-semibold text-[var(--accent)] hover:underline">All bills</Link>
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Exports</p>
+          <span className="text-[12px] text-[var(--ink-muted)]">CSV</span>
+        </div>
+        <div className="flex flex-wrap gap-2 p-3">
+          {EXPORTS.map((item) => (
+            <Button key={item.href} href={item.href} external variant="secondary" size="sm">{item.label}</Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
+            <Link href="/inventory/supplier-bills" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All bills</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {billQueue.map((bill) => (
@@ -305,10 +263,10 @@ export default async function ProcurementPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-            <p className="text-sm font-bold text-[var(--ink)]">Recent GRNs</p>
-            <Link href="/inventory/goods-received" className="text-xs font-semibold text-[var(--accent)] hover:underline">All GRNs</Link>
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recent GRNs</p>
+            <Link href="/inventory/goods-received" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All GRNs</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {recentGrns.map((grn) => (

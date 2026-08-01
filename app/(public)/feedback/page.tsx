@@ -171,7 +171,7 @@ export default async function FeedbackPage({
               defaultValue={ref}
               placeholder="e.g. EI-2024-0001"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50"
             />
             {jobInfo && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10">
@@ -192,20 +192,20 @@ export default async function FeedbackPage({
               defaultValue={jobInfo?.client.fullName ?? ""}
               placeholder="Full name *"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientPhone"
               defaultValue={jobInfo?.client.phone ?? ""}
               placeholder="Phone number *"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientEmail"
               defaultValue={jobInfo?.client.email ?? ""}
               placeholder="Email (optional)"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
             />
           </div>
 
@@ -217,7 +217,7 @@ export default async function FeedbackPage({
             <select
               name="category"
               defaultValue="OTHER"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -230,13 +230,13 @@ export default async function FeedbackPage({
               placeholder="Describe your complaint in detail *"
               required
               rows={4}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 resize-none"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 resize-none"
             />
             <textarea
               name="expectedResolution"
               placeholder="What resolution would you like? (optional)"
               rows={2}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50 resize-none"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 resize-none"
             />
           </div>
 

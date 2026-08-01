@@ -421,7 +421,6 @@ export default async function DeliveryNotesPage({
 
       <DataTable
         className="doc-list"
-        dense
         rows={pageRows}
         getRowKey={(n) => n.id}
         empty="No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed."
@@ -432,9 +431,9 @@ export default async function DeliveryNotesPage({
             cell: (n) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{n.deliveryNoteNumber}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
                 {/* Client + source visible on mobile (those columns hidden at md/lg) */}
-                <p className="mt-0.5 text-[13px] font-medium text-[var(--ink)] lg:hidden">
+                <p className="mt-0.5 font-medium text-[var(--ink)] lg:hidden">
                   {n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? ""}
                 </p>
               </>
@@ -480,7 +479,7 @@ export default async function DeliveryNotesPage({
             className: "hidden lg:table-cell",
             cell: (n) =>
               n.deliveryMethod ? (
-                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)]">
+                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 font-semibold text-[var(--ink-muted)]">
                   {n.deliveryMethod.replaceAll("_", " ")}
                 </span>
               ) : "-",
@@ -520,20 +519,20 @@ export default async function DeliveryNotesPage({
                 <MenuSection label="Edit Delivery Note" />
                 <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
                   <input type="hidden" name="deliveryNoteId" value={n.id} />
-                  <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                  <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                  <input name="receivedBySignatureText" defaultValue={n.receivedBySignatureText ?? ""} placeholder="Signature text" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                  <select name="deliveryMethod" defaultValue={n.deliveryMethod ?? ""} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
+                  <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                  <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                  <input name="receivedBySignatureText" defaultValue={n.receivedBySignatureText ?? ""} placeholder="Signature text" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                  <select name="deliveryMethod" defaultValue={n.deliveryMethod ?? ""} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50">
                     <option value="">No method</option>
                     {DELIVERY_METHODS.map((m) => <option key={m} value={m}>{m.replaceAll("_", " ")}</option>)}
                   </select>
-                  <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                  <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Delivery Note</MenuActionButton>
                 </form>
                 <MenuDestructiveRow>
                   <form action={deleteDeliveryNoteAction}>
                     <input type="hidden" name="deliveryNoteId" value={n.id} />
-                    <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
+                    <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
                   </form>
                 </MenuDestructiveRow>
               </RowActionsMenu>

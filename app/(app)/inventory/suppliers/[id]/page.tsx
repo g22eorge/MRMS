@@ -245,15 +245,15 @@ export default async function SupplierDetailPage({
 
             <form action={createSupplierPriceAction} className="grid gap-2 border-b border-[var(--line)] p-3 md:grid-cols-[1.2fr_1fr_0.7fr_0.55fr_0.55fr_0.55fr_auto]">
               <input type="hidden" name="supplierId" value={supplier.id} />
-              <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
                 <option value="">No linked item</option>
                 {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
               </select>
-              <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+              <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+              <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+              <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+              <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+              <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
               <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-semibold">Add</button>
             </form>
 
@@ -270,7 +270,7 @@ export default async function SupplierDetailPage({
                   cell: (price) => (
                     <>
                       <p className="font-semibold text-[var(--ink)]">{price.partId ? partLabel.get(price.partId) ?? price.description : price.description}</p>
-                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
+                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
                     </>
                   ),
                 },
@@ -284,24 +284,24 @@ export default async function SupplierDetailPage({
                     <form action={updateSupplierPriceAction} className="grid gap-2 text-left">
                       <input type="hidden" name="id" value={price.id} />
                       <input type="hidden" name="supplierId" value={supplier.id} />
-                      <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+                      <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60">
                         <option value="">No linked item</option>
                         {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
                       </select>
-                      <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                      <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                      <input name="unitCost" defaultValue={price.unitCost} required inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
+                      <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
+                      <input name="unitCost" defaultValue={price.unitCost} required inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
                       <div className="grid grid-cols-2 gap-2">
-                        <input name="minQuantity" defaultValue={price.minQuantity ?? ""} placeholder="MOQ" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                        <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                        <input name="minQuantity" defaultValue={price.minQuantity ?? ""} placeholder="MOQ" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
+                        <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
                       </div>
-                      <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase outline-none focus:border-[var(--accent)]/60" />
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Save Price</button>
+                      <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 uppercase outline-none focus:border-[var(--accent)]/60" />
+                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Price</button>
                     </form>
                     <form action={deleteSupplierPriceAction} className="mt-2 border-t border-[var(--line)] pt-2">
                       <input type="hidden" name="id" value={price.id} />
                       <input type="hidden" name="supplierId" value={supplier.id} />
-                      <button type="submit" className="text-xs font-semibold text-red-600 hover:text-red-700">Delete</button>
+                      <button type="submit" className="font-semibold text-red-600 hover:text-red-700">Delete</button>
                     </form>
                   </div>
                 </RowActionsMenu>
@@ -329,8 +329,8 @@ export default async function SupplierDetailPage({
                       const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
                       return (
                         <>
-                          <Link href={`/inventory/purchase-orders/${po.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{po.reference ?? po.id.slice(-6).toUpperCase()}</Link>
-                          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(po.orderedAt)} · {receivedQty}/{orderedQty} received</p>
+                          <Link href={`/inventory/purchase-orders/${po.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{po.reference ?? po.id.slice(-6).toUpperCase()}</Link>
+                          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(po.orderedAt)} · {receivedQty}/{orderedQty} received</p>
                         </>
                       );
                     },
@@ -342,7 +342,7 @@ export default async function SupplierDetailPage({
                   {
                     key: "lines",
                     align: "right",
-                    className: "text-xs text-[var(--ink-muted)]",
+                    className: "text-[12px] text-[var(--ink-muted)]",
                     cell: (po) => `${po._count.items} lines`,
                   },
                 ]}
@@ -365,8 +365,8 @@ export default async function SupplierDetailPage({
                     key: "bill",
                     cell: (bill) => (
                       <>
-                        <Link href={`/inventory/supplier-bills/${bill.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
-                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}</p>
+                        <Link href={`/inventory/supplier-bills/${bill.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
+                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}</p>
                       </>
                     ),
                   },
@@ -379,8 +379,8 @@ export default async function SupplierDetailPage({
                     align: "right",
                     cell: (bill) => (
                       <>
-                        <p className="text-xs font-bold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">bal {formatMoney(Math.max(0, bill.totalAmount - bill.paidAmount), bill.currency)}</p>
+                        <p className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</p>
+                        <p className="text-[12px] text-[var(--ink-muted)]">bal {formatMoney(Math.max(0, bill.totalAmount - bill.paidAmount), bill.currency)}</p>
                       </>
                     ),
                   },
@@ -402,8 +402,8 @@ export default async function SupplierDetailPage({
                     key: "request",
                     cell: (request) => (
                       <>
-                        <Link href={`/inventory/purchase-requests/${request.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{request.priority} · needed {fmt(request.neededBy)}</p>
+                        <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
+                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{request.priority} · needed {fmt(request.neededBy)}</p>
                       </>
                     ),
                   },
@@ -414,7 +414,7 @@ export default async function SupplierDetailPage({
                   {
                     key: "lines",
                     align: "right",
-                    className: "text-xs text-[var(--ink-muted)]",
+                    className: "text-[12px] text-[var(--ink-muted)]",
                     cell: (request) => `${request._count.items} lines`,
                   },
                 ]}
@@ -433,8 +433,8 @@ export default async function SupplierDetailPage({
                     key: "grn",
                     cell: (grn) => (
                       <>
-                        <Link href={`/inventory/goods-received/${grn.id}`} className="font-mono text-xs font-bold text-[var(--ink)] hover:text-[var(--accent)]">{grn.grnNumber}</Link>
-                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</p>
+                        <Link href={`/inventory/goods-received/${grn.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{grn.grnNumber}</Link>
+                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</p>
                       </>
                     ),
                   },
@@ -445,7 +445,7 @@ export default async function SupplierDetailPage({
                   {
                     key: "lines",
                     align: "right",
-                    className: "text-xs text-[var(--ink-muted)]",
+                    className: "text-[12px] text-[var(--ink-muted)]",
                     cell: (grn) => `${grn._count.items} lines`,
                   },
                 ]}

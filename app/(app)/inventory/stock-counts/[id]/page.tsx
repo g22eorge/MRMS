@@ -82,7 +82,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
             cell: (item) => (
               <>
                 <p className="font-semibold text-[var(--ink)]">{item.part.sku}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{item.part.name}</p>
+                <p className="text-[12px] text-[var(--ink-muted)]">{item.part.name}</p>
               </>
             ),
           },
@@ -92,7 +92,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
           {
             key: "note",
             header: "Note",
-            className: "hidden text-xs text-[var(--ink-muted)] sm:table-cell",
+            className: "hidden text-[12px] text-[var(--ink-muted)] sm:table-cell",
             headerClassName: "hidden sm:table-cell",
             cell: (item) => item.note ?? "-",
           },

@@ -5,7 +5,9 @@ import { Prisma, QuotationStatus } from "@prisma/client";
 
 import { CopyButton } from "@/components/shared/CopyButton";
 import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -37,7 +39,7 @@ export default async function QuotationDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ editError?: string }>;
+  searchParams: Promise<{ editError?: string; edit?: string }>;
 }) {
   const { id } = await params;
   const filters = await searchParams;
@@ -78,6 +80,7 @@ export default async function QuotationDetailPage({
   const recipientAddress = quotation.client?.address ?? null;
   const taxDisplayLabel = quotation.taxLabel ?? "Tax";
   const taxDisplayRate = quotation.taxRate ?? null;
+  const isExpired = quotation.status !== "ACCEPTED" && quotation.validUntil != null && quotation.validUntil < new Date();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const pdfHref = `/api/quotations/${quotation.id}`;
   const pdfUrl = `${appUrl}${pdfHref}`;
@@ -223,351 +226,321 @@ export default async function QuotationDetailPage({
     }
     redirect(`/sales/quotations/${id}`);
   }
+  const field =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cellInput =
+    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] outline-none focus:border-[var(--accent)]/50";
+  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+  const iconBtn =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
+  const iconBtnDanger =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500";
+  const showEdit = canEditDraft && (filters.edit === "1" || Boolean(filters.editError));
+
+  const timeline: Array<{ label: string; value: string; valueClass?: string }> = [
+    { label: "Created", value: formatEATDateTime(quotation.createdAt) },
+    ...(quotation.sentAt ? [{ label: "Sent", value: formatEATDateTime(quotation.sentAt) }] : []),
+    ...(quotation.acceptedAt ? [{ label: "Accepted", value: formatEATDateTime(quotation.acceptedAt), valueClass: "text-emerald-600" }] : []),
+    ...(quotation.rejectedAt ? [{ label: "Rejected", value: formatEATDateTime(quotation.rejectedAt), valueClass: "text-red-600" }] : []),
+    ...(quotation.approvedBy ? [{ label: "Approved by", value: quotation.approvedBy.name }] : []),
+    ...(recipientAddress ? [{ label: "Client address", value: recipientAddress }] : []),
+  ];
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Quotation</p>
-            <p className="font-mono text-[13px] font-bold text-[var(--ink)]">{quotation.quoteNumber}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-muted)]">
-              {recipientName ? <span>For: {recipientName}</span> : null}
-              {quotation.job ? (
-                <>
-                  {recipientName ? <span className="opacity-40">·</span> : null}
-                  <span>Job: <Link href={`/jobs/${quotation.job.id}`} className="text-[var(--accent)] hover:underline">{quotation.job.jobNumber}</Link></span>
-                </>
-              ) : null}
-              {recipientAddress ? (
-                <>
-                  <span className="opacity-40">·</span>
-                  <span>{recipientAddress}</span>
-                </>
-              ) : null}
-              <span className="opacity-40">·</span>
-              <span>By {quotation.createdBy?.name ?? "Unknown"}</span>
-            </div>
-          </div>
-          <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, quotation.status)}>{quotation.status}</StatusBadge>
-        </div>
+    <div className="mx-auto max-w-4xl space-y-4 pb-24 lg:pb-8">
+      <div>
+        <Link href="/sales?tab=quotations" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All quotations
+        </Link>
       </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Document Actions</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={pdfHref}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-[12px] font-bold text-[var(--ink)] transition hover:border-[var(--accent)]/40"
-          >
-            Download PDF
-          </a>
-          <RowActionsMenu label={`Quotation actions for ${quotation.quoteNumber}`}>
-            <div className="py-1 text-left">
-              <MenuActionLink href={pdfHref} external icon="quote" tone="accent">
-                Download Quotation PDF
-              </MenuActionLink>
+      {/* -- Identity + actions + money strip -- */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="mono truncate text-[13px] font-bold text-[var(--ink)]">{quotation.quoteNumber}</p>
+              <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, quotation.status)}>{quotation.status}</StatusBadge>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
+              <span className="truncate">{recipientName ?? "No recipient"}</span>
+              {quotation.lead ? (
+                <>
+                  <span className="opacity-40">&middot;</span>
+                  <Link href={`/sales/leads/${quotation.lead.id}`} className="transition hover:text-[var(--accent)]">Lead</Link>
+                </>
+              ) : null}
               {quotation.job ? (
-                <MenuActionLink href={`/jobs/${quotation.job.id}`} icon="job">
-                  Open Job
-                </MenuActionLink>
+                <>
+                  <span className="opacity-40">&middot;</span>
+                  <Link href={`/jobs/${quotation.job.id}`} className="mono transition hover:text-[var(--accent)]">{quotation.job.jobNumber}</Link>
+                </>
               ) : null}
             </div>
-            <MenuSection label="Share" />
-            <MenuActionLink href={`mailto:${emailTo}?subject=${mailSubject}&body=${mailBody}`} icon="open">
-              Email quotation
-            </MenuActionLink>
-            {whatsappPhone ? (
-              <MenuActionLink href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} external icon="whatsapp" tone="success">
-                Send via WhatsApp
-              </MenuActionLink>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
+              Created {formatEATDate(quotation.createdAt)} by {quotation.createdBy?.name ?? "unknown"}
+              {quotation.convertedToInvoiceId ? " &middot; invoiced" : ""}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button href={pdfHref} external target="_blank" rel="noreferrer" variant="secondary" size="sm">PDF</Button>
+            {canEditDraft ? (
+              <Button
+                href={showEdit ? `/sales/quotations/${quotation.id}` : `/sales/quotations/${quotation.id}?edit=1`}
+                variant={showEdit ? "ghost" : "secondary"}
+                size="sm"
+              >
+                {showEdit ? "Close" : "Edit"}
+              </Button>
             ) : null}
-            <div className="px-3 py-1.5">
-              <CopyButton
-                text={pdfUrl}
-                label="Copy PDF link"
-                title="Copy quotation PDF link"
-                className="flex w-full rounded-md px-2 py-1.5 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
-              />
-            </div>
-            {canSend ? (
-              <>
-                <MenuSection label="Status" />
-                <div className="px-3 py-1.5">
-              <form action={sendAction}>
-                <MenuActionButton icon="save" tone="accent">
-                  Send to Client
-                </MenuActionButton>
-              </form>
-                </div>
-              </>
-            ) : null}
-            {canAccept ? (
-              <>
-                {!canSend ? <MenuSection label="Status" /> : null}
-                <div className="px-3 py-1.5">
-              <form action={acceptAction}>
-                <MenuActionButton icon="save" tone="success">
-                  Mark Accepted
-                </MenuActionButton>
-              </form>
-                </div>
-              </>
-            ) : null}
-            {canReject ? (
-              <div className="px-3 py-1.5">
-              <form action={rejectAction}>
-                <MenuActionButton icon="close" tone="danger">
-                  Mark Rejected
-                </MenuActionButton>
-              </form>
+            <RowActionsMenu label={`Quotation actions for ${quotation.quoteNumber}`}>
+              <div className="py-1 text-left">
+                <MenuActionLink href={pdfHref} external icon="quote" tone="accent">
+                  Download Quotation PDF
+                </MenuActionLink>
+                {quotation.job ? (
+                  <MenuActionLink href={`/jobs/${quotation.job.id}`} icon="job">
+                    Open Job
+                  </MenuActionLink>
+                ) : null}
               </div>
-            ) : null}
-            {canConvert ? (
-              <>
-                <MenuSection label="Convert" />
+              <MenuSection label="Share" />
+              <MenuActionLink href={`mailto:${emailTo}?subject=${mailSubject}&body=${mailBody}`} icon="open">
+                Email quotation
+              </MenuActionLink>
+              {whatsappPhone ? (
+                <MenuActionLink href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} external icon="whatsapp" tone="success">
+                  Send via WhatsApp
+                </MenuActionLink>
+              ) : null}
+              <div className="px-3 py-1.5">
+                <CopyButton
+                  text={pdfUrl}
+                  label="Copy PDF link"
+                  title="Copy quotation PDF link"
+                  className="flex w-full rounded-md px-2 py-1.5 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
+                />
+              </div>
+              {canSend || canAccept || canReject ? <MenuSection label="Status" /> : null}
+              {canSend ? (
                 <div className="px-3 py-1.5">
-                  <form action={convertToInvoiceAction}>
-                    <MenuActionButton icon="invoice" tone="accent">
-                      Convert to Invoice
-                    </MenuActionButton>
+                  <form action={sendAction}>
+                    <MenuActionButton icon="save" tone="accent">Send to Client</MenuActionButton>
                   </form>
                 </div>
-              </>
-            ) : quotation.convertedToInvoiceId ? (
-              <>
-                <MenuSection label="Invoice" />
-                <MenuActionLink href="/documents/invoices" icon="invoice" tone="success">
-                  Invoice Created
-                </MenuActionLink>
-              </>
-            ) : null}
-          </RowActionsMenu>
+              ) : null}
+              {canAccept ? (
+                <div className="px-3 py-1.5">
+                  <form action={acceptAction}>
+                    <MenuActionButton icon="save" tone="success">Mark Accepted</MenuActionButton>
+                  </form>
+                </div>
+              ) : null}
+              {canReject ? (
+                <div className="px-3 py-1.5">
+                  <form action={rejectAction}>
+                    <MenuActionButton icon="close" tone="danger">Mark Rejected</MenuActionButton>
+                  </form>
+                </div>
+              ) : null}
+              {canConvert ? (
+                <>
+                  <MenuSection label="Convert" />
+                  <div className="px-3 py-1.5">
+                    <form action={convertToInvoiceAction}>
+                      <MenuActionButton icon="invoice" tone="accent">Convert to Invoice</MenuActionButton>
+                    </form>
+                  </div>
+                </>
+              ) : quotation.convertedToInvoiceId ? (
+                <>
+                  <MenuSection label="Invoice" />
+                  <MenuActionLink href="/documents/invoices" icon="invoice" tone="success">
+                    Invoice Created
+                  </MenuActionLink>
+                </>
+              ) : null}
+            </RowActionsMenu>
+          </div>
         </div>
-      </div>
+
+        <StatStrip
+          columns={4}
+          tiles={[
+            { label: "Total", value: formatMoney(quotation.totalAmount, currency) },
+            {
+              label: "Discount",
+              value: quotation.discountAmount > 0 ? `-${formatMoney(quotation.discountAmount, currency)}` : "None",
+              valueClass: quotation.discountAmount > 0 ? "text-red-600" : undefined,
+            },
+            {
+              label: taxDisplayLabel,
+              value: quotation.vatAmount > 0 ? formatMoney(quotation.vatAmount, currency) : "None",
+              sub: taxDisplayRate !== null ? `${taxDisplayRate}%` : undefined,
+            },
+            {
+              label: "Valid Until",
+              value: quotation.validUntil ? formatEATDate(quotation.validUntil) : "Open",
+              valueClass: isExpired ? "text-amber-600" : undefined,
+              sub: isExpired ? "expired" : undefined,
+            },
+          ]}
+        />
+      </section>
 
       {filters.editError ? (
         <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{filters.editError}</div>
       ) : null}
 
-      {canEditDraft ? (
-        <details className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <summary className="cursor-pointer list-none text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] [&::-webkit-details-marker]:hidden">
-            Edit Quote
-          </summary>
-          <form action={updateDetailsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)]">
-              Valid Until
-              <input
-                type="date"
-                name="validUntil"
-                defaultValue={quotation.validUntil ? quotation.validUntil.toISOString().slice(0, 10) : ""}
-                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
-              />
-            </label>
-            <label className="space-y-1 text-[12px] font-semibold text-[var(--ink-muted)] sm:col-span-2">
-              Notes
-              <textarea
-                name="notes"
-                rows={3}
-                defaultValue={quotation.notes ?? ""}
-                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-normal text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
-              />
-            </label>
-            <div className="sm:col-span-2">
-              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[12px] font-bold">
-                Save Quote
-              </button>
-            </div>
+      {/* -- Edit draft -- */}
+      {showEdit ? (
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5">
+            <p className={cardLabel}>Edit Draft</p>
+          </div>
+          <form action={updateDetailsAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
+            <input
+              type="date"
+              name="validUntil"
+              aria-label="Valid until"
+              defaultValue={quotation.validUntil ? quotation.validUntil.toISOString().slice(0, 10) : ""}
+              className={field}
+            />
+            <input name="notes" defaultValue={quotation.notes ?? ""} placeholder="Notes" aria-label="Notes" className={field} />
+            <Button type="submit" variant="secondary" size="sm">Save</Button>
           </form>
-          <form action={deleteAction} className="mt-3 border-t border-[var(--line)] pt-3">
-            <button type="submit" className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-[12px] font-bold text-red-700 transition hover:bg-red-500/20 dark:text-red-400">
-              Delete Draft
-            </button>
+          <form action={deleteAction} className="border-t border-[var(--line)] px-3 py-2.5">
+            <Button type="submit" variant="danger" size="sm">Delete Draft</Button>
           </form>
-        </details>
+        </section>
       ) : null}
 
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Line Items</p>
+      {/* -- Line items -- */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className={cardLabel}>Line Items</p>
+          <p className="text-[12px] text-[var(--ink-muted)]">
+            {quotation.items.length} {quotation.items.length === 1 ? "line" : "lines"} &middot; {formatMoney(quotation.totalAmount, currency)}
+          </p>
         </div>
+
+        {canEditDraft ? (
+          <form action={addItemAction} className="grid gap-2 border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3 md:grid-cols-[minmax(0,1fr)_72px_120px_80px_auto]">
+            <input name="description" placeholder="New item description" className={field} />
+            <input name="quantity" type="number" min="1" step="any" defaultValue="1" aria-label="Quantity" className={field} />
+            <input name="unitPrice" type="number" min="0" step="any" defaultValue="0" aria-label="Unit price" className={field} />
+            {canOverrideDiscount ? (
+              <input name="discount" type="number" min="0" max="100" step="any" defaultValue="0" aria-label="Discount percent" className={field} />
+            ) : <input type="hidden" name="discount" value="0" />}
+            <Button type="submit" size="sm" className="px-4">Add</Button>
+          </form>
+        ) : null}
+
         <DataTable
           frameless
+          dense
           rows={quotation.items}
           getRowKey={(item) => item.id}
-          empty="No items"
+          empty="No items yet."
           columns={[
             {
               key: "description",
-              header: "Description",
-              className: "text-[var(--ink)]",
+              header: "Item",
               cell: (item) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} aria-label="Description" className={cellInput} />
                 ) : item.description,
             },
             {
               key: "qty",
               header: "Qty",
-              align: "right",
-              headerClassName: "w-16",
-              className: "text-[var(--ink-muted)]",
+              className: "w-20 whitespace-nowrap tabular-nums",
               cell: (item) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
+                  <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} aria-label="Quantity" className={cellInput} />
                 ) : item.quantity,
             },
             {
               key: "unitPrice",
-              header: "Unit Price",
-              align: "right",
-              headerClassName: "w-28",
-              className: "text-[var(--ink-muted)]",
+              header: "Price",
+              className: "w-32 whitespace-nowrap tabular-nums",
               cell: (item) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="w-28 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
+                  <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} aria-label="Unit price" className={cellInput} />
                 ) : formatMoney(item.unitPrice, currency),
             },
             {
               key: "discount",
-              header: "Disc %",
-              align: "right",
-              headerClassName: "w-16",
-              className: "text-[var(--ink-muted)]",
+              header: "Disc",
+              className: "w-20 whitespace-nowrap tabular-nums text-[var(--ink-muted)]",
               cell: (item) =>
                 canEditDraft && canOverrideDiscount ? (
-                  <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50" />
-                ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-40">—</span>,
+                  <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} aria-label="Discount percent" className={cellInput} />
+                ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-30">&mdash;</span>,
             },
             {
               key: "total",
               header: "Total",
-              align: "right",
-              headerClassName: "w-28",
-              className: "font-medium text-[var(--ink)]",
+              className: "whitespace-nowrap font-semibold tabular-nums",
               cell: (item) => formatMoney(item.lineTotal, currency),
             },
           ]}
           actions={
             canEditDraft
               ? (item) => (
-                  <>
-                    <form id={`quote-item-${item.id}`} action={updateItemAction} className="inline">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <form id={`quote-item-${item.id}`} action={updateItemAction}>
                       <input type="hidden" name="itemId" value={item.id} />
                       {!canOverrideDiscount ? <input type="hidden" name="discount" value="0" /> : null}
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--ink)]">Save</button>
+                      <button type="submit" title="Save line" className={iconBtn}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                      </button>
                     </form>
-                    <form action={removeItemAction} className="ml-1 inline">
+                    <form action={removeItemAction}>
                       <input type="hidden" name="itemId" value={item.id} />
-                      <button type="submit" className="rounded-lg border border-red-400/30 px-2.5 py-1 text-[12px] font-semibold text-red-600">Remove</button>
+                      <button type="submit" title="Remove line" className={iconBtnDanger}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                      </button>
                     </form>
-                  </>
+                  </div>
                 )
               : undefined
           }
         />
-        {canEditDraft ? (
-          <form action={addItemAction} className="grid gap-2 border-t border-[var(--line)] px-4 py-3 md:grid-cols-[1fr_80px_120px_90px_auto]">
-            <input name="description" placeholder="New item description" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-            <input name="quantity" type="number" min="1" step="any" defaultValue="1" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-            <input name="unitPrice" type="number" min="0" step="any" defaultValue="0" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-            {canOverrideDiscount ? (
-              <input name="discount" type="number" min="0" max="100" step="any" defaultValue="0" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-            ) : <input type="hidden" name="discount" value="0" />}
-            <button type="submit" className="btn-premium-secondary rounded-lg px-4 py-2 text-[12px] font-semibold">
-              Add Item
-            </button>
-          </form>
-        ) : null}
-        <div className="border-t border-[var(--line)] px-4 py-3">
-          <div className="flex flex-col items-end gap-1 text-[13px]">
-            {quotation.discountAmount > 0 ? (
-              <div className="flex gap-4">
-                <span className="text-[var(--ink-muted)]">Discount</span>
-                <span className="font-medium text-red-600">-{formatMoney(quotation.discountAmount, currency)}</span>
-              </div>
-            ) : null}
-            {quotation.vatAmount > 0 ? (
-              <div className="flex gap-4">
-                <span className="text-[var(--ink-muted)]">{taxDisplayLabel}{taxDisplayRate !== null ? ` (${taxDisplayRate}%)` : ""}</span>
-                <span className="font-medium text-[var(--ink)]">{formatMoney(quotation.vatAmount, currency)}</span>
-              </div>
-            ) : null}
-            <div className="flex gap-4 border-t border-[var(--line)] pt-2">
-              <span className="font-semibold text-[var(--ink)]">Total</span>
-              <span className="text-[15px] font-bold text-[var(--ink)]">{formatMoney(quotation.totalAmount, currency)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-4">
-        <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Details</p>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] sm:grid-cols-3">
-          <div>
-            <dt className="text-[var(--ink-muted)]">Created</dt>
-            <dd className="font-medium text-[var(--ink)]">{formatEATDateTime(quotation.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--ink-muted)]">Created by</dt>
-            <dd className="font-medium text-[var(--ink)]">{quotation.createdBy?.name ?? "Unknown"}</dd>
-          </div>
-          {quotation.validUntil ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Valid until</dt>
-              <dd className="font-medium text-[var(--ink)]">{formatEATDate(quotation.validUntil)}</dd>
-            </div>
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">
+          {quotation.discountAmount > 0 ? <span>Discount <span className="font-semibold text-red-600">-{formatMoney(quotation.discountAmount, currency)}</span></span> : null}
+          {quotation.vatAmount > 0 ? (
+            <span>
+              {taxDisplayLabel}{taxDisplayRate !== null ? ` (${taxDisplayRate}%)` : ""}{" "}
+              <span className="font-semibold text-[var(--ink)]">{formatMoney(quotation.vatAmount, currency)}</span>
+            </span>
           ) : null}
-          {quotation.sentAt ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Sent</dt>
-              <dd className="font-medium text-[var(--ink)]">{formatEATDateTime(quotation.sentAt)}</dd>
+          <span className="text-[13px]">Total <span className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(quotation.totalAmount, currency)}</span></span>
+        </div>
+      </section>
+
+      {/* -- Timeline + notes -- */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="border-b border-[var(--line)] px-4 py-2.5">
+          <p className={cardLabel}>Record</p>
+        </div>
+        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
+          {timeline.map(({ label, value, valueClass }) => (
+            <div key={label} className="px-4 py-2.5">
+              <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">{label}</dt>
+              <dd className={`mt-0.5 text-[13px] font-semibold [overflow-wrap:anywhere] ${valueClass ?? "text-[var(--ink)]"}`}>{value}</dd>
             </div>
-          ) : null}
-          {quotation.acceptedAt ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Accepted</dt>
-              <dd className="font-medium text-green-700">{formatEATDateTime(quotation.acceptedAt)}</dd>
-            </div>
-          ) : null}
-          {quotation.rejectedAt ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Rejected</dt>
-              <dd className="font-medium text-red-600">{formatEATDateTime(quotation.rejectedAt)}</dd>
-            </div>
-          ) : null}
-          {quotation.approvedBy ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Approved by</dt>
-              <dd className="font-medium text-[var(--ink)]">{quotation.approvedBy.name}</dd>
-            </div>
-          ) : null}
-          {quotation.lead ? (
-            <div>
-              <dt className="text-[var(--ink-muted)]">Lead</dt>
-              <dd>
-                <Link href={`/sales/leads/${quotation.lead.id}`} className="font-medium text-[var(--accent)] hover:underline">
-                  {quotation.lead.fullName}
-                </Link>
-              </dd>
-            </div>
-          ) : null}
-          {recipientAddress ? (
-            <div className="sm:col-span-2">
-              <dt className="text-[var(--ink-muted)]">Client address</dt>
-              <dd className="font-medium text-[var(--ink)]">{recipientAddress}</dd>
-            </div>
-          ) : null}
+          ))}
         </dl>
         {quotation.notes ? (
-          <div className="mt-3 border-t border-[var(--line)] pt-3">
-            <p className="mb-1 text-[13px] font-semibold text-[var(--ink-muted)]">Notes</p>
-            <p className="whitespace-pre-wrap text-[12px] text-[var(--ink)]">{quotation.notes}</p>
+          <div className="border-t border-[var(--line)] px-4 py-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
+            <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)]">{quotation.notes}</p>
           </div>
         ) : null}
-      </div>
+      </section>
     </div>
   );
 }

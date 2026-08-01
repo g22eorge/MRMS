@@ -110,7 +110,7 @@ export default async function SuppliersPage({
           },
         ]}
         actions={(s) => (
-          <Link href={`/inventory/suppliers/${s.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+          <Link href={`/inventory/suppliers/${s.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
             View
           </Link>
         )}

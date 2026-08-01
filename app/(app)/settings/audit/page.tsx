@@ -87,7 +87,7 @@ export default async function SettingsAuditPage({
 
       <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)]">
+          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
             <option value="">All actions</option>
             {actionOptions.map((item) => (
               <option key={item} value={item}>{item}</option>
@@ -108,7 +108,7 @@ export default async function SettingsAuditPage({
           {
             key: "when",
             header: "When",
-            className: "whitespace-nowrap align-top text-xs text-[var(--ink-muted)]",
+            className: "whitespace-nowrap align-top text-[12px] text-[var(--ink-muted)]",
             cell: (event) => fmt(event.createdAt),
           },
           {
@@ -117,19 +117,19 @@ export default async function SettingsAuditPage({
             className: "align-top",
             cell: (event) => (
               <>
-                <p className="font-mono text-xs font-semibold text-[var(--ink)]">{event.action}</p>
-                <p className="mt-1 max-w-[240px] text-xs text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
+                <p className="mono font-semibold text-[var(--ink)]">{event.action}</p>
+                <p className="mt-1 max-w-[240px] text-[12px] text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
               </>
             ),
           },
           {
             key: "actor",
             header: "Actor",
-            className: "align-top text-xs text-[var(--ink-muted)]",
+            className: "align-top text-[12px] text-[var(--ink-muted)]",
             cell: (event) => {
               const actor = event.actorUserId ? actorMap.get(event.actorUserId) : null;
               return actor ? (
-                <span>{actor.name}<br /><span className="font-mono">{actor.email}</span></span>
+                <span>{actor.name}<br /><span className="mono">{actor.email}</span></span>
               ) : (
                 event.actorUserId ?? "-"
               );
@@ -138,18 +138,18 @@ export default async function SettingsAuditPage({
           {
             key: "entity",
             header: "Entity",
-            className: "align-top text-xs",
+            className: "align-top",
             cell: (event) => (
               <>
                 <p className="font-semibold text-[var(--ink)]">{event.entityType}</p>
-                <p className="font-mono text-[var(--ink-muted)]">{event.entityId}</p>
+                <p className="mono text-[var(--ink-muted)]">{event.entityId}</p>
               </>
             ),
           },
           {
             key: "after",
             header: "After",
-            className: "max-w-[260px] align-top font-mono text-xs text-[var(--ink-muted)]",
+            className: "max-w-[260px] align-top mono text-[12px] text-[var(--ink-muted)]",
             cell: (event) => compactJson(event.afterJson),
           },
         ]}

@@ -116,7 +116,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
             cell: (org) => (
               <Link href={PLATFORM_ROUTES.org(org.id)} className="group block">
                 <p className="font-semibold text-[var(--ink)] group-hover:underline">{org.name}</p>
-                <p className="text-[13px] text-[var(--ink-muted)]">/{org.slug}</p>
+                <p className="text-[var(--ink-muted)]">/{org.slug}</p>
               </Link>
             ),
           },
@@ -138,14 +138,14 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
             key: "users",
             header: "Users",
             align: "center",
-            className: "font-mono text-[var(--ink-muted)]",
+            className: "mono text-[var(--ink-muted)]",
             cell: (org) => org._count.users,
           },
           {
             key: "jobs",
             header: "Jobs",
             align: "center",
-            className: "font-mono text-[var(--ink-muted)]",
+            className: "mono text-[var(--ink-muted)]",
             cell: (org) => org._count.jobs,
           },
           {
@@ -178,7 +178,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                   <select
                     name="plan"
                     defaultValue={org.plan}
-                    className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
                   >
                     <option value="STARTER">Starter</option>
                     <option value="STANDARD">Standard</option>
@@ -186,7 +186,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                     <option value="PREMIUM">Premium</option>
                     <option value="ENTERPRISE">Enterprise</option>
                   </select>
-                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-[var(--gold)]/60 hover:text-[var(--gold)]">
+                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-[var(--gold)]/60 hover:text-[var(--gold)]">
                     Plan
                   </button>
                 </form>
@@ -197,21 +197,21 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                   <select
                     name="status"
                     defaultValue={org.billingStatus}
-                    className="rounded border border-[var(--line)] bg-[var(--bg)] px-1.5 py-0.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
                   >
                     <option value="TRIALING">Trialing</option>
                     <option value="ACTIVE">Active</option>
                     <option value="PAST_DUE">Past Due</option>
                     <option value="CANCELLED">Cancelled</option>
                   </select>
-                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
+                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
                     Status
                   </button>
                 </form>
 
                 <Link
                   href={PLATFORM_ROUTES.org(org.id)}
-                  className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]"
+                  className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]"
                 >
                   →
                 </Link>

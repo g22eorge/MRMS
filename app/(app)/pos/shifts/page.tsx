@@ -11,10 +11,10 @@ import { promisify } from "util";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { StatCards } from "@/components/ui/StatCards";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const scryptAsync = promisify(scrypt);
@@ -411,15 +411,12 @@ export default async function CashierShiftsPage({
       )}
 
       {/* ── KPI tiles (below shift panel) ── */}
-      <StatStrip
-        variant="cards"
-        tiles={[
+      <StatCards columns={4} cards={[
           { label: "Total Shifts", value: totalShifts, sub: "all time" },
           { label: "Open Shifts", value: openCount, sub: "currently open" },
           { label: "Closed This Month", value: closedThisMonth, sub: "this month" },
           { label: "Cash Collected MTD", value: formatMoney(cashCollectedThisMonth, currency), sub: "closing cash, this month" },
-        ]}
-      />
+        ]} />
 
       {/* Filter */}
       <form method="GET" className="flex gap-2">
@@ -534,13 +531,13 @@ export default async function CashierShiftsPage({
           return (
             <>
               {isOpen && shift.cashierId !== user.id && (
-                <form action={closeShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><input type="hidden" name="closingCash" value="0" /><ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-orange-400/30 px-2 py-0.5 text-[13px] font-semibold text-orange-600 hover:bg-orange-500/10 dark:text-orange-400">Force close</ConfirmSubmitButton></form>
+                <form action={closeShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><input type="hidden" name="closingCash" value="0" /><ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-orange-400/30 px-2 py-0.5 font-semibold text-orange-600 hover:bg-orange-500/10 dark:text-orange-400">Force close</ConfirmSubmitButton></form>
               )}
               {!isOpen && (
-                <form action={reopenShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><ConfirmSubmitButton message="Reopen this shift? The cashier will be able to process sales again. Use this to correct an accidental closure." confirmLabel="Reopen" className="rounded border border-sky-400/30 px-2 py-0.5 text-[13px] font-semibold text-sky-600 hover:bg-sky-500/10 dark:text-sky-400">Reopen</ConfirmSubmitButton></form>
+                <form action={reopenShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><ConfirmSubmitButton message="Reopen this shift? The cashier will be able to process sales again. Use this to correct an accidental closure." confirmLabel="Reopen" className="rounded border border-sky-400/30 px-2 py-0.5 font-semibold text-sky-600 hover:bg-sky-500/10 dark:text-sky-400">Reopen</ConfirmSubmitButton></form>
               )}
               {!isOpen && (
-                <form action={deleteShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><ConfirmSubmitButton message="Delete this shift record? This cannot be undone." confirmLabel="Delete" className="rounded border border-red-400/30 px-2 py-0.5 text-[13px] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton></form>
+                <form action={deleteShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><ConfirmSubmitButton message="Delete this shift record? This cannot be undone." confirmLabel="Delete" className="rounded border border-red-400/30 px-2 py-0.5 font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton></form>
               )}
             </>
           );

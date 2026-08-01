@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { Role } from "@prisma/client";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { StatStrip } from "@/components/ui/StatStrip";
+import { StatCards } from "@/components/ui/StatCards";
 
 function deviceName(brand?: string | null, model?: string | null) {
   const b = brand && brand !== "Unknown" ? brand : "";
@@ -62,7 +62,7 @@ function clamp(value: number, min: number, max: number) {
 
 function priorityBand(overdue: boolean, ready: boolean, ageDays: number) {
   if (overdue) return { label: "Attention", tone: "bg-[#0b0b0b] text-white/90 border-white/10" };
-  if (ready) return { label: "High", tone: "bg-[var(--accent)] text-white border-[var(--accent)]" };
+  if (ready) return { label: "High", tone: "bg-[var(--accent)] text-black border-[var(--accent)]" };
   if (ageDays >= 2) return { label: "Medium", tone: "bg-[var(--accent)]/20 text-[var(--accent)] border-[var(--accent)]/30" };
   return { label: "Normal", tone: "bg-[var(--panel-strong)] text-[var(--ink)] border-[var(--line)]" };
 }
@@ -249,14 +249,29 @@ export default async function TechniciansPage({
         actions: <Link href="/settings/users" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px]">Manage staff →</Link>,
       }}
     >
-      {/* ── Technician KPI tiles ── */}
-      <StatStrip
-        variant="cards"
-        tiles={[
-          { label: "Total Technicians", value: totalTechs, sub: `${internalCount} internal · ${externalCount} external` },
-          { label: "Active Jobs", value: assignedCount, sub: "in the queue now" },
-          { label: "Ready to Complete", value: readyCount, sub: "approved, awaiting handover", valueClass: readyCount > 0 ? "text-emerald-600 dark:text-emerald-400" : undefined },
-          { label: "Overdue", value: overdueCount, sub: `${assignedThisMonth} assigned this month`, valueClass: overdueCount > 0 ? "text-red-500" : undefined },
+      {/* ── Mobile KPI strip ── */}
+      <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] lg:hidden">
+        {([
+          { label: "Techs", value: totalTechs },
+          { label: "Active", value: assignedCount },
+          { label: "Ready", value: readyCount },
+          { label: "Overdue", value: overdueCount },
+        ] as const).map(({ label, value }) => (
+          <div key={label} className="flex flex-col items-center py-3">
+            <p className="text-[22px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+            <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Desktop KPI cards ── */}
+      <StatCards
+        columns={4}
+        cards={[
+          { key: "techs", label: "Total technicians", value: totalTechs, sub: `${internalCount} internal · ${externalCount} external`, muted: totalTechs === 0 },
+          { key: "active", label: "Active jobs", value: assignedCount, sub: "in the queue now", tone: "accent", muted: assignedCount === 0 },
+          { key: "ready", label: "Ready to complete", value: readyCount, sub: "approved, awaiting handover", tone: "good", muted: readyCount === 0 },
+          { key: "overdue", label: "Overdue", value: overdueCount, sub: `${assignedThisMonth} assigned this month`, tone: "crit", muted: overdueCount === 0 },
         ]}
       />
 
@@ -328,7 +343,7 @@ export default async function TechniciansPage({
                   className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                     activeStatus
                       ? "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
-                      : "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : "border-[var(--accent)] bg-[var(--accent)] text-black"
                   }`}
                 >
                   All
@@ -341,7 +356,7 @@ export default async function TechniciansPage({
                       href={statusHref(status)}
                       className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                         active
-                          ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                          ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                           : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
                       }`}
                     >
@@ -371,7 +386,7 @@ export default async function TechniciansPage({
               <Link
                 key={action.label}
                 href={action.href}
-                className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${action.active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${action.active ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)] hover:border-[var(--accent)]/30"}`}
               >
                 {action.label} <span className={action.active ? "opacity-80" : "text-[var(--ink-muted)]"}>({action.count})</span>
               </Link>
@@ -525,7 +540,7 @@ export default async function TechniciansPage({
                 <>
                   <p className="text-[var(--ink-muted)]">{job.ageDays}d old</p>
                   {job.repairTimeline ? (
-                    <p className="text-[13px] text-[var(--accent)]">ETA {job.repairTimeline}</p>
+                    <p className="text-[var(--accent)]">ETA {job.repairTimeline}</p>
                   ) : null}
                   {typeof job.etaProgress === "number" ? (
                     <div className="mt-1 h-1 w-20 rounded-full bg-[var(--line)]">
@@ -554,14 +569,14 @@ export default async function TechniciansPage({
             <>
               <Link
                 href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
-                className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
+                className="whitespace-nowrap rounded-md border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/8 hover:text-[var(--accent)]"
               >
                 Open
               </Link>
               {job.status === "IN_REPAIR" || job.status === "READY_FOR_PICKUP" ? (
                 <Link
                   href={`/jobs/${job.id}?returnTo=${encodeURIComponent(boardReturnTo)}`}
-                  className="btn-premium whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-white"
+                  className="btn-premium whitespace-nowrap rounded-lg px-3 py-1.5 font-semibold text-white"
                 >
                   Complete
                 </Link>

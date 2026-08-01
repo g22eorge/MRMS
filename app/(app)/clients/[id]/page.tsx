@@ -186,7 +186,7 @@ export default async function ClientDetailPage({
     ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
     : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
   const controlClass =
-    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
   return (
     <div className="space-y-5">
@@ -292,7 +292,7 @@ export default async function ClientDetailPage({
               disabled={!canEdit}
               name="notes"
               defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
+              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
             />
           </label>
         </div>
@@ -308,7 +308,7 @@ export default async function ClientDetailPage({
             <div className="flex items-center gap-1">
               <Link
                 href={`/clients/${id}`}
-                className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
               >
                 All
               </Link>
@@ -316,7 +316,7 @@ export default async function ClientDetailPage({
                 <Link
                   key={status}
                   href={`/clients/${id}?${new URLSearchParams({ ...(filters.q ? { q: filters.q } : {}), status }).toString()}`}
-                  className={`hidden rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                  className={`hidden rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
                 >
                   {statusOptionLabel[status]}
                 </Link>
@@ -366,7 +366,7 @@ export default async function ClientDetailPage({
           <p className="text-[13px] text-[var(--ink-muted)]">Internal notes visible to your team only</p>
         </div>
         <form action={addClientNote} className="flex flex-col gap-2 p-4">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
           <button type="submit" disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 

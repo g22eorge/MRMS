@@ -34,7 +34,7 @@ export function PeriodFilterChips({
             value={key}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
               active === key
-                ? "bg-[var(--accent)] text-white"
+                ? "bg-[var(--accent)] text-black"
                 : "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
             }`}
           >

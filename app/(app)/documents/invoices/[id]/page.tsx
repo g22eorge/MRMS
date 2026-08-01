@@ -9,7 +9,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatStrip } from "@/components/ui/StatStrip";
+import { StatCards } from "@/components/ui/StatCards";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
@@ -228,10 +228,7 @@ export default async function InvoiceDetailPage({
           }
         />
 
-        <StatStrip
-          variant="cards"
-          columns={5}
-          tiles={[
+        <StatCards columns={5} cards={[
             { label: "Invoice #", value: invoice.invoiceNumber },
             { label: "Date", value: formatEATDate(invoice.issuedAt) },
             {
@@ -251,10 +248,9 @@ export default async function InvoiceDetailPage({
               value: formatMoney(total, currency),
               valueClass: "text-[var(--ink)]",
             },
-          ]}
-        />
+          ]} />
 
-        <div className="max-w-6xl mx-auto">
+        <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 action-bar">
             {canSend && invoice.client?.phone && (
               <form
@@ -398,6 +394,7 @@ export default async function InvoiceDetailPage({
             {invoice.lines.length ? (
               <>
                 <DataTable
+                  frameless
                   rows={invoice.lines}
                   getRowKey={(l: any) => l.id}
                   dense
@@ -406,7 +403,7 @@ export default async function InvoiceDetailPage({
                       key: "description",
                       header: "Description",
                       cell: (row: any) => (
-                        <span className="text-[13px] font-medium">
+                        <span className="font-medium">
                           {row.description}
                         </span>
                       ),
@@ -417,7 +414,7 @@ export default async function InvoiceDetailPage({
                       align: "center",
                       className: "w-[60px]",
                       cell: (row: any) => (
-                        <span className="text-[13px]">{row.quantity}</span>
+                        <span className="">{row.quantity}</span>
                       ),
                     },
                     {
@@ -426,7 +423,7 @@ export default async function InvoiceDetailPage({
                       align: "right",
                       className: "min-w-[110px] whitespace-nowrap",
                       cell: (row: any) => (
-                        <span className="mono text-[13px] tabular-nums">
+                        <span className="mono tabular-nums">
                           {formatMoney(row.unitPrice, currency)}
                         </span>
                       ),
@@ -436,7 +433,7 @@ export default async function InvoiceDetailPage({
                       align: "right",
  className: "min-w-[100px] whitespace-nowrap",
       cell: (row: any) => (
-        <span className="mono text-[13px] tabular-nums">
+        <span className="mono tabular-nums">
           {row.taxAmount
             ? formatMoney(row.taxAmount, currency)
             : "—"}
@@ -449,7 +446,7 @@ export default async function InvoiceDetailPage({
                       align: "right",
  className: "min-w-[100px] whitespace-nowrap",
       cell: (row: any) => (
-        <span className="mono text-[13px] font-bold tabular-nums">
+        <span className="mono font-bold tabular-nums">
           {formatMoney(row.lineTotal, currency)}
                         </span>
                       ),
@@ -498,11 +495,12 @@ export default async function InvoiceDetailPage({
           )}
 
           {invoice.payments.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-sm font-bold text-[var(--ink-muted)] mb-2">
-                Payment History
-              </h3>
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payment History</p>
+              </div>
               <DataTable
+                frameless
                 rows={invoice.payments}
                 getRowKey={(p) => p.id}
                 empty="No payments."
@@ -559,11 +557,12 @@ export default async function InvoiceDetailPage({
     )}
 
     {invoice.deliveryNotes.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-sm font-bold text-[var(--ink-muted)] mb-2">
-                Delivery Notes
-              </h3>
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Delivery Notes</p>
+              </div>
               <DataTable
+                frameless
                 rows={invoice.deliveryNotes}
                 getRowKey={(dn) => dn.id}
                 empty="No delivery notes."

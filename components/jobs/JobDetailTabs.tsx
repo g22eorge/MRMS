@@ -369,7 +369,7 @@ function MessagesTab({
               placeholder="Type a reply… (Enter to send, Shift+Enter for new line)"
               rows={2}
               disabled={isSending}
-              className="min-h-[60px] flex-1 resize-none rounded-xl bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 disabled:opacity-50"
+              className="min-h-[60px] flex-1 resize-none rounded-xl bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 disabled:opacity-50"
             />
             <button
               type="button"
@@ -1295,7 +1295,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     </div>
                     <div className="min-w-0">
                       <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
-                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
                         <span className="font-medium">{derivedRepairPath}</span>
                       </div>
                     </div>
@@ -1330,7 +1330,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     </div>
                     <div className="min-w-0">
                       <p className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">Repair path</p>
-                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink)]">
+                      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
                         <span className="font-medium">{derivedRepairPath}</span>
                       </div>
                     </div>

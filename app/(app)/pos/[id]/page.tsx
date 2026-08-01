@@ -6,12 +6,15 @@ import type { PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney } from "@/lib/currency";
+import { formatEATDateTime } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
@@ -709,131 +712,198 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
   const balance = Math.max(0, sale.totalAmount - sale.paidAmount);
   const canDeleteSale = user.role === "ADMIN" && sale.status === "OPEN" && !sale.invoicedAt && sale._count.payments === 0 && sale._count.creditNotes === 0 && sale._count.refunds === 0;
 
+  const isOpen = sale.status === "OPEN";
+  const refundedTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
+
+  // One control scale for the whole page — same language as the clients workspace.
+  const field =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const fieldOnStrong =
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cellInput =
+    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] outline-none focus:border-[var(--accent)]/50";
+  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+  const barClass = "border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3";
+  const iconBtn =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
+  const iconBtnDanger =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500";
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/pos" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Sales</Link>
-        <div className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)]">
-          {sale.branch?.name ?? "No branch"}
-        </div>
+    <div className="space-y-4 pb-24 lg:pb-8">
+      <div>
+        <Link href="/pos" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          All sales
+        </Link>
       </div>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">POS · Sale</p>
-            <p className="mt-0.5 font-mono text-[13px] font-bold text-[var(--ink)]">{sale.saleNumber}</p>
-            {sale.client ? <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{sale.client.fullName}</p> : null}
-          </div>
-          <StatusBadge tone={sale.status === "PAID" ? "success" : sale.status === "VOID" ? "danger" : "warning"}>
-            {sale.status}
-          </StatusBadge>
-        </div>
-
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Subtotal</p>
-            <p className="mt-1 text-base font-bold text-[var(--ink)]">{formatMoney(sale.subtotal, saleCurrency)}</p>
-            {sale.discountAmount > 0 ? <p className="mt-0.5 text-xs text-red-500">−{formatMoney(sale.discountAmount, saleCurrency)} disc</p> : null}
-            {sale.vatAmount > 0 ? <p className="mt-0.5 text-xs text-[var(--ink-muted)]">+{formatMoney(sale.vatAmount, saleCurrency)} VAT</p> : null}
-          </div>
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Total</p>
-            <p className="mt-1 text-base font-bold text-[var(--ink)]">{formatMoney(sale.totalAmount, saleCurrency)}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Paid</p>
-            <p className="mt-1 text-base font-bold text-emerald-700">{formatMoney(sale.paidAmount, saleCurrency)}</p>
-          </div>
-          <div className={`rounded-lg border p-3 ${balance > 0 ? "border-amber-400/30 bg-amber-400/10" : "border-emerald-500/20 bg-emerald-500/10"}`}>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Balance</p>
-            <p className={`mt-1 text-base font-bold ${balance > 0 ? "text-amber-700" : "text-emerald-700"}`}>
-              {balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared"}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="mono truncate text-[13px] font-bold text-[var(--ink)]">{sale.saleNumber}</p>
+              <StatusBadge tone={sale.status === "PAID" ? "success" : sale.status === "VOID" ? "danger" : "warning"}>
+                {sale.status}
+              </StatusBadge>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
+              <span className="truncate">{sale.client?.fullName ?? "Walk-in"}</span>
+              <span className="opacity-40">·</span>
+              <span className="truncate">{sale.branch?.name ?? "No branch"}</span>
+              {sale.invoiceNumber ? <><span className="opacity-40">·</span><span className="mono">{sale.invoiceNumber}</span></> : null}
+            </div>
+            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
+              Created {formatEATDateTime(sale.createdAt)}
+              {sale.paidAt ? ` · paid ${formatEATDateTime(sale.paidAt)}` : null}
             </p>
           </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button href={`/api/sales/${sale.id}/receipt`} external target="_blank" rel="noreferrer" variant="secondary" size="sm">
+              Receipt PDF
+            </Button>
+            {canDeleteSale ? (
+              <form action={deleteSaleAction}>
+                <input type="hidden" name="saleId" value={sale.id} />
+                <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className={buttonClasses("danger", "sm")}>
+                  Delete
+                </ConfirmSubmitButton>
+              </form>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href={`/api/sales/${sale.id}/receipt`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-premium-secondary rounded-lg px-3 py-2 text-sm"
-          >
-            Receipt PDF
-          </a>
-          {canDeleteSale ? (
-            <form action={deleteSaleAction}>
-              <input type="hidden" name="saleId" value={sale.id} />
-              <ConfirmSubmitButton message="Delete this open POS sale? Stock will be restored." className="rounded-lg border border-red-400/30 bg-red-500/5 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete Sale</ConfirmSubmitButton>
-            </form>
-          ) : null}
-        </div>
+        <StatStrip
+          columns={4}
+          tiles={[
+            {
+              label: "Subtotal",
+              value: formatMoney(sale.subtotal, saleCurrency),
+              sub:
+                [
+                  sale.discountAmount > 0 ? `-${formatMoney(sale.discountAmount, saleCurrency)} disc` : null,
+                  sale.vatAmount > 0 ? `+${formatMoney(sale.vatAmount, saleCurrency)} VAT` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || undefined,
+            },
+            { label: "Total", value: formatMoney(sale.totalAmount, saleCurrency) },
+            { label: "Paid", value: formatMoney(sale.paidAmount, saleCurrency), valueClass: "text-emerald-600" },
+            {
+              label: "Balance",
+              value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared",
+              valueClass: balance > 0 ? "text-amber-600" : "text-emerald-600",
+            },
+          ]}
+        />
 
-        <form action={updateSaleAction} className="mt-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 md:grid-cols-[220px_1fr_auto]">
+        <form action={updateSaleAction} className="grid gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
           <input type="hidden" name="saleId" value={sale.id} />
-          <select
-            name="branchId"
-            defaultValue={sale.branchId ?? ""}
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-          >
+          <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
             <option value="">No branch</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <input
-            name="notes"
-            defaultValue={sale.notes ?? ""}
-            placeholder="Sale note"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-          />
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save Sale</button>
+          <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
+          <Button type="submit" variant="secondary" size="sm">Save</Button>
         </form>
       </section>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Items</p>
+      {/* -- Items -- */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className={cardLabel}>Items</p>
+          <p className="text-[12px] text-[var(--ink-muted)]">
+            {sale.items.length} {sale.items.length === 1 ? "line" : "lines"} &middot; {formatMoney(sale.subtotal, saleCurrency)}
+          </p>
+        </div>
 
-        {sale.status === "OPEN" ? (
-          <form action={addItemAction} className="mt-3 grid gap-2 md:grid-cols-[1.2fr_1.8fr_80px_140px_auto]">
+        {isOpen ? (
+          <form action={addItemAction} className={`grid gap-2 md:grid-cols-[1.3fr_1.7fr_72px_120px_auto] ${barClass}`}>
             <input type="hidden" name="saleId" value={sale.id} />
-            <select
-              name="partId"
-              defaultValue=""
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-              title="Optional: pick a part to deduct stock"
-            >
+            <select name="partId" defaultValue="" aria-label="Part" title="Optional: pick a part to deduct stock" className={field}>
               <option value="">Custom item</option>
               {parts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.sku} · {p.name} ({p.qtyOnHand})
+                  {p.sku} &middot; {p.name} ({p.qtyOnHand})
                 </option>
               ))}
             </select>
-            <input
-              name="description"
-              placeholder="Description"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-            />
-            <input
-              name="quantity"
-              placeholder="Qty"
-              defaultValue={1}
-              inputMode="numeric"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-              required
-            />
-            <input
-              name="unitPrice"
-              placeholder="Price"
-              inputMode="decimal"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-              required
-            />
-            <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Add</button>
+            <input name="description" placeholder="Description" className={field} />
+            <input name="quantity" placeholder="Qty" defaultValue={1} inputMode="numeric" aria-label="Quantity" className={field} required />
+            <input name="unitPrice" placeholder="Price" inputMode="decimal" aria-label="Unit price" className={field} required />
+            <Button type="submit" size="sm" className="px-4">Add</Button>
           </form>
         ) : null}
 
-        {sale.status === "OPEN" ? (
+        <DataTable
+          frameless
+          dense
+          rows={sale.items}
+          getRowKey={(it) => it.id}
+          empty="No items yet."
+          columns={[
+            {
+              key: "item",
+              header: "Item",
+              cell: (it) =>
+                isOpen ? (
+                  <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} aria-label="Description" className={cellInput} />
+                ) : it.description,
+            },
+            {
+              key: "qty",
+              header: "Qty",
+              className: "w-20 whitespace-nowrap tabular-nums",
+              cell: (it) =>
+                isOpen ? (
+                  <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" aria-label="Quantity" className={cellInput} />
+                ) : it.quantity,
+            },
+            {
+              key: "price",
+              header: "Price",
+              className: "w-32 whitespace-nowrap tabular-nums",
+              cell: (it) =>
+                isOpen ? (
+                  <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" aria-label="Unit price" className={cellInput} />
+                ) : formatMoney(it.unitPrice, saleCurrency),
+            },
+            {
+              key: "total",
+              header: "Total",
+              className: "whitespace-nowrap font-semibold tabular-nums",
+              cell: (it) => formatMoney(it.lineTotal, saleCurrency),
+            },
+          ]}
+          actions={
+            isOpen
+              ? (it) => (
+                  <div className="flex items-center justify-end gap-1.5">
+                    <form id={`edit-item-${it.id}`} action={updateItemAction}>
+                      <input type="hidden" name="saleId" value={sale.id} />
+                      <input type="hidden" name="itemId" value={it.id} />
+                      <button type="submit" title="Save line" className={iconBtn}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                      </button>
+                    </form>
+                    <form action={deleteItemAction}>
+                      <input type="hidden" name="saleId" value={sale.id} />
+                      <input type="hidden" name="itemId" value={it.id} />
+                      <ConfirmSubmitButton
+                        message="Delete this POS line item? Stock will be restored if linked to inventory."
+                        title="Delete line"
+                        className={iconBtnDanger}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                      </ConfirmSubmitButton>
+                    </form>
+                  </div>
+                )
+              : undefined
+          }
+        />
+
+        {isOpen ? (
           <form
             action={async (formData: FormData) => {
               "use server";
@@ -858,297 +928,233 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
 
               revalidatePath(`/pos/${saleId}`);
             }}
-            className="mt-3 flex flex-wrap items-end gap-2"
+            className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5"
           >
             <input type="hidden" name="saleId" value={sale.id} />
-            <div>
-              <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</p>
-              <input
-                name="discountAmount"
-                inputMode="decimal"
-                defaultValue={sale.discountAmount}
-                placeholder="0"
-                className="w-36 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-              />
-            </div>
-            <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Apply</button>
+            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</span>
+            <input
+              name="discountAmount"
+              inputMode="decimal"
+              defaultValue={sale.discountAmount}
+              placeholder="0"
+              aria-label="Discount amount"
+              className={`${field} w-32 flex-none`}
+            />
+            <Button type="submit" variant="secondary" size="sm">Apply</Button>
+            <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
+              VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
+            </span>
           </form>
         ) : null}
-
-        <DataTable
-          dense
-          className="mt-3"
-          rows={sale.items}
-          getRowKey={(it) => it.id}
-          empty="No items yet."
-          columns={[
-            {
-              key: "item",
-              header: "Item",
-              cell: (it) =>
-                sale.status === "OPEN" ? (
-                  <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                ) : it.description,
-            },
-            {
-              key: "qty",
-              header: "Qty",
-              cell: (it) =>
-                sale.status === "OPEN" ? (
-                  <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" className="w-20 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                ) : it.quantity,
-            },
-            {
-              key: "price",
-              header: "Price",
-              cell: (it) =>
-                sale.status === "OPEN" ? (
-                  <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
-                ) : formatMoney(it.unitPrice, saleCurrency),
-            },
-            {
-              key: "total",
-              header: "Total",
-              cell: (it) => formatMoney(it.lineTotal, saleCurrency),
-            },
-          ]}
-          actions={
-            sale.status === "OPEN"
-              ? (it) => (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <form id={`edit-item-${it.id}`} action={updateItemAction}>
-                      <input type="hidden" name="saleId" value={sale.id} />
-                      <input type="hidden" name="itemId" value={it.id} />
-                      <button type="submit" className="btn-premium-secondary rounded-md px-2.5 py-1.5 text-xs">Save</button>
-                    </form>
-                    <form action={deleteItemAction}>
-                      <input type="hidden" name="saleId" value={sale.id} />
-                      <input type="hidden" name="itemId" value={it.id} />
-                      <ConfirmSubmitButton message="Delete this POS line item? Stock will be restored if linked to inventory." className="rounded-md border border-red-400/30 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">Delete</ConfirmSubmitButton>
-                    </form>
-                  </div>
-                )
-              : undefined
-          }
-        />
       </section>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payments</p>
+      {/* -- Payments -- */}
+      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+          <p className={cardLabel}>Payments</p>
+          <p className="text-[12px] text-[var(--ink-muted)]">
+            {sale.payments.length} recorded &middot;{" "}
+            {balance > 0
+              ? <span className="font-semibold text-amber-600">{formatMoney(balance, saleCurrency)} due</span>
+              : <span className="font-semibold text-emerald-600">cleared</span>}
+          </p>
+        </div>
 
         {sale.status !== "VOID" && balance > 0 ? (
-          <form action={addPaymentAction} className="mt-3 grid gap-2 md:grid-cols-[140px_180px_1fr_auto]">
+          <form action={addPaymentAction} className={`grid gap-2 md:grid-cols-[140px_170px_minmax(0,1fr)_auto] ${barClass}`}>
             <input type="hidden" name="saleId" value={sale.id} />
-            <input
-              name="amount"
-              inputMode="decimal"
-              placeholder="Amount"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-              required
-            />
-            <select
-              name="method"
-              defaultValue={"CASH" as PaymentMethod}
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-            >
+            <input name="amount" inputMode="decimal" placeholder="Amount" aria-label="Amount" className={field} required />
+            <select name="method" defaultValue={"CASH" as PaymentMethod} aria-label="Payment method" className={field}>
               {METHODS.map((m) => (
                 <option key={m} value={m}>{m.replaceAll("_", " ")}</option>
               ))}
             </select>
-            <input
-              name="reference"
-              placeholder="Ref (optional)"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-            />
-            <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Add</button>
+            <input name="reference" placeholder="Ref (optional)" className={field} />
+            <Button type="submit" size="sm" className="px-4">Add</Button>
           </form>
         ) : null}
 
         <DataTable
+          frameless
           dense
-          className="mt-3"
           rows={sale.payments}
           getRowKey={(p) => p.id}
           empty="No payments yet."
           columns={[
-            { key: "date", header: "Date", className: "text-[var(--ink-muted)]", cell: (p) => p.receivedAt.toLocaleString() },
+            { key: "date", header: "Date", className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]", cell: (p) => formatEATDateTime(p.receivedAt) },
             { key: "method", header: "Method", cell: (p) => p.method.replaceAll("_", " ") },
-            { key: "ref", header: "Ref", className: "text-[var(--ink-muted)]", cell: (p) => p.reference ?? "-" },
-            { key: "amount", header: "Amount", className: "font-semibold", cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, saleCurrency)) },
+            { key: "ref", header: "Ref", className: "text-[12px] text-[var(--ink-muted)]", cell: (p) => p.reference ?? <span className="opacity-30">&mdash;</span> },
+            { key: "amount", header: "Amount", className: "whitespace-nowrap font-semibold tabular-nums", cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, saleCurrency)) },
           ]}
         />
       </section>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Returns & Refunds</p>
-        <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Credit notes and refunds are only available for paid sales. Stock is only returned when you mark items received back.
-        </p>
+      {/* -- Returns & refunds: collapsed until there is something to see -- */}
+      <details
+        open={creditNotes.length > 0 || refunds.length > 0}
+        className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
+          <p className={cardLabel}>Returns &amp; Refunds</p>
+          <span className="text-[12px] text-[var(--ink-muted)]">
+            {creditNotes.length} credit {creditNotes.length === 1 ? "note" : "notes"}
+            {refundedTotal > 0 ? ` · ${formatMoney(refundedTotal, saleCurrency)} refunded` : ""}
+          </span>
+        </summary>
 
         {sale.status === "PAID" ? (
-          <div className="mt-3 space-y-4">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Issue Credit Note</p>
-              <form action={createCreditNoteAction} className="mt-2 space-y-2">
+          <div className="space-y-3 border-t border-[var(--line)] p-3">
+            {/* Issue credit note */}
+            <form action={createCreditNoteAction} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
+              <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Issue Credit Note</p>
                 <input type="hidden" name="saleId" value={sale.id} />
-                <input
-                  name="reason"
-                  placeholder="Reason (optional)"
-                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-                />
+                <input name="reason" placeholder="Reason (optional)" className={`${fieldOnStrong} ml-auto max-w-xs`} />
+                <Button type="submit" size="sm">Create</Button>
+              </div>
+              <DataTable
+                frameless
+                dense
+                rows={sale.items}
+                getRowKey={(it) => it.id}
+                empty="No items on this sale."
+                columns={[
+                  { key: "item", header: "Item", cell: (it) => it.description },
+                  { key: "sold", header: "Sold", className: "w-20 tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                  {
+                    key: "returnQty",
+                    header: "Return qty",
+                    className: "w-28",
+                    cell: (it) => (
+                      <input name={`returnQty:${it.id}`} defaultValue={0} inputMode="numeric" aria-label={`Return quantity for ${it.description}`} className={cellInput} />
+                    ),
+                  },
+                ]}
+              />
+            </form>
 
-                <DataTable
-                  dense
-                  rows={sale.items}
-                  getRowKey={(it) => it.id}
-                  empty="No items on this sale."
-                  columns={[
-                    { key: "item", header: "Item", cell: (it) => it.description },
-                    { key: "sold", header: "Sold", className: "text-[var(--ink-muted)]", cell: (it) => it.quantity },
-                    {
-                      key: "returnQty",
-                      header: "Return Qty",
-                      cell: (it) => (
-                        <input
-                          name={`returnQty:${it.id}`}
-                          defaultValue={0}
-                          inputMode="numeric"
-                          className="w-28 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm outline-none focus:border-[var(--accent)]/50"
-                        />
-                      ),
-                    },
-                  ]}
-                />
-
-                <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Create Credit Note</button>
-              </form>
-            </div>
-
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refund (Requires Credit Note)</p>
+            {/* Refund */}
+            <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
+              <div className="border-b border-[var(--line)] px-3 py-2">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                  Refund <span className="normal-case tracking-normal opacity-70">(requires a credit note)</span>
+                </p>
+              </div>
               {creditNotes.length === 0 ? (
-                <p className="mt-2 text-sm text-[var(--ink-muted)]">Create a credit note first.</p>
+                <p className="px-3 py-2.5 text-[13px] text-[var(--ink-muted)]">Create a credit note first.</p>
               ) : (
-                <form action={createRefundAction} className="mt-2 grid gap-2 md:grid-cols-[220px_140px_180px_1fr_auto]">
+                <form action={createRefundAction} className="grid gap-2 p-3 md:grid-cols-[210px_130px_170px_minmax(0,1fr)_auto]">
                   <input type="hidden" name="saleId" value={sale.id} />
-                  <select name="creditNoteId" defaultValue={creditNotes[0]?.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
+                  <select name="creditNoteId" defaultValue={creditNotes[0]?.id} aria-label="Credit note" className={fieldOnStrong}>
                     {creditNotes.map((cn) => (
                       <option key={cn.id} value={cn.id}>
-                        {cn.creditNoteNumber} · {formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}
+                        {cn.creditNoteNumber} &middot; {formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}
                       </option>
                     ))}
                   </select>
-                  <input
-                    name="amount"
-                    inputMode="decimal"
-                    placeholder="Amount"
-                    className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-                    required
-                  />
+                  <input name="amount" inputMode="decimal" placeholder="Amount" aria-label="Refund amount" className={fieldOnStrong} required />
                   <input
                     name="exchangeRateToBase"
                     inputMode="decimal"
-                    placeholder={`Rate to ${org.baseCurrency} (if needed)`}
-                    className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+                    placeholder={`Rate to ${org.baseCurrency}`}
                     title={`Only required when currency differs from ${org.baseCurrency}`}
+                    className={fieldOnStrong}
                   />
-                  <input
-                    name="reference"
-                    placeholder="Ref (optional)"
-                    className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-                  />
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Refund</button>
+                  <input name="reference" placeholder="Ref (optional)" className={fieldOnStrong} />
+                  <Button type="submit" size="sm" className="px-4">Refund</Button>
                 </form>
               )}
             </div>
 
+            {/* Credit notes */}
             <div className="overflow-hidden rounded-lg border border-[var(--line)]">
-              <div className="bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Credit Notes</p>
+              <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Credit Notes</p>
               </div>
-              <div className="bg-[var(--panel)] p-3 space-y-3">
+              <div className="space-y-2 bg-[var(--panel)] p-3">
                 {creditNotes.length === 0 ? (
-                  <p className="text-sm text-[var(--ink-muted)]">No credit notes yet.</p>
+                  <p className="text-[13px] text-[var(--ink-muted)]">No credit notes yet.</p>
                 ) : creditNotes.map((cn) => (
-                  <div key={cn.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="mono text-sm font-bold text-[var(--ink)]">{cn.creditNoteNumber}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">{cn.issuedAt.toLocaleString()}</p>
-                        {cn.reason ? <p className="text-xs text-[var(--ink-muted)]">Reason: {cn.reason}</p> : null}
+                  <div key={cn.id} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="mono text-[13px] font-bold text-[var(--ink)]">{cn.creditNoteNumber}</p>
+                        <p className="text-[12px] text-[var(--ink-muted)]">
+                          {formatEATDateTime(cn.issuedAt)}
+                          {cn.reason ? ` · ${cn.reason}` : ""}
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-[var(--ink-muted)]">Total</p>
-                        <p className="text-sm font-semibold">{formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}</p>
-                        <p className="text-xs text-[var(--ink-muted)]">
-                          {cn.itemsReceivedBackAt ? "Stock received" : "Awaiting stock return"}
+                      <div className="flex shrink-0 items-center gap-2">
+                        <StatusBadge tone={cn.itemsReceivedBackAt ? "success" : "warning"} dot>
+                          {cn.itemsReceivedBackAt ? "Stock received" : "Awaiting stock"}
+                        </StatusBadge>
+                        <p className="text-[13px] font-bold tabular-nums text-[var(--ink)]">
+                          {formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}
                         </p>
                       </div>
                     </div>
 
                     {cn.items.length ? (
                       <DataTable
+                        frameless
                         dense
-                        className="mt-2"
                         rows={cn.items}
                         getRowKey={(it) => it.id}
                         columns={[
                           { key: "item", header: "Item", cell: (it) => it.description },
-                          { key: "qty", header: "Qty", className: "text-[var(--ink-muted)]", cell: (it) => it.quantity },
-                          { key: "total", header: "Total", cell: (it) => formatMoney(it.lineTotal, normalizeCurrency(cn.currency, saleCurrency)) },
+                          { key: "qty", header: "Qty", className: "w-20 tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                          { key: "total", header: "Total", className: "whitespace-nowrap tabular-nums", cell: (it) => formatMoney(it.lineTotal, normalizeCurrency(cn.currency, saleCurrency)) },
                         ]}
                       />
                     ) : null}
 
                     {!cn.itemsReceivedBackAt ? (
-                      <form action={markItemsReceivedBackAction} className="mt-2 flex flex-wrap items-end gap-2">
+                      <form action={markItemsReceivedBackAction} className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2">
                         <input type="hidden" name="saleId" value={sale.id} />
                         <input type="hidden" name="creditNoteId" value={cn.id} />
-                        <input
-                          name="note"
-                          placeholder="Stock received note (optional)"
-                          className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
-                        />
-                        <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Mark Items Received Back</button>
+                        <input name="note" placeholder="Stock received note (optional)" className={`${fieldOnStrong} min-w-[200px] flex-1`} />
+                        <Button type="submit" variant="secondary" size="sm">Mark items received</Button>
                       </form>
                     ) : cn.itemsReceivedBackNote ? (
-                      <p className="mt-2 text-xs text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>
+                      <p className="border-t border-[var(--line)] px-3 py-2 text-[12px] text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>
                     ) : null}
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Refunds */}
             <div className="overflow-hidden rounded-lg border border-[var(--line)]">
-              <div className="bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refunds</p>
+              <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refunds</p>
               </div>
-              <div className="bg-[var(--panel)] p-3">
-                <DataTable
-                  dense
-                  rows={refunds}
-                  getRowKey={(r) => r.id}
-                  empty="No refunds yet."
-                  columns={[
-                    { key: "date", header: "Date", className: "text-[var(--ink-muted)]", cell: (r) => r.refundedAt.toLocaleString() },
-                    {
-                      key: "creditNote",
-                      header: "Credit Note",
-                      className: "mono text-[var(--ink-muted)]",
-                      cell: (r) => (r.creditNoteId ? (creditNotes.find((c) => c.id === r.creditNoteId)?.creditNoteNumber ?? "-") : "-"),
-                    },
-                    { key: "method", header: "Method", cell: (r) => r.method.replaceAll("_", " ") },
-                    { key: "ref", header: "Ref", className: "text-[var(--ink-muted)]", cell: (r) => r.reference ?? "-" },
-                    { key: "amount", header: "Amount", className: "font-semibold", cell: (r) => formatMoney(r.amount, normalizeCurrency(r.currency, saleCurrency)) },
-                  ]}
-                />
-              </div>
+              <DataTable
+                frameless
+                dense
+                rows={refunds}
+                getRowKey={(r) => r.id}
+                empty="No refunds yet."
+                columns={[
+                  { key: "date", header: "Date", className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]", cell: (r) => formatEATDateTime(r.refundedAt) },
+                  {
+                    key: "creditNote",
+                    header: "Credit note",
+                    className: "mono text-[12px] text-[var(--ink-muted)]",
+                    cell: (r) => (r.creditNoteId ? (creditNotes.find((c) => c.id === r.creditNoteId)?.creditNoteNumber ?? "—") : "—"),
+                  },
+                  { key: "method", header: "Method", cell: (r) => r.method.replaceAll("_", " ") },
+                  { key: "ref", header: "Ref", className: "text-[12px] text-[var(--ink-muted)]", cell: (r) => r.reference ?? <span className="opacity-30">&mdash;</span> },
+                  { key: "amount", header: "Amount", className: "whitespace-nowrap font-semibold tabular-nums", cell: (r) => formatMoney(r.amount, normalizeCurrency(r.currency, saleCurrency)) },
+                ]}
+              />
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">This sale must be PAID before you can issue credit notes or refunds.</p>
+          <p className="border-t border-[var(--line)] px-4 py-3 text-[13px] text-[var(--ink-muted)]">
+            This sale must be PAID before you can issue credit notes or refunds. Stock is only returned when you mark items received back.
+          </p>
         )}
-      </section>
+      </details>
     </div>
   );
 }

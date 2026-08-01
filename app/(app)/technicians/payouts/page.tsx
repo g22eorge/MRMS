@@ -6,6 +6,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { getJobPayoutsByIds, getTechnicianPayoutTotalsByJobIds, hasJobPayoutColumns } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { StatCards } from "@/components/ui/StatCards";
 
 type SearchParams = {
   q?: string;
@@ -114,19 +115,17 @@ export default async function TechnicianPayoutsPage({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2.5 sm:px-4 sm:py-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[13px]">Payout Brief</p>
-          <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">{payoutBrief}</p>
-        </div>
+      <div className="dc-card border-l-[3px] border-l-[var(--accent)] px-3 py-2.5 sm:px-4 sm:py-3">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[13px]">Payout Brief</p>
+        <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">{payoutBrief}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 lg:hidden">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-center">
+        <div className="dc-card p-3 text-center">
           <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
           <p className="mt-1 text-lg font-semibold">{formatMoney(total, currency)}</p>
         </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-center">
+        <div className="dc-card p-3 text-center">
           <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Outstanding</p>
           <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{formatMoney(unpaid, currency)}</p>
         </div>
@@ -148,7 +147,7 @@ export default async function TechnicianPayoutsPage({
           name="q"
           defaultValue={filters.q}
           placeholder="Search job # / device"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
         />
       </form>
 
@@ -182,20 +181,14 @@ export default async function TechnicianPayoutsPage({
         </div>
       </form>
 
-      <div className="hidden gap-3 lg:grid lg:grid-cols-3">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Total in view</p>
-          <p className="text-lg font-semibold">{formatMoney(total, currency)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Paid</p>
-          <p className="text-lg font-semibold text-[var(--accent)]">{formatMoney(paid, currency)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-xs text-[var(--ink-muted)]">Outstanding</p>
-          <p className="text-lg font-semibold text-[var(--accent)]">{formatMoney(unpaid, currency)}</p>
-        </div>
-      </div>
+      <StatCards
+        columns={3}
+        cards={[
+          { key: "total", label: "Total in view", value: formatMoney(total, currency), sub: `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}`, muted: total === 0 },
+          { key: "paid", label: "Paid", value: formatMoney(paid, currency), sub: "settled", tone: "good", muted: paid === 0 },
+          { key: "outstanding", label: "Outstanding", value: formatMoney(unpaid, currency), sub: "still owed", tone: "warn", muted: unpaid === 0 },
+        ]}
+      />
 
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         {jobs.length === 0 ? (

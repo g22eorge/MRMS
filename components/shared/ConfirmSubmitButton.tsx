@@ -9,9 +9,19 @@ type ConfirmSubmitButtonProps = {
   className?: string;
   children: React.ReactNode;
   confirmLabel?: string;
+  /** Tooltip / accessible name — required when the trigger renders an icon only. */
+  title?: string;
+  "aria-label"?: string;
 };
 
-export function ConfirmSubmitButton({ message, className, children, confirmLabel = "Confirm" }: ConfirmSubmitButtonProps) {
+export function ConfirmSubmitButton({
+  message,
+  className,
+  children,
+  confirmLabel = "Confirm",
+  title,
+  "aria-label": ariaLabel,
+}: ConfirmSubmitButtonProps) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -21,6 +31,8 @@ export function ConfirmSubmitButton({ message, className, children, confirmLabel
         ref={btnRef}
         type="button"
         className={className}
+        title={title}
+        aria-label={ariaLabel ?? title}
         onClick={() => setOpen(true)}
       >
         {children}

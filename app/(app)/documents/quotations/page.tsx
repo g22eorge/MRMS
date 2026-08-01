@@ -207,20 +207,20 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
 </form>
           </div>
 
-  <div className="max-w-6xl mx-auto">
+      <div>
   <BulkSelectionProvider pageIds={rows.map((r) => r.id)}>
     <BulkActionBar />
     {(() => {
       const columns = [
         { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox quotationId={row.id} /> },
         { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: any) => (
-          <Link href={`/documents/quotations/${row.id}`} className="mono text-sm font-bold text-[var(--accent)] hover:underline truncate whitespace-nowrap">{row.quoteNumber}</Link>
+          <Link href={`/documents/quotations/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">{row.quoteNumber}</Link>
         )},
         { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
         { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: any) => <span className="mono text-[13px] truncate whitespace-nowrap">{row.amount}</span> },
-        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: any) => <span className="text-[13px] truncate whitespace-nowrap">{row.validUntil}</span> },
-        { key: "created", header: "Created", className: "w-[130px]", cell: (row: any) => <span className="text-[13px]">{row.created}</span> },
+        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.validUntil}</span> },
+        { key: "created", header: "Created", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.created}</span> },
       ];
       const actions = (row: any) => (
         <RowActionsMenu label={`Quotation ${row.quoteNumber}`}>
@@ -255,8 +255,6 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           rows={rows}
           getRowKey={(r) => r.id}
           empty="No quotations found."
-          dense
-          headerSurface
           columns={columns}
           actions={actions}
         />
