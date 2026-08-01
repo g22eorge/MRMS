@@ -12,6 +12,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
 import { CreateCreditNoteDialog } from "./CreateCreditNoteDialog";
@@ -60,13 +61,21 @@ export default async function CreditNotesPage({
     const note = String(formData.get("note") ?? "").trim();
     if (!creditNoteId) return;
 
-    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, itemsReceivedBackAt: true } });
+    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, creditNoteNumber: true, itemsReceivedBackAt: true } });
     if (!cn || cn.itemsReceivedBackAt) return;
 
     const { user: actor } = await requireOrgSession();
     await prisma.creditNote.update({
       where: { id: creditNoteId },
       data: { itemsReceivedBackAt: new Date(), itemsReceivedBackById: actor.id, itemsReceivedBackNote: note || null },
+    });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "CreditNote",
+      entityId: creditNoteId,
+      action: "CREDIT_NOTE_ITEMS_RECEIVED",
+      summary: `Returned items marked received for credit note ${cn.creditNoteNumber}`,
     });
     revalidatePath("/documents/credit-notes");
     redirect("/documents/credit-notes");
@@ -96,7 +105,7 @@ export default async function CreditNotesPage({
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 
-    await prisma.refund.create({
+    const refund = await prisma.refund.create({
       data: {
         orgId,
         saleId: cn.saleId,
@@ -109,6 +118,15 @@ export default async function CreditNotesPage({
         createdById: user.id,
         refundedAt: new Date(),
       },
+      select: { id: true },
+    });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "Refund",
+      entityId: refund.id,
+      action: "REFUND_CREATED",
+      summary: `Refund ${formatMoney(amountRaw, cn.currency)} from credit note ${cn.creditNoteNumber}`,
     });
     notifyRefundIssued({
       orgId,
@@ -189,9 +207,10 @@ export default async function CreditNotesPage({
     const totalAmount = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
     let creditNoteNumber = "";
+    let creditNoteId = "";
     await prisma.$transaction(async (tx) => {
       creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote");
-      await tx.creditNote.create({
+      const created = await tx.creditNote.create({
         data: {
           orgId,
           saleId,
@@ -210,7 +229,17 @@ export default async function CreditNotesPage({
             })),
           },
         },
+        select: { id: true },
       });
+      creditNoteId = created.id;
+    });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "CreditNote",
+      entityId: creditNoteId,
+      action: "CREDIT_NOTE_CREATED",
+      summary: `Credit note ${creditNoteNumber} for sale ${sale.saleNumber} (${formatMoney(totalAmount, sale.currency)})`,
     });
     notifyCreditNoteIssued({
       orgId,
@@ -233,11 +262,20 @@ export default async function CreditNotesPage({
 
     const cn = await prisma.creditNote.findFirst({
       where: { id, orgId },
-      select: { id: true, refunds: { select: { id: true } } },
+      select: { id: true, creditNoteNumber: true, totalAmount: true, currency: true, refunds: { select: { id: true } } },
     });
     if (!cn || cn.refunds.length > 0) return;
 
     await prisma.creditNote.delete({ where: { id } });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "CreditNote",
+      entityId: id,
+      action: "CREDIT_NOTE_DELETED",
+      summary: `Credit note ${cn.creditNoteNumber} deleted (${formatMoney(cn.totalAmount, cn.currency)})`,
+      before: { creditNoteNumber: cn.creditNoteNumber, totalAmount: cn.totalAmount },
+    });
     revalidatePath("/documents/credit-notes");
     redirect("/documents/credit-notes");
   }

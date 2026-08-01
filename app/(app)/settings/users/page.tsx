@@ -16,6 +16,7 @@ import { InvitePanel } from "@/components/settings/InvitePanel";
 import { checkUserLimit, getLimitsForOrg } from "@/lib/plan-limits";
 import { PlanBanner } from "@/components/shared/PlanBanner";
 import { rateLimit } from "@/lib/rate-limit";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
 type SearchParams = {
   q?: string;
@@ -652,6 +653,19 @@ export default async function UsersPage({
       // Keep access updates successful even when audit table is not yet migrated.
     }
 
+    await writeSystemAuditEvent({
+      orgId: actorOrgId,
+      actorUserId: session.user.id,
+      entityType: "User",
+      entityId: targetUserId,
+      action: roleChanged ? "USER_ROLE_CHANGED" : "USER_PERMISSIONS_CHANGED",
+      summary: roleChanged
+        ? `Role ${target.role} → ${nextRole}${permissionChanged ? " (permissions updated)" : ""}`
+        : `Permissions updated (+${added.length} / -${removed.length})`,
+      before: { role: target.role, permissions: currentPermissionValues },
+      after: { role: nextRole, permissions: permissionValues },
+    });
+
     revalidatePath("/settings/users");
     redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
   }
@@ -670,6 +684,16 @@ export default async function UsersPage({
     if (target.isActive) {
       await prisma.session.deleteMany({ where: { userId: targetId } }).catch(() => {});
     }
+    await writeSystemAuditEvent({
+      orgId: actorOrgId,
+      actorUserId: session.user.id,
+      entityType: "User",
+      entityId: targetId,
+      action: target.isActive ? "USER_DEACTIVATED" : "USER_REACTIVATED",
+      summary: `User ${target.isActive ? "deactivated" : "reactivated"}`,
+      before: { isActive: target.isActive },
+      after: { isActive: !target.isActive },
+    });
     revalidatePath("/settings/users");
     redirect(`/settings/users?${new URLSearchParams({ q, userId: targetId }).toString()}`);
   }

@@ -519,7 +519,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const totalAmount = picked.reduce((sum, p) => sum + p.lineTotal, 0);
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) return;
 
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote");
 
       const created = await tx.creditNote.create({
@@ -545,6 +545,17 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           lineTotal: p.lineTotal,
         })),
       });
+
+      return { id: created.id, creditNoteNumber };
+    });
+
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "CreditNote",
+      entityId: result.id,
+      action: "CREDIT_NOTE_CREATED",
+      summary: `Credit note ${result.creditNoteNumber} for sale ${existingSale.saleNumber} (${formatMoney(totalAmount, currency)})`,
     });
 
     revalidatePath(`/pos/${saleId}`);
@@ -597,6 +608,15 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       });
     });
 
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "CreditNote",
+      entityId: creditNoteId,
+      action: "CREDIT_NOTE_ITEMS_RECEIVED_BACK",
+      summary: `Returned stock received back for credit note ${creditNote.creditNoteNumber}`,
+    });
+
     revalidatePath(`/pos/${saleId}`);
   }
 
@@ -643,7 +663,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       if (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0) return;
     }
 
-    await prisma.refund.create({
+    const refund = await prisma.refund.create({
       data: {
         orgId,
         saleId,
@@ -657,6 +677,16 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         createdById: session.user.id,
         note: note || null,
       },
+      select: { id: true },
+    });
+
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "Refund",
+      entityId: refund.id,
+      action: "REFUND_CREATED",
+      summary: `Refund ${formatMoney(amount, currency)} for sale ${saleId} against credit note ${creditNoteId}`,
     });
 
     revalidatePath(`/pos/${saleId}`);

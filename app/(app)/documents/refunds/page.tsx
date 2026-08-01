@@ -13,6 +13,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
@@ -105,7 +106,7 @@ export default async function RefundsPage({
     }
     if (refundableAmount <= 0 || amountRaw > refundableAmount) return;
 
-    await prisma.refund.create({
+    const refund = await prisma.refund.create({
       data: {
         orgId,
         invoiceId,
@@ -118,6 +119,15 @@ export default async function RefundsPage({
         note: note || null,
         createdById: user.id,
       },
+      select: { id: true },
+    });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "Refund",
+      entityId: refund.id,
+      action: "REFUND_CREATED",
+      summary: `Refund ${formatMoney(amountRaw, currency)} against ${sourceType} ${sourceId}`,
     });
     revalidatePath("/documents/refunds");
     redirect("/documents/refunds");
@@ -131,10 +141,19 @@ export default async function RefundsPage({
     const refundId = String(formData.get("refundId") ?? "").trim();
     if (!refundId) return;
 
-    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true } });
+    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true } });
     if (!refund) return;
 
     await prisma.refund.delete({ where: { id: refundId } });
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: user.id,
+      entityType: "Refund",
+      entityId: refundId,
+      action: "REFUND_DELETED",
+      summary: `Refund deleted (${formatMoney(refund.amount, refund.currency)})`,
+      before: { amount: refund.amount, currency: refund.currency },
+    });
     revalidatePath("/documents/refunds");
   }
 
