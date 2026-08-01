@@ -17,7 +17,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -444,7 +444,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const amount = Number(rawAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, totalAmount: true, status: true, currency: true } });
+    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, totalAmount: true, status: true, currency: true, clientId: true } });
     if (!existingSale || existingSale.status === "VOID") return;
 
     const saleCurrency = normalizeCurrency(existingSale.currency, org.baseCurrency);
@@ -459,7 +459,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       : "OTHER" as PaymentMethod;
 
     await prisma.$transaction(async (tx) => {
-      await tx.payment.create({
+      const payment = await tx.payment.create({
         data: {
           orgId,
           saleId,
@@ -471,6 +471,20 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           reference: reference || null,
           createdById: session.user.id,
         },
+        select: { id: true },
+      });
+
+      // Generate a receipt for the sale payment — same as invoice payments do.
+      // Previously POS payments created no Receipt record, so till sales had no
+      // receipt document (inconsistent with the invoice flow).
+      await createReceiptForPayment(tx, {
+        orgId,
+        paymentId: payment.id,
+        saleId,
+        clientId: existingSale.clientId,
+        amount,
+        currency: saleCurrency,
+        issuedById: session.user.id,
       });
 
       await syncSalePaymentState(tx, { orgId, saleId });
