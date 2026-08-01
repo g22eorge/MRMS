@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -145,15 +146,15 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
 
   if (!billId || !Number.isFinite(amount) || amount <= 0) return;
 
-  await prisma.$transaction(async (tx) => {
+  const paid = await prisma.$transaction(async (tx) => {
     const bill = await tx.supplierBill.findFirst({
       where: { id: billId, orgId, status: { not: "CANCELLED" } },
       select: { id: true, totalAmount: true, paidAmount: true, currency: true },
     });
-    if (!bill) return;
+    if (!bill) return null;
 
     const balance = bill.totalAmount - bill.paidAmount;
-    if (amount > balance) return;
+    if (amount > balance) return null;
 
     const nextPaid = bill.paidAmount + amount;
     await tx.supplierPayment.create({
@@ -176,7 +177,19 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         status: nextBillStatus(bill.totalAmount, nextPaid),
       },
     });
+    return { currency: bill.currency || org.baseCurrency };
   });
+
+  if (paid) {
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: session.user.id,
+      entityType: "SupplierBill",
+      entityId: billId,
+      action: "SUPPLIER_PAYMENT_RECORDED",
+      summary: `Supplier payment ${paid.currency} ${amount.toLocaleString()} on bill ${billId}`,
+    });
+  }
 
   revalidatePath("/inventory/supplier-bills");
   revalidatePath("/procurement");

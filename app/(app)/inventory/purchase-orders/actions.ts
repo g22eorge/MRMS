@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { redirect } from "next/navigation";
@@ -267,9 +268,10 @@ export async function receiveStockAction(
 
   if (!updates.length) return { error: "No changes to save" };
   const grnNumber = await generateGrnNumber(orgId);
+  let grnId = "";
 
   await prisma.$transaction(async (tx) => {
-    await tx.goodsReceived.create({
+    const grn = await tx.goodsReceived.create({
       data: {
         orgId,
         grnNumber,
@@ -287,7 +289,9 @@ export async function receiveStockAction(
           })),
         },
       },
+      select: { id: true },
     });
+    grnId = grn.id;
 
     for (const u of updates) {
       await tx.purchaseOrderItem.update({
@@ -344,6 +348,15 @@ export async function receiveStockAction(
         receivedAt: allReceived ? new Date() : po.receivedAt,
       },
     });
+  });
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "GoodsReceived",
+    entityId: grnId,
+    action: "GOODS_RECEIVED",
+    summary: `${grnNumber} received against PO ${po.reference ?? poId} (${updates.length} line${updates.length === 1 ? "" : "s"})`,
   });
 
   revalidatePath(`/inventory/purchase-orders/${poId}`);

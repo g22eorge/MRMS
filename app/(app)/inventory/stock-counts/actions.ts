@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -114,12 +115,12 @@ export async function approveStockCountAction(formData: FormData): Promise<void>
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.$transaction(async (tx) => {
+  const approved = await prisma.$transaction(async (tx) => {
     const count = await tx.stockCount.findFirst({
       where: { id, orgId, status: "SUBMITTED" },
       include: { items: true },
     });
-    if (!count) return;
+    if (!count) return null;
 
     for (const item of count.items) {
       if (item.varianceQty === 0) continue;
@@ -146,7 +147,19 @@ export async function approveStockCountAction(formData: FormData): Promise<void>
     }
 
     await tx.stockCount.update({ where: { id }, data: { status: "APPROVED", approvedAt: new Date(), approvedById: session.user.id } });
+    return { countNumber: count.countNumber, variances: count.items.filter((i) => i.varianceQty !== 0).length };
   });
+
+  if (approved) {
+    await writeSystemAuditEvent({
+      orgId,
+      actorUserId: session.user.id,
+      entityType: "StockCount",
+      entityId: id,
+      action: "STOCK_COUNT_APPROVED",
+      summary: `${approved.countNumber} approved (${approved.variances} variance line${approved.variances === 1 ? "" : "s"})`,
+    });
+  }
 
   revalidatePath("/inventory/stock-counts");
   revalidatePath(`/inventory/stock-counts/${id}`);
