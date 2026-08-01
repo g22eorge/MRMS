@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
+import { postSalePayment } from "@/lib/accounting/post";
+
 type Tx = Prisma.TransactionClient;
 
 /** Scan existing documents of a type for the highest sequence in the given year. */
@@ -233,30 +235,47 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
 }
 
 export async function createReceiptForPayment(tx: Tx, params: { orgId: string; paymentId: string; invoiceId?: string | null; saleId?: string | null; clientId?: string | null; amount: number; currency: string; issuedById?: string | null }) {
-  const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
-  if (existing) return existing;
-  const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
-  try {
-    return await tx.receipt.create({
-      data: {
-        orgId: params.orgId,
-        receiptNumber,
-        paymentId: params.paymentId,
-        invoiceId: params.invoiceId ?? null,
-        saleId: params.saleId ?? null,
-        clientId: params.clientId ?? null,
-        amount: params.amount,
-        currency: params.currency,
-        issuedById: params.issuedById ?? null,
-      },
-    });
-  } catch (err) {
-    // @@unique([orgId, paymentId]) — a concurrent create won the race; return it
-    // instead of surfacing a 500.
-    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002") {
-      const winner = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
-      if (winner) return winner;
+  const receipt = await (async () => {
+    const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
+    if (existing) return existing;
+    const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
+    try {
+      return await tx.receipt.create({
+        data: {
+          orgId: params.orgId,
+          receiptNumber,
+          paymentId: params.paymentId,
+          invoiceId: params.invoiceId ?? null,
+          saleId: params.saleId ?? null,
+          clientId: params.clientId ?? null,
+          amount: params.amount,
+          currency: params.currency,
+          issuedById: params.issuedById ?? null,
+        },
+      });
+    } catch (err) {
+      // @@unique([orgId, paymentId]) — a concurrent create won the race; return it
+      // instead of surfacing a 500.
+      if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002") {
+        const winner = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
+        if (winner) return winner;
+      }
+      throw err;
     }
-    throw err;
+  })();
+
+  // C5: cash-basis ledger post for the customer payment. Idempotent on the
+  // payment id, so it fires exactly once even across the six payment paths
+  // that funnel through here. issuedById is the required journal author.
+  if (params.issuedById) {
+    await postSalePayment(tx, {
+      orgId: params.orgId,
+      userId: params.issuedById,
+      amount: params.amount,
+      reference: `pay:${params.paymentId}`,
+      description: `Payment received (receipt ${receipt.receiptNumber})`,
+    });
   }
+
+  return receipt;
 }

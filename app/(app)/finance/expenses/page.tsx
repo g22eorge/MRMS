@@ -11,6 +11,8 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { prisma } from "@/lib/prisma";
+import { postExpensePayment } from "@/lib/accounting/post";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
@@ -240,6 +242,19 @@ export default async function ExpensesPage({ searchParams }: Props) {
         createdById: user.id,
       },
     });
+
+    // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash. Idempotent
+    // on the expense id, so a retry or backfill won't double-post.
+    await prisma.$transaction((tx) =>
+      postExpensePayment(tx, {
+        orgId: user.orgId,
+        userId: user.id,
+        amount: amountRaw,
+        date: paidAt ?? undefined,
+        reference: `expense:${expense.id}`,
+        description: `Expense ${expenseNumber} — ${description}`,
+      }),
+    );
 
     await writeSystemAuditEvent({
       entityType: "Expense",

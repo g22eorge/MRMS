@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { postSupplierPayment } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -169,7 +170,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
     if (amount > balance) return null;
 
     const nextPaid = bill.paidAmount + amount;
-    await tx.supplierPayment.create({
+    const supplierPayment = await tx.supplierPayment.create({
       data: {
         orgId,
         billId,
@@ -181,6 +182,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         note,
         createdById: session.user.id,
       },
+      select: { id: true, paidAt: true },
     });
     await tx.supplierBill.update({
       where: { id: billId },
@@ -188,6 +190,15 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         paidAmount: nextPaid,
         status: nextBillStatus(bill.totalAmount, nextPaid),
       },
+    });
+    // C5: cash-basis ledger post — Dr Cost of Sales, Cr Cash.
+    await postSupplierPayment(tx, {
+      orgId,
+      userId: session.user.id,
+      amount,
+      date: supplierPayment.paidAt ?? undefined,
+      reference: `supplier-pay:${supplierPayment.id}`,
+      description: `Supplier payment on bill ${billId}`,
     });
     return { currency: bill.currency || org.baseCurrency };
   });

@@ -14,6 +14,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { postRefund } from "@/lib/accounting/post";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
@@ -139,6 +140,14 @@ export default async function RefundsPage({
       if (invoiceId) {
         await syncInvoicePaymentState(tx, { orgId, invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
       }
+      // C5: cash-basis ledger post — reverse revenue, pay out cash.
+      await postRefund(tx, {
+        orgId,
+        userId: user.id,
+        amount: amountRaw,
+        reference: `refund:${created.id}`,
+        description: `Refund against ${sourceType} ${sourceId}`,
+      });
       return created;
     });
     await writeSystemAuditEvent({
