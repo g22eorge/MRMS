@@ -2,9 +2,8 @@ import type { Prisma } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
 
-export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote") {
-  const year = new Date().getFullYear();
-  const startsWith = `${prefix}-${year}-`;
+/** Scan existing documents of a type for the highest sequence in the given year. */
+async function currentMaxDocumentSequence(tx: Tx, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote", startsWith: string) {
   const numbers = countModel === "quotation"
     ? await tx.quotation.findMany({ where: { quoteNumber: { startsWith } }, select: { quoteNumber: true } })
     : countModel === "invoice"
@@ -14,7 +13,7 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "qu
         : countModel === "creditNote"
           ? await tx.creditNote.findMany({ where: { creditNoteNumber: { startsWith } }, select: { creditNoteNumber: true } })
           : await tx.receipt.findMany({ where: { receiptNumber: { startsWith } }, select: { receiptNumber: true } });
-  const max = numbers.reduce((highest, record) => {
+  return numbers.reduce((highest, record) => {
     const value = "quoteNumber" in record
       ? record.quoteNumber
       : "invoiceNumber" in record
@@ -27,7 +26,38 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "qu
     const sequence = Number(value.slice(startsWith.length));
     return Number.isFinite(sequence) ? Math.max(highest, sequence) : highest;
   }, 0);
-  return `${startsWith}${String(max + 1).padStart(4, "0")}`;
+}
+
+/**
+ * Allocate the next shared document number (INV/QT/RCT/CN/DN).
+ *
+ * Uses an atomic per-(type,year) counter (DocumentSequence) so concurrent
+ * creation can't compute the same number and P2002 (the old read-max-then-write
+ * race). Numbers stay globally sequential, matching the existing @unique columns.
+ * The counter is lazy-initialised from the current max so sequences continue
+ * rather than restarting.
+ */
+export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote") {
+  const year = new Date().getFullYear();
+  const startsWith = `${prefix}-${year}-`;
+
+  const existing = await tx.documentSequence.findUnique({ where: { type_year: { type: prefix, year } } });
+  if (!existing) {
+    const seed = await currentMaxDocumentSequence(tx, countModel, startsWith);
+    try {
+      await tx.documentSequence.create({ data: { type: prefix, year, value: seed } });
+    } catch (err) {
+      // A concurrent call seeded it first — fine, we'll increment below.
+      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
+    }
+  }
+
+  const updated = await tx.documentSequence.update({
+    where: { type_year: { type: prefix, year } },
+    data: { value: { increment: 1 } },
+    select: { value: true },
+  });
+  return `${startsWith}${String(updated.value).padStart(4, "0")}`;
 }
 
 export async function nextAvailableInvoiceNumber(tx: Tx, preferred?: string | null, excludeInvoiceId?: string | null) {

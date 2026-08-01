@@ -1479,6 +1479,20 @@ model RepairRequestSequence {
   @@unique([orgId, year])
 }
 
+// Atomic per-(type,year) counter for shared document numbers (INV/QT/RCT/CN/DN).
+// Numbers stay globally sequential (matching the existing @unique columns); the
+// counter just removes the read-max-then-write race that could 500 under
+// concurrent creation. Lazy-initialised from the current max for continuity.
+model DocumentSequence {
+  id        String   @id @default(cuid())
+  type      String
+  year      Int
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, year])
+}
+
 enum RepairRequestStatus {
   // Legacy: kept for existing production rows.
   PENDING_INTAKE
