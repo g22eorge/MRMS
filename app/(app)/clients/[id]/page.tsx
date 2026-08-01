@@ -9,6 +9,8 @@ import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBad
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/currency";
+import { getClientStatement } from "@/lib/commercial/statements";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
@@ -46,8 +48,9 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const filters = await searchParams;
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   const canEdit = user.role === "ADMIN" || user.role === "OPS";
+  const canSeeFinancials = can.viewFinancials(user);
 
   if (!can.viewClientInfo(user)) {
     redirect("/dashboard");
@@ -74,6 +77,7 @@ export default async function ClientDetailPage({
               : {}),
           },
           orderBy: { receivedAt: "desc" },
+          take: 25,
         },
         notesEntries: {
           include: { author: { select: { name: true } } },
@@ -100,6 +104,7 @@ export default async function ClientDetailPage({
               : {}),
           },
           orderBy: { receivedAt: "desc" },
+          take: 25,
         },
       },
     });
@@ -120,6 +125,9 @@ export default async function ClientDetailPage({
     ...(clientData as ClientDetail),
     notesEntries: notesFeatureAvailable ? (clientData as ClientDetail).notesEntries : [],
   } as ClientDetail;
+
+  // M20: statement of account (receivables) — only for finance-capable roles.
+  const statement = canSeeFinancials ? await getClientStatement(orgId, id, org.baseCurrency) : null;
 
   async function updateClient(formData: FormData) {
     "use server";
@@ -299,6 +307,52 @@ export default async function ClientDetailPage({
 
         {canEdit ? <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-white">Save Client</button> : null}
       </form>
+
+      {statement ? (
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
+            <div className="flex items-center gap-4 text-[13px]">
+              <span className="text-[var(--ink-muted)]">Billed <span className="font-semibold text-[var(--ink)] tabular-nums">{formatMoney(statement.totals.billed, statement.currency)}</span></span>
+              <span className="text-[var(--ink-muted)]">Paid <span className="font-semibold text-emerald-600 tabular-nums">{formatMoney(statement.totals.paid, statement.currency)}</span></span>
+              <span className="text-[var(--ink-muted)]">Outstanding <span className={`font-black tabular-nums ${statement.totals.outstanding > 0 ? "text-red-500" : "text-emerald-600"}`}>{formatMoney(statement.totals.outstanding, statement.currency)}</span></span>
+            </div>
+          </div>
+          {statement.lines.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No billed documents yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+              <table className="w-full min-w-[520px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">
+                    <th className="px-3 py-2 text-left font-bold">Document</th>
+                    <th className="px-3 py-2 text-left font-bold">Date</th>
+                    <th className="px-3 py-2 text-right font-bold">Billed</th>
+                    <th className="px-3 py-2 text-right font-bold">Paid</th>
+                    <th className="px-3 py-2 text-right font-bold">Balance</th>
+                    <th className="px-3 py-2 text-right font-bold">Running</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statement.lines.map((l) => (
+                    <tr key={`${l.type}-${l.number}`} className="border-b border-[var(--line)]/60 last:border-0">
+                      <td className="px-3 py-2">
+                        <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
+                        <span className="font-mono text-[var(--ink)]">{l.number}</span>
+                      </td>
+                      <td className="px-3 py-2 text-[var(--ink-muted)]">{l.date.toISOString().slice(0, 10)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatMoney(l.billed, statement.currency)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{l.paid ? formatMoney(l.paid, statement.currency) : "—"}</td>
+                      <td className={`px-3 py-2 text-right tabular-nums ${l.balance > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(l.balance, statement.currency)}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatMoney(l.running, statement.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
