@@ -127,7 +127,44 @@ export async function syncInvoicePaymentState(
   return { paidAmount, isPaid, totalAmount: invoice.totalAmount, jobId: invoice.jobId };
 }
 
-/** Recompute sale paidAmount/status from linked payments. */
+/** Sum sale-linked payments in org base currency; REFUND payments and standalone Refund rows net off. */
+export async function sumSalePaidAmount(
+  tx: Tx,
+  params: { orgId: string; saleId: string; baseCurrency: string },
+): Promise<number> {
+  const [payments, refunds] = await Promise.all([
+    tx.payment.findMany({
+      where: { orgId: params.orgId, saleId: params.saleId },
+      select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
+    }),
+    // Standalone Refund rows (Documents → Refunds path) net off the sale too.
+    tx.refund.findMany({
+      where: { orgId: params.orgId, saleId: params.saleId },
+      select: { amount: true, currency: true, exchangeRateToBase: true },
+    }),
+  ]);
+
+  const paymentsTotal = payments.reduce((sum, payment) => {
+    const base = toBaseAmount({
+      amount: payment.amount,
+      currency: payment.currency,
+      baseCurrency: params.baseCurrency,
+      exchangeRateToBase: payment.exchangeRateToBase,
+    });
+    return payment.kind === "REFUND" ? sum - base : sum + base;
+  }, 0);
+
+  const refundsTotal = refunds.reduce((sum, refund) => sum + toBaseAmount({
+    amount: refund.amount,
+    currency: refund.currency,
+    baseCurrency: params.baseCurrency,
+    exchangeRateToBase: refund.exchangeRateToBase,
+  }), 0);
+
+  return paymentsTotal - refundsTotal;
+}
+
+/** Recompute sale paidAmount/status from linked payments (FX-converted, refunds netted). */
 export async function syncSalePaymentState(
   tx: Tx,
   params: { orgId: string; saleId: string },
@@ -141,11 +178,9 @@ export async function syncSalePaymentState(
     throw new Error(`Sale ${params.saleId} not found for org ${params.orgId}`);
   }
 
-  const payAgg = await tx.payment.aggregate({
-    where: { saleId: params.saleId, orgId: params.orgId },
-    _sum: { amount: true },
-  });
-  const paidAmount = payAgg._sum.amount ?? 0;
+  const org = await tx.organization.findUnique({ where: { id: params.orgId }, select: { baseCurrency: true } });
+  const baseCurrency = org?.baseCurrency ?? "UGX";
+  const paidAmount = await sumSalePaidAmount(tx, { orgId: params.orgId, saleId: params.saleId, baseCurrency });
   const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
 
   await tx.sale.updateMany({

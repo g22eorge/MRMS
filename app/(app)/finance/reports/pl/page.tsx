@@ -179,6 +179,12 @@ export default async function PLPage({
               Balance Sheet →
             </Link>
             <Link
+              href={`/finance/reports/trial-balance?year=${year}&month=${month}`}
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--panel-strong)]"
+            >
+              Trial Balance
+            </Link>
+            <Link
               href="/finance/accounts"
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--panel-strong)]"
             >

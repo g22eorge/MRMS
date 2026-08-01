@@ -400,6 +400,7 @@ export default async function BalanceSheetPage({
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { label: "P&L Statement", href: `/finance/reports/pl?year=${year}&month=${month}` },
+              { label: "Trial Balance", href: `/finance/reports/trial-balance?year=${year}&month=${month}` },
               { label: "Chart of Accounts", href: "/finance/accounts" },
               { label: "Bank Accounts", href: "/finance/bank" },
             ].map((link) => (
