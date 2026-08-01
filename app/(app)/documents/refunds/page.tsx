@@ -107,6 +107,15 @@ export default async function RefundsPage({
     }
     if (refundableAmount <= 0 || amountRaw > refundableAmount) return;
 
+    // Capture the FX rate for a non-base refund so it can be converted for
+    // base-currency reporting (was left null, making conversion impossible).
+    const refundCurrency = normalizeCurrency(currency, org.baseCurrency);
+    const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
+    const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
+    if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
+      return;
+    }
+
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {
@@ -115,6 +124,7 @@ export default async function RefundsPage({
           saleId,
           creditNoteId,
           currency,
+          exchangeRateToBase,
           amount: amountRaw,
           method,
           reference: reference || null,
