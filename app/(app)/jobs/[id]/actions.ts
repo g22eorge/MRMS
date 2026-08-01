@@ -921,6 +921,8 @@ export async function recordClientPaymentAction(formData: FormData) {
     revalidatePath("/dashboard");
     notifyPaymentReceived({
       orgId,
+      // Client gets a confirmation for real payments only, not refunds.
+      jobId: payload.kind === "REFUND" ? undefined : job.id,
       jobNumber: job.jobNumber,
       amount: payload.amount,
       currency: org.baseCurrency,
