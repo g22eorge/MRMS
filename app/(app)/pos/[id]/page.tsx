@@ -22,17 +22,20 @@ const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD
 async function recalcSaleTotals(
   tx: Prisma.TransactionClient,
   saleId: string,
-  includeVat: boolean,
   orgId: string,
+  overrideTaxApplicable?: boolean,
 ) {
   const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
   const subtotal = itemsAgg._sum.lineTotal ?? 0;
-  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true } });
+  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
+  // VAT intent is persisted on the sale; only an explicit add-time choice overrides
+  // it. This stops later edits/discounts from silently force-enabling VAT (M7).
+  const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? true;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
   const taxable = Math.max(0, subtotal - discountAmount);
   let vatRate = 0;
-  if (includeVat) {
+  if (taxApplicable) {
     const branding = await tx.documentBrandingSettings.findFirst({ where: { orgId }, select: { vatRatePercent: true } });
     vatRate = Math.max(0, branding?.vatRatePercent ?? 18) / 100;
   }
@@ -46,6 +49,7 @@ async function recalcSaleTotals(
       subtotal,
       discountAmount,
       vatAmount,
+      taxApplicable,
       totalAmount,
     },
   });
@@ -316,7 +320,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       }
 
       await tx.saleItem.update({ where: { id: item.id }, data: { description, quantity, unitPrice, lineTotal: quantity * unitPrice } });
-      await recalcSaleTotals(tx, saleId, true, orgId);
+      await recalcSaleTotals(tx, saleId, orgId);
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "SaleItem", entityId: itemId, action: "POS_ITEM_UPDATED", summary: "POS sale item updated" });
 
@@ -358,7 +362,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       }
 
       await tx.saleItem.delete({ where: { id: item.id } });
-      await recalcSaleTotals(tx, saleId, true, orgId);
+      await recalcSaleTotals(tx, saleId, orgId);
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "SaleItem", entityId: itemId, action: "POS_ITEM_DELETED", summary: "POS sale item deleted" });
 
@@ -416,7 +420,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal },
       });
 
-      await recalcSaleTotals(tx, saleId, vat, orgId);
+      await recalcSaleTotals(tx, saleId, orgId, vat);
     });
 
     revalidatePath(`/pos/${saleId}`);
@@ -849,7 +853,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 const subtotal = itemsAgg._sum.lineTotal ?? 0;
                 const capped = Math.max(0, Math.min(discountAmount, subtotal));
                 await tx.sale.update({ where: { id: saleId }, data: { discountAmount: capped } });
-                await recalcSaleTotals(tx, saleId, true, orgId);
+                await recalcSaleTotals(tx, saleId, orgId);
               });
 
               revalidatePath(`/pos/${saleId}`);

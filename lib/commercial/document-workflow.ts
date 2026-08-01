@@ -206,17 +206,27 @@ export async function createReceiptForPayment(tx: Tx, params: { orgId: string; p
   const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
   if (existing) return existing;
   const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
-  return tx.receipt.create({
-    data: {
-      orgId: params.orgId,
-      receiptNumber,
-      paymentId: params.paymentId,
-      invoiceId: params.invoiceId ?? null,
-      saleId: params.saleId ?? null,
-      clientId: params.clientId ?? null,
-      amount: params.amount,
-      currency: params.currency,
-      issuedById: params.issuedById ?? null,
-    },
-  });
+  try {
+    return await tx.receipt.create({
+      data: {
+        orgId: params.orgId,
+        receiptNumber,
+        paymentId: params.paymentId,
+        invoiceId: params.invoiceId ?? null,
+        saleId: params.saleId ?? null,
+        clientId: params.clientId ?? null,
+        amount: params.amount,
+        currency: params.currency,
+        issuedById: params.issuedById ?? null,
+      },
+    });
+  } catch (err) {
+    // @@unique([orgId, paymentId]) — a concurrent create won the race; return it
+    // instead of surfacing a 500.
+    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002") {
+      const winner = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
+      if (winner) return winner;
+    }
+    throw err;
+  }
 }

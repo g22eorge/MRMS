@@ -898,6 +898,7 @@ model Sale {
   subtotal       Float     @default(0)
   discountAmount Float     @default(0)
   vatAmount      Float     @default(0)
+  taxApplicable  Boolean   @default(true)
   totalAmount    Float     @default(0)
   paidAmount     Float     @default(0)
   paidAt         DateTime?
@@ -2380,6 +2381,7 @@ model Receipt {
   voidedAt      DateTime?
   voidReason    String?
 
+  @@unique([orgId, paymentId])
   @@index([orgId, issuedAt])
   @@index([paymentId])
   @@index([clientId])
