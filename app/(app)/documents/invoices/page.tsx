@@ -201,7 +201,7 @@ export default async function InvoicesPage({
       }
       if (!resolvedClientId) throw new Error("client-not-found");
       const invoiceNumber = await nextAvailableInvoiceNumber(tx);
-      return tx.invoice.create({
+      const created = await tx.invoice.create({
         data: {
           orgId,
           clientId: resolvedClientId,
@@ -231,6 +231,25 @@ export default async function InvoicesPage({
           },
         },
       });
+
+      // Decrement stock for part-linked (product) lines — this is a direct goods
+      // sale. Repair invoices use sourceType "QuotationItem" and are consumed at
+      // job completion instead, so this never double-counts.
+      for (const item of items) {
+        if (!item.partId) continue;
+        await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: item.quantity } } });
+        await tx.partStockTransaction.create({
+          data: {
+            partId: item.partId,
+            type: "OUT",
+            quantity: item.quantity,
+            reason: `Invoice ${invoiceNumber}: ${item.description}`.slice(0, 500),
+            createdById: user.id,
+          },
+        });
+      }
+
+      return created;
     });
     await writeSystemAuditEvent({
       orgId,

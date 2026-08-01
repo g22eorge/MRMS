@@ -65,11 +65,23 @@ max on first use per (type, year), so numbering continues seamlessly. No backfil
   ```
   For single-tenant care, pass the care org id (all departments belong to it).
 
-## Still pending (not yet done — larger/cross-model)
+## 5. `Receipt` relations (H14) — DONE (adds FK constraints on existing columns)
+
+Receipt's loose FKs (payment/sale/invoice/branch/client/issuedBy) are now real
+`@relation`s with `onDelete: SetNull`. Prod note: adding the FK constraints can
+fail if orphan receipts already reference missing parents — check/clean first
+(dev had 0 receipts).
+
+## H1-invoice — DONE, no schema change
+
+Invoiced goods now decrement stock. No `InvoiceLine.partId` column was needed —
+lines already carry the part via `sourceType = "Part"` / `sourceId`. Standalone
+product invoices decrement on issue and restore on void; repair invoices
+(`sourceType = "QuotationItem"`) are consumed at job completion instead, so there
+is no double-count.
+
+## Still pending
 
 - **M6** — `PartStockTransaction` `orgId` / `locationId` / `unitCost` / source ref:
   additive, but `orgId` should be backfilled from `part.orgId` for existing rows.
-- **H14 (relations)** — converting `Receipt`'s loose FKs to `@relation` with `onDelete`
-  touches Payment/Sale/Invoice/Client (back-relations). Cross-model.
-- **H1-invoice** — `InvoiceLine.partId` + decrement invoiced goods on finalization
-  (with reversal on void/credit).
+  Lower value (ledger enrichment); not yet done.

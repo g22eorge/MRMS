@@ -103,9 +103,30 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    const updated = await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { status: "VOID" },
+    const alreadyVoid = invoice.status === "VOID";
+    const updated = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.update({ where: { id: invoice.id }, data: { status: "VOID" } });
+      // Restore stock for product lines decremented at issue (sourceType "Part").
+      // Repair invoices (QuotationItem lines) were consumed at job completion, not
+      // here, so they aren't restored. Guarded on status so voiding is idempotent.
+      if (!alreadyVoid) {
+        const partLines = await tx.invoiceLine.findMany({
+          where: { invoiceId: invoice.id, orgId, sourceType: "Part", sourceId: { not: null } },
+          select: { sourceId: true, quantity: true, description: true },
+        });
+        for (const line of partLines) {
+          if (!line.sourceId) continue;
+          const qty = Math.round(line.quantity);
+          if (qty <= 0) continue;
+          const part = await tx.part.findFirst({ where: { id: line.sourceId, orgId }, select: { id: true } });
+          if (!part) continue;
+          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: qty } } });
+          await tx.partStockTransaction.create({
+            data: { partId: part.id, type: "IN", quantity: qty, reason: `Invoice ${inv.invoiceNumber} voided: ${line.description}`.slice(0, 500), createdById: user.id },
+          });
+        }
+      }
+      return inv;
     });
     await writeSystemAuditEvent({ orgId: invoice.orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "INVOICE_VOIDED", summary: `${updated.invoiceNumber} voided` });
     revalidatePath("/documents/invoices");
