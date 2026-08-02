@@ -12,8 +12,10 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  // Pre-fill each line to its full ordered quantity so the common case —
+  // "everything arrived" — is a single confirm. Short lines get adjusted down.
   const [quantities, setQuantities] = useState<Record<string, number>>(
-    Object.fromEntries(items.map((i) => [i.id, i.qtyReceived])),
+    Object.fromEntries(items.map((i) => [i.id, i.qtyOrdered])),
   );
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,6 +57,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
             ))}
           </select>
         </label>
+        <p className="text-[12px] text-[var(--ink-muted)]">Quantities are pre-filled to receive the full outstanding order — adjust any line that arrived short, then confirm.</p>
         <DataTable
           frameless
           dense
@@ -94,7 +97,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
                   type="number"
                   min={0}
                   max={item.qtyOrdered}
-                  value={quantities[item.id] ?? item.qtyReceived}
+                  value={quantities[item.id] ?? item.qtyOrdered}
                   onChange={(e) =>
                     setQuantities((prev) => ({
                       ...prev,
@@ -116,7 +119,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
           disabled={pending || !locationId}
           className="btn-premium rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
         >
-          {pending ? "Saving..." : "Post GRN"}
+          {pending ? "Receiving..." : "Receive stock"}
         </button>
       </form>
     </div>
