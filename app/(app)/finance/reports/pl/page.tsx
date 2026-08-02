@@ -1,6 +1,7 @@
 // @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
+import { PrintReportButton } from "@/components/reports/PrintReportButton";
 // @ts-nocheck
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
@@ -162,7 +163,7 @@ export default async function PLPage({
       : `${MONTHS[month - 2]} ${year}`;
 
   return (
-    <div className="space-y-4">
+    <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -172,6 +173,7 @@ export default async function PLPage({
             <p className="text-[13px] text-[var(--ink-muted)]">{periodLabel}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PrintReportButton />
             <Link
               href={`/finance/reports/balance-sheet?year=${year}&month=${month}`}
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--panel-strong)]"
@@ -226,7 +228,7 @@ export default async function PLPage({
 
       {/* ── PERIOD SELECTOR ──────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
-        <form method="GET" className="flex items-center gap-2">
+        <form method="GET" className="no-print flex items-center gap-2">
           <input type="hidden" name="mode" value={mode} />
           <select
             name="month"

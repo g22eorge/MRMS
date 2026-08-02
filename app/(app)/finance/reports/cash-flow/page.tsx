@@ -1,6 +1,7 @@
 // @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
+import { PrintReportButton } from "@/components/reports/PrintReportButton";
 import { redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -300,7 +301,7 @@ export default async function CashFlowPage({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="print-area space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -309,7 +310,8 @@ export default async function CashFlowPage({
             <p className="text-[13px] font-bold text-[var(--ink)]">Cash Flow Statement</p>
             <p className="text-[13px] text-[var(--ink-muted)]">{periodLabel}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="no-print flex flex-wrap gap-2">
+            <PrintReportButton />
             <Link href="/finance/reports" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">← Reports</Link>
             <form className="flex flex-wrap gap-1.5" method="GET">
               <select name="mode" defaultValue={mode} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none">

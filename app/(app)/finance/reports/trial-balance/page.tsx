@@ -1,4 +1,5 @@
 import { StatCards } from "@/components/ui/StatCards";
+import { PrintReportButton } from "@/components/reports/PrintReportButton";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
@@ -67,7 +68,7 @@ export default async function TrialBalancePage({
   const hasData = rows.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -77,6 +78,7 @@ export default async function TrialBalancePage({
             <p className="text-[13px] text-[var(--ink-muted)]">As of {MONTHS[month - 1]} {year}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PrintReportButton />
             <Link
               href={`/finance/reports/pl?year=${year}&month=${month}`}
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--panel-strong)]"
@@ -100,7 +102,7 @@ export default async function TrialBalancePage({
       </div>
 
       {/* ── PERIOD SELECTOR ──────────────────────────────────────────────── */}
-      <form method="GET" className="flex items-center gap-2">
+      <form method="GET" className="no-print flex items-center gap-2">
         <select name="month" defaultValue={month} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]">
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>{m}</option>
