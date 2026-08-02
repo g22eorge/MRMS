@@ -396,6 +396,9 @@ export default async function CreditNotesPage({
     return (
       <RowActionsMenu label={`Credit note actions for ${cn.creditNoteNumber}`}>
         <div className="py-1 text-left">
+          <MenuActionLink href={`/documents/credit-notes/${cn.id}`} icon="open">
+            View credit note
+          </MenuActionLink>
           <MenuActionLink href={`/api/credit-notes/${cn.id}`} external icon="quote" tone="accent">
             Download Credit Note PDF
           </MenuActionLink>

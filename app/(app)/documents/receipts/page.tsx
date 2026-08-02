@@ -463,6 +463,9 @@ export default async function ReceiptsPage({
                   </a>
                   <RowActionsMenu label="Receipt actions">
                     <div className="py-1 text-left">
+                      <MenuActionLink href={`/documents/receipts/${p.id}`} icon="open">
+                        View receipt
+                      </MenuActionLink>
                       <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
                         Download Receipt PDF
                       </MenuActionLink>
@@ -581,6 +584,9 @@ export default async function ReceiptsPage({
                 </a>
                 <RowActionsMenu label="Receipt actions">
                   <div className="py-1 text-left">
+                    <MenuActionLink href={`/documents/receipts/${p.id}`} icon="open">
+                      View receipt
+                    </MenuActionLink>
                     <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
                       Download Receipt PDF
                     </MenuActionLink>

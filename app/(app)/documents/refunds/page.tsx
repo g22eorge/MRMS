@@ -394,6 +394,9 @@ export default async function RefundsPage({
     return (
       <RowActionsMenu label={`Refund actions for ${sourceLabel}`}>
         <div className="py-1 text-left">
+          <MenuActionLink href={`/documents/refunds/${r.id}`} icon="open">
+            View refund
+          </MenuActionLink>
           <MenuActionLink href={`/api/refunds/${r.id}`} external icon="receipt" tone="accent">
             Download Refund PDF
           </MenuActionLink>
