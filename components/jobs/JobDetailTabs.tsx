@@ -569,6 +569,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const setActive = (t: string) => setSegment(tabToSegment(t));
   const [savedSection, setSavedSection] = useState<string | null>(null);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  // Live billing editor state so the VAT breakdown recomputes as you type/toggle
+  // (before saving). Saved figures elsewhere still read from `job`.
+  const [billInput, setBillInput] = useState<string>(job.clientBill != null ? String(job.clientBill) : "");
+  const [vatInput, setVatInput] = useState<boolean>(job.vatApplicable ?? false);
   const [showOneTimeForm, setShowOneTimeForm] = useState(false);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
   const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
@@ -696,6 +700,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             : "Overpaid";
   const repairCostBeforeVat = vatApplicable ? clientBillValue / 1.18 : clientBillValue;
   const vatAmount = vatApplicable ? Math.max(clientBillValue - repairCostBeforeVat, 0) : 0;
+  // Live editor figures (recompute instantly from the form inputs, pre-save).
+  const liveBill = Number(billInput) || 0;
+  const liveBaseBeforeVat = vatInput ? liveBill / 1.18 : liveBill;
+  const liveVatAmount = vatInput ? Math.max(liveBill - liveBaseBeforeVat, 0) : 0;
   const hasPayoutControls = canManagePayouts && job.repairPath === "EXTERNAL";
   const quotationEligibleByStatus = canGenerateQuotationForStatus(job.status);
   const invoiceEligibleByStatus = canGenerateInvoiceForStatus(job.status);
@@ -1249,9 +1257,15 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             }}
             className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
           >
-            {canAssignJobs && technicians.length > 0 ? (
+            {canAssignJobs ? (
               <div className={softSectionClass}>
                 <p className="text-xs font-semibold text-[var(--ink-muted)]">Assign technician</p>
+                {technicians.length === 0 ? (
+                  <p className="text-[12px] text-[var(--ink-muted)]">
+                    No technicians added yet. Use <span className="font-medium">One-Time External…</span> below for a one-off, or add internal/external technicians under{" "}
+                    <Link href="/settings/users" className="text-[var(--accent)] underline">Settings → Users</Link> to pick from a list.
+                  </p>
+                ) : null}
                 {showOneTimeForm || oneTimeExternal ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="min-w-0 sm:col-span-2">
@@ -1622,7 +1636,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                       name="clientBill"
                       type="number"
                       step="0.01"
-                      defaultValue={job.clientBill ?? undefined}
+                      value={billInput}
+                      onChange={(e) => setBillInput(e.target.value)}
                       placeholder="0.00"
                       className={fieldClass}
                     />
@@ -1632,7 +1647,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               {canManageFinancials ? (
                 <CheckboxField
                   name="vatApplicable"
-                  defaultChecked={vatApplicable}
+                  checked={vatInput}
+                  onChange={setVatInput}
                   withHiddenFalse
                   label="VAT applicable (18%)"
                   className="flex items-center gap-2 text-sm text-[var(--ink)]"
@@ -1643,10 +1659,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   variant="card"
                   currency="UGX"
                   formatMoney={formatBillAmount}
-                  subtotal={repairCostBeforeVat}
+                  subtotal={liveBaseBeforeVat}
                   taxLabel="VAT (18%)"
-                  taxAmount={vatAmount}
-                  total={clientBillValue}
+                  taxAmount={liveVatAmount}
+                  total={liveBill}
                 />
               ) : null}
               {canManageFinancials && existingMargin !== null ? (
