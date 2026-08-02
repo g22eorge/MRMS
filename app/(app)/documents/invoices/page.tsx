@@ -30,6 +30,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
 import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
+import { shareInvoiceDocument } from "@/lib/notifications/share-document";
 import {
   InvoiceOverdueReminderBulkButton,
   InvoiceOverdueReminderButton,
@@ -476,6 +477,22 @@ export default async function InvoicesPage({
     const jobId = String(formData.get("jobId") ?? "").trim();
     if (!jobId) return;
     await sendInvoiceViaWhatsAppAction(jobId);
+    revalidatePath("/documents/invoices");
+  }
+
+  // Row-menu Send — works for standalone AND job-linked invoices, logs to the
+  // outbox. Replaces the old form POSTs to /api/invoices/[id]/send /whatsapp,
+  // which were never real routes (they 404'd).
+  async function sendInvoiceRowShareAction(formData: FormData) {
+    "use server";
+    const { user } = await getCurrentUserRole();
+    const orgId = user.orgId;
+    if (!orgId) return;
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) return;
+    const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+    const channel = String(formData.get("channel") ?? "") === "email" ? "email" : "whatsapp";
+    if (!invoiceId) return;
+    await shareInvoiceDocument({ orgId, invoiceId, channel });
     revalidatePath("/documents/invoices");
   }
 
@@ -933,10 +950,14 @@ export default async function InvoicesPage({
                 ) : null}
 
                   <MenuSection label="Send" />
-                  <form action={`/api/invoices/${row.id}/send`} method="POST">
+                  <form action={sendInvoiceRowShareAction}>
+                    <input type="hidden" name="invoiceId" value={row.id} />
+                    <input type="hidden" name="channel" value="email" />
                     <MenuActionButton icon="open" type="submit">Send by Email</MenuActionButton>
                   </form>
-                  <form action={`/api/invoices/${row.id}/whatsapp`} method="POST">
+                  <form action={sendInvoiceRowShareAction}>
+                    <input type="hidden" name="invoiceId" value={row.id} />
+                    <input type="hidden" name="channel" value="whatsapp" />
                     <MenuActionButton icon="whatsapp" tone="success" type="submit">Send by WhatsApp</MenuActionButton>
                   </form>
                   <MenuSection label="Danger zone" />

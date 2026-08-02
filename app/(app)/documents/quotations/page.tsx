@@ -13,6 +13,7 @@ import { sanitizeText } from "@/lib/sanitize";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { prisma } from "@/lib/prisma";
+import { shareQuotationDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { QuotationPreviewProvider } from "./QuotationPreviewProvider";
 import { PreviewButton } from "./PreviewButton";
@@ -132,6 +133,21 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     redirect("/documents/quotations");
   }
 
+  // Row-menu Send — outbox-logged WhatsApp/email. Replaces the old form POSTs to
+  // /api/quotations/[id]/send /whatsapp, which were never real routes (404).
+  async function sendQuotationRowShareAction(formData: FormData) {
+    "use server";
+    const { user } = await getCurrentUserRole();
+    const orgId = user.orgId;
+    if (!orgId) return;
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) return;
+    const quotationId = String(formData.get("quotationId") ?? "").trim();
+    const channel = String(formData.get("channel") ?? "") === "email" ? "email" : "whatsapp";
+    if (!quotationId) return;
+    await shareQuotationDocument({ orgId, quotationId, channel });
+    revalidatePath("/documents/quotations");
+  }
+
   const pageView = paginationView(page, totalItems, pageSize);
   const hrefForPage = (p: number) => pageHrefBuilder(`/documents/quotations`, { page: p.toString(), status: statusFilter, q });
 
@@ -213,8 +229,9 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
         <RowActionsMenu label={`Quotation ${row.quoteNumber}`}>
           <MenuActionLink href={`/documents/quotations/${row.id}`} icon="open">View</MenuActionLink>
           <PreviewButton quotationId={row.id} />
-          <MenuActionLink href={`/documents/quotations/${row.id}`} icon="save">Edit</MenuActionLink>
-          <MenuActionLink href={`/api/quotations/${row.id}/pdf`} external icon="download">Print / PDF</MenuActionLink>
+          <MenuActionLink href={`/documents/quotations/${row.id}?edit=1`} icon="save">Edit</MenuActionLink>
+          {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
+          <MenuActionLink href={`/api/quotations/${row.id}`} external icon="download">Print / PDF</MenuActionLink>
           {["ACCEPTED", "SENT"].includes(row.status) && (
             <form action={convertToInvoiceAction}>
               <input type="hidden" name="id" value={row.id} />
@@ -222,10 +239,14 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
             </form>
           )}
           <MenuSection label="Send" />
-          <form action={`/api/quotations/${row.id}/send`} method="POST">
+          <form action={sendQuotationRowShareAction}>
+            <input type="hidden" name="quotationId" value={row.id} />
+            <input type="hidden" name="channel" value="email" />
             <MenuActionButton icon="receipt" type="submit">Send by Email</MenuActionButton>
           </form>
-          <form action={`/api/quotations/${row.id}/whatsapp`} method="POST">
+          <form action={sendQuotationRowShareAction}>
+            <input type="hidden" name="quotationId" value={row.id} />
+            <input type="hidden" name="channel" value="whatsapp" />
             <MenuActionButton icon="whatsapp" tone="success" type="submit">Send by WhatsApp</MenuActionButton>
           </form>
           <MenuSection label="Danger zone" />
