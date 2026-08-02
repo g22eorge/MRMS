@@ -1094,3 +1094,27 @@ tr:has(details[open]) {
   }
 }
 
+/* Print isolation: reports (and anything opting in with .print-area) print
+ * clean, without the app sidebar/header/nav. Everything is hidden, then only
+ * the .print-area subtree is shown and pinned to the page origin. */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+}
+
