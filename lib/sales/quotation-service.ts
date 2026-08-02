@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { can } from "@/lib/permissions";
-import { normalizeCurrency } from "@/lib/currency";
+import { normalizeCurrency, roundMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -76,15 +76,16 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
     return { partId, description, quantity, unitPrice, discount, lineTotal: quotationLineTotal({ quantity, unitPrice, discount }) };
   });
 
-  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-  const requestedTaxRate = Number(data.taxRate);
-  const taxRate = data.taxApplicable ? Math.min(Math.max(Number.isFinite(requestedTaxRate) ? requestedTaxRate : 0, 0), 100) : 0;
-  const vatAmount = taxRate > 0 ? subtotal * (taxRate / 100) : 0;
-  const taxLabel = vatAmount > 0 ? sanitizeText(String(data.taxLabel || "Tax")).slice(0, 32) : null;
-  const totalAmount = subtotal + vatAmount;
   // Currency must follow the org, not a process-wide env var (multi-tenant).
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } }).catch(() => null);
   const currency = normalizeCurrency(org?.baseCurrency, process.env.APP_CURRENCY ?? "UGX");
+  // Round to the currency's minor unit so subtotal + tax === total to the shilling.
+  const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
+  const requestedTaxRate = Number(data.taxRate);
+  const taxRate = data.taxApplicable ? Math.min(Math.max(Number.isFinite(requestedTaxRate) ? requestedTaxRate : 0, 0), 100) : 0;
+  const vatAmount = roundMoney(taxRate > 0 ? subtotal * (taxRate / 100) : 0, currency);
+  const taxLabel = vatAmount > 0 ? sanitizeText(String(data.taxLabel || "Tax")).slice(0, 32) : null;
+  const totalAmount = roundMoney(subtotal + vatAmount, currency);
   const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
   if (partIds.length) {
     const validParts = await prisma.part.findMany({

@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { orgDb } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
+import type { InvoiceType } from "@prisma/client";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -51,12 +50,16 @@ export default async function InvoiceDetailPage({
   ) {
     redirect("/dashboard");
   }
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
 
   const { id } = await params;
-  const db = orgDb(user.orgId);
+  // Every query below is explicitly scoped by orgId, so the fully-typed prisma
+  // client (which preserves select inference) is used directly.
+  const db = prisma;
 
   const invoice = await db.invoice.findFirst({
-    where: { id, orgId: user.orgId },
+    where: { id, orgId: orgId },
     select: {
       id: true,
       invoiceNumber: true,
@@ -127,7 +130,7 @@ export default async function InvoiceDetailPage({
   if (!invoice) redirect("/documents/invoices");
 
   const org = await db.organization.findFirst({
-    where: { id: user.orgId },
+    where: { id: orgId },
     select: { baseCurrency: true },
   });
   const currency = normalizeCurrency(
@@ -149,27 +152,27 @@ export default async function InvoiceDetailPage({
   const sp = searchParams ? await searchParams : {};
   const isEdit = sp.edit === "1";
   const clients = isEdit ? await db.client.findMany({
-    where: { orgId: user.orgId },
+    where: { orgId: orgId },
     select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true },
     orderBy: { fullName: "asc" },
   }) : [];
   const leads = isEdit ? await db.lead.findMany({
-    where: { orgId: user.orgId },
+    where: { orgId: orgId },
     select: { id: true, fullName: true, phone: true, email: true, organization: true, interest: true },
     orderBy: { fullName: "asc" },
   }) : [];
   const jobs = isEdit ? await db.job.findMany({
-    where: { orgId: user.orgId },
+    where: { orgId: orgId },
     select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { receivedAt: "desc" },
   }) : [];
   const parts = isEdit ? await db.part.findMany({
-    where: { orgId: user.orgId },
+    where: { orgId: orgId },
     select: { id: true, sku: true, name: true, unitCost: true, qtyOnHand: true },
     orderBy: { name: "asc" },
   }) : [];
   const taxRates = isEdit ? await db.taxRate.findMany({
-    where: { orgId: user.orgId },
+    where: { orgId: orgId },
     select: { id: true, name: true, code: true, rate: true, isDefault: true },
   }) : [];
   const editInitialData = isEdit ? {
@@ -620,7 +623,7 @@ export default async function InvoiceDetailPage({
 
       // Tenant + status guard: only edit this org's non-finalized invoices.
       const target = await prisma.invoice.findFirst({
-        where: { id: fdId, orgId: user.orgId },
+        where: { id: fdId, orgId: orgId },
         select: { id: true, status: true, currency: true },
       });
       if (!target || target.status === "VOID" || target.status === "PAID") return;
@@ -651,19 +654,22 @@ export default async function InvoiceDetailPage({
       const clientId = String(fd.get("clientId") ?? "").trim() || null;
 
       await prisma.$transaction(async (tx) => {
-        await tx.invoiceLine.deleteMany({ where: { invoiceId: fdId, orgId: user.orgId } });
+        await tx.invoiceLine.deleteMany({ where: { invoiceId: fdId, orgId: orgId } });
         await tx.invoice.update({
           where: { id: fdId },
           data: {
             subject: String(fd.get("subject") ?? "").trim() || null,
             notes: String(fd.get("notes") ?? "").trim() || null,
             dueDate: fd.get("dueDate") ? new Date(String(fd.get("dueDate"))) : null,
-            invoiceType: String(fd.get("invoiceType") ?? "SERVICE").trim(),
+            invoiceType: ((): InvoiceType => {
+              const t = String(fd.get("invoiceType") ?? "SERVICE").trim();
+              return (["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"] as const).includes(t as InvoiceType) ? (t as InvoiceType) : "SERVICE";
+            })(),
             ...(clientId ? { clientId } : {}),
             totalAmount,
             lines: {
               create: items.map((item) => ({
-                orgId: user.orgId,
+                orgId: orgId,
                 sourceType: item.partId ? "Part" : "Custom",
                 sourceId: item.partId,
                 description: item.description,
@@ -676,7 +682,7 @@ export default async function InvoiceDetailPage({
             },
           },
         });
-        await syncInvoicePaymentState(tx, { orgId: user.orgId, invoiceId: fdId, baseCurrency: currency, actorUserId: user.id });
+        await syncInvoicePaymentState(tx, { orgId: orgId, invoiceId: fdId, baseCurrency: currency, actorUserId: user.id });
       });
 
       revalidatePath("/documents/invoices/" + fdId);

@@ -12,6 +12,7 @@ import {
   formatMoneyCompact,
   isSupportedCurrency,
   normalizeCurrency,
+  roundMoney,
   toBaseAmount,
 } from "@/lib/currency";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
@@ -166,9 +167,9 @@ export default async function InvoicesPage({
       ? (invoiceTypeRaw as InvoiceType)
       : ("SERVICE" as InvoiceType);
     const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
-    const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-    const taxAmount = taxRate > 0 ? subtotal * (taxRate / 100) : 0;
-    const totalAmount = subtotal + taxAmount;
+    const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
+    const taxAmount = roundMoney(taxRate > 0 ? subtotal * (taxRate / 100) : 0, currency);
+    const totalAmount = roundMoney(subtotal + taxAmount, currency);
     const invoiceSubject = sanitizeText(subject || items[0]?.description || "Invoice");
 
     const invoice = await prisma.$transaction(async (tx) => {
@@ -215,7 +216,7 @@ export default async function InvoicesPage({
           notes: notes ? sanitizeText(notes) : null,
           lines: {
             create: items.map((item) => {
-              const lineTax = taxAmount > 0 && subtotal > 0 ? taxAmount * (item.lineTotal / subtotal) : 0;
+              const lineTax = roundMoney(taxAmount > 0 && subtotal > 0 ? taxAmount * (item.lineTotal / subtotal) : 0, currency);
               return {
                 orgId,
                 sourceType: item.partId ? "Part" : "Custom",

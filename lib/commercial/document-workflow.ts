@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { orgTagFor, composeOrgNumber, maxNumberSequence } from "@/lib/commercial/org-number";
+import { roundMoney } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote";
@@ -187,9 +188,13 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
       lines: {
         create: quotation.items.length > 0
           ? quotation.items.map((item) => {
-              const taxAmount = quotation.vatAmount > 0 && taxableSubtotal > 0
-                ? quotation.vatAmount * (item.lineTotal / taxableSubtotal)
-                : 0;
+              const lineCurrency = quotation.currency || params.currency;
+              const taxAmount = roundMoney(
+                quotation.vatAmount > 0 && taxableSubtotal > 0
+                  ? quotation.vatAmount * (item.lineTotal / taxableSubtotal)
+                  : 0,
+                lineCurrency,
+              );
               return {
                 orgId: params.orgId,
                 sourceType: "QuotationItem",
@@ -199,7 +204,7 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
                 unitPrice: item.unitPrice,
                 // QuotationItem.discount is a percentage; InvoiceLine.discountAmount
                 // is an absolute currency value — convert instead of copying raw.
-                discountAmount: item.quantity * item.unitPrice * ((item.discount ?? 0) / 100),
+                discountAmount: roundMoney(item.quantity * item.unitPrice * ((item.discount ?? 0) / 100), lineCurrency),
                 taxAmount,
                 lineTotal: item.lineTotal,
               };
