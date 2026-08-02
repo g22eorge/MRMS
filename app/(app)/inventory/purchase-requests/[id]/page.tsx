@@ -5,6 +5,8 @@ import { DataTable } from "@/components/ui/DataTable";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { convertPurchaseRequestToPoAction, deletePurchaseRequestAction, reviewPurchaseRequestAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -34,25 +36,27 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory · Purchase Request</p>
-          <p className="mt-0.5 font-mono text-[13px] font-bold text-[var(--ink)]">{request.requestNumber}</p>
-          <p className="mt-0.5 text-sm text-[var(--ink-muted)]">Requested by {request.requestedBy.name || request.requestedBy.email}</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Link href={`/api/procurement/documents/purchase-request/${request.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-            Print / PDF
-          </Link>
-          <form action={deletePurchaseRequestAction}>
-            <input type="hidden" name="id" value={request.id} />
-            <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600">
-              Delete
-            </button>
-          </form>
-          <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-400">{request.status}</span>
-        </div>
-      </div>
+      <RecordActionBar
+        backHref="/inventory/purchase-requests"
+        eyebrow="Inventory · Purchase Request"
+        title={request.requestNumber}
+        status={{ label: request.status, tone: request.status === "APPROVED" ? "success" : request.status === "REJECTED" ? "danger" : request.status === "CONVERTED" ? "violet" : request.status === "SUBMITTED" ? "sky" : "neutral" }}
+        secondary={
+          <>
+            <RecordPreviewButton variant="button" label="Preview" pdfUrl={`/api/procurement/documents/purchase-request/${request.id}`} title={`Purchase Request ${request.requestNumber}`} />
+            <Link href={`/api/procurement/documents/purchase-request/${request.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+              Print / PDF
+            </Link>
+            <form action={deletePurchaseRequestAction}>
+              <input type="hidden" name="id" value={request.id} />
+              <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600">
+                Delete
+              </button>
+            </form>
+          </>
+        }
+      />
+      <p className="text-sm text-[var(--ink-muted)]">Requested by {request.requestedBy.name || request.requestedBy.email}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Priority</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.priority}</p></div>
