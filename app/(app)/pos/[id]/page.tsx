@@ -915,63 +915,69 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         />
 
         {isOpen ? (
-          <>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const { user, orgId } = await requireOrgSession();
-              if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
-              const saleId = String(formData.get("saleId") ?? "").trim();
-              const raw = String(formData.get("discountAmount") ?? "").trim();
-              if (!saleId) return;
-              const discountAmount = Math.max(0, Number(raw || "0"));
-              if (!Number.isFinite(discountAmount)) return;
+          <details className="group border-t border-[var(--line)] bg-[var(--panel-strong)]/40">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 hover:bg-[var(--panel-strong)]/60 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                <span className="transition-transform group-open:rotate-90" aria-hidden="true">&rsaquo;</span> Adjust
+              </span>
+              <span className="text-[12px] text-[var(--ink-muted)]">
+                {sale.discountAmount > 0 ? <>&minus;{formatMoney(sale.discountAmount, saleCurrency)} &middot; </> : null}
+                VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
+              </span>
+            </summary>
+            <form
+              action={async (formData: FormData) => {
+                "use server";
+                const { user, orgId } = await requireOrgSession();
+                if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+                const saleId = String(formData.get("saleId") ?? "").trim();
+                const raw = String(formData.get("discountAmount") ?? "").trim();
+                if (!saleId) return;
+                const discountAmount = Math.max(0, Number(raw || "0"));
+                if (!Number.isFinite(discountAmount)) return;
 
-              const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
-              if (!existingSale || existingSale.status !== "OPEN") return;
+                const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
+                if (!existingSale || existingSale.status !== "OPEN") return;
 
-              await prisma.$transaction(async (tx) => {
-                const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
-                const subtotal = itemsAgg._sum.lineTotal ?? 0;
-                const capped = Math.max(0, Math.min(discountAmount, subtotal));
-                await tx.sale.update({ where: { id: saleId }, data: { discountAmount: capped } });
-                await recalcSaleTotals(tx, saleId, orgId);
-              });
+                await prisma.$transaction(async (tx) => {
+                  const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
+                  const subtotal = itemsAgg._sum.lineTotal ?? 0;
+                  const capped = Math.max(0, Math.min(discountAmount, subtotal));
+                  await tx.sale.update({ where: { id: saleId }, data: { discountAmount: capped } });
+                  await recalcSaleTotals(tx, saleId, orgId);
+                });
 
-              revalidatePath(`/pos/${saleId}`);
-            }}
-            className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5"
-          >
-            <input type="hidden" name="saleId" value={sale.id} />
-            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</span>
-            <input
-              name="discountAmount"
-              inputMode="decimal"
-              defaultValue={sale.discountAmount}
-              placeholder="0"
-              aria-label="Discount amount"
-              className={`${field} w-32 flex-none`}
-            />
-            <Button type="submit" variant="secondary" size="sm">Apply</Button>
-            <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
-              VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
-            </span>
-          </form>
-          <form
-            action={toggleSaleVatAction}
-            className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5"
-          >
-            <input type="hidden" name="saleId" value={sale.id} />
-            <input type="hidden" name="next" value={sale.taxApplicable ? "false" : "true"} />
-            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
-            <Button type="submit" variant="secondary" size="sm">
-              {sale.taxApplicable ? "Turn VAT off" : "Turn VAT on"}
-            </Button>
-            <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
-              {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
-            </span>
-          </form>
-          </>
+                revalidatePath(`/pos/${saleId}`);
+              }}
+              className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"
+            >
+              <input type="hidden" name="saleId" value={sale.id} />
+              <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</span>
+              <input
+                name="discountAmount"
+                inputMode="decimal"
+                defaultValue={sale.discountAmount}
+                placeholder="0"
+                aria-label="Discount amount"
+                className={`${field} w-32 flex-none`}
+              />
+              <Button type="submit" variant="secondary" size="sm">Apply</Button>
+            </form>
+            <form
+              action={toggleSaleVatAction}
+              className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"
+            >
+              <input type="hidden" name="saleId" value={sale.id} />
+              <input type="hidden" name="next" value={sale.taxApplicable ? "false" : "true"} />
+              <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
+              <Button type="submit" variant="secondary" size="sm">
+                {sale.taxApplicable ? "Turn VAT off" : "Turn VAT on"}
+              </Button>
+              <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
+                {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
+              </span>
+            </form>
+          </details>
         ) : null}
       </section>
 
@@ -1016,21 +1022,22 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         />
       </section>
 
-      {/* -- Returns & refunds: collapsed until there is something to see -- */}
+      {/* -- Return / Refund: only surfaced once the sale is paid -- */}
+      {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
       <details
         open={creditNotes.length > 0 || refunds.length > 0}
         className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
       >
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
-          <p className={cardLabel}>Returns &amp; Refunds</p>
+          <p className={cardLabel}>Return / Refund</p>
           <span className="text-[12px] text-[var(--ink-muted)]">
-            {creditNotes.length} credit {creditNotes.length === 1 ? "note" : "notes"}
-            {refundedTotal > 0 ? ` · ${formatMoney(refundedTotal, saleCurrency)} refunded` : ""}
+            {creditNotes.length > 0 || refundedTotal > 0
+              ? `${creditNotes.length} credit ${creditNotes.length === 1 ? "note" : "notes"}${refundedTotal > 0 ? ` · ${formatMoney(refundedTotal, saleCurrency)} refunded` : ""}`
+              : "Issue a credit note or refund"}
           </span>
         </summary>
 
-        {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
-          <div className="space-y-3 border-t border-[var(--line)] p-3">
+        <div className="space-y-3 border-t border-[var(--line)] p-3">
             {/* Issue credit note */}
             <form action={createCreditNoteAction} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
               <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
@@ -1175,13 +1182,9 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 ]}
               />
             </div>
-          </div>
-        ) : (
-          <p className="border-t border-[var(--line)] px-4 py-3 text-[13px] text-[var(--ink-muted)]">
-            This sale must be PAID before you can issue credit notes or refunds. Stock is only returned when you mark items received back.
-          </p>
-        )}
+        </div>
       </details>
+      ) : null}
         </div>
 
         <RecordSummaryRail
