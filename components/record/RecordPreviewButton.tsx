@@ -12,10 +12,13 @@ export function RecordPreviewButton({
   pdfUrl,
   title = "Document",
   label = "Preview",
+  variant = "menu",
 }: {
   pdfUrl: string;
   title?: string;
   label?: string;
+  /** "menu" (default) = full-width dropdown row; "button" = compact inline action. */
+  variant?: "menu" | "button";
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,21 +31,34 @@ export function RecordPreviewButton({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const eye = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => { setLoading(true); setOpen(true); }}
-        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
-      >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-80" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </span>
-        <span className="min-w-0 flex-1">{label}</span>
-      </button>
+      {variant === "button" ? (
+        <button
+          type="button"
+          onClick={() => { setLoading(true); setOpen(true); }}
+          className="btn-premium-secondary inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold"
+        >
+          <span aria-hidden="true" className="opacity-80">{eye}</span>
+          {label}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setLoading(true); setOpen(true); }}
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
+        >
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-80" aria-hidden="true">{eye}</span>
+          <span className="min-w-0 flex-1">{label}</span>
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">

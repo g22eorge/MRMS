@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -14,8 +13,10 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
-import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
+import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -780,34 +781,14 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-4 pb-24 lg:pb-8">
-      <div>
-        <Link href="/pos" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          All sales
-        </Link>
-      </div>
-
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="mono truncate text-[13px] font-bold text-[var(--ink)]">{sale.saleNumber}</p>
-              <StatusBadge tone={sale.status === "PAID" ? "success" : sale.status === "VOID" ? "danger" : "warning"}>
-                {sale.status}
-              </StatusBadge>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <span className="truncate">{sale.client?.fullName ?? "Walk-in"}</span>
-              <span className="opacity-40">·</span>
-              <span className="truncate">{sale.branch?.name ?? "No branch"}</span>
-              {sale.invoiceNumber ? <><span className="opacity-40">·</span><span className="mono">{sale.invoiceNumber}</span></> : null}
-            </div>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
-              Created {formatEATDateTime(sale.createdAt)}
-              {sale.paidAt ? ` · paid ${formatEATDateTime(sale.paidAt)}` : null}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+      <RecordActionBar
+        backHref="/pos"
+        eyebrow="Point of Sale · Sale"
+        title={sale.saleNumber}
+        status={{ label: sale.status, tone: sale.status === "PAID" ? "success" : sale.status === "VOID" ? "danger" : "warning" }}
+        secondary={
+          <>
+            <RecordPreviewButton variant="button" label="Preview" pdfUrl={`/api/sales/${sale.id}/receipt`} title={`Receipt ${sale.saleNumber}`} />
             <Button href={`/api/sales/${sale.id}/receipt`} external target="_blank" rel="noreferrer" variant="secondary" size="sm">
               Receipt PDF
             </Button>
@@ -819,43 +800,24 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 </ConfirmSubmitButton>
               </form>
             ) : null}
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <StatStrip
-          columns={4}
-          tiles={[
-            {
-              label: "Subtotal",
-              value: formatMoney(sale.subtotal, saleCurrency),
-              sub:
-                [
-                  sale.discountAmount > 0 ? `-${formatMoney(sale.discountAmount, saleCurrency)} disc` : null,
-                  sale.vatAmount > 0 ? `+${formatMoney(sale.vatAmount, saleCurrency)} VAT` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || undefined,
-            },
-            { label: "Total", value: formatMoney(sale.totalAmount, saleCurrency) },
-            { label: "Paid", value: formatMoney(sale.paidAmount, saleCurrency), valueClass: "text-emerald-600" },
-            {
-              label: "Balance",
-              value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared",
-              valueClass: balance > 0 ? "text-amber-600" : "text-emerald-600",
-            },
-          ]}
-        />
-
-        <form action={updateSaleAction} className="grid gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
-          <input type="hidden" name="saleId" value={sale.id} />
-          <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
-            <option value="">No branch</option>
-            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-          <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
-          <Button type="submit" variant="secondary" size="sm">Save</Button>
-        </form>
-      </section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+          {/* -- Sale settings -- */}
+          <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <form action={updateSaleAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
+              <input type="hidden" name="saleId" value={sale.id} />
+              <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
+                <option value="">No branch</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
+              <Button type="submit" variant="secondary" size="sm">Save</Button>
+            </form>
+          </section>
 
       {/* -- Items -- */}
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -1220,6 +1182,29 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           </p>
         )}
       </details>
+        </div>
+
+        <RecordSummaryRail
+          headline={balance > 0
+            ? { label: "Balance due", value: formatMoney(balance, saleCurrency), tone: "warn" }
+            : { label: "Total", value: formatMoney(sale.totalAmount, saleCurrency), tone: "good" }}
+          rows={[
+            { label: "Subtotal", value: formatMoney(sale.subtotal, saleCurrency) },
+            ...(sale.discountAmount > 0 ? [{ label: "Discount", value: `−${formatMoney(sale.discountAmount, saleCurrency)}` }] : []),
+            { label: sale.taxApplicable ? "VAT" : "VAT (off)", value: sale.vatAmount > 0 ? formatMoney(sale.vatAmount, saleCurrency) : "—" },
+            { label: "Total", value: formatMoney(sale.totalAmount, saleCurrency) },
+            { label: "Paid", value: formatMoney(sale.paidAmount, saleCurrency) },
+            { label: "Balance", value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared" },
+            ...(refundedTotal > 0 ? [{ label: "Refunded", value: formatMoney(refundedTotal, saleCurrency) }] : []),
+            { label: "Items", value: sale.items.length },
+            { label: "Branch", value: sale.branch?.name ?? "No branch" },
+            { label: "Created", value: formatEATDateTime(sale.createdAt) },
+            ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
+            ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
+          ] as SummaryRow[]}
+          party={{ title: "Customer", name: sale.client?.fullName ?? "Walk-in" }}
+        />
+      </div>
     </div>
   );
 }
