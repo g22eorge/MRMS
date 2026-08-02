@@ -589,6 +589,12 @@ export default async function InvoicesPage({
                     <InvoiceNewButton />
                   )
         }
+        kpis={[
+          { label: "Outstanding", value: formatMoney(totalOutstanding, orgCurrency), sub: `${outstanding.length} open`, tone: totalOutstanding > 0 ? "warn" : "neutral" },
+          { label: "Overdue", value: overdueInView.length, sub: "past due", tone: overdueInView.length > 0 ? "crit" : "neutral" },
+          { label: "Collected", value: formatMoney(totalCollected, orgCurrency), sub: "paid to date", tone: "good" },
+          { label: "Invoices", value: filtered.length, sub: "in view" },
+        ]}
       />
 
       {/* Search + Status toolbar */}

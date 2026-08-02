@@ -26,7 +26,6 @@ import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -506,14 +505,13 @@ export default async function CreditNotesPage({
             )}
           </>
         }
-      />
-
-      <StatCards columns={4} cards={[
+        kpis={[
           { label: "Total", value: creditNotesTotal, sub: "credit notes" },
           { label: "Total Value", value: formatMoneyCompact(totalValue, currency), sub: "issued" },
           { label: "Pending Return", value: pendingReturn, sub: "items not received back", valueClass: pendingReturn > 0 ? "text-amber-600" : undefined },
           { label: "Settled", value: creditNotesTotal - pendingReturn, sub: "items returned", valueClass: "text-emerald-600" },
-        ]} />
+        ]}
+      />
 
       {/* Filters: period chips + return-state chips + search */}
       <DocumentFilterBar

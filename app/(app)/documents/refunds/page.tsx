@@ -24,7 +24,6 @@ import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -463,14 +462,13 @@ export default async function RefundsPage({
             </Link>
           ) : undefined
         }
-      />
-
-      <StatCards columns={4} cards={[
+        kpis={[
           { label: "Total Refunds", value: totalRefunds, sub: "all time" },
           { label: "Total Refunded", value: formatMoneyCompact(totalAmount, currency), sub: "amount returned" },
           { label: "Invoice Refunds", value: formatMoneyCompact(invoiceAmount, currency), sub: "from invoices" },
           { label: "Sale Refunds", value: formatMoneyCompact(saleAmount, currency), sub: "from sales" },
-        ]} />
+        ]}
+      />
 
       {showNewRefundForm && ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-sm">
