@@ -214,30 +214,43 @@ export default async function RefundsPage({
   if (methodFilter !== "all") baseWhere.method = methodFilter as PaymentMethod;
   if (typeFilter === "invoice") baseWhere.invoiceId = { not: null };
   if (typeFilter === "sale") baseWhere.saleId = { not: null };
+  // Period + text search run in SQL (not in-memory over the first 100 rows), so
+  // large orgs don't silently lose older refunds and pagination reflects the true
+  // filtered total. SQLite LIKE is ASCII-case-insensitive, matching the old lowercased filter.
+  if (periodFilter === "this_month") baseWhere.refundedAt = { gte: thisMonthStart };
+  else if (periodFilter === "last_month") baseWhere.refundedAt = { gte: lastMonthStart, lte: lastMonthEnd };
+  if (q) {
+    baseWhere.OR = [
+      { reference: { contains: q } },
+      { note: { contains: q } },
+      { invoice: { is: { invoiceNumber: { contains: q } } } },
+      { invoice: { is: { job: { is: { client: { is: { fullName: { contains: q } } } } } } } },
+      { sale: { is: { saleNumber: { contains: q } } } },
+      { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+      { creditNote: { is: { creditNoteNumber: { contains: q } } } },
+    ];
+  }
 
-  const [refunds, kpiData, invoiceRefundTotal, saleRefundTotal, invoiceRefundSources, saleRefundSources, creditNoteRefundSources] = await Promise.all([
-    prisma.refund.findMany({
-      where: baseWhere,
-      orderBy: { refundedAt: "desc" },
-      take: 100,
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        method: true,
-        reference: true,
-        note: true,
-        refundedAt: true,
-        createdAt: true,
-        invoiceId: true,
-        saleId: true,
-        creditNoteId: true,
-        invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
-        creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } } } },
-        createdBy: { select: { name: true } },
-      },
-    }).catch(() => [] as never[]),
+  const refundListSelect = {
+    id: true,
+    amount: true,
+    currency: true,
+    method: true,
+    reference: true,
+    note: true,
+    refundedAt: true,
+    createdAt: true,
+    invoiceId: true,
+    saleId: true,
+    creditNoteId: true,
+    invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
+    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+    creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } } } },
+    createdBy: { select: { name: true } },
+  } satisfies Prisma.RefundSelect;
+
+  const [refundCount, kpiData, invoiceRefundTotal, saleRefundTotal, invoiceRefundSources, saleRefundSources, creditNoteRefundSources] = await Promise.all([
+    prisma.refund.count({ where: baseWhere }).catch(() => 0),
     prisma.refund.aggregate({
       where: { orgId },
       _count: { id: true },
@@ -293,27 +306,16 @@ export default async function RefundsPage({
     }).catch(() => []),
   ]);
 
-  const filtered = refunds.filter((r) => {
-    if (q) {
-      const search = q.toLowerCase();
-      if (!(
-        r.invoice?.invoiceNumber?.toLowerCase().includes(search) ||
-        r.sale?.saleNumber?.toLowerCase().includes(search) ||
-        r.creditNote?.creditNoteNumber?.toLowerCase().includes(search) ||
-        r.invoice?.job?.client?.fullName?.toLowerCase().includes(search) ||
-        r.sale?.client?.fullName?.toLowerCase().includes(search) ||
-        r.reference?.toLowerCase().includes(search) ||
-        r.note?.toLowerCase().includes(search)
-      )) return false;
-    }
-    if (periodFilter === "this_month") return r.refundedAt >= thisMonthStart;
-    if (periodFilter === "last_month") return r.refundedAt >= lastMonthStart && r.refundedAt <= lastMonthEnd;
-    return true;
-  });
-
-  // KPIs come from whole-dataset aggregates above; only the displayed rows are paginated.
-  const pageView = paginationView(page, filtered.length);
-  const pageRows = filtered.slice(pageView.skip, pageView.skip + pageView.take);
+  // KPIs come from whole-dataset aggregates above; the list is paginated in SQL
+  // against the filtered total so no rows are dropped beyond an arbitrary cap.
+  const pageView = paginationView(page, refundCount);
+  const pageRows = await prisma.refund.findMany({
+    where: baseWhere,
+    orderBy: { refundedAt: "desc" },
+    skip: pageView.skip,
+    take: pageView.take,
+    select: refundListSelect,
+  }).catch(() => [] as never[]);
   const refundsHref = pageHrefBuilder("/documents/refunds", {
     q,
     method: methodFilter !== "all" ? methodFilter : "",
@@ -346,7 +348,7 @@ export default async function RefundsPage({
     .filter((creditNote) => creditNote.refundableAmount > 0);
   const hasRefundSources = refundableInvoices.length > 0 || refundableSales.length > 0 || refundableCreditNotes.length > 0;
 
-  type RefundRow = (typeof refunds)[number];
+  type RefundRow = (typeof pageRows)[number];
 
   const refundDerived = (r: RefundRow) => {
     const refundCurrency = normalizeCurrency(r.currency, currency);

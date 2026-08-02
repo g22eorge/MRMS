@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { type DeliveryMethod } from "@prisma/client";
+import { type DeliveryMethod, Prisma } from "@prisma/client";
 
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
@@ -13,7 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { matchesDocumentPeriod } from "@/lib/documents/period-filters";
+import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
 import {
@@ -234,12 +234,49 @@ export default async function DeliveryNotesPage({
     invoice?: { id: string; invoiceNumber: string; client: { fullName: string; phone: string | null; email: string | null } | null; job: { id: string; jobNumber: string; client: { fullName: string; phone: string | null; email: string | null } } | null } | null;
   };
 
+  const now = new Date();
+  const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodRange = dateFilterForDocumentPeriod(periodFilter, now);
+
+  // Method + period + search run in SQL so the list isn't capped at the first 100
+  // rows (which silently hid older notes and made pagination lie past 100).
+  const commonWhere: Prisma.DeliveryNoteWhereInput = { orgId };
+  if (methodFilter !== "all") commonWhere.deliveryMethod = methodFilter as DeliveryMethod;
+  if (periodRange) commonWhere.deliveredAt = periodRange;
+
+  const searchOrPrimary: Prisma.DeliveryNoteWhereInput[] | undefined = q
+    ? [
+        { deliveryNoteNumber: { contains: q } },
+        { invoice: { is: { invoiceNumber: { contains: q } } } },
+        { invoice: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { sale: { is: { saleNumber: { contains: q } } } },
+        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+      ]
+    : undefined;
+  // Legacy deployments whose Prisma client predates DeliveryNote.invoice can't
+  // filter on that relation — drop the invoice clauses for the fallback path.
+  const searchOrFallback: Prisma.DeliveryNoteWhereInput[] | undefined = q
+    ? [
+        { deliveryNoteNumber: { contains: q } },
+        { sale: { is: { saleNumber: { contains: q } } } },
+        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+      ]
+    : undefined;
+
+  const wherePrimary: Prisma.DeliveryNoteWhereInput = searchOrPrimary ? { ...commonWhere, OR: searchOrPrimary } : commonWhere;
+  const whereFallback: Prisma.DeliveryNoteWhereInput = searchOrFallback ? { ...commonWhere, OR: searchOrFallback } : commonWhere;
+
   let notes: DeliveryNoteRow[] = [];
+  let filteredCount = 0;
+  let pageView = paginationView(page, 0);
   try {
+    filteredCount = await prisma.deliveryNote.count({ where: wherePrimary });
+    pageView = paginationView(page, filteredCount);
     notes = await prisma.deliveryNote.findMany({
-      where: { orgId },
+      where: wherePrimary,
       orderBy: { deliveredAt: "desc" },
-      take: 100,
+      skip: pageView.skip,
+      take: pageView.take,
       select: {
         id: true,
         deliveryNoteNumber: true,
@@ -271,10 +308,13 @@ export default async function DeliveryNotesPage({
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("Unknown field `invoice`")) throw err;
     // Keep legacy deployments readable until their generated Prisma client includes DeliveryNote.invoice.
+    filteredCount = await prisma.deliveryNote.count({ where: whereFallback });
+    pageView = paginationView(page, filteredCount);
     notes = await prisma.deliveryNote.findMany({
-      where: { orgId },
+      where: whereFallback,
       orderBy: { deliveredAt: "desc" },
-      take: 100,
+      skip: pageView.skip,
+      take: pageView.take,
       select: {
         id: true,
         deliveryNoteNumber: true,
@@ -296,24 +336,15 @@ export default async function DeliveryNotesPage({
     });
   }
 
-  const now = new Date();
-  const monthStart = now.getMonth();
-  const thisMonth = notes.filter((n) => n.deliveredAt >= new Date(now.getFullYear(), monthStart, 1)).length;
-  const uniqueSources = new Set(notes.map((n) => n.invoice?.id ?? n.sale?.id).filter(Boolean)).size;
-
-  const filteredNotes = notes.filter((n) => {
-    if (q) {
-      const search = q.toLowerCase();
-      const label = n.deliveryNoteNumber + " " + (n.invoice?.invoiceNumber ?? "") + " " + (n.sale?.saleNumber ?? "") + " " + (n.invoice?.client?.fullName ?? n.sale?.client?.fullName ?? "");
-      if (!label.toLowerCase().includes(search)) return false;
-    }
-    if (methodFilter !== "all" && n.deliveryMethod !== methodFilter) return false;
-    if (!matchesDocumentPeriod(n.deliveredAt, periodFilter, now)) return false;
-    return true;
-  });
-  // KPIs stay whole-dataset (computed from notes/filteredNotes); slice for display only.
-  const pageView = paginationView(page, filteredNotes.length);
-  const pageRows = filteredNotes.slice(pageView.skip, pageView.skip + pageView.take);
+  // KPIs are whole-dataset aggregates, independent of the current page/filters.
+  const [totalNotes, thisMonth, distinctInvoiceSources, distinctSaleSources] = await Promise.all([
+    prisma.deliveryNote.count({ where: { orgId } }).catch(() => 0),
+    prisma.deliveryNote.count({ where: { orgId, deliveredAt: { gte: monthStartDate } } }).catch(() => 0),
+    prisma.deliveryNote.findMany({ where: { orgId, invoiceId: { not: null } }, distinct: ["invoiceId"], select: { invoiceId: true } }).catch(() => [] as { invoiceId: string | null }[]),
+    prisma.deliveryNote.findMany({ where: { orgId, saleId: { not: null } }, distinct: ["saleId"], select: { saleId: true } }).catch(() => [] as { saleId: string | null }[]),
+  ]);
+  const uniqueSources = distinctInvoiceSources.length + distinctSaleSources.length;
+  const pageRows = notes;
   const deliveryNotesHref = pageHrefBuilder("/documents/delivery-notes", {
     q,
     period: periodFilter !== "all" ? periodFilter : "",
@@ -345,10 +376,10 @@ export default async function DeliveryNotesPage({
           </Link>
         }
         kpis={[
-          { label: "Total Notes", value: notes.length, sub: "all time" },
+          { label: "Total Notes", value: totalNotes, sub: "all time" },
           { label: "This Month", value: thisMonth, sub: "delivered", accent: true },
           { label: "Unique Sources", value: uniqueSources, sub: "invoices & sales" },
-          { label: "Filtered", value: filteredNotes.length, sub: "matching filters" },
+          { label: "Filtered", value: filteredCount, sub: "matching filters" },
         ]}
       />
 
