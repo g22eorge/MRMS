@@ -1,0 +1,26 @@
+import { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/prisma";
+import { getPortalSession } from "@/lib/portal-auth";
+import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
+import { pdfAttachmentResponse, pdfGenerationErrorResponse } from "@/lib/pdf/pdf-response";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ jobId: string }> }) {
+  const { jobId } = await ctx.params;
+  const session = await getPortalSession();
+  if (!session) return new Response("Unauthorized", { status: 401 });
+
+  // Isolation: the repair must belong to this customer + shop.
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, orgId: session.org.id, clientId: session.client.id },
+    select: { id: true },
+  });
+  if (!job) return new Response("Not found", { status: 404 });
+
+  const result = await generateQuotationBuffer(jobId, session.org.name, "Portal", false, undefined, session.org.id);
+  if (!result.ok) return pdfGenerationErrorResponse(result.error, 404);
+  return pdfAttachmentResponse(result.buffer, result.filename);
+}

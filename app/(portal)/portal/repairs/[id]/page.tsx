@@ -48,7 +48,12 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
         select: { id: true, quoteNumber: true, status: true, totalAmount: true, currency: true, validUntil: true, sentAt: true },
         orderBy: { createdAt: "desc" },
       },
-      invoice: { select: { invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true } },
+      invoice: {
+        select: {
+          id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true,
+          payments: { select: { id: true, amount: true, currency: true, method: true, receivedAt: true }, orderBy: { receivedAt: "desc" } },
+        },
+      },
     },
   });
   if (!job) notFound();
@@ -136,23 +141,17 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
         ) : null}
       </div>
 
-      {/* Assessment report */}
+      {/* Assessment report — clean summary + neat downloadable PDF */}
       {reports.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
-            <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">
+            <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white">
               ↓ Download PDF
             </a>
           </div>
-          {reports.map((r) => (
-            <div key={r.id} className="space-y-2 text-[13px]">
-              <p className="text-[var(--ink)]">{r.summary}</p>
-              {r.findings ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Findings:</span> <span className="text-[var(--ink)]">{r.findings}</span></div> : null}
-              {r.recommendedWork ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Recommended work:</span> <span className="text-[var(--ink)]">{r.recommendedWork}</span></div> : null}
-              {r.riskNotes ? <div><span className="text-[12px] font-semibold text-[var(--ink-muted)]">Notes:</span> <span className="text-[var(--ink)]">{r.riskNotes}</span></div> : null}
-            </div>
-          ))}
+          <p className="text-[13px] text-[var(--ink)]">{reports[0].summary}</p>
+          <p className="mt-1 text-[12px] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
         </div>
       ) : null}
 
@@ -169,6 +168,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
               <div className="flex items-center gap-2">
                 <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
+                <a href={`/api/portal/quotation/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ PDF</a>
                 {q.status === "SENT" ? (
                   <form action={approveQuotationAction}>
                     <input type="hidden" name="quotationId" value={q.id} />
@@ -187,12 +187,28 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {/* Financials */}
       {invoice ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
+            <a href={`/api/portal/invoice/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ Invoice</a>
+          </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div><p className="text-[15px] font-bold tabular-nums text-[var(--ink)]">{formatMoney(invoice.totalAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Total</p></div>
             <div><p className="text-[15px] font-bold tabular-nums text-emerald-600">{formatMoney(invoice.paidAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Paid</p></div>
             <div><p className={`text-[15px] font-bold tabular-nums ${outstanding > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(outstanding, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Outstanding</p></div>
           </div>
+          {invoice.payments.length > 0 ? (
+            <div className="mt-3 border-t border-[var(--line)] pt-3">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Receipts</p>
+              <ul className="space-y-1">
+                {invoice.payments.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between text-[12px]">
+                    <span className="text-[var(--ink-muted)]">{fmtDate(p.receivedAt)} · {formatMoney(p.amount, p.currency)}</span>
+                    <a href={`/api/portal/receipt/${p.id}`} target="_blank" rel="noopener" className="font-semibold text-[var(--accent)] hover:underline">↓ Receipt</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
