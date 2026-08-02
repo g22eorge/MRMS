@@ -135,7 +135,11 @@ export async function generateAssessmentDraft(params: {
         riskNotes: String(parsed.riskNotes ?? "").trim(),
       },
     };
-  } catch {
+  } catch (err) {
+    // Surface the real cause server-side (model/param/SDK/network) instead of
+    // silently swallowing it — the customer-facing message stays generic.
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[assessment] AI draft failed (model=${model}): ${msg}`);
     return { ok: false, error: "The AI draft could not be generated — write the report manually below." };
   }
 }

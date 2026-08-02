@@ -31,8 +31,11 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     if (body.subject !== undefined) data.subject = body.subject ? String(body.subject).trim() : null;
     if (body.notes !== undefined) data.notes = body.notes ? String(body.notes).trim() : null;
     if (body.dueDate !== undefined) data.dueDate = body.dueDate ? new Date(String(body.dueDate)) : null;
-    if (body.status) data.status = String(body.status);
-    if (body.invoiceType) data.invoiceType = String(body.invoiceType);
+    // Do NOT accept an arbitrary `status` here — VOID/PAID have dedicated flows
+    // (stock restoration, ledger posting, payment-sync). Whitelist invoiceType.
+    if (body.invoiceType && ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"].includes(String(body.invoiceType))) {
+      data.invoiceType = String(body.invoiceType);
+    }
 
     const updated = await prisma.invoice.update({ where: { id: invoice.id }, data });
     await writeSystemAuditEvent({ orgId: invoice.orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "INVOICE_UPDATED", summary: `${updated.invoiceNumber} updated` });

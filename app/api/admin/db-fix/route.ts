@@ -429,6 +429,103 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceLine_orgId_invoiceId_idx" ON "InvoiceLine"("orgId", "invoiceId")');
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "InvoiceLine_sourceType_sourceId_idx" ON "InvoiceLine"("sourceType", "sourceId")');
     changes.push({ kind: "create_table", detail: "Created InvoiceLine + indexes" });
+  } else {
+    const cols = await tableColumns("InvoiceLine");
+    const addLineCol = async (name: string, type: string, dflt?: string) => {
+      if (cols.has(name)) return;
+      await prisma.$executeRawUnsafe(`ALTER TABLE "InvoiceLine" ADD COLUMN "${name}" ${type}${dflt ? ` DEFAULT ${dflt}` : ""}`);
+      changes.push({ kind: "alter_table", detail: `Added InvoiceLine.${name}` });
+    };
+    await addLineCol("orgId", "TEXT");
+    await addLineCol("sourceType", "TEXT");
+    await addLineCol("sourceId", "TEXT");
+    await addLineCol("discountAmount", "REAL", "0");
+    await addLineCol("taxAmount", "REAL", "0");
+  }
+
+  // TaxRate / Lead / Part — the invoice ?edit=1 path queries these; ensure the
+  // manual repair can restore them too (defense-in-depth alongside the reconciler).
+  if (!(await tableExists("TaxRate"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TaxRate" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "rate" REAL NOT NULL,
+        "isDefault" INTEGER NOT NULL DEFAULT 0,
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "appliesToSales" INTEGER NOT NULL DEFAULT 1,
+        "appliesToPurchases" INTEGER NOT NULL DEFAULT 0,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "TaxRate_orgId_idx" ON "TaxRate"("orgId")');
+    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "TaxRate_orgId_code_key" ON "TaxRate"("orgId", "code")');
+    changes.push({ kind: "create_table", detail: "Created TaxRate + indexes" });
+  }
+
+  if (!(await tableExists("Lead"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Lead" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT,
+        "branchId" TEXT,
+        "fullName" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "email" TEXT,
+        "organization" TEXT,
+        "interest" TEXT,
+        "source" TEXT NOT NULL DEFAULT 'WALK_IN',
+        "status" TEXT NOT NULL DEFAULT 'NEW',
+        "estimatedValue" REAL,
+        "score" INTEGER NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "lostReason" TEXT,
+        "clientId" TEXT,
+        "assignedToId" TEXT,
+        "createdById" TEXT,
+        "convertedAt" DATETIME,
+        "closedAt" DATETIME,
+        "followUpAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Lead_orgId_status_idx" ON "Lead"("orgId", "status")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Lead_assignedToId_idx" ON "Lead"("assignedToId")');
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Lead_createdAt_idx" ON "Lead"("createdAt")');
+    changes.push({ kind: "create_table", detail: "Created Lead + indexes" });
+  } else {
+    const cols = await tableColumns("Lead");
+    if (!cols.has("lostReason")) {
+      await prisma.$executeRawUnsafe('ALTER TABLE "Lead" ADD COLUMN "lostReason" TEXT');
+      changes.push({ kind: "alter_table", detail: "Added Lead.lostReason" });
+    }
+  }
+
+  if (!(await tableExists("Part"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Part" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "sku" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "manufacturer" TEXT,
+        "unitCost" REAL,
+        "qtyOnHand" INTEGER NOT NULL DEFAULT 0,
+        "qtyReserved" INTEGER NOT NULL DEFAULT 0,
+        "reorderLevel" INTEGER NOT NULL DEFAULT 0,
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "orgId" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Part_orgId_isActive_idx" ON "Part"("orgId", "isActive")');
+    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Part_sku_orgId_key" ON "Part"("sku", "orgId")');
+    changes.push({ kind: "create_table", detail: "Created Part + indexes" });
   }
 
   // InvoiceAttachment — files attached to an invoice
