@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -73,6 +75,23 @@ export default async function PurchaseOrderDetailPage({
     select: { id: true, name: true, code: true },
     orderBy: [{ name: "asc" }],
   });
+
+  // Create the first stock location inline so receiving is never a dead-end.
+  async function createLocationForPoAction(formData: FormData) {
+    "use server";
+    const ctx = await requireOrgSession();
+    if (!can.manageInventory(ctx.user)) redirect("/inventory");
+    assertOrgCanMutate({ access: ctx.org.access, userRole: ctx.user.role, userAccessMode: ctx.user.accessMode, kind: "GENERAL" });
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return;
+    const code = String(formData.get("code") ?? "").trim().toUpperCase() || null;
+    try {
+      await prisma.stockLocation.create({ data: { orgId: ctx.orgId, name, code, isActive: true } });
+    } catch {
+      /* ignore duplicate code — the existing location will simply appear */
+    }
+    revalidatePath(`/inventory/purchase-orders/${id}`);
+  }
 
   return (
     <div className="space-y-3">
@@ -219,8 +238,14 @@ export default async function PurchaseOrderDetailPage({
             </div>
           ) : null}
           {canReceive && locations.length === 0 ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-700">
-              Create an active stock location before receiving this purchase order.
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
+              <p className="text-sm font-bold text-[var(--ink)]">Receive stock</p>
+              <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">You have no stock location yet — create one here and keep going, no need to leave this page.</p>
+              <form action={createLocationForPoAction} className="mt-2 flex flex-wrap items-end gap-2">
+                <input name="name" required placeholder="Location name (e.g. Main Store)" className="min-w-[180px] flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
+                <input name="code" placeholder="Code (optional)" className="w-32 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm uppercase outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
+                <button type="submit" className="btn-premium rounded-md px-3 py-1.5 text-sm font-semibold">Create &amp; continue</button>
+              </form>
             </div>
           ) : null}
         </div>
