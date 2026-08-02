@@ -112,6 +112,15 @@ export default async function PurchaseRequestsPage({
             cell: (request) => request._count.items,
           },
         ]}
+        renderMobileCard={(request) => (
+          <Link href={`/inventory/purchase-requests/${request.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+            <div className="min-w-0">
+              <p className="mono truncate font-bold text-[var(--ink)]">{request.requestNumber}</p>
+              <p className="mt-0.5 truncate text-[var(--ink-muted)]">{request.priority} · {request.supplier?.name ?? "No preference"} · {request._count.items} item{request._count.items === 1 ? "" : "s"}</p>
+            </div>
+            <StatusBadge tone={toneFor(STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>
+          </Link>
+        )}
         actions={(request) => (
           <>
             <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>

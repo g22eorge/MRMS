@@ -175,6 +175,23 @@ export default async function PurchaseOrdersPage({
             cell: (po) => fmtDate(po.expectedAt),
           },
         ]}
+        renderMobileCard={(po) => {
+          const orderedQty = po.items.reduce((sum, item) => sum + item.qtyOrdered, 0);
+          const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
+          const isOverdue = ["ORDERED", "PARTIAL"].includes(po.status) && po.expectedAt && po.expectedAt < now;
+          return (
+            <Link href={`/inventory/purchase-orders/${po.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+              <div className="min-w-0">
+                <p className="mono truncate font-bold text-[var(--ink)]">{poNumber(po)}</p>
+                <p className="mt-0.5 truncate text-[var(--ink-muted)]">{po.supplier.name} · {receivedQty}/{orderedQty} received · {formatMoney(po.items.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0))}</p>
+              </div>
+              <span className="flex shrink-0 items-center gap-1">
+                <StatusBadge tone={toneFor(STATUS_TONES, po.status)}>{po.status}</StatusBadge>
+                {isOverdue ? <StatusBadge tone="danger">Late</StatusBadge> : null}
+              </span>
+            </Link>
+          );
+        }}
         actions={(po) => (
           <>
             {po.status === "DRAFT" ? (

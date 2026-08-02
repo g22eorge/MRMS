@@ -118,6 +118,15 @@ export default async function StockCountsPage({
             cell: (count) => fmt(count.countedAt),
           },
         ]}
+        renderMobileCard={(count) => (
+          <Link href={`/inventory/stock-counts/${count.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+            <div className="min-w-0">
+              <p className="mono truncate font-bold text-[var(--ink)]">{count.countNumber}</p>
+              <p className="mt-0.5 truncate text-[var(--ink-muted)]">{count.location.name}{count.location.code ? ` (${count.location.code})` : ""} · {count._count.items} item{count._count.items === 1 ? "" : "s"}</p>
+            </div>
+            <StatusBadge tone={toneFor(STATUS_TONES, count.status)}>{count.status}</StatusBadge>
+          </Link>
+        )}
         actions={(count) => (
           <Link href={`/inventory/stock-counts/${count.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
         )}

@@ -114,6 +114,19 @@ export default async function SuppliersPage({
             View
           </Link>
         )}
+        renderMobileCard={(s) => (
+          <Link href={`/inventory/suppliers/${s.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+            <div className="min-w-0">
+              <p className="truncate font-bold text-[var(--ink)]">{s.name}</p>
+              <p className="mt-0.5 truncate text-[var(--ink-muted)]">
+                {s.contactName ?? s.phone ?? "No contact"}
+                {s.contactName && s.phone ? <> · {s.phone}</> : null}
+                {" · "}{s._count.purchaseOrders} PO{s._count.purchaseOrders === 1 ? "" : "s"}
+              </p>
+            </div>
+            <StatusBadge tone={s.isActive ? "success" : "neutral"}>{s.isActive ? "Active" : "Inactive"}</StatusBadge>
+          </Link>
+        )}
       />
     </ListPageLayout>
   );
