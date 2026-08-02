@@ -133,6 +133,15 @@ export default async function SupplierBillsPage({
             cell: (bill) => fmt(bill.dueAt),
           },
         ]}
+        renderMobileCard={(bill) => (
+          <Link href={`/inventory/supplier-bills/${bill.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+            <div className="min-w-0">
+              <p className="mono truncate font-bold text-[var(--ink)]">{bill.billNumber}</p>
+              <p className="mt-0.5 truncate text-[var(--ink-muted)]">{bill.supplier.name} · {bill.currency} {bill.totalAmount.toLocaleString()} · bal {(bill.totalAmount - bill.paidAmount).toLocaleString()}</p>
+            </div>
+            <StatusBadge tone={toneFor(STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>
+          </Link>
+        )}
         actions={(bill) => (
           <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
         )}

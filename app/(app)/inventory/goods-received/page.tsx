@@ -114,6 +114,15 @@ export default async function GoodsReceivedPage({
             cell: (grn) => fmt(grn.receivedAt),
           },
         ]}
+        renderMobileCard={(grn) => (
+          <Link href={`/inventory/goods-received/${grn.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
+            <div className="min-w-0">
+              <p className="truncate font-bold text-[var(--ink)]">{grn.grnNumber}</p>
+              <p className="mt-0.5 truncate text-[var(--ink-muted)]">{grn.supplier.name} · {fmt(grn.receivedAt)}</p>
+            </div>
+            <span className="shrink-0 font-semibold tabular-nums text-[var(--ink)]">{grn.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0).toLocaleString()}</span>
+          </Link>
+        )}
       />
     </ListPageLayout>
   );
