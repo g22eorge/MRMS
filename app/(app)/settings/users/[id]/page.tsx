@@ -9,6 +9,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
 import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { UserAccessControlPanel } from "@/components/settings/UserAccessControlPanel";
@@ -571,22 +572,20 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="space-y-3">
+      <RecordActionBar
+        backHref="/settings/users"
+        eyebrow="Settings · User"
+        title={target.name}
+        status={{ label: target.isActive ? "Active" : "Inactive", tone: target.isActive ? "success" : "neutral" }}
+      />
+      <p className="text-[13px] text-[var(--ink-muted)]">
+        {target.email} · {roleLabel(target.role)} · {accessMode === "READ_ONLY" ? "Read-only" : "Full access"}
+      </p>
+
       <div className="grid gap-3 lg:grid-cols-2">
         {/* Left column */}
         <div className="space-y-3">
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="mb-3 flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Settings · User</p>
-                <p className="mt-0.5 text-[13px] font-semibold text-[var(--ink)]">{target.name}</p>
-                <p className="text-[13px] text-[var(--ink-muted)]">{target.email}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">{roleLabel(target.role)}</span>
-                <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">{accessMode === "READ_ONLY" ? "Read-only" : "Full"}</span>
-                <span className={`rounded-full border px-2 py-0.5 text-[12px] font-semibold ${target.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-[var(--line)] text-[var(--ink-muted)]"}`}>{target.isActive ? "Active" : "Inactive"}</span>
-              </div>
-            </div>
             <p className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Profile</p>
             <UserDetailsForm id={target.id} name={target.name} email={target.email} phone={target.phone} action={updateUserDetails} />
           </section>

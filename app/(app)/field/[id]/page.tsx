@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDateTime } from "@/lib/date-eat";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { VisitActions } from "./VisitActions";
 
 const STATUS_LABELS: Record<FieldVisitStatus, string> = {
@@ -17,14 +18,6 @@ const STATUS_LABELS: Record<FieldVisitStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-const STATUS_COLORS: Record<FieldVisitStatus, string> = {
-  SCHEDULED: "border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  EN_ROUTE:  "border border-yellow-400/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ARRIVED:   "border border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  COMPLETED: "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  FAILED:    "border border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  CANCELLED: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-};
 
 const TYPE_LABELS: Record<string, string> = {
   COLLECTION: "Collection",
@@ -90,20 +83,13 @@ export default async function FieldVisitDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Field · Visit</p>
-          <p className="mt-0.5 text-[13px] font-bold text-[var(--ink)]">
-            {TYPE_LABELS[visit.type] ?? visit.type} Visit
-          </p>
-          <p className="text-sm text-[var(--ink-muted)] mt-0.5">
-            Scheduled {formatEATDateTime(visit.scheduledAt)}
-          </p>
-        </div>
-        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLORS[visit.status]}`}>
-          {STATUS_LABELS[visit.status]}
-        </span>
-      </div>
+      <RecordActionBar
+        backHref="/field"
+        eyebrow="Field · Visit"
+        title={`${TYPE_LABELS[visit.type] ?? visit.type} Visit`}
+        status={{ label: STATUS_LABELS[visit.status], tone: visit.status === "COMPLETED" ? "success" : visit.status === "CANCELLED" || visit.status === "FAILED" ? "danger" : visit.status === "EN_ROUTE" || visit.status === "ARRIVED" ? "warning" : "sky" }}
+      />
+      <p className="text-sm text-[var(--ink-muted)]">Scheduled {formatEATDateTime(visit.scheduledAt)}</p>
 
       {visit.job && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
