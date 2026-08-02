@@ -19,6 +19,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { computeVat } from "@/lib/commercial/vat";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
@@ -32,19 +34,23 @@ async function recalcSaleTotals(
   const subtotal = itemsAgg._sum.lineTotal ?? 0;
   const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
-  // VAT intent is persisted on the sale; only an explicit add-time choice overrides
-  // it. This stops later edits/discounts from silently force-enabling VAT (M7).
-  const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? true;
+  // VAT is org-configurable. Intent is persisted on the sale; only an explicit
+  // toggle/add-time choice overrides it. When a sale has no persisted intent yet
+  // it falls back to the org's vatDefaultApplicable (default OFF), so VAT never
+  // silently applies. Read branding via the self-healing raw helper so a missing
+  // vatInclusive column on an older prod DB can't break checkout.
+  const branding = await getDocumentBrandingSettings(orgId);
+  const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? branding.vatDefaultApplicable;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
   const taxable = Math.max(0, subtotal - discountAmount);
-  let vatRate = 0;
-  if (taxApplicable) {
-    const branding = await tx.documentBrandingSettings.findFirst({ where: { orgId }, select: { vatRatePercent: true } });
-    vatRate = Math.max(0, branding?.vatRatePercent ?? 18) / 100;
-  }
+  const raw = computeVat(taxable, {
+    applicable: taxApplicable,
+    ratePercent: branding.vatRatePercent,
+    inclusive: branding.vatInclusive,
+  });
   // Round to the currency's minor unit so zero-decimal (UGX) totals stay payable.
-  const vatAmount = roundMoney(taxable * vatRate, currency);
-  const totalAmount = roundMoney(taxable + vatAmount, currency);
+  const vatAmount = roundMoney(raw.vatAmount, currency);
+  const totalAmount = roundMoney(raw.totalAmount, currency);
 
   await tx.sale.update({
     where: { id: saleId },
@@ -79,6 +85,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     subtotal: number;
     discountAmount: number;
     vatAmount: number;
+    taxApplicable: boolean;
     totalAmount: number;
     paidAmount: number;
     paidAt: Date | null;
@@ -131,6 +138,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         subtotal: true,
         discountAmount: true,
         vatAmount: true,
+        taxApplicable: true,
         totalAmount: true,
         paidAmount: true,
         paidAt: true,
@@ -383,7 +391,6 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const description = String(formData.get("description") ?? "").trim();
     const qty = Number(String(formData.get("quantity") ?? "1").trim());
     const unitPrice = Number(String(formData.get("unitPrice") ?? "0").trim());
-    const vat = String(formData.get("vat") ?? "on") === "on";
 
     if (!saleId) return;
     if (!partId && !description) return;
@@ -423,7 +430,28 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal },
       });
 
-      await recalcSaleTotals(tx, saleId, orgId, vat);
+      await recalcSaleTotals(tx, saleId, orgId);
+    });
+
+    revalidatePath(`/pos/${saleId}`);
+  }
+
+  // Flip VAT on/off for this specific sale (overrides the org default per-sale).
+  async function toggleSaleVatAction(formData: FormData) {
+    "use server";
+    const { user, orgId } = await requireOrgSession();
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+    const saleId = String(formData.get("saleId") ?? "").trim();
+    const next = String(formData.get("next") ?? "") === "true";
+    if (!saleId) return;
+
+    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
+    if (!existingSale || existingSale.status !== "OPEN") return;
+
+    await prisma.$transaction(async (tx) => {
+      await recalcSaleTotals(tx, saleId, orgId, next);
     });
 
     revalidatePath(`/pos/${saleId}`);
@@ -925,6 +953,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         />
 
         {isOpen ? (
+          <>
           <form
             action={async (formData: FormData) => {
               "use server";
@@ -966,6 +995,21 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
               VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
             </span>
           </form>
+          <form
+            action={toggleSaleVatAction}
+            className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5"
+          >
+            <input type="hidden" name="saleId" value={sale.id} />
+            <input type="hidden" name="next" value={sale.taxApplicable ? "false" : "true"} />
+            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
+            <Button type="submit" variant="secondary" size="sm">
+              {sale.taxApplicable ? "Turn VAT off" : "Turn VAT on"}
+            </Button>
+            <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
+              {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
+            </span>
+          </form>
+          </>
         ) : null}
       </section>
 

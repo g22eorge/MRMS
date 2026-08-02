@@ -40,6 +40,7 @@ const brandingSchema = z.object({
   sequencePadLength: z.coerce.number().int().min(2).max(8),
   vatDefaultApplicable: z.enum(["true", "false"]),
   vatRatePercent: z.coerce.number().min(0).max(100),
+  vatInclusive: z.enum(["true", "false"]),
   vatLabel: z.string().min(2).max(30),
   termsText: z.string().min(10).max(2000),
   footerText: z.string().min(6).max(180),
@@ -209,8 +210,9 @@ export default async function BrandingPage({
       quoteFormat: String(formData.get("quoteFormat") ?? ""),
       quoteValidityDays: formData.get("quoteValidityDays"),
       sequencePadLength: formData.get("sequencePadLength"),
-      vatDefaultApplicable: String(formData.get("vatDefaultApplicable") ?? "true"),
+      vatDefaultApplicable: String(formData.get("vatDefaultApplicable") ?? "false"),
       vatRatePercent: formData.get("vatRatePercent"),
+      vatInclusive: String(formData.get("vatInclusive") ?? "false"),
       vatLabel: String(formData.get("vatLabel") ?? ""),
       termsText: String(formData.get("termsText") ?? ""),
       footerText: String(formData.get("footerText") ?? ""),
@@ -250,6 +252,7 @@ export default async function BrandingPage({
       sequencePadLength: parsed.data.sequencePadLength,
       vatDefaultApplicable: parsed.data.vatDefaultApplicable === "true",
       vatRatePercent: parsed.data.vatRatePercent,
+      vatInclusive: parsed.data.vatInclusive === "true",
       vatLabel: sanitizeText(parsed.data.vatLabel),
       termsText: sanitizeText(parsed.data.termsText),
       footerText: sanitizeText(parsed.data.footerText),
@@ -332,10 +335,14 @@ export default async function BrandingPage({
           <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">VAT &amp; Sign-off</p>
           <div className="grid gap-2 lg:grid-cols-2">
             <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
-              <option value="true">VAT default: applicable</option>
-              <option value="false">VAT default: not applicable</option>
+              <option value="false">Charge VAT on sales: off (default)</option>
+              <option value="true">Charge VAT on sales: on</option>
             </select>
-            <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <select name="vatInclusive" defaultValue={settings.vatInclusive ? "true" : "false"} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+              <option value="false">Prices exclude VAT (add on top)</option>
+              <option value="true">Prices include VAT (extract from price)</option>
+            </select>
+            <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate %" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
