@@ -534,6 +534,7 @@ export default async function DeliveryNotesPage({
               </a>
               <RowActionsMenu label="Delivery note actions">
                 <div className="py-1 text-left">
+                  <MenuActionLink href={`/documents/delivery-notes/${n.id}`} icon="open">View delivery note</MenuActionLink>
                   <DocumentPreviewButton pdfUrl={`/api/delivery-notes/${n.id}`} title={`Delivery note ${n.deliveryNoteNumber}`} />
                   <MenuActionLink href={`/api/delivery-notes/${n.id}`} external icon="delivery" tone="accent">
                     Download Delivery Note
