@@ -4,6 +4,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { approveStockCountAction, cancelStockCountAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -35,19 +36,15 @@ export default async function StockCountDetailPage({ params }: { params: Promise
 
   return (
     <div className="max-w-4xl space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory · Stock Count</p>
-          <p className="mt-0.5 font-mono text-[13px] font-bold text-[var(--ink)]">{count.countNumber}</p>
-          <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
-            {count.location.name}{count.location.code ? ` (${count.location.code})` : ""}
-          </p>
-        </div>
-        <span className="mt-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-400">
-          {count.status}
-        </span>
-      </div>
+      <RecordActionBar
+        backHref="/inventory/stock-counts"
+        eyebrow="Inventory · Stock Count"
+        title={count.countNumber}
+        status={{ label: count.status, tone: count.status === "APPROVED" ? "success" : count.status === "CANCELLED" ? "danger" : "sky" }}
+      />
+      <p className="text-sm text-[var(--ink-muted)]">
+        {count.location.name}{count.location.code ? ` (${count.location.code})` : ""}
+      </p>
 
       {/* KPI tiles */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { SupplierEditForm } from "./SupplierEditForm";
 import { createSupplierPriceAction, deleteSupplierPriceAction, updateSupplierPriceAction } from "../actions";
 
@@ -171,31 +172,20 @@ export default async function SupplierDetailPage({
 
   return (
     <div className="space-y-4">
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory · Supplier</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-black leading-tight text-[var(--ink)]">{supplier.name}</h1>
-              <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${supplier.isActive ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
-                {supplier.isActive ? "Active" : "Inactive"}
-              </span>
-            </div>
-            <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
-              {supplier.contactName || supplier.phone || supplier.email ? [supplier.contactName, supplier.phone, supplier.email].filter(Boolean).join(" · ") : "No contact details captured"}
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Suppliers</Link>
-            {supplier.isActive ? (
-              <>
-                <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">New PO</Link>
-                <Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 px-3 py-2 text-xs font-semibold text-[var(--gold)] transition hover:bg-[var(--gold)]/15">New Bill</Link>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </section>
+      <RecordActionBar
+        backHref="/inventory/suppliers"
+        eyebrow="Inventory · Supplier"
+        title={supplier.name}
+        status={{ label: supplier.isActive ? "Active" : "Inactive", tone: supplier.isActive ? "success" : "neutral" }}
+        secondary={
+          supplier.isActive ? (
+            <>
+              <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">New PO</Link>
+              <Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 px-3 py-2 text-xs font-semibold text-[var(--gold)] transition hover:bg-[var(--gold)]/15">New Bill</Link>
+            </>
+          ) : undefined
+        }
+      />
 
       <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Open POs" value={openPoCount.toLocaleString()} hint={`${supplier._count.purchaseOrders.toLocaleString()} total`} tone={openPoCount > 0 ? "amber" : "neutral"} />
