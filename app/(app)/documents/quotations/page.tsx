@@ -62,7 +62,12 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     ];
   }
 
-  const [quotations, totalItems] = await Promise.all([
+  // KPI band reflects the whole org (all statuses), respecting only the search —
+  // so the summary numbers stay stable as you flip the status filter.
+  const kpiWhere: Prisma.QuotationWhereInput = { orgId: user.orgId };
+  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q } }, { client: { fullName: { contains: q } } }];
+
+  const [quotations, totalItems, statusGroups] = await Promise.all([
     db.quotation.findMany({
       where,
       select: {
@@ -80,7 +85,13 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
       take: pageSize,
     }),
     db.quotation.count({ where }),
+    db.quotation.groupBy({ by: ["status"], where: kpiWhere, _count: { _all: true }, _sum: { totalAmount: true } }),
   ]);
+
+  const byStatus = Object.fromEntries(statusGroups.map((g) => [g.status, g]));
+  const statusCount = (s: string) => byStatus[s]?._count?._all ?? 0;
+  const statusValue = (s: string) => byStatus[s]?._sum?.totalAmount ?? 0;
+  const openQuoteValue = statusValue("DRAFT") + statusValue("SENT");
 
   const rows = quotations.map((q) => {
     const currency = normalizeCurrency(orgCurrency, normalizeCurrency(q.currency, "UGX"));
@@ -171,6 +182,12 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
           actions={
 canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold" />
           }
+          kpis={[
+            { label: "Quotations", value: totalItems, sub: "all statuses" },
+            { label: "Open Value", value: formatMoney(openQuoteValue, orgCurrency), sub: "draft + pending", tone: "accent" },
+            { label: "Pending", value: statusCount("SENT"), sub: "awaiting reply", tone: statusCount("SENT") > 0 ? "warn" : "neutral" },
+            { label: "Accepted", value: statusCount("ACCEPTED"), sub: "won", tone: "good" },
+          ]}
         />
 
         {/* Search + Status toolbar — mirrors invoice */}
