@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
-import { StatCards } from "@/components/ui/StatCards";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/ui/DataTable";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -172,26 +172,26 @@ export default async function JobCardsPage({
       </div>
 
       {/* Action row */}
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] text-[var(--ink-muted)]">
-          <span className="font-semibold tabular-nums text-[var(--ink)]">{total}</span> job card{total === 1 ? "" : "s"}
-        </p>
-        <Link
-          href="/jobs/new"
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[13px] font-bold text-black transition hover:brightness-105"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
-          New Repair Job
-        </Link>
-      </div>
-
-      {/* KPI strip */}
-      <StatCards columns={4} cards={[
+      <PageHeader
+        title="Job Cards"
+        eyebrow="Documents"
+        description={`${total} job card${total === 1 ? "" : "s"}`}
+        actions={
+          <Link
+            href="/jobs/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[13px] font-bold text-black transition hover:brightness-105"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
+            New Repair Job
+          </Link>
+        }
+        kpis={[
           { label: "Showing", value: total, sub: "job cards" },
           { label: "In repair", value: byStatus.IN_REPAIR ?? 0, sub: "active repairs" },
           { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", valueClass: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "text-[var(--dc-good)]" : undefined },
           { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", valueClass: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "text-[var(--dc-warn)]" : undefined },
-        ]} />
+        ]}
+      />
 
       {/* Period chips */}
       <div className="flex gap-2">
