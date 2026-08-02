@@ -4,7 +4,7 @@ import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import type { DeliveryMethod, InvoiceStatus, InvoiceType, PaymentMethod } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType, PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import {
@@ -13,7 +13,6 @@ import {
   isSupportedCurrency,
   normalizeCurrency,
   roundMoney,
-  toBaseAmount,
 } from "@/lib/currency";
 import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import { JobStatus } from "@/lib/job-status";
@@ -24,7 +23,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
-import { createReceiptForPayment, nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
+import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
@@ -49,7 +48,6 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
-const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
 export const dynamic = "force-dynamic";
 
@@ -265,221 +263,6 @@ export default async function InvoicesPage({
     redirect(`/documents/invoices?pay=${invoice.id}`);
   }
 
-  async function addPaymentAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    const orgId = user.orgId;
-    const db = orgDb(orgId);
-    if (!("ADMIN" === user.role || "OPS" === user.role || can.approveInvoices(user))) return;
-
-    const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-    // Strip commas / currency prefix so "50,000" or "UGX 50,000" parses correctly
-    const rawAmount = String(formData.get("amount") ?? "").replace(/[^\d.]/g, "").trim();
-    const method = String(formData.get("method") ?? "CASH").trim();
-    const reference = String(formData.get("reference") ?? "").trim();
-    const org = await prisma.organization.findUnique({ where: { id: orgId! }, select: { baseCurrency: true } });
-    const baseCurrency = org?.baseCurrency ?? "UGX";
-    const currency = normalizeCurrency(formData.get("currency"), baseCurrency);
-    const exchangeRateToBaseRaw = String(formData.get("exchangeRateToBase") ?? "").trim();
-    if (!invoiceId) return;
-
-    const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    if (!isSupportedCurrency(currency)) return;
-
-    // For the base currency (UGX) no exchange rate needed — null means 1:1
-    const isBaseCurrency = currency === baseCurrency;
-    const exchangeRateToBase = isBaseCurrency
-      ? null
-      : exchangeRateToBaseRaw
-        ? Number(exchangeRateToBaseRaw)
-        : null;
-    // Only require exchange rate for non-base currencies
-    if (!isBaseCurrency) {
-      if (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)
-        return;
-    }
-
-    const invoice = await db.invoice.findFirst({
-      where: { id: invoiceId },
-      select: { id: true, totalAmount: true, paidAmount: true, jobId: true, clientId: true, status: true },
-    });
-    if (!invoice || invoice.status === "VOID") return;
-
-    const existingPaid = invoice.paidAmount ?? 0;
-    if (existingPaid + amount > invoice.totalAmount) return;
-
-    const safeMethod = parsePaymentMethod(method, "OTHER");
-
-    await prisma.$transaction(async (tx) => {
-      const payment = await tx.payment.create({
-        data: {
-          invoiceId: invoice.id,
-          currency,
-          exchangeRateToBase,
-          amount,
-          method: safeMethod,
-          reference: reference || null,
-          createdById: user.id,
-          orgId,
-        },
-      });
-      await createReceiptForPayment(tx, {
-        orgId,
-        paymentId: payment.id,
-        invoiceId: invoice.id,
-        clientId: invoice.clientId,
-        amount,
-        currency,
-        issuedById: user.id,
-      });
-
-      await syncInvoicePaymentState(tx, {
-        orgId: orgId!,
-        invoiceId: invoice.id,
-        baseCurrency,
-        actorUserId: user.id,
-        clientPaymentRef: reference || null,
-      });
-    });
-
-    revalidatePath("/documents/invoices");
-    // Clear the ?pay= param by redirecting back to the clean URL
-    redirect("/documents/invoices");
-  }
-
-  // Create an invoice record from a completed job, then redirect straight to
-  // the inline payment form so the user can collect immediately in one flow.
-  async function createAndCollectAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    const orgId = user.orgId;
-    const db = orgDb(orgId);
-    const canManagePayments = "ADMIN" === user.role || "OPS" === user.role || can.approveInvoices(user);
-    if (!can.createInvoices(user) && !can.approveInvoices(user)) return;
-
-    const jobId = String(formData.get("jobId") ?? "").trim();
-    if (!jobId) return;
-
-    const job = await db.job.findFirst({
-      where: { id: jobId, ...(canManagePayments ? {} : { createdById: user.id }) },
-      select: { id: true, jobNumber: true, clientId: true, clientBill: true, invoiceIssuedAt: true, invoiceNumber: true, status: true },
-    });
-    if (!job || !job.clientBill || job.clientBill <= 0) return;
-
-    // If invoice already exists, go straight to collect. Some older rows may
-    // have an Invoice without the matching job stamp, so repair that stamp.
-    const existing = await db.invoice.findFirst({
-      where: { jobId: job.id },
-      select: { id: true, invoiceNumber: true, issuedAt: true },
-    });
-    if (existing) {
-      if (!job.invoiceIssuedAt || !job.invoiceNumber) {
-        await db.job.updateMany({
-          where: { id: job.id },
-          data: { invoiceIssuedAt: existing.issuedAt, invoiceNumber: existing.invoiceNumber },
-        });
-      }
-      redirect(`/documents/invoices?pay=${existing.id}`);
-    }
-
-    // Create the invoice record
-    const invoice = await prisma.$transaction(async (tx) => {
-      const invoiceNumber = await nextAvailableInvoiceNumber(tx, orgId);
-      const inv = await tx.invoice.create({
-        data: {
-          orgId,
-          jobId: job.id,
-          clientId: job.clientId,
-          invoiceType: "REPAIR",
-          invoiceNumber,
-          subject: `Repair job ${job.jobNumber}`,
-          currency: orgCurrency,
-          status: "ISSUED",
-          totalAmount: job.clientBill!,
-          issuedAt: new Date(),
-        },
-      });
-      // Stamp invoice details on the job
-      await tx.job.update({
-        where: { id: job.id },
-        data: { invoiceIssuedAt: new Date(), invoiceNumber },
-      });
-      return inv;
-    });
-
-    await writeSystemAuditEvent({
-      orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id,
-      action: "INVOICE_CREATED", summary: `${invoice.invoiceNumber} created from ${job.jobNumber}`,
-    });
-
-    revalidatePath("/documents/invoices");
-    // Redirect straight to the inline payment form
-    redirect(`/documents/invoices?pay=${invoice.id}`);
-  }
-
-  async function updateInvoiceAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    const db = orgDb(user.orgId);
-    if (!("ADMIN" === user.role || "OPS" === user.role || can.approveInvoices(user))) return;
-
-    const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-    const statusRaw = String(formData.get("status") ?? "ISSUED").trim();
-    const notes = String(formData.get("notes") ?? "").trim();
-    const subject = String(formData.get("subject") ?? "").trim();
-    if (!invoiceId) return;
-    const status = INVOICE_STATUSES.includes(statusRaw as InvoiceStatus)
-      ? (statusRaw as InvoiceStatus)
-      : ("ISSUED" as InvoiceStatus);
-
-    await db.invoice.updateMany({
-      where: { id: invoiceId },
-      data: { status, notes: notes || null, subject: subject || null },
-    });
-    revalidatePath("/documents/invoices");
-  }
-
-  async function deleteInvoiceAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    const db = orgDb(user.orgId);
-    if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
-
-    const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-    if (!invoiceId) return;
-
-    const invoice = await db.invoice.findFirst({
-      where: { id: invoiceId },
-      select: {
-        id: true,
-        jobId: true,
-        payments: { select: { id: true }, take: 1 },
-        deliveryNotes: { select: { id: true }, take: 1 },
-      },
-    });
-    if (!invoice || invoice.payments.length > 0 || invoice.deliveryNotes.length > 0) return;
-
-    await prisma.$transaction(async (tx) => {
-      await tx.invoice.deleteMany({ where: { id: invoice.id } });
-      if (invoice.jobId) {
-        await tx.job.updateMany({
-          where: { id: invoice.jobId },
-          data: { invoiceIssuedAt: null, invoiceNumber: null },
-        });
-      }
-    });
-    revalidatePath("/documents/invoices");
-  }
-
-  async function sendInvoiceWhatsAppFromRowAction(formData: FormData) {
-    "use server";
-    const jobId = String(formData.get("jobId") ?? "").trim();
-    if (!jobId) return;
-    await sendInvoiceViaWhatsAppAction(jobId);
-    revalidatePath("/documents/invoices");
-  }
-
   // Row-menu Send — works for standalone AND job-linked invoices, logs to the
   // outbox. Replaces the old form POSTs to /api/invoices/[id]/send /whatsapp,
   // which were never real routes (they 404'd).
@@ -494,58 +277,6 @@ export default async function InvoicesPage({
     if (!invoiceId) return;
     await shareInvoiceDocument({ orgId, invoiceId, channel });
     revalidatePath("/documents/invoices");
-  }
-
-  async function createDeliveryNoteAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    const db = orgDb(user.orgId);
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
-
-    const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-    const deliveredByName = String(formData.get("deliveredByName") ?? "").trim();
-    const receivedByName = String(formData.get("receivedByName") ?? "").trim();
-    const note = String(formData.get("note") ?? "").trim();
-    const methodRaw = String(formData.get("deliveryMethod") ?? "").trim();
-    if (!invoiceId || !deliveredByName || !receivedByName) return;
-
-    const deliveryMethod = DELIVERY_METHODS.includes(methodRaw as DeliveryMethod)
-      ? (methodRaw as DeliveryMethod)
-      : null;
-    const invoice = await db.invoice.findFirst({
-      where: { id: invoiceId },
-      select: {
-        id: true,
-        invoiceNumber: true,
-        paidAmount: true,
-        totalAmount: true,
-        subject: true,
-        job: { select: { jobNumber: true, brand: true, model: true } },
-      },
-    });
-    if (!invoice || invoice.paidAmount < invoice.totalAmount) return;
-
-    await prisma.$transaction(async (tx) => {
-      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
-      const desc = invoice.job
-        ? `Repair handover for ${invoice.job.jobNumber} (${invoice.job.brand} ${invoice.job.model})`
-        : (invoice.subject ?? invoice.invoiceNumber);
-      await tx.deliveryNote.create({
-        data: {
-          invoiceId: invoice.id,
-          orgId: user.orgId,
-          deliveryNoteNumber,
-          deliveryMethod,
-          deliveredByName,
-          receivedByName,
-          note: note || null,
-          createdById: user.id,
-          items: { create: [{ description: desc, quantity: 1 }] },
-        },
-      });
-    });
-    revalidatePath("/documents/invoices");
-    revalidatePath("/documents/delivery-notes");
   }
 
   // ── Data fetching ────────────────────────────────────────────────────────────
