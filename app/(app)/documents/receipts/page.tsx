@@ -13,6 +13,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { reverseJournalEntry, postJournalEntry } from "@/lib/accounting/post";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
@@ -121,9 +122,12 @@ export default async function ReceiptsPage({
 
     const source = await prisma.payment.findFirst({
       where: { id: paymentId, orgId },
-      select: { invoiceId: true, saleId: true, currency: true, exchangeRateToBase: true },
+      select: { amount: true, invoiceId: true, saleId: true, currency: true, exchangeRateToBase: true },
     });
     if (!source) return;
+    // Ledger delta in the payment's own currency (matching how the original
+    // "pay:<id>" entry posted), so an amount change keeps the books in step.
+    const ledgerDelta = Math.round((amount - source.amount + Number.EPSILON) * 100) / 100;
 
     if (source.invoiceId) {
       const invoice = await db.invoice.findFirst({ where: { id: source.invoiceId }, select: { id: true, totalAmount: true } });
@@ -146,6 +150,21 @@ export default async function ReceiptsPage({
       // Keep the linked Receipt document in sync (no relation/cascade exists,
       // so the amount must be updated explicitly or the job timeline goes stale).
       await tx.receipt.updateMany({ where: { orgId, paymentId }, data: { amount } });
+
+      // Post a balanced adjusting entry for the amount change so the ledger tracks
+      // the new receipt amount (unique per edit, so repeated edits each adjust).
+      if (Math.abs(ledgerDelta) > 0.005) {
+        const adjCount = await tx.journalEntry.count({ where: { orgId, reference: { startsWith: `pay:${paymentId}:adj:` } } });
+        await postJournalEntry(tx, {
+          orgId,
+          userId: user.id,
+          description: `Receipt amount adjusted (${source.amount} → ${amount})`,
+          reference: `pay:${paymentId}:adj:${adjCount + 1}`,
+          lines: ledgerDelta > 0
+            ? [{ code: "1000", debit: ledgerDelta, memo: "Cash adjustment" }, { code: "4000", credit: ledgerDelta, memo: "Sales revenue adjustment" }]
+            : [{ code: "4000", debit: -ledgerDelta, memo: "Sales revenue adjustment" }, { code: "1000", credit: -ledgerDelta, memo: "Cash adjustment" }],
+        });
+      }
 
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });
@@ -184,6 +203,10 @@ export default async function ReceiptsPage({
 
     await prisma.$transaction(async (tx) => {
       await tx.payment.deleteMany({ where: { id: paymentId, orgId } });
+
+      // Reverse the cash-basis ledger post for this payment ("pay:<id>") so the
+      // deletion doesn't leave the ledger overstating cash.
+      await reverseJournalEntry(tx, { orgId, userId: user.id, originalReference: `pay:${paymentId}`, description: "Reversal — receipt/payment deleted" });
 
       // Void (rather than delete) the linked Receipt document so the numbered
       // record is retained for audit; the job timeline already hides voided rows.

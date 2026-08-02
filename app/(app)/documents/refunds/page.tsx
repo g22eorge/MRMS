@@ -14,7 +14,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { postRefund } from "@/lib/accounting/post";
+import { postRefund, reverseJournalEntry } from "@/lib/accounting/post";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
@@ -164,16 +164,24 @@ export default async function RefundsPage({
 
   async function deleteRefundAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
     if (user.role !== "ADMIN") return;
 
     const refundId = String(formData.get("refundId") ?? "").trim();
     if (!refundId) return;
 
-    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true } });
+    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true, invoiceId: true } });
     if (!refund) return;
 
-    await prisma.refund.delete({ where: { id: refundId } });
+    await prisma.$transaction(async (tx) => {
+      await tx.refund.deleteMany({ where: { id: refundId, orgId } });
+      // Reverse the refund's ledger post ("refund:<id>") and reopen the invoice's
+      // paid state — deleting the refund undoes both the cash-out and the reduction.
+      await reverseJournalEntry(tx, { orgId, userId: user.id, originalReference: `refund:${refundId}`, description: "Reversal — refund deleted" });
+      if (refund.invoiceId) {
+        await syncInvoicePaymentState(tx, { orgId, invoiceId: refund.invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
+      }
+    });
     await writeSystemAuditEvent({
       orgId,
       actorUserId: user.id,

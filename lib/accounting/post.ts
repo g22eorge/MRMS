@@ -127,6 +127,46 @@ export async function postJournalEntry(tx: Tx, params: PostJournalParams): Promi
   });
 }
 
+/**
+ * Post a reversing entry that exactly cancels a prior POSTED entry (found by its
+ * `reference`, e.g. "pay:<id>" or "refund:<id>"): same accounts and amounts with
+ * debit/credit swapped. Used when a receipt/refund is deleted so the cash-basis
+ * ledger doesn't overstate cash. Idempotent on "<reference>:reversal", and a
+ * no-op when the original never posted (nothing to reverse).
+ */
+export async function reverseJournalEntry(
+  tx: Tx,
+  params: { orgId: string; userId: string; originalReference: string; description?: string; date?: Date },
+): Promise<{ id: string } | null> {
+  const reversalRef = `${params.originalReference}:reversal`;
+  const already = await tx.journalEntry.findFirst({ where: { orgId: params.orgId, reference: reversalRef }, select: { id: true } });
+  if (already) return null;
+
+  const original = await tx.journalEntry.findFirst({
+    where: { orgId: params.orgId, reference: params.originalReference, status: "POSTED" },
+    select: { totalAmount: true, lines: { select: { accountId: true, debit: true, credit: true, description: true } } },
+  });
+  if (!original || original.lines.length === 0) return null;
+
+  const date = params.date ?? new Date();
+  const entryNumber = await nextEntryNumber(tx, params.orgId, date.getFullYear());
+  return tx.journalEntry.create({
+    data: {
+      orgId: params.orgId,
+      entryNumber,
+      date,
+      description: params.description ?? `Reversal of ${params.originalReference}`,
+      reference: reversalRef,
+      status: "POSTED",
+      postedAt: new Date(),
+      totalAmount: original.totalAmount,
+      createdById: params.userId,
+      lines: { create: original.lines.map((l) => ({ accountId: l.accountId, debit: l.credit, credit: l.debit, description: l.description })) },
+    },
+    select: { id: true },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Event helpers (cash basis)
 // ---------------------------------------------------------------------------
