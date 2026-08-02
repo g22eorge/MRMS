@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { SupplierEditForm } from "./SupplierEditForm";
+import { SupplierActivityFeed, type SupplierActivityItem } from "./SupplierActivityFeed";
 import { createSupplierPriceAction, deleteSupplierPriceAction, updateSupplierPriceAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -170,6 +171,60 @@ export default async function SupplierDetailPage({
   const fmt = (d: Date | null) =>
     d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
+  // One time-ordered activity feed across POs, bills, requests and GRNs.
+  const activityItems: SupplierActivityItem[] = [
+    ...supplier.purchaseOrders.map((po) => {
+      const ordered = po.items.reduce((sum, item) => sum + item.qtyOrdered, 0);
+      const received = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
+      return {
+        key: `po-${po.id}`,
+        type: "PO" as const,
+        label: po.reference ?? po.id.slice(-6).toUpperCase(),
+        href: `/inventory/purchase-orders/${po.id}`,
+        dateMs: (po.orderedAt ?? po.createdAt).getTime(),
+        dateLabel: fmt(po.orderedAt ?? po.createdAt),
+        status: po.status,
+        tone: toneFor(PO_STATUS_TONES, po.status),
+        amount: formatMoney(po.items.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0)),
+        sub: `${received}/${ordered} received`,
+      };
+    }),
+    ...supplier.supplierBills.map((bill) => ({
+      key: `bill-${bill.id}`,
+      type: "BILL" as const,
+      label: bill.billNumber,
+      href: `/inventory/supplier-bills/${bill.id}`,
+      dateMs: bill.issuedAt.getTime(),
+      dateLabel: `${fmt(bill.issuedAt)} · due ${fmt(bill.dueAt)}`,
+      status: bill.status,
+      tone: toneFor(BILL_STATUS_TONES, bill.status, "sky"),
+      amount: formatMoney(bill.totalAmount, bill.currency),
+      sub: `bal ${formatMoney(Math.max(0, bill.totalAmount - bill.paidAmount), bill.currency)}`,
+    })),
+    ...supplier.purchaseRequests.map((request) => ({
+      key: `req-${request.id}`,
+      type: "REQUEST" as const,
+      label: request.requestNumber,
+      href: `/inventory/purchase-requests/${request.id}`,
+      dateMs: request.createdAt.getTime(),
+      dateLabel: `${request.priority} · needed ${fmt(request.neededBy)}`,
+      status: request.status,
+      tone: toneFor(REQUEST_STATUS_TONES, request.status, "sky"),
+      sub: `${request._count.items} lines`,
+    })),
+    ...supplier.goodsReceivedNotes.map((grn) => ({
+      key: `grn-${grn.id}`,
+      type: "GRN" as const,
+      label: grn.grnNumber,
+      href: `/inventory/goods-received/${grn.id}`,
+      dateMs: grn.receivedAt.getTime(),
+      dateLabel: fmt(grn.receivedAt),
+      status: grn.status,
+      tone: toneFor(GRN_STATUS_TONES, grn.status, "success"),
+      sub: `${grn._count.items} lines`,
+    })),
+  ].sort((a, b) => b.dateMs - a.dateMs);
+
   return (
     <div className="space-y-4">
       <RecordActionBar
@@ -299,149 +354,11 @@ export default async function SupplierDetailPage({
             />
           </section>
 
-          <div className="grid gap-4 2xl:grid-cols-2">
-            <ActivitySection
-              title="Purchase Orders"
-              count={supplier._count.purchaseOrders}
-              action={<Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New PO</Link>}
-            >
-              <DataTable
-                frameless
-                hideHeader
-                rows={supplier.purchaseOrders}
-                getRowKey={(po) => po.id}
-                empty="No purchase orders yet."
-                columns={[
-                  {
-                    key: "po",
-                    cell: (po) => {
-                      const orderedQty = po.items.reduce((sum, item) => sum + item.qtyOrdered, 0);
-                      const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
-                      return (
-                        <>
-                          <Link href={`/inventory/purchase-orders/${po.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{po.reference ?? po.id.slice(-6).toUpperCase()}</Link>
-                          <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(po.orderedAt)} · {receivedQty}/{orderedQty} received</p>
-                        </>
-                      );
-                    },
-                  },
-                  {
-                    key: "status",
-                    cell: (po) => <StatusBadge tone={toneFor(PO_STATUS_TONES, po.status)}>{po.status}</StatusBadge>,
-                  },
-                  {
-                    key: "lines",
-                    align: "right",
-                    className: "text-[12px] text-[var(--ink-muted)]",
-                    cell: (po) => `${po._count.items} lines`,
-                  },
-                ]}
-              />
-            </ActivitySection>
-
-            <ActivitySection
-              title="Supplier Bills"
-              count={supplier._count.supplierBills}
-              action={<Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New Bill</Link>}
-            >
-              <DataTable
-                frameless
-                hideHeader
-                rows={supplier.supplierBills}
-                getRowKey={(bill) => bill.id}
-                empty="No supplier bills yet."
-                columns={[
-                  {
-                    key: "bill",
-                    cell: (bill) => (
-                      <>
-                        <Link href={`/inventory/supplier-bills/${bill.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}</p>
-                      </>
-                    ),
-                  },
-                  {
-                    key: "status",
-                    cell: (bill) => <StatusBadge tone={toneFor(BILL_STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>,
-                  },
-                  {
-                    key: "amount",
-                    align: "right",
-                    cell: (bill) => (
-                      <>
-                        <p className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(bill.totalAmount, bill.currency)}</p>
-                        <p className="text-[12px] text-[var(--ink-muted)]">bal {formatMoney(Math.max(0, bill.totalAmount - bill.paidAmount), bill.currency)}</p>
-                      </>
-                    ),
-                  },
-                ]}
-              />
-            </ActivitySection>
-          </div>
-
-          <div className="grid gap-4 2xl:grid-cols-2">
-            <ActivitySection title="Purchase Requests" count={supplier._count.purchaseRequests}>
-              <DataTable
-                frameless
-                hideHeader
-                rows={supplier.purchaseRequests}
-                getRowKey={(request) => request.id}
-                empty="No requests for this supplier."
-                columns={[
-                  {
-                    key: "request",
-                    cell: (request) => (
-                      <>
-                        <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{request.priority} · needed {fmt(request.neededBy)}</p>
-                      </>
-                    ),
-                  },
-                  {
-                    key: "status",
-                    cell: (request) => <StatusBadge tone={toneFor(REQUEST_STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>,
-                  },
-                  {
-                    key: "lines",
-                    align: "right",
-                    className: "text-[12px] text-[var(--ink-muted)]",
-                    cell: (request) => `${request._count.items} lines`,
-                  },
-                ]}
-              />
-            </ActivitySection>
-
-            <ActivitySection title="Goods Received" count={supplier._count.goodsReceivedNotes}>
-              <DataTable
-                frameless
-                hideHeader
-                rows={supplier.goodsReceivedNotes}
-                getRowKey={(grn) => grn.id}
-                empty="No goods received records yet."
-                columns={[
-                  {
-                    key: "grn",
-                    cell: (grn) => (
-                      <>
-                        <Link href={`/inventory/goods-received/${grn.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{grn.grnNumber}</Link>
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</p>
-                      </>
-                    ),
-                  },
-                  {
-                    key: "status",
-                    cell: (grn) => <StatusBadge tone={toneFor(GRN_STATUS_TONES, grn.status, "success")}>{grn.status}</StatusBadge>,
-                  },
-                  {
-                    key: "lines",
-                    align: "right",
-                    className: "text-[12px] text-[var(--ink-muted)]",
-                    cell: (grn) => `${grn._count.items} lines`,
-                  },
-                ]}
-              />
-            </ActivitySection>
-          </div>
+          <SupplierActivityFeed
+            items={activityItems}
+            newPoHref={`/inventory/purchase-orders/new?supplierId=${supplier.id}`}
+            newBillHref={`/inventory/supplier-bills/new?supplierId=${supplier.id}`}
+          />
         </div>
       </div>
     </div>
@@ -465,17 +382,5 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
       <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
       <div className="min-w-0 whitespace-pre-wrap text-[var(--ink)]">{children}</div>
     </div>
-  );
-}
-
-function ActivitySection({ title, count, action, children }: { title: string; count: number; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title} ({count})</p>
-        {action}
-      </div>
-      {children}
-    </section>
   );
 }
