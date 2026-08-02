@@ -12,6 +12,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
@@ -533,6 +534,7 @@ export default async function DeliveryNotesPage({
               </a>
               <RowActionsMenu label="Delivery note actions">
                 <div className="py-1 text-left">
+                  <DocumentPreviewButton pdfUrl={`/api/delivery-notes/${n.id}`} title={`Delivery note ${n.deliveryNoteNumber}`} />
                   <MenuActionLink href={`/api/delivery-notes/${n.id}`} external icon="delivery" tone="accent">
                     Download Delivery Note
                   </MenuActionLink>

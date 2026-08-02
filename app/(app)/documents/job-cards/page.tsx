@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/ui/DataTable";
 import { can } from "@/lib/permissions";
@@ -322,6 +323,7 @@ export default async function JobCardsPage({
               </a>
               <RowActionsMenu label="Job card actions">
                 <MenuSection label="Actions" />
+                <DocumentPreviewButton pdfUrl={`/api/jobs/${job.id}/job-card`} title={`Job card ${job.jobNumber}`} />
                 <MenuActionLink href={`/api/jobs/${job.id}/job-card`} external icon="job" tone="accent">
                   Download Job Card PDF
                 </MenuActionLink>

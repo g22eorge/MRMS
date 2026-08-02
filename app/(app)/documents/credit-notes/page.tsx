@@ -11,6 +11,7 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
+import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
@@ -413,6 +414,7 @@ export default async function CreditNotesPage({
           <MenuActionLink href={`/documents/credit-notes/${cn.id}`} icon="open">
             View credit note
           </MenuActionLink>
+          <DocumentPreviewButton pdfUrl={`/api/credit-notes/${cn.id}`} title={`Credit note ${cn.creditNoteNumber}`} />
           <MenuActionLink href={`/api/credit-notes/${cn.id}`} external icon="quote" tone="accent">
             Download Credit Note PDF
           </MenuActionLink>

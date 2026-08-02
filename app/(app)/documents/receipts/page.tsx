@@ -11,6 +11,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { reverseJournalEntry, postJournalEntry } from "@/lib/accounting/post";
@@ -499,6 +500,7 @@ export default async function ReceiptsPage({
                       <MenuActionLink href={`/documents/receipts/${p.id}`} icon="open">
                         View receipt
                       </MenuActionLink>
+                      <DocumentPreviewButton pdfUrl={`/api/payments/${p.id}/receipt`} title="Receipt" />
                       <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
                         Download Receipt PDF
                       </MenuActionLink>
@@ -620,6 +622,7 @@ export default async function ReceiptsPage({
                     <MenuActionLink href={`/documents/receipts/${p.id}`} icon="open">
                       View receipt
                     </MenuActionLink>
+                    <DocumentPreviewButton pdfUrl={`/api/payments/${p.id}/receipt`} title="Receipt" />
                     <MenuActionLink href={`/api/payments/${p.id}/receipt`} external icon="receipt" tone="success">
                       Download Receipt PDF
                     </MenuActionLink>

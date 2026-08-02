@@ -12,6 +12,7 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
+import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postRefund, reverseJournalEntry } from "@/lib/accounting/post";
@@ -405,6 +406,7 @@ export default async function RefundsPage({
           <MenuActionLink href={`/documents/refunds/${r.id}`} icon="open">
             View refund
           </MenuActionLink>
+          <DocumentPreviewButton pdfUrl={`/api/refunds/${r.id}`} title={`Refund · ${sourceLabel}`} />
           <MenuActionLink href={`/api/refunds/${r.id}`} external icon="receipt" tone="accent">
             Download Refund PDF
           </MenuActionLink>
