@@ -102,14 +102,19 @@ async function run() {
 
   let tables = await existingTables();
 
-  // Pass 1 — tables & columns
+  // Pass 1 — tables & columns. Each statement is guarded so one failure can't
+  // strand every not-yet-processed table (which would ship a half-synced schema).
   for (const stmt of creates) {
     const name = tableName(stmt);
     if (!name) continue;
     if (!tables.has(name)) {
-      await client.execute(stmt);
-      createdTables.push(name);
-      tables.add(name);
+      try {
+        await client.execute(stmt);
+        createdTables.push(name);
+        tables.add(name);
+      } catch (e) {
+        warnings.push(`create table ${name} failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
       continue;
     }
     const existingCols = await columnsOf(name);
@@ -120,8 +125,12 @@ async function run() {
         addDef = def.replace(/\s*NOT NULL/i, "").trim();
         warnings.push(`${name}.${col} added as NULLABLE (schema is NOT NULL without default — backfill may be needed)`);
       }
-      await client.execute(`ALTER TABLE "${name}" ADD COLUMN "${col}" ${addDef}`);
-      addedColumns.push(`${name}.${col}`);
+      try {
+        await client.execute(`ALTER TABLE "${name}" ADD COLUMN "${col}" ${addDef}`);
+        addedColumns.push(`${name}.${col}`);
+      } catch (e) {
+        warnings.push(`add column ${name}.${col} failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
   }
 

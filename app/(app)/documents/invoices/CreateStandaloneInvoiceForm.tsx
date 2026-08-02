@@ -64,6 +64,7 @@ type Props = {
     }>;
   };
   submitLabel?: string;
+  editInvoiceId?: string;
 };
 
 export function CreateStandaloneInvoiceForm({
@@ -77,12 +78,13 @@ export function CreateStandaloneInvoiceForm({
   defaultTaxRate,
   defaultTaxLabel,
   initialData,
+  editInvoiceId,
   submitLabel = "Create Invoice",
 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const customer = useCustomerPicker(clients);
   const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
-  const [taxEnabled, setTaxEnabled] = useState(defaultTaxApplicable);
+  const [taxEnabled, setTaxEnabled] = useState(initialData?.taxEnabled ?? defaultTaxApplicable);
   const [partsList, setPartsList] = useState<PartOption[]>(parts);
 
   // Seed from initialData when available (edit mode)
@@ -212,6 +214,7 @@ export function CreateStandaloneInvoiceForm({
           </div>
         ) : null}
 
+        {editInvoiceId ? <input type="hidden" name="invoiceId" value={editInvoiceId} /> : null}
         <input type="hidden" name="clientId" value={customer.mode === "existing" ? customer.selectedClient?.id ?? "" : ""} />
         <input type="hidden" name="newClientFullName" value={customer.mode === "new" ? customer.newClient.fullName : ""} />
         <input type="hidden" name="newClientPhone" value={customer.mode === "new" ? customer.newClient.phone : ""} />

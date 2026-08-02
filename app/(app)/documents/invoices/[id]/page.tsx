@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { orgDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -176,9 +178,10 @@ export default async function InvoiceDetailPage({
     subject: invoice.subject ?? "",
     dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "",
     notes: invoice.notes ?? "",
-    taxEnabled: Boolean(invoice.taxRate && invoice.taxRate > 0),
-    taxRate: invoice.taxRate ?? 0,
-    taxLabel: invoice.taxLabel ?? "",
+    // Invoice has no taxRate/taxLabel columns — tax lives per line. Derive it.
+    taxEnabled: taxTotal > 0,
+    taxRate: subtotal > 0 ? Number(((taxTotal / subtotal) * 100).toFixed(2)) : 0,
+    taxLabel: "VAT",
     lines: invoice.lines.map((l: any) => ({
       description: l.description,
       quantity: l.quantity,
@@ -536,7 +539,7 @@ export default async function InvoiceDetailPage({
             </div>
           )}
 
-          {(invoice.taxRate || invoice.taxLabel) && (
+          {taxTotal > 0 && (
       <div className="mt-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--line)] px-4 py-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Tax</p>
@@ -545,12 +548,12 @@ export default async function InvoiceDetailPage({
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Rate</p>
             <p className="text-[13px] font-medium">
-              {typeof invoice.taxRate === "number" ? `${invoice.taxRate}%` : "—"}
+              {subtotal > 0 ? `${Number(((taxTotal / subtotal) * 100).toFixed(2))}%` : "—"}
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Label</p>
-            <p className="text-[13px] font-medium">{invoice.taxLabel ?? "—"}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Amount</p>
+            <p className="text-[13px] font-medium">{formatMoney(taxTotal, currency)}</p>
           </div>
         </div>
       </div>
@@ -607,22 +610,75 @@ export default async function InvoiceDetailPage({
     jobs={jobs as any[]}
     parts={parts as any[]}
     taxRates={taxRates as any[]}
-    defaultTaxApplicable={Boolean(invoice.taxRate && invoice.taxRate > 0)}
-    defaultTaxRate={Number(invoice.taxRate) || 0}
-    defaultTaxLabel={invoice.taxLabel ?? ""}
+    defaultTaxApplicable={taxTotal > 0}
+    defaultTaxRate={subtotal > 0 ? Number(((taxTotal / subtotal) * 100).toFixed(2)) : 0}
+    defaultTaxLabel="VAT"
     action={async (fd: FormData) => {
       "use server";
       const fdId = String(fd.get("invoiceId") ?? "").trim();
       if (!fdId) return;
-      await db.invoice.updateMany({
-        where: { id: fdId },
-        data: {
-          subject: String(fd.get("subject") ?? "").trim() || null,
-          notes: String(fd.get("notes") ?? "").trim() || null,
-          dueDate: fd.get("dueDate") ? new Date(String(fd.get("dueDate"))) : null,
-          invoiceType: String(fd.get("invoiceType") ?? "SERVICE").trim(),
-        },
+
+      // Tenant + status guard: only edit this org's non-finalized invoices.
+      const target = await prisma.invoice.findFirst({
+        where: { id: fdId, orgId: user.orgId },
+        select: { id: true, status: true, currency: true },
       });
+      if (!target || target.status === "VOID" || target.status === "PAID") return;
+
+      const taxApplicable = String(fd.get("taxApplicable") ?? "") === "1";
+      const requestedTaxRate = Number(String(fd.get("taxRate") ?? "0").trim());
+      const taxRate = taxApplicable ? Math.min(Math.max(Number.isFinite(requestedTaxRate) ? requestedTaxRate : 0, 0), 100) : 0;
+      const canDisc = can.overrideDiscount(user);
+
+      let rawItems: Array<{ partId?: string | null; description?: string; quantity?: number; unitPrice?: number; discount?: number }> = [];
+      try { const p = JSON.parse(String(fd.get("items") ?? "[]")); if (Array.isArray(p)) rawItems = p; } catch {}
+      const items = rawItems
+        .map((item) => {
+          const description = sanitizeText(String(item.description ?? ""));
+          const quantity = Number(item.quantity);
+          const unitPrice = Number(item.unitPrice);
+          const gross = (Number.isFinite(quantity) ? quantity : 0) * (Number.isFinite(unitPrice) ? unitPrice : 0);
+          const discountPercent = canDisc ? Math.min(Math.max(Number(item.discount) || 0, 0), 100) : 0;
+          const discountAmount = gross * (discountPercent / 100);
+          return { partId: item.partId || null, description, quantity, unitPrice, discountAmount, lineTotal: gross - discountAmount };
+        })
+        .filter((i) => i.description && Number.isFinite(i.quantity) && i.quantity > 0 && Number.isFinite(i.unitPrice) && i.unitPrice >= 0);
+      if (!items.length) return;
+
+      const newSubtotal = items.reduce((s, i) => s + i.lineTotal, 0);
+      const newTax = taxRate > 0 ? newSubtotal * (taxRate / 100) : 0;
+      const totalAmount = newSubtotal + newTax;
+      const clientId = String(fd.get("clientId") ?? "").trim() || null;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.invoiceLine.deleteMany({ where: { invoiceId: fdId, orgId: user.orgId } });
+        await tx.invoice.update({
+          where: { id: fdId },
+          data: {
+            subject: String(fd.get("subject") ?? "").trim() || null,
+            notes: String(fd.get("notes") ?? "").trim() || null,
+            dueDate: fd.get("dueDate") ? new Date(String(fd.get("dueDate"))) : null,
+            invoiceType: String(fd.get("invoiceType") ?? "SERVICE").trim(),
+            ...(clientId ? { clientId } : {}),
+            totalAmount,
+            lines: {
+              create: items.map((item) => ({
+                orgId: user.orgId,
+                sourceType: item.partId ? "Part" : "Custom",
+                sourceId: item.partId,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discountAmount: item.discountAmount,
+                taxAmount: newTax > 0 && newSubtotal > 0 ? newTax * (item.lineTotal / newSubtotal) : 0,
+                lineTotal: item.lineTotal,
+              })),
+            },
+          },
+        });
+        await syncInvoicePaymentState(tx, { orgId: user.orgId, invoiceId: fdId, baseCurrency: currency, actorUserId: user.id });
+      });
+
       revalidatePath("/documents/invoices/" + fdId);
       revalidatePath("/documents/invoices");
     }}

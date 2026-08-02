@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgSession } from "@/lib/org-context";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
-import { getCurrentUserRole } from "@/lib/session";
 
 const editSchema = z.object({
   id: z.string().min(1),
@@ -18,7 +18,7 @@ const editSchema = z.object({
 });
 
 export async function updateJobEditAction(formData: FormData) {
-  const { session: currentSession, user: currentUser } = await getCurrentUserRole();
+  const { user: currentUser, orgId } = await requireOrgSession();
   if (currentUser.role === "TECHNICIAN_EXTERNAL" || currentUser.role === "FRONT_DESK") {
     return { error: "Forbidden" };
   }
@@ -37,17 +37,18 @@ export async function updateJobEditAction(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid form values" };
   }
 
-  const existing = await prisma.job.findUnique({ where: { id: parsed.data.id } });
+  // Tenant scope: only ever load/write a job in the caller's own org.
+  const existing = await prisma.job.findFirst({ where: { id: parsed.data.id, orgId } });
   if (!existing) {
     return { error: "Job not found" };
   }
 
-  if (currentUser.role === "TECHNICIAN_INTERNAL" && existing.assignedToId !== currentSession.user.id) {
+  if (currentUser.role === "TECHNICIAN_INTERNAL" && existing.assignedToId !== currentUser.id) {
     return { error: "Forbidden" };
   }
 
-  await prisma.job.update({
-    where: { id: parsed.data.id },
+  await prisma.job.updateMany({
+    where: { id: parsed.data.id, orgId },
     data: {
       brand: sanitizeText(parsed.data.brand),
       model: sanitizeText(parsed.data.model),
@@ -59,8 +60,9 @@ export async function updateJobEditAction(formData: FormData) {
 
   await prisma.auditLog.create({
     data: {
+      orgId,
       jobId: parsed.data.id,
-      userId: currentSession.user.id,
+      userId: currentUser.id,
       action: "JOB_EDITED",
       detail: JSON.stringify({
         brand: parsed.data.brand,

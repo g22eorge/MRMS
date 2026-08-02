@@ -88,6 +88,7 @@ export async function POST(request: Request) {
         paymentId: payment.id,
         amount,
         currency: invCurrency,
+        issuedById: user.id, // required so the payment posts to the cash-basis ledger
       });
 
       await syncInvoicePaymentState(tx, {

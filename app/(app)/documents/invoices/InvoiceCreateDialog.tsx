@@ -138,6 +138,9 @@ export function InvoiceCreateDialog({
         defaultTaxApplicable={defaultTaxApplicable}
         defaultTaxRate={defaultTaxRate}
         defaultTaxLabel={defaultTaxLabel}
+        initialData={editInitialData}
+        editInvoiceId={editInvoiceId}
+        submitLabel={editInvoiceId ? "Save changes" : "Create Invoice"}
       />
           </div>
         </div>
