@@ -1,21 +1,25 @@
-// @ts-nocheck
 export const dynamic = "force-dynamic";
 
 /* Edit handled via ?edit=1 inline form */
 
-import { orgDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { requireOrgSession } from "@/lib/org-context";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate } from "@/lib/date-eat";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
+import type { BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
+import { shareQuotationDocument } from "@/lib/notifications/share-document";
+import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
+import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
+import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
@@ -23,6 +27,7 @@ const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   ACCEPTED: "success",
   REJECTED: "danger",
   EXPIRED: "slate",
+  VOID: "danger",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,19 +36,23 @@ const STATUS_LABEL: Record<string, string> = {
   ACCEPTED: "Accepted",
   REJECTED: "Rejected",
   EXPIRED: "Expired",
+  VOID: "Void",
 };
+
+const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
+const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 
 export default async function QuotationDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { user } = await getCurrentUserRole();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
 
   const { id } = await params;
   const sp = await searchParams;
 
-  const db = orgDb(user.orgId);
-
-  const quotation = await db.quotation.findFirst({
-    where: { id, orgId: user.orgId },
+  const quotation = await prisma.quotation.findFirst({
+    where: { id, orgId },
     select: {
       id: true,
       quoteNumber: true,
@@ -53,10 +62,11 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       validUntil: true,
       notes: true,
       discountAmount: true,
-  vatAmount: true,
-  taxRate: true,
-  taxLabel: true,
-  createdAt: true,
+      vatAmount: true,
+      taxRate: true,
+      taxLabel: true,
+      createdAt: true,
+      convertedToInvoiceId: true,
       client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } },
       job: { select: { id: true, jobNumber: true, brand: true, model: true, serialOrImei: true } },
       items: { select: { id: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
@@ -64,206 +74,236 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   });
   if (!quotation) redirect("/documents/quotations");
 
-  const org = await db.organization.findFirst({ where: { id: user.orgId! }, select: { baseCurrency: true } });
-  const currency = normalizeCurrency(org?.baseCurrency ?? "UGX", normalizeCurrency(quotation.currency, "UGX"));
+  const org = await prisma.organization.findFirst({ where: { id: orgId }, select: { baseCurrency: true } });
+  const currency = normalizeCurrency(org?.baseCurrency, normalizeCurrency(quotation.currency, "UGX"));
   const subtotal = quotation.items.reduce((sum, item) => sum + item.lineTotal, 0);
-  const canDelete = ["ADMIN", "OPS"].includes(user.role);
-  const isEdit = sp?.edit === "1";
-  const isVoid = quotation.status === "VOID";
-  const publicLink = `/view/quote/${quotation.id}`;
-  const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
+  const total = quotation.totalAmount || subtotal;
 
-  async function deleteQuotationAction(formData: FormData) {
+  // The convert target may be stored as an invoice id (canonical) or, from older
+  // rows, an invoice number — resolve either so the related link is reliable.
+  const convertedInvoice = quotation.convertedToInvoiceId
+    ? await prisma.invoice.findFirst({
+        where: { orgId, OR: [{ id: quotation.convertedToInvoiceId }, { invoiceNumber: quotation.convertedToInvoiceId }] },
+        select: { id: true, invoiceNumber: true },
+      })
+    : null;
+
+  const isVoid = quotation.status === "VOID";
+  const isEdit = sp?.edit === "1";
+  const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
+  const canDelete = ["ADMIN", "OPS"].includes(user.role);
+  const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
+  const canConvert = can.createInvoices(user) && !convertedInvoice && !isVoid && ["DRAFT", "SENT", "ACCEPTED"].includes(quotation.status);
+
+  async function sendQuotationWhatsAppAction() {
     "use server";
-    const { user } = await getCurrentUserRole();
-    if (!canDelete) redirect("/dashboard");
-    const db = orgDb(user.orgId);
-    await db.quotation.delete({ where: { id } });
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS", "FRONT_DESK"].includes(actor.role))) return;
+    const ok = await shareQuotationDocument({ orgId: actorOrg, quotationId: id, channel: "whatsapp" });
+    redirect(`/documents/quotations/${id}?sent=${ok ? "whatsapp" : "failed"}`);
+  }
+  async function sendQuotationEmailAction() {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS", "FRONT_DESK"].includes(actor.role))) return;
+    const ok = await shareQuotationDocument({ orgId: actorOrg, quotationId: id, channel: "email" });
+    redirect(`/documents/quotations/${id}?sent=${ok ? "email" : "failed"}`);
+  }
+
+  async function convertToInvoiceAction() {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!can.createInvoices(actor)) redirect("/dashboard");
+    const orgRec = await prisma.organization.findUnique({ where: { id: actorOrg }, select: { baseCurrency: true } });
+    const cur = normalizeCurrency(orgRec?.baseCurrency, "UGX");
+    const invoice = await prisma.$transaction((tx) => ensureInvoiceFromQuotation(tx, { orgId: actorOrg, quotationId: id, currency: cur }));
+    revalidatePath("/documents/quotations");
+    if (invoice) {
+      revalidatePath("/documents/invoices");
+      redirect(`/documents/invoices/${invoice.id}`);
+    }
+    redirect(`/documents/quotations/${id}`);
+  }
+
+  async function deleteQuotationAction() {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
+    await prisma.quotation.deleteMany({ where: { id, orgId: actorOrg } });
     revalidatePath("/documents/quotations");
     redirect("/documents/quotations");
   }
 
-  async function editQuotationAction(formData: FormData) {
-    "use server";
-    const { user } = await getCurrentUserRole();
-    if (!can.createQuotations(user)) redirect("/dashboard");
-    const db = orgDb(user.orgId);
-    const quotationId = String(formData.get("id") ?? "").trim();
-    if (!quotationId) return;
-    const validUntilRaw = String(formData.get("validUntil") ?? "").trim();
-    const notes = sanitizeText(String(formData.get("notes") ?? "")).trim();
-    await db.quotation.updateMany({
-      where: { id: quotationId },
-      data: {
-        validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
-        notes: notes || null,
-      },
-    });
-    revalidatePath(`/documents/quotations/${quotationId}`);
-    revalidatePath("/documents/quotations");
-    redirect(`/documents/quotations/${quotationId}`);
-  }
+  const status: { label: string; tone: BadgeTone } = {
+    label: STATUS_LABEL[quotation.status] ?? quotation.status,
+    tone: QUOTATION_STATUS_TONES[quotation.status] ?? "neutral",
+  };
+
+  const primary = canConvert ? (
+    <form action={convertToInvoiceAction} className="inline">
+      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">Convert to invoice</button>
+    </form>
+  ) : null;
+
+  const secondary = (
+    <>
+      {canSend && quotation.client?.phone && (
+        <form action={sendQuotationWhatsAppAction} className="inline">
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
+        </form>
+      )}
+      {canSend && quotation.client?.email && (
+        <form action={sendQuotationEmailAction} className="inline">
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
+        </form>
+      )}
+      {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
+      <Link href={`/api/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">PDF</Link>
+      <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link>
+    </>
+  );
+
+  const overflow = canDelete ? (
+    <RowActionsMenu label="More actions">
+      <MenuDestructiveRow>
+        <form action={deleteQuotationAction}>
+          <ConfirmSubmitButton
+            message="Delete this quotation? This cannot be undone."
+            confirmLabel="Delete"
+            className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold text-red-600 dark:text-red-400"
+          >
+            Delete quotation
+          </ConfirmSubmitButton>
+        </form>
+      </MenuDestructiveRow>
+    </RowActionsMenu>
+  ) : null;
+
+  const rows = [
+    { label: "Created", value: formatEATDate(quotation.createdAt) },
+    { label: "Valid until", value: quotation.validUntil ? formatEATDate(quotation.validUntil) : "—" },
+    { label: "Subtotal", value: formatMoney(subtotal, currency) },
+    ...(quotation.discountAmount > 0 ? [{ label: "Discount", value: `− ${formatMoney(quotation.discountAmount, currency)}` }] : []),
+    ...(quotation.vatAmount > 0 ? [{ label: quotation.taxLabel ?? "Tax", value: formatMoney(quotation.vatAmount, currency) }] : []),
+  ];
+
+  const related = [
+    ...(quotation.job ? [{ label: quotation.job.jobNumber, href: `/jobs/${quotation.job.id}`, sub: `${quotation.job.brand} ${quotation.job.model}`.trim() || "Job" }] : []),
+    ...(convertedInvoice ? [{ label: convertedInvoice.invoiceNumber, href: `/documents/invoices/${convertedInvoice.id}`, sub: "Converted invoice" }] : []),
+  ];
+
+  const activity = [{ label: "Created", at: formatEATDate(quotation.createdAt) }];
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `/* print styles injected at runtime */` }} />
-      <section className="space-y-4 pb-20" id="print-area">
-        <PageHeader
-          title={`Quotation ${(quotation as any).quoteNumber}`}
-          eyebrow="Documents · Quotations"
-          description={sanitizeText(quotation.notes ?? "Quotation")}
-          actions={
-            <div className="flex flex-wrap items-center gap-2 action-bar">
-              <Link href="/documents/quotations" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">← Back</Link>
-        <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link>
-                      <Link href={`/api/quotations/${quotation.id}/pdf`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
-            </div>
-          }
-        />
-        <StatCards columns={5} cards={[
-            { label: "Quote #", value: (quotation as any).quoteNumber },
-            { label: "Date", value: formatEATDate(quotation.createdAt) },
-            { label: "Valid Until", value: ((quotation as any).validUntil) ? formatEATDate((quotation as any).validUntil) : "—" },
-            { label: "Status", value: <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status] ?? "neutral"}>{STATUS_LABEL[quotation.status] ?? quotation.status}</StatusBadge> },
-            { label: "Total", value: formatMoney(quotation.totalAmount, currency) },
-        ]} />
-      <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 action-bar">
-          {canSend && quotation.client?.phone && (
-            <form action={`/api/quotations/${quotation.id}/whatsapp`} method="POST" className="inline">
-              <input type="hidden" name="toPhone" value={quotation.client.phone} />
-              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
-            </form>
-          )}
-          {canSend && quotation.client?.email && (
-            <form action={`/api/quotations/${quotation.id}/send`} method="POST" className="inline">
-              <input type="hidden" name="toEmail" value={quotation.client.email} />
-              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
-            </form>
-          )}
-          {canDelete && (
-            <form action={deleteQuotationAction} className="inline">
-              <input type="hidden" name="id" value={quotation.id} />
-              <button type="submit" className="btn-premium-destructive rounded-lg px-3 py-1.5 text-[12px] font-medium">Delete</button>
-            </form>
-        )}
-      </div>
-
-        {quotation.client && (
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Client</p></div>
-            <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Name</p><p className="text-[13px] font-medium">{quotation.client.fullName}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Phone</p><p className="text-[13px] font-medium">{quotation.client.phone ?? "—"}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Email</p><p className="text-[13px] font-medium">{quotation.client.email ?? "—"}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Organization</p><p className="text-[13px] font-medium">{quotation.client.organization ?? "—"}</p></div>
-              <div className="min-[600px]:col-span-2"><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Address</p><p className="text-[13px] font-medium whitespace-pre-wrap">{quotation.client.address ?? "—"}</p></div>
-            </div>
-          </div>
-        )}
-
-        {quotation.job && (
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Job</p></div>
-            <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Job #</p><p className="text-[13px] font-medium">{quotation.job.jobNumber}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Device</p><p className="text-[13px] font-medium">{quotation.job.brand} {quotation.job.model}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Serial / IMEI</p><p className="text-[13px] font-medium">{quotation.job.serialOrImei ?? "—"}</p></div>
-            </div>
-          </div>
-        )}
-
-        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Line Items</p></div>
-          {quotation.items.length ? (
-            <>
-              <DataTable frameless rows={quotation.items} getRowKey={(l: any) => l.id} dense columns={[
-                { key: "description", header: "Description", cell: (row: any) => <span className="font-medium">{row.description}</span> },
-                { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row: any) => <span className="">{row.quantity}</span> },
-{ key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
-{ key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row: any) => <span className="mono font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
-              ]} />
-              <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
-                <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
-                {quotation.discountAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Discount</span><span className="mono text-red-500">{formatMoney(quotation.discountAmount, currency)}</span></div>}
-                {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Tax (VAT)</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
-                <div className="flex w-full max-w-xs justify-between text-[14px] border-t border-[var(--line)] pt-1"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(quotation.totalAmount, currency)}</span></div>
-              </div>
-            </>
-          ) : <div className="p-4 text-[13px] text-[var(--ink-muted)]">No items.</div>}
-        </div>
-
-        {(quotation.taxRate || quotation.taxLabel) && (
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Tax</p></div>
-            <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Rate</p><p className="text-[13px] font-medium">{typeof quotation.taxRate === "number" ? `${quotation.taxRate}%` : "—"}</p></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Label</p><p className="text-[13px] font-medium">{quotation.taxLabel ?? "—"}</p></div>
-            </div>
-          </div>
-        )}
-
-    {quotation.notes && (
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[var(--line)] px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Notes</p></div>
-            <div className="p-4 text-[13px] whitespace-pre-wrap text-[var(--ink-muted)]">{quotation.notes}</div>
-          </div>
-        )}
-        </div>
-    </section>
-      {isEdit ? (
       <section className="space-y-4 pb-20">
-        <PageHeader
-          title={`Edit Quotation ${(quotation as any).quoteNumber}`}
+        <DocumentActionBar
+          backHref="/documents/quotations"
           eyebrow="Documents · Quotations"
-          description="Edit header fields"
-          actions={
-            <div className="flex flex-wrap items-center gap-2 action-bar">
-              <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">← Back to view</Link>
-            </div>
-          }
+          title={`Quotation ${quotation.quoteNumber}`}
+          status={status}
+          primary={primary}
+          secondary={secondary}
+          overflow={overflow}
         />
-        <form
-          action={async (fd: FormData) => {
-            "use server";
-            const { user } = await getCurrentUserRole();
-            if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
-            const db = orgDb(user.orgId);
-            const validUntilRaw = String(fd.get("validUntil") ?? "").trim();
-            await db.quotation.updateMany({
-              where: { id, orgId: user.orgId },
-              data: {
-                validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
-                notes: String(fd.get("notes") ?? "").trim() || null,
-              },
-            });
-            revalidatePath(`/documents/quotations/${id}`);
-            revalidatePath("/documents/quotations");
-            redirect(`/documents/quotations/${id}`);
-          }}
-          className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
-        >
-          <input type="hidden" name="id" value={quotation.id} />
-          <div className="border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Edit Quotation</p>
+
+        {sent && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${
+              sent === "failed"
+                ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+            }`}
+          >
+            {sent === "whatsapp" && "WhatsApp message queued — track delivery in the outbox."}
+            {sent === "email" && "Email queued — track delivery in the outbox."}
+            {sent === "failed" && "Could not send: this quotation has no client phone or email on file."}
           </div>
-          <div className="p-4 grid grid-cols-1 min-[600px]:grid-cols-2 gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Valid Until</p>
-              <input name="validUntil" type="date" defaultValue={((quotation as any).validUntil) ? new Date((quotation as any).validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+        )}
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className={cardClass}>
+              <div className={cardHeadClass}>Line Items</div>
+              {quotation.items.length ? (
+                <>
+                  <DataTable
+                    frameless
+                    rows={quotation.items}
+                    getRowKey={(l) => l.id}
+                    dense
+                    columns={[
+                      { key: "description", header: "Description", cell: (row) => <span className="font-medium">{row.description}</span> },
+                      { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row) => <span>{row.quantity}</span> },
+                      { key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row) => <span className="mono tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
+                      { key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row) => <span className="mono font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
+                    ]}
+                  />
+                  <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
+                    <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
+                    {quotation.discountAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Discount</span><span className="mono text-red-500">− {formatMoney(quotation.discountAmount, currency)}</span></div>}
+                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
+                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
+                  </div>
+                </>
+              ) : <div className="p-4 text-[13px] text-[var(--ink-muted)]">No items.</div>}
             </div>
+
+            {quotation.notes && (
+              <div className={cardClass}>
+                <div className={cardHeadClass}>Notes</div>
+                <div className="whitespace-pre-wrap p-4 text-[13px] text-[var(--ink-muted)]">{sanitizeText(quotation.notes)}</div>
+              </div>
+            )}
+
+            {isEdit && (
+              <form
+                action={async (fd: FormData) => {
+                  "use server";
+                  const { user: actor, orgId: actorOrg } = await requireOrgSession();
+                  if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+                  const validUntilRaw = String(fd.get("validUntil") ?? "").trim();
+                  await prisma.quotation.updateMany({
+                    where: { id, orgId: actorOrg },
+                    data: {
+                      validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
+                      notes: String(fd.get("notes") ?? "").trim() || null,
+                    },
+                  });
+                  revalidatePath(`/documents/quotations/${id}`);
+                  revalidatePath("/documents/quotations");
+                  redirect(`/documents/quotations/${id}`);
+                }}
+                className={cardClass}
+              >
+                <div className={cardHeadClass}>Edit quotation</div>
+                <div className="grid grid-cols-1 gap-3 p-4 min-[600px]:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Valid Until</p>
+                    <input name="validUntil" type="date" defaultValue={quotation.validUntil ? new Date(quotation.validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </div>
+                </div>
+                <div className="px-4 pb-4">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Notes</p>
+                  <textarea name="notes" defaultValue={quotation.notes ?? ""} rows={4} className="w-full resize-y rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
+                </div>
+                <div className="flex items-center gap-2 border-t border-[var(--line)] px-4 py-3">
+                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold">Save changes</button>
+                  <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Cancel</Link>
+                </div>
+              </form>
+            )}
           </div>
-          <div className="p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-1">Notes</p>
-            <textarea name="notes" defaultValue={(quotation as any).notes ?? ""} rows={4} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50 resize-y" />
-          </div>
-          <div className="border-t border-[var(--line)] px-4 py-3 flex items-center gap-2">
-            <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold">Save Changes</button>
-            <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Cancel</Link>
-          </div>
-        </form>
+
+          <DocumentSummaryRail
+            headline={{ label: "Total", value: formatMoney(total, currency), tone: "ink" }}
+            rows={rows}
+            client={quotation.client}
+            related={related}
+            activity={activity}
+          />
+        </div>
       </section>
-    ) : null}
     </>
   );
 }

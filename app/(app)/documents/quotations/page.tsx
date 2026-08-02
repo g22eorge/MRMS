@@ -11,7 +11,8 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { sanitizeText } from "@/lib/sanitize";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
-import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
+import { prisma } from "@/lib/prisma";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { QuotationPreviewProvider } from "./QuotationPreviewProvider";
 import { PreviewButton } from "./PreviewButton";
@@ -113,35 +114,21 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     "use server";
     const { user } = await getCurrentUserRole();
     if (!can.createInvoices(user)) redirect("/dashboard");
-    const db = orgDb(user.orgId);
+    const orgId = user.orgId;
+    if (!orgId) redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
-    const quotation = await db.quotation.findFirst({ where: { id, orgId: user.orgId }, select: { clientId: true, items: true, totalAmount: true, currency: true, notes: true } });
-    if (!quotation) redirect("/documents/quotations");
-    const nextInvNumber = await nextDocumentNumber(db, "INV", "invoice", orgId);
-    await db.invoice.create({
-      data: {
-        orgId: user.orgId,
-        invoiceNumber: nextInvNumber,
-        clientId: quotation.clientId,
-        currency: quotation.currency ?? "UGX",
-        totalAmount: quotation.totalAmount,
-        notes: quotation.notes ?? "",
-        status: "DRAFT",
-        lines: {
-          create: quotation.items.map((item: any) => ({
-            orgId: user.orgId,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            discount: item.discount,
-            lineTotal: item.lineTotal,
-            taxAmount: 0,
-          })),
-        },
-      },
-    });
-    await db.quotation.update({ where: { id }, data: { convertedToInvoiceId: nextInvNumber } });
+    if (!id) redirect("/documents/quotations");
+    // Use the canonical converter: correct tax proportioning, one-invoice-per-job
+    // dedup, and it links convertedToInvoiceId to the invoice ID (the old inline
+    // version referenced an undefined `orgId` and stored the invoice number).
+    const orgRec = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } });
+    const currency = normalizeCurrency(orgRec?.baseCurrency, "UGX");
+    const invoice = await prisma.$transaction((tx) => ensureInvoiceFromQuotation(tx, { orgId, quotationId: id, currency }));
     revalidatePath("/documents/quotations");
+    if (invoice) {
+      revalidatePath("/documents/invoices");
+      redirect(`/documents/invoices/${invoice.id}`);
+    }
     redirect("/documents/quotations");
   }
 
