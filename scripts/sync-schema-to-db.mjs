@@ -125,6 +125,23 @@ async function run() {
     }
   }
 
+  // Pre-index remediation — fix known legacy-data violations so the UNIQUE
+  // indexes below can be created. Both are safe and idempotent.
+  const remediations = [];
+  {
+    const tablesNow = await existingTables();
+    // Empty-string invoiceNumber duplicates → NULL (SQLite allows many NULLs in a unique index).
+    if (tablesNow.has("Job")) {
+      const r = await client.execute(`UPDATE "Job" SET "invoiceNumber" = NULL WHERE "invoiceNumber" IS NOT NULL AND TRIM("invoiceNumber") = ''`);
+      if (r.rowsAffected) remediations.push(`Job.invoiceNumber: nulled ${r.rowsAffected} empty value(s)`);
+    }
+    // Duplicate branding rows per org → keep the newest (max rowid), delete the rest.
+    if (tablesNow.has("DocumentBrandingSettings")) {
+      const r = await client.execute(`DELETE FROM "DocumentBrandingSettings" WHERE rowid NOT IN (SELECT MAX(rowid) FROM "DocumentBrandingSettings" GROUP BY "orgId")`);
+      if (r.rowsAffected) remediations.push(`DocumentBrandingSettings: removed ${r.rowsAffected} duplicate row(s)`);
+    }
+  }
+
   // Pass 2 — indexes (idempotent via IF NOT EXISTS)
   for (const stmt of indexes) {
     const idempotent = stmt
@@ -144,6 +161,7 @@ async function run() {
     databaseUrl: url,
     createdTables,
     addedColumns,
+    remediations,
     indexesEnsured,
     warnings,
   };
