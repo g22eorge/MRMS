@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { randomBytes } from "crypto";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { redirect } from "next/navigation";
 import { hashPassword, verifyPassword, makeSignature } from "better-auth/crypto";
 
@@ -94,7 +94,11 @@ export async function getPortalSession(): Promise<PortalContext | null> {
   if (idx < 0) return null;
   const token = raw.slice(0, idx);
   const providedSig = raw.slice(idx + 1);
-  if (!token || providedSig !== (await sign(token))) return null;
+  if (!token) return null;
+  // Constant-time signature check (avoid a timing side-channel on the session).
+  const provided = Buffer.from(providedSig);
+  const expected = Buffer.from(await sign(token));
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) return null;
 
   const session = await prisma.portalSession.findUnique({
     where: { token },

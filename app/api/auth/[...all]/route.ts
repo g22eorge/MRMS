@@ -49,15 +49,15 @@ export async function POST(request: NextRequest) {
     let rl: { allowed: boolean; retryAfterMs: number } | null = null;
 
     if (path.endsWith("/sign-in/email")) {
-      rl = checkRateLimit(`ba-signin:${ip}`, { limit: 10, windowMs: 60_000 });
+      rl = await checkRateLimit(`ba-signin:${ip}`, { limit: 10, windowMs: 60_000 });
     } else if (path.endsWith("/sign-up/email")) {
-      rl = checkRateLimit(`ba-signup:${ip}`, { limit: 5, windowMs: 10 * 60_000 });
+      rl = await checkRateLimit(`ba-signup:${ip}`, { limit: 5, windowMs: 10 * 60_000 });
     } else if (
       path.endsWith("/reset-password") ||
       path.endsWith("/send-verification-email") ||
       path.endsWith("/forget-password")
     ) {
-      rl = checkRateLimit(`ba-passreset:${ip}`, { limit: 5, windowMs: 10 * 60_000 });
+      rl = await checkRateLimit(`ba-passreset:${ip}`, { limit: 5, windowMs: 10 * 60_000 });
     }
 
     if (rl && !rl.allowed) {

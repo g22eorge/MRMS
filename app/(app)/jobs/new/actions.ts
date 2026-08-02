@@ -140,7 +140,7 @@ export async function createJobAction(
       return { error: "You cannot create jobs." };
     }
 
-    const rl = rateLimit.jobCreate(orgId);
+    const rl = await rateLimit.jobCreate(orgId);
     if (!rl.allowed) {
       return { error: "Too many jobs created in a short period. Please wait a moment and try again." };
     }

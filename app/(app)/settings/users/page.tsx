@@ -704,7 +704,7 @@ export default async function UsersPage({
     const { user: actor, orgId: actorOrgId } = await requireOrgSession();
     if (actor.role !== "ADMIN") return { error: "Only admins can invite users." };
 
-    const rl = rateLimit.invite(actorOrgId);
+    const rl = await rateLimit.invite(actorOrgId);
     if (!rl.allowed) return { error: "Too many invites sent recently. Please wait before generating more." };
 
     const parsed = inviteSchema.safeParse({

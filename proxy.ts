@@ -53,7 +53,7 @@ function clientIp(req: NextRequest): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = clientIp(req);
 
@@ -65,7 +65,7 @@ export function proxy(req: NextRequest) {
 
   // Webhook endpoints: allow bursts but cap runaway callers (200 / min per IP).
   if (pathname.startsWith("/api/webhooks")) {
-    const { allowed, retryAfterMs } = checkRateLimit(`webhook:${ip}`, {
+    const { allowed, retryAfterMs } = await checkRateLimit(`webhook:${ip}`, {
       limit: 200,
       windowMs: 60 * 1000,
     });
@@ -79,7 +79,7 @@ export function proxy(req: NextRequest) {
 
   // Public intake form: 5 submissions per hour per IP.
   if (pathname.startsWith("/repair-request")) {
-    const { allowed, retryAfterMs } = checkRateLimit(`form:${ip}`, {
+    const { allowed, retryAfterMs } = await checkRateLimit(`form:${ip}`, {
       limit: 5,
       windowMs: 60 * 60 * 1000,
     });
@@ -97,7 +97,7 @@ export function proxy(req: NextRequest) {
     !pathname.startsWith("/api/auth") &&
     !pathname.startsWith("/api/webhooks")
   ) {
-    const { allowed, retryAfterMs } = checkRateLimit(`api:${ip}`, {
+    const { allowed, retryAfterMs } = await checkRateLimit(`api:${ip}`, {
       limit: 100,
       windowMs: 60 * 1000,
     });

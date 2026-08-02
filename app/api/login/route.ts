@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const isSuperAdmin = checkIsPlatformAdmin(email);
 
     if (!isSuperAdmin) {
-      const rl = checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
+      const rl = await checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
       if (!rl.allowed) {
         return NextResponse.json(
           { message: "Too many login attempts. Please wait a minute.", code: "RATE_LIMITED" },

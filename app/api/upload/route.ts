@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Per-user upload rate limit (30 uploads / 10 min).
-  const rl = rateLimit.upload(user.id);
+  const rl = await rateLimit.upload(user.id);
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Too many uploads. Please wait a moment." },

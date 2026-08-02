@@ -35,13 +35,15 @@ export async function approveQuotationAction(formData: FormData): Promise<void> 
     roles: ["ADMIN", "OPS"],
   }).catch(() => {});
 
+  // Best-effort audit: the approval already committed above, so a failing audit
+  // write must not 500 the customer (they'd retry an already-accepted quote).
   await writeSystemAuditEvent({
     orgId: org.id,
     entityType: "Quotation",
     entityId: quotation.id,
     action: "QUOTATION_APPROVED_PORTAL",
     summary: `${quotation.quoteNumber} approved by portal user ${portalUser.name}`,
-  });
+  }).catch(() => {});
 
   if (jobId) revalidatePath(`/portal/repairs/${jobId}`);
 }
