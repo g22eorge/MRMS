@@ -8,8 +8,9 @@ import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/Button";
-import { StatStrip } from "@/components/ui/StatStrip";
-import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
 import { updateLeadStatus, addLeadActivity, updateLeadDetails } from "../../actions";
 
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -30,14 +31,6 @@ const LEAD_STATUS_TONES: Record<string, BadgeTone> = {
   WON:           "success",
   LOST:          "danger",
   STALE:         "neutral",
-};
-
-const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
-  DRAFT:    "neutral",
-  SENT:     "info",
-  ACCEPTED: "success",
-  REJECTED: "danger",
-  EXPIRED:  "slate",
 };
 
 const ACTIVITY_TYPE_LABELS: Record<string, string> = {
@@ -166,36 +159,13 @@ export default async function LeadDetailPage({
 
   return (
     <div className="space-y-4 pb-24 lg:pb-8">
-      <div>
-        <Link href="/sales" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          All leads
-        </Link>
-      </div>
-
-      {/* ── Identity + stats ── */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-[13px] font-bold text-[var(--ink)]">{lead.fullName}</p>
-              <StatusBadge tone={toneFor(LEAD_STATUS_TONES, lead.status)}>{LEAD_STATUS_LABELS[lead.status]}</StatusBadge>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <a href={`tel:${lead.phone}`} className="transition hover:text-[var(--accent)]">{lead.phone}</a>
-              {lead.email ? <><span className="opacity-40">·</span><span className="truncate">{lead.email}</span></> : null}
-              {lead.organization ? <><span className="opacity-40">·</span><span className="truncate">{lead.organization}</span></> : null}
-              <span className="opacity-40">·</span>
-              <span>{lead.source.replace(/_/g, " ").toLowerCase()}</span>
-            </div>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
-              Created {formatEATDate(lead.createdAt)} by {lead.createdBy?.name ?? "unknown"}
-              {lead.assignedTo ? ` · assigned to ${lead.assignedTo.name}` : " · unassigned"}
-              {lead.convertedAt ? ` · converted ${formatEATDate(lead.convertedAt)}` : ""}
-              {lead.closedAt ? ` · closed ${formatEATDate(lead.closedAt)}` : ""}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+      <RecordActionBar
+        backHref="/sales"
+        eyebrow="Sales · Lead"
+        title={lead.fullName}
+        status={{ label: LEAD_STATUS_LABELS[lead.status], tone: toneFor(LEAD_STATUS_TONES, lead.status) }}
+        secondary={
+          <>
             {can.createQuotations(user) ? (
               <Button href={`/sales/quotations/new?leadId=${lead.id}`} variant="secondary" size="sm">New Quotation</Button>
             ) : null}
@@ -204,165 +174,158 @@ export default async function LeadDetailPage({
                 {showEdit ? "Close" : "Edit"}
               </Button>
             ) : null}
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <StatStrip
-          columns={4}
-          tiles={[
-            { label: "Est. Value", value: lead.estimatedValue != null ? formatMoney(lead.estimatedValue, currency) : "—" },
-            { label: "Quoted", value: quotedTotal > 0 ? formatMoney(quotedTotal, currency) : "—", sub: lead.quotations.length > 0 ? `${lead.quotations.length} quotation${lead.quotations.length === 1 ? "" : "s"}` : undefined },
-            {
-              label: "Follow-up",
-              value: lead.followUpAt ? formatEATDate(lead.followUpAt) : "None",
-              valueClass: isOverdue ? "text-amber-600" : undefined,
-              sub: isOverdue ? "overdue" : undefined,
-            },
-            { label: "Activities", value: lead.activities.length },
-          ]}
-        />
-
-        {lead.interest || lead.notes ? (
-          <div className="space-y-1 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px]">
-            {lead.interest ? (
-              <p className="text-[var(--ink-muted)]"><span className="font-semibold text-[var(--ink)]">Interest</span> · {lead.interest}</p>
-            ) : null}
-            {lead.notes ? (
-              <p className="text-[var(--ink-muted)] [overflow-wrap:anywhere]"><span className="font-semibold text-[var(--ink)]">Notes</span> · {lead.notes}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* Stage update — inline bar, no separate card */}
-        {canEdit ? (
-          <form action={updateStatusAction} className="border-t border-[var(--line)] p-3">
-            {filters.statusError ? <p className={errorBox}>{filters.statusError}</p> : null}
-            <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)_auto]">
-              <select name="status" defaultValue={lead.status} aria-label="Stage" className={field}>
-                {(Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((s) => (
-                  <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-                ))}
-              </select>
-              <input name="note" placeholder="Optional note" className={field} />
-              <Button type="submit" variant="secondary" size="sm">Update Stage</Button>
-            </div>
-          </form>
-        ) : null}
-      </section>
-
-      {/* ── Edit details (opened from the header) ── */}
-      {canEdit && showEdit ? (
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="border-b border-[var(--line)] px-4 py-2.5">
-            <p className={cardLabel}>Edit Lead</p>
-          </div>
-          <form action={updateLeadDetailsAction} className="p-3">
-            {filters.editError ? <p className={errorBox}>{filters.editError}</p> : null}
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <input name="fullName" required defaultValue={lead.fullName} placeholder="Full name *" aria-label="Full name" className={field} />
-              <input name="phone" required defaultValue={lead.phone} placeholder="Phone *" aria-label="Phone" className={field} />
-              <input name="email" type="email" defaultValue={lead.email ?? ""} placeholder="Email" aria-label="Email" className={field} />
-              <input name="organization" defaultValue={lead.organization ?? ""} placeholder="Organization" aria-label="Organization" className={field} />
-              <select name="source" defaultValue={lead.source} aria-label="Source" className={field}>
-                <option value="WALK_IN">Walk-in</option>
-                <option value="REFERRAL">Referral</option>
-                <option value="PHONE">Phone</option>
-                <option value="SOCIAL_MEDIA">Social media</option>
-                <option value="WEBSITE">Website</option>
-                <option value="OTHER">Other</option>
-              </select>
-              <input name="estimatedValue" type="number" min="0" step="1" defaultValue={lead.estimatedValue ?? ""} placeholder={`Est. value (${currency})`} aria-label="Estimated value" className={field} />
-              <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? lead.followUpAt.toISOString().slice(0, 10) : ""} aria-label="Follow-up date" className={field} />
-              {orgUsers.length > 0 ? (
-                <select name="assignedToId" defaultValue={lead.assignedToId ?? ""} aria-label="Assigned to" className={field}>
-                  <option value="">Unassigned</option>
-                  {orgUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              ) : null}
-              <input name="interest" defaultValue={lead.interest ?? ""} placeholder="Interest / product" aria-label="Interest" className={field} />
-              <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} placeholder="Notes" aria-label="Notes" className={`${field} sm:col-span-2 lg:col-span-3`} />
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Button type="submit" size="sm" className="px-4 font-bold">Save Lead</Button>
-              <Link href={`/sales/leads/${lead.id}`} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
-            </div>
-          </form>
-        </section>
-      ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* ── Activity ── */}
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className={cardLabel}>Activity</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">
-              {lead.activities.length} entr{lead.activities.length === 1 ? "y" : "ies"}
-            </p>
-          </div>
-
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+          {/* ── Stage update ── */}
           {canEdit ? (
-            <form action={addActivityAction} className="border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
-              {filters.activityError ? <p className={errorBox}>{filters.activityError}</p> : null}
-              <div className="grid gap-2 md:grid-cols-[140px_minmax(0,1fr)_auto]">
-                <select name="type" aria-label="Activity type" className={field}>
-                  <option value="NOTE">Note</option>
-                  <option value="CALL">Call</option>
-                  <option value="EMAIL">Email</option>
-                  <option value="MEETING">Meeting</option>
-                </select>
-                <input name="note" required placeholder="Activity note" className={field} />
-                <Button type="submit" variant="secondary" size="sm">Add</Button>
-              </div>
-            </form>
+            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-2.5"><p className={cardLabel}>Stage</p></div>
+              <form action={updateStatusAction} className="p-3">
+                {filters.statusError ? <p className={errorBox}>{filters.statusError}</p> : null}
+                <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+                  <select name="status" defaultValue={lead.status} aria-label="Stage" className={field}>
+                    {(Object.keys(LEAD_STATUS_LABELS) as LeadStatus[]).map((s) => (
+                      <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                  <input name="note" placeholder="Optional note" className={field} />
+                  <Button type="submit" variant="secondary" size="sm">Update Stage</Button>
+                </div>
+              </form>
+            </section>
           ) : null}
 
-          {lead.activities.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">No activity yet</p>
-          ) : (
-            <div className="divide-y divide-[var(--line)]">
-              {lead.activities.map((activity) => (
-                <div key={activity.id} className="px-4 py-2.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-[13px] font-semibold text-[var(--ink)]">
-                      {ACTIVITY_TYPE_LABELS[activity.type] ?? activity.type}
-                      <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{activity.user.name}</span>
-                    </p>
-                    <p className="shrink-0 text-[12px] text-[var(--ink-muted)]/60">{formatEATDateTime(activity.createdAt)}</p>
-                  </div>
-                  {activity.note ? <p className="mt-0.5 text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere]">{activity.note}</p> : null}
+          {/* ── Edit details (opened from the action bar) ── */}
+          {canEdit && showEdit ? (
+            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--line)] px-4 py-2.5">
+                <p className={cardLabel}>Edit Lead</p>
+              </div>
+              <form action={updateLeadDetailsAction} className="p-3">
+                {filters.editError ? <p className={errorBox}>{filters.editError}</p> : null}
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <input name="fullName" required defaultValue={lead.fullName} placeholder="Full name *" aria-label="Full name" className={field} />
+                  <input name="phone" required defaultValue={lead.phone} placeholder="Phone *" aria-label="Phone" className={field} />
+                  <input name="email" type="email" defaultValue={lead.email ?? ""} placeholder="Email" aria-label="Email" className={field} />
+                  <input name="organization" defaultValue={lead.organization ?? ""} placeholder="Organization" aria-label="Organization" className={field} />
+                  <select name="source" defaultValue={lead.source} aria-label="Source" className={field}>
+                    <option value="WALK_IN">Walk-in</option>
+                    <option value="REFERRAL">Referral</option>
+                    <option value="PHONE">Phone</option>
+                    <option value="SOCIAL_MEDIA">Social media</option>
+                    <option value="WEBSITE">Website</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <input name="estimatedValue" type="number" min="0" step="1" defaultValue={lead.estimatedValue ?? ""} placeholder={`Est. value (${currency})`} aria-label="Estimated value" className={field} />
+                  <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? lead.followUpAt.toISOString().slice(0, 10) : ""} aria-label="Follow-up date" className={field} />
+                  {orgUsers.length > 0 ? (
+                    <select name="assignedToId" defaultValue={lead.assignedToId ?? ""} aria-label="Assigned to" className={field}>
+                      <option value="">Unassigned</option>
+                      {orgUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  ) : null}
+                  <input name="interest" defaultValue={lead.interest ?? ""} placeholder="Interest / product" aria-label="Interest" className={field} />
+                  <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} placeholder="Notes" aria-label="Notes" className={`${field} sm:col-span-2 lg:col-span-3`} />
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+                <div className="mt-2 flex items-center gap-2">
+                  <Button type="submit" size="sm" className="px-4 font-bold">Save Lead</Button>
+                  <Link href={`/sales/leads/${lead.id}`} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+                </div>
+              </form>
+            </section>
+          ) : null}
 
-        {/* ── Quotations ── */}
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className={cardLabel}>Quotations</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">{lead.quotations.length}</p>
-          </div>
-          {lead.quotations.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">None linked yet</p>
-          ) : (
-            <div className="divide-y divide-[var(--line)]">
-              {lead.quotations.map((q) => (
-                <Link key={q.id} href={`/sales/quotations/${q.id}`} className="flex items-center justify-between gap-2 px-4 py-2.5 transition hover:bg-[var(--panel-strong)]/40">
-                  <div className="min-w-0">
-                    <p className="mono truncate text-[13px] font-semibold text-[var(--ink)]">{q.quoteNumber}</p>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(q.createdAt)}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <p className="text-[13px] font-bold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</p>
-                    <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
-                  </div>
-                </Link>
-              ))}
+          {/* ── Interest / Notes ── */}
+          {lead.interest || lead.notes ? (
+            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="space-y-1 px-4 py-3 text-[13px]">
+                {lead.interest ? (
+                  <p className="text-[var(--ink-muted)]"><span className="font-semibold text-[var(--ink)]">Interest</span> · {lead.interest}</p>
+                ) : null}
+                {lead.notes ? (
+                  <p className="text-[var(--ink-muted)] [overflow-wrap:anywhere]"><span className="font-semibold text-[var(--ink)]">Notes</span> · {lead.notes}</p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {/* ── Activity ── */}
+          <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+              <p className={cardLabel}>Activity</p>
+              <p className="text-[12px] text-[var(--ink-muted)]">
+                {lead.activities.length} entr{lead.activities.length === 1 ? "y" : "ies"}
+              </p>
             </div>
-          )}
-        </section>
+
+            {canEdit ? (
+              <form action={addActivityAction} className="border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
+                {filters.activityError ? <p className={errorBox}>{filters.activityError}</p> : null}
+                <div className="grid gap-2 md:grid-cols-[140px_minmax(0,1fr)_auto]">
+                  <select name="type" aria-label="Activity type" className={field}>
+                    <option value="NOTE">Note</option>
+                    <option value="CALL">Call</option>
+                    <option value="EMAIL">Email</option>
+                    <option value="MEETING">Meeting</option>
+                  </select>
+                  <input name="note" required placeholder="Activity note" className={field} />
+                  <Button type="submit" variant="secondary" size="sm">Add</Button>
+                </div>
+              </form>
+            ) : null}
+
+            {lead.activities.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-[var(--ink-muted)]">No activity yet</p>
+            ) : (
+              <div className="divide-y divide-[var(--line)]">
+                {lead.activities.map((activity) => (
+                  <div key={activity.id} className="px-4 py-2.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-[13px] font-semibold text-[var(--ink)]">
+                        {ACTIVITY_TYPE_LABELS[activity.type] ?? activity.type}
+                        <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{activity.user.name}</span>
+                      </p>
+                      <p className="shrink-0 text-[12px] text-[var(--ink-muted)]/60">{formatEATDateTime(activity.createdAt)}</p>
+                    </div>
+                    {activity.note ? <p className="mt-0.5 text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere]">{activity.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* ── Summary rail ── */}
+        <RecordSummaryRail
+          headline={{ label: "Estimated Value", value: lead.estimatedValue != null ? formatMoney(lead.estimatedValue, currency) : "—" }}
+          rows={[
+            { label: "Quoted", value: quotedTotal > 0 ? formatMoney(quotedTotal, currency) : "—" },
+            {
+              label: "Follow-up",
+              value: (
+                <span className={isOverdue ? "text-amber-600" : undefined}>
+                  {lead.followUpAt ? formatEATDate(lead.followUpAt) : "None"}{isOverdue ? " · overdue" : ""}
+                </span>
+              ),
+            },
+            { label: "Activities", value: lead.activities.length },
+            { label: "Source", value: lead.source.replace(/_/g, " ").toLowerCase() },
+            { label: "Assigned", value: lead.assignedTo?.name ?? "Unassigned" },
+            { label: "Created", value: `${formatEATDate(lead.createdAt)}${lead.createdBy?.name ? ` · ${lead.createdBy.name}` : ""}` },
+          ]}
+          party={{ title: "Lead contact", name: lead.fullName, org: lead.organization, lines: [lead.phone, lead.email] }}
+          related={lead.quotations.map((q) => ({
+            label: q.quoteNumber,
+            href: `/sales/quotations/${q.id}`,
+            sub: `${formatMoney(q.totalAmount, q.currency)} · ${q.status}`,
+          }))}
+        />
       </div>
     </div>
   );
