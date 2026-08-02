@@ -15,7 +15,9 @@ import { createPortalUserAction, togglePortalUserAction } from "./portal-actions
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
-import { formatPhoneDisplay, phoneTelHref } from "@/lib/phone";
+import { formatPhoneDisplay } from "@/lib/phone";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 
 const updateClientSchema = z.object({
   fullName: z.string().min(2),
@@ -207,55 +209,24 @@ export default async function ClientDetailPage({
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Link href="/clients" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          All clients
-        </Link>
-      </div>
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Client Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <RecordActionBar
+        backHref="/clients"
+        eyebrow="Clients"
+        title={client.fullName}
+        secondary={canEdit ? (
+          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[12px]">+ New Repair</Link>
+        ) : undefined}
+      />
 
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-bold text-[var(--ink)]">{client.fullName}</p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <a href={phoneTelHref(client.phone) ?? `tel:${client.phone}`} className="transition hover:text-[var(--accent)]">{formatPhoneDisplay(client.phone)}</a>
-              {client.email ? <><span className="opacity-40">·</span><span>{client.email}</span></> : null}
-              {client.organization ? <><span className="opacity-40">·</span><span className="truncate">{client.organization}</span></> : null}
-              {client.address ? <><span className="opacity-40">·</span><span className="truncate">{client.address}</span></> : null}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-5">
+          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Client Brief</p>
+              <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
             </div>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">Joined {formatEATDate(client.createdAt)} · last activity {formatEATDateTime(latestActivity)}</p>
           </div>
-          {canEdit ? (
-            <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[12px]">+ New Repair</Link>
-          ) : null}
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Total Jobs</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{totalJobs}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Open</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--accent)]">{openJobs}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Completed</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{completedJobs}</p>
-          </div>
-          <div className="px-4 py-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Rate</p>
-            <p className="text-[15px] font-black tabular-nums leading-tight text-[var(--ink)]">{completionRate.toFixed(0)}%</p>
-          </div>
-        </div>
-      </div>
 
       <form action={updateClient} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div>
@@ -495,6 +466,29 @@ export default async function ClientDetailPage({
             ))
           )}
         </div>
+      </div>
+        </div>
+
+        <RecordSummaryRail
+          headline={statement
+            ? { label: "Outstanding", value: formatMoney(statement.totals.outstanding, statement.currency), tone: statement.totals.outstanding > 0 ? "crit" : "good" }
+            : { label: "Total jobs", value: String(totalJobs) }}
+          rows={[
+            { label: "Total jobs", value: totalJobs },
+            { label: "Open", value: openJobs },
+            { label: "Completed", value: completedJobs },
+            { label: "Completion", value: `${completionRate.toFixed(0)}%` },
+            ...(statement
+              ? [
+                  { label: "Billed", value: formatMoney(statement.totals.billed, statement.currency) },
+                  { label: "Paid", value: formatMoney(statement.totals.paid, statement.currency) },
+                ]
+              : []),
+            { label: "Joined", value: formatEATDate(client.createdAt) },
+            { label: "Last activity", value: formatEATDate(latestActivity) },
+          ] as SummaryRow[]}
+          party={{ title: "Client", name: client.fullName, org: client.organization, lines: [formatPhoneDisplay(client.phone), client.email, client.address] }}
+        />
       </div>
     </div>
   );
