@@ -152,6 +152,49 @@ export async function GET() {
     }
   };
 
+  // Live check for the UNIQUE constraints most likely to be BLOCKED by legacy prod
+  // data during a schema heal (see scripts/sync-schema-to-db.mjs Pass 2). Each query
+  // counts the rows that violate the invariant; a non-zero count means the reconciler
+  // can't create that UNIQUE index, so it stays unenforced. Read-only — resolving the
+  // duplicates (which financial row is authoritative) is a human decision, not a
+  // silent deploy-time delete. Any check that can't run (missing table/column) is null.
+  const countViolation = async (label: string, sql: string): Promise<{ index: string; violatingRows: number } | { index: string; violatingRows: null }> => {
+    try {
+      const rows = await prisma.$queryRawUnsafe<Array<{ n: number | bigint }>>(sql);
+      return { index: label, violatingRows: Number(rows[0]?.n ?? 0) };
+    } catch {
+      return { index: label, violatingRows: null };
+    }
+  };
+
+  const uniqueConstraintRisks = await Promise.all([
+    // Two+ invoices sharing one job → Invoice_jobId_key can't be created.
+    countViolation(
+      "Invoice_jobId_key",
+      `SELECT COALESCE(SUM(c - 1), 0) AS n FROM (SELECT COUNT(*) AS c FROM "Invoice" WHERE "jobId" IS NOT NULL GROUP BY "jobId" HAVING c > 1)`,
+    ),
+    // Two+ receipts for one payment in an org → Receipt_orgId_paymentId_key can't be created.
+    countViolation(
+      "Receipt_orgId_paymentId_key",
+      `SELECT COALESCE(SUM(c - 1), 0) AS n FROM (SELECT COUNT(*) AS c FROM "Receipt" GROUP BY "orgId", "paymentId" HAVING c > 1)`,
+    ),
+    // Duplicate non-empty invoice numbers → Invoice_invoiceNumber_key can't be created.
+    countViolation(
+      "Invoice_invoiceNumber_key",
+      `SELECT COALESCE(SUM(c - 1), 0) AS n FROM (SELECT COUNT(*) AS c FROM "Invoice" WHERE "invoiceNumber" IS NOT NULL AND TRIM("invoiceNumber") <> '' GROUP BY "invoiceNumber" HAVING c > 1)`,
+    ),
+    // Empty-string Job.invoiceNumber duplicates (reconciler nulls these pre-index).
+    countViolation(
+      "Job_invoiceNumber_empty",
+      `SELECT COUNT(*) AS n FROM "Job" WHERE "invoiceNumber" IS NOT NULL AND TRIM("invoiceNumber") = ''`,
+    ),
+    // More than one branding row per org (reconciler dedups these pre-index).
+    countViolation(
+      "DocumentBrandingSettings_orgId_dupes",
+      `SELECT COALESCE(SUM(c - 1), 0) AS n FROM (SELECT COUNT(*) AS c FROM "DocumentBrandingSettings" GROUP BY "orgId" HAVING c > 1)`,
+    ),
+  ]);
+
   return NextResponse.json({
     ok: true,
     runtime: {
@@ -164,6 +207,7 @@ export async function GET() {
     jobColumnsPresent,
     jobColumnNames,
     jobStatusCounts,
+    uniqueConstraintRisks,
     outboxColumnsPresent,
     invoiceColumnsPresent: await columnsFor("Invoice", INVOICE_COLUMNS_TO_CHECK),
     deliveryNoteColumnsPresent: await columnsFor("DeliveryNote", DELIVERY_NOTE_COLUMNS_TO_CHECK),

@@ -98,6 +98,7 @@ async function run() {
   const createdTables = [];
   const addedColumns = [];
   const warnings = [];
+  const skippedIndexes = [];
   let indexesEnsured = 0;
 
   let tables = await existingTables();
@@ -172,8 +173,17 @@ async function run() {
       await client.execute(idempotent);
       indexesEnsured += 1;
     } catch (e) {
-      // A unique index can fail if existing data violates it — report, don't abort.
-      warnings.push(`index skipped: ${idempotent.slice(0, 80)} → ${e instanceof Error ? e.message : String(e)}`);
+      // A UNIQUE index can fail if existing data violates it. Never abort — but a
+      // silently-skipped UNIQUE means an invariant is now UNENFORCED, so surface it
+      // distinctly (not just buried in warnings) with the index name a deploy/admin
+      // can act on. Non-unique index failures stay in warnings only.
+      const isUnique = /^CREATE UNIQUE INDEX/i.test(idempotent);
+      const name = idempotent.match(/INDEX(?: IF NOT EXISTS)?\s+"([^"]+)"/i)?.[1] ?? null;
+      const reason = e instanceof Error ? e.message : String(e);
+      if (isUnique) {
+        skippedIndexes.push({ name, reason, unique: true });
+      }
+      warnings.push(`index skipped: ${idempotent.slice(0, 80)} → ${reason}`);
     }
   }
 
@@ -184,6 +194,11 @@ async function run() {
     addedColumns,
     remediations,
     indexesEnsured,
+    // Non-empty means one or more UNIQUE constraints could NOT be created because
+    // existing rows violate them — those invariants are unenforced until the
+    // duplicate/legacy data is resolved. Investigate every entry before trusting
+    // uniqueness (invoice numbers, receipt-per-payment, one-invoice-per-job, etc.).
+    skippedIndexes,
     warnings,
   };
 }
