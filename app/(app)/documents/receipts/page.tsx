@@ -66,12 +66,22 @@ export default async function ReceiptsPage({
 
     const method = parsePaymentMethod(methodRaw, "OTHER");
     if (sourceType === "invoice") {
-      const invoice = await db.invoice.findFirst({ where: { id: sourceId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, clientId: true, jobId: true } });
+      const invoice = await db.invoice.findFirst({ where: { id: sourceId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, clientId: true, jobId: true, currency: true } });
       if (!invoice || invoice.paidAmount + amount > invoice.totalAmount) return null;
 
+      // Record the payment in the INVOICE's currency, not the form's. A foreign-
+      // currency invoice needs an FX rate or syncInvoicePaymentState converts to 0
+      // and paidAmount never advances — the receipt dialog doesn't collect a rate,
+      // so reject rather than silently under-record (use the invoice detail's
+      // Collect payment, which does collect the rate).
+      const invCurrency = normalizeCurrency(invoice.currency, baseCurrency);
+      const rateRaw = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
+      const exchangeRateToBase = invCurrency === baseCurrency ? null : (rateRaw ? Number(rateRaw) : null);
+      if (invCurrency !== baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) return null;
+
       await prisma.$transaction(async (tx) => {
-        const payment = await tx.payment.create({ data: { orgId, invoiceId: invoice.id, amount, method, reference: reference || null, currency, createdById: user.id } });
-        await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount, currency, issuedById: user.id });
+        const payment = await tx.payment.create({ data: { orgId, invoiceId: invoice.id, amount, method, reference: reference || null, currency: invCurrency, exchangeRateToBase, createdById: user.id } });
+        await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount, currency: invCurrency, issuedById: user.id });
         await syncInvoicePaymentState(tx, { orgId, invoiceId: invoice.id, baseCurrency, actorUserId: user.id });
       });
       await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "RECEIPT_CREATED", summary: "Receipt generated from invoice" });
