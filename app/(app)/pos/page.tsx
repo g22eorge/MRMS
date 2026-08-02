@@ -11,6 +11,7 @@ import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
+import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -121,11 +122,16 @@ export default async function PosPage({
     if (!_shift) redirect("/pos/shifts?reason=no-shift");
 
     const saleNumber = await nextSaleNumber(db, _orgId2);
+    // Seed VAT intent from the org default so a sale only charges VAT when the
+    // org has opted in (Settings -> Branding -> VAT). Cashiers can still flip it
+    // per-sale on the sale page.
+    const branding = await getDocumentBrandingSettings(_orgId2);
     const sale = await db.sale.create({
       data: {
         saleNumber,
         status: "OPEN",
         // currency uses schema default
+        taxApplicable: branding.vatDefaultApplicable,
         createdById: _u2.id,
       },
       select: { id: true },

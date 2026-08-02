@@ -16,6 +16,7 @@ export const defaultBranding = {
   sequencePadLength: 4,
   vatDefaultApplicable: false,
   vatRatePercent: 18,
+  vatInclusive: false,
   vatLabel: "VAT",
   termsText:
     "Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.",
@@ -62,6 +63,7 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     sequencePadLength: Number(row.sequencePadLength ?? defaultBranding.sequencePadLength),
     vatDefaultApplicable: Boolean(row.vatDefaultApplicable ?? defaultBranding.vatDefaultApplicable),
     vatRatePercent: Number(row.vatRatePercent ?? defaultBranding.vatRatePercent),
+    vatInclusive: Boolean(row.vatInclusive ?? defaultBranding.vatInclusive),
     vatLabel: String(row.vatLabel ?? defaultBranding.vatLabel),
     termsText: String(row.termsText ?? defaultBranding.termsText),
     footerText: String(row.footerText ?? defaultBranding.footerText),
@@ -101,6 +103,7 @@ async function ensureRawTable() {
       sequencePadLength INTEGER NOT NULL,
       vatDefaultApplicable BOOLEAN NOT NULL,
       vatRatePercent REAL NOT NULL,
+      vatInclusive BOOLEAN NOT NULL DEFAULT 0,
       vatLabel TEXT NOT NULL,
       termsText TEXT NOT NULL,
       footerText TEXT NOT NULL,
@@ -125,13 +128,13 @@ async function ensureRawTable() {
   const ADDABLE_COLUMNS: ReadonlySet<string> = new Set([
     "invoiceTemplateKey", "quotationTemplateKey", "jobCardTemplateKey", "receiptTemplateKey",
     "primaryColor", "secondaryColor", "accentColor", "backgroundColor", "surfaceColor", "borderColor",
-    "orgId",
+    "orgId", "vatInclusive",
   ]);
-  const addColumn = async (name: string, dflt: string) => {
+  const addColumn = async (name: string, dflt: string, type = "TEXT") => {
     if (!ADDABLE_COLUMNS.has(name)) return;
     if (colSet.has(name)) return;
     await prisma.$executeRawUnsafe(
-      `ALTER TABLE "DocumentBrandingSettings" ADD COLUMN "${name}" TEXT DEFAULT ${dflt}`,
+      `ALTER TABLE "DocumentBrandingSettings" ADD COLUMN "${name}" ${type} DEFAULT ${dflt}`,
     ).catch(() => {/* ignore if already exists in concurrent request */});
     colSet.add(name);
   };
@@ -146,6 +149,7 @@ async function ensureRawTable() {
   await addColumn("surfaceColor",   "'#F5F5F5'");
   await addColumn("borderColor",    "'#E5E5E5'");
   await addColumn("orgId",          "NULL");
+  await addColumn("vatInclusive",   "0", "BOOLEAN");
 
   rawTableEnsured = true;
 }
@@ -173,7 +177,7 @@ async function getViaRaw(orgId?: string) {
           id, companyName, companyTagline, companyAddressLine1, companyAddressLine2,
           companyContacts, companyEmail, companyWebsite, documentTitle,
           quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
-          vatDefaultApplicable, vatRatePercent, vatLabel, termsText,
+          vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
           footerText, signatureCompanyLabel, signatureClientLabel,
           invoiceTemplateKey, quotationTemplateKey, jobCardTemplateKey, receiptTemplateKey,
           updatedAt
@@ -183,7 +187,7 @@ async function getViaRaw(orgId?: string) {
           ${defaultBranding.companyContacts}, ${defaultBranding.companyEmail}, ${defaultBranding.companyWebsite},
           ${defaultBranding.documentTitle}, ${defaultBranding.quotePrefix}, ${defaultBranding.quoteFormat},
           ${defaultBranding.quoteValidityDays}, ${defaultBranding.sequencePadLength},
-          ${defaultBranding.vatDefaultApplicable}, ${defaultBranding.vatRatePercent}, ${defaultBranding.vatLabel},
+          ${defaultBranding.vatDefaultApplicable}, ${defaultBranding.vatRatePercent}, ${defaultBranding.vatInclusive}, ${defaultBranding.vatLabel},
           ${defaultBranding.termsText}, ${defaultBranding.footerText},
           ${defaultBranding.signatureCompanyLabel}, ${defaultBranding.signatureClientLabel},
           ${defaultBranding.invoiceTemplateKey}, ${defaultBranding.quotationTemplateKey}, ${defaultBranding.jobCardTemplateKey}, ${defaultBranding.receiptTemplateKey},
@@ -214,7 +218,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       companyName, companyTagline, companyAddressLine1, companyAddressLine2,
       companyContacts, companyEmail, companyWebsite, documentTitle,
       quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
-      vatDefaultApplicable, vatRatePercent, vatLabel, termsText,
+      vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
       footerText, signatureCompanyLabel, signatureClientLabel,
       primaryColor, secondaryColor, accentColor, backgroundColor, surfaceColor, borderColor,
       invoiceTemplateKey, quotationTemplateKey, jobCardTemplateKey, receiptTemplateKey,
@@ -226,7 +230,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       ${data.companyContacts}, ${data.companyEmail}, ${data.companyWebsite},
       ${data.documentTitle}, ${data.quotePrefix}, ${data.quoteFormat},
       ${data.quoteValidityDays}, ${data.sequencePadLength},
-      ${data.vatDefaultApplicable}, ${data.vatRatePercent}, ${data.vatLabel},
+      ${data.vatDefaultApplicable}, ${data.vatRatePercent}, ${data.vatInclusive}, ${data.vatLabel},
       ${data.termsText}, ${data.footerText}, ${data.signatureCompanyLabel},
       ${data.signatureClientLabel},
       ${data.primaryColor}, ${data.secondaryColor}, ${data.accentColor},
@@ -251,6 +255,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       sequencePadLength = excluded.sequencePadLength,
       vatDefaultApplicable = excluded.vatDefaultApplicable,
       vatRatePercent = excluded.vatRatePercent,
+      vatInclusive = excluded.vatInclusive,
       vatLabel = excluded.vatLabel,
       termsText = excluded.termsText,
       footerText = excluded.footerText,
