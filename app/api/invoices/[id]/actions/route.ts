@@ -72,7 +72,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     // Allocate the number and create the note in one transaction (was split
     // across two calls, so the number could collide or the create fail alone).
     const deliveryNoteNumber = await prisma.$transaction(async (tx) => {
-      const number = await nextDocumentNumber(tx, "DN", "deliveryNote");
+      const number = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
       await tx.deliveryNote.create({
         data: {
           orgId,

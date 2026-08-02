@@ -91,7 +91,7 @@ export default async function DeliveryNotesPage({
         : [{ description: fallbackDescription, quantity: 1 }];
 
       const noteRecord = await prisma.$transaction(async (tx) => {
-        const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote");
+        const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
         return tx.deliveryNote.create({
           data: {
             orgId,
@@ -128,7 +128,7 @@ export default async function DeliveryNotesPage({
         : [{ description: `Sale handover for ${sale.saleNumber}`, quantity: 1 }];
 
       const noteRecord = await prisma.$transaction(async (tx) => {
-        const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote");
+        const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
         return tx.deliveryNote.create({
           data: {
             orgId,

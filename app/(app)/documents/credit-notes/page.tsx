@@ -237,7 +237,7 @@ export default async function CreditNotesPage({
     let creditNoteNumber = "";
     let creditNoteId = "";
     await prisma.$transaction(async (tx) => {
-      creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote");
+      creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
       const created = await tx.creditNote.create({
         data: {
           orgId,

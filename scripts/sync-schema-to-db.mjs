@@ -149,6 +149,18 @@ async function run() {
       const r = await client.execute(`DELETE FROM "DocumentBrandingSettings" WHERE rowid NOT IN (SELECT MAX(rowid) FROM "DocumentBrandingSettings" GROUP BY "orgId")`);
       if (r.rowsAffected) remediations.push(`DocumentBrandingSettings: removed ${r.rowsAffected} duplicate row(s)`);
     }
+    // DocumentSequence became org-scoped: drop the legacy global unique so per-org
+    // counter rows can coexist (the new (orgId,type,year) unique is created below).
+    if (tablesNow.has("DocumentSequence")) {
+      const idx = await client.execute({
+        sql: "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
+        args: ["DocumentSequence_type_year_key"],
+      });
+      if (idx.rows.length) {
+        await client.execute('DROP INDEX "DocumentSequence_type_year_key"');
+        remediations.push("Dropped legacy DocumentSequence_type_year_key (now org-scoped)");
+      }
+    }
   }
 
   // Pass 2 — indexes (idempotent via IF NOT EXISTS)

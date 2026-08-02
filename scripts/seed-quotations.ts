@@ -32,7 +32,7 @@ async function seed() {
 
   const statuses: QuotationStatus[] = ["DRAFT", "SENT", "ACCEPTED", "REJECTED"];
   for (const status of statuses) {
-    const quoteNumber = await nextDocumentNumber(prisma, "QT", "quotation");
+    const quoteNumber = await nextDocumentNumber(prisma, "QT", "quotation", targetOrgId);
 
     const items = [
       { description: "Service Item 1", quantity: 1, unitPrice: 100000, discount: 0, lineTotal: 100000 },

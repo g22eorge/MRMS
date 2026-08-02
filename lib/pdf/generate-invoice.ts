@@ -130,6 +130,7 @@ export async function generateInvoiceBuffer(
         });
         const safeInvoiceNumber = await nextAvailableInvoiceNumber(
           tx,
+          orgId,
           existingInvoice?.invoiceNumber ?? preferredInvoiceNumber,
           existingInvoice?.id,
         );

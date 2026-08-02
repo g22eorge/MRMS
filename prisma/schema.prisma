@@ -1513,12 +1513,13 @@ model RepairRequestSequence {
 // concurrent creation. Lazy-initialised from the current max for continuity.
 model DocumentSequence {
   id        String   @id @default(cuid())
+  orgId     String?
   type      String
   year      Int
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
 
-  @@unique([type, year])
+  @@unique([orgId, type, year])
 }
 
 enum RepairRequestStatus {

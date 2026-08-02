@@ -551,7 +551,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     if ((priorCredited._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) return;
 
     const result = await prisma.$transaction(async (tx) => {
-      const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote");
+      const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
 
       const created = await tx.creditNote.create({
         data: {

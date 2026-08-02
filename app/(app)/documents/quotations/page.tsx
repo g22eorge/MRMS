@@ -117,7 +117,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     const id = String(formData.get("id") ?? "").trim();
     const quotation = await db.quotation.findFirst({ where: { id, orgId: user.orgId }, select: { clientId: true, items: true, totalAmount: true, currency: true, notes: true } });
     if (!quotation) redirect("/documents/quotations");
-    const nextInvNumber = await nextDocumentNumber(db, "INV", "invoice");
+    const nextInvNumber = await nextDocumentNumber(db, "INV", "invoice", orgId);
     await db.invoice.create({
       data: {
         orgId: user.orgId,

@@ -1,53 +1,47 @@
 import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
+import { orgTagFor, composeOrgNumber, maxNumberSequence } from "@/lib/commercial/org-number";
 
 type Tx = Prisma.TransactionClient;
+type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote";
 
-/** Scan existing documents of a type for the highest sequence in the given year. */
-async function currentMaxDocumentSequence(tx: Tx, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote", startsWith: string) {
-  const numbers = countModel === "quotation"
-    ? await tx.quotation.findMany({ where: { quoteNumber: { startsWith } }, select: { quoteNumber: true } })
+/** Highest existing sequence for `inner` (e.g. "INV-2026-") within one org,
+ * tolerating both tagged (EGL-INV-2026-0007) and legacy untagged numbers so the
+ * sequence continues smoothly through the org-tag transition. */
+async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
+  const numbers: string[] = countModel === "quotation"
+    ? (await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner } }, select: { quoteNumber: true } })).map((r) => r.quoteNumber)
     : countModel === "invoice"
-      ? await tx.invoice.findMany({ where: { invoiceNumber: { startsWith } }, select: { invoiceNumber: true } })
+      ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner } }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
       : countModel === "deliveryNote"
-        ? await tx.deliveryNote.findMany({ where: { deliveryNoteNumber: { startsWith } }, select: { deliveryNoteNumber: true } })
+        ? (await tx.deliveryNote.findMany({ where: { orgId, deliveryNoteNumber: { contains: inner } }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
         : countModel === "creditNote"
-          ? await tx.creditNote.findMany({ where: { creditNoteNumber: { startsWith } }, select: { creditNoteNumber: true } })
-          : await tx.receipt.findMany({ where: { receiptNumber: { startsWith } }, select: { receiptNumber: true } });
-  return numbers.reduce((highest, record) => {
-    const value = "quoteNumber" in record
-      ? record.quoteNumber
-      : "invoiceNumber" in record
-        ? record.invoiceNumber
-        : "deliveryNoteNumber" in record
-          ? record.deliveryNoteNumber
-          : "creditNoteNumber" in record
-            ? record.creditNoteNumber
-            : record.receiptNumber;
-    const sequence = Number(value.slice(startsWith.length));
-    return Number.isFinite(sequence) ? Math.max(highest, sequence) : highest;
-  }, 0);
+          ? (await tx.creditNote.findMany({ where: { orgId, creditNoteNumber: { contains: inner } }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
+          : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner } }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
+  return maxNumberSequence(inner, numbers.filter(Boolean));
 }
 
 /**
- * Allocate the next shared document number (INV/QT/RCT/CN/DN).
+ * Allocate the next org-scoped, org-tagged document number (INV/QT/RCT/CN/DN),
+ * e.g. "EGL-INV-2026-0044" — consistent with the rest of the system's numbering.
  *
- * Uses an atomic per-(type,year) counter (DocumentSequence) so concurrent
- * creation can't compute the same number and P2002 (the old read-max-then-write
- * race). Numbers stay globally sequential, matching the existing @unique columns.
- * The counter is lazy-initialised from the current max so sequences continue
- * rather than restarting.
+ * Uses an atomic per-(orgId,type,year) counter (DocumentSequence) so concurrent
+ * creation can't compute the same number. The org tag (uppercased slug) keeps
+ * the full number globally unique, so the existing @unique columns keep working.
+ * The counter seeds from the org's current max (tagged or legacy) so sequences
+ * continue rather than restarting.
  */
-export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote") {
+export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: CountModel, orgId: string) {
   const year = new Date().getFullYear();
-  const startsWith = `${prefix}-${year}-`;
+  const inner = `${prefix}-${year}-`;
+  const tag = await orgTagFor(orgId);
 
-  const existing = await tx.documentSequence.findUnique({ where: { type_year: { type: prefix, year } } });
+  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type: prefix, year } } });
   if (!existing) {
-    const seed = await currentMaxDocumentSequence(tx, countModel, startsWith);
+    const seed = await currentMaxDocumentSequence(tx, countModel, inner, orgId);
     try {
-      await tx.documentSequence.create({ data: { type: prefix, year, value: seed } });
+      await tx.documentSequence.create({ data: { orgId, type: prefix, year, value: seed } });
     } catch (err) {
       // A concurrent call seeded it first — fine, we'll increment below.
       if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
@@ -55,14 +49,14 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: "qu
   }
 
   const updated = await tx.documentSequence.update({
-    where: { type_year: { type: prefix, year } },
+    where: { orgId_type_year: { orgId, type: prefix, year } },
     data: { value: { increment: 1 } },
     select: { value: true },
   });
-  return `${startsWith}${String(updated.value).padStart(4, "0")}`;
+  return composeOrgNumber(tag, inner, updated.value);
 }
 
-export async function nextAvailableInvoiceNumber(tx: Tx, preferred?: string | null, excludeInvoiceId?: string | null) {
+export async function nextAvailableInvoiceNumber(tx: Tx, orgId: string, preferred?: string | null, excludeInvoiceId?: string | null) {
   const preferredNumber = preferred?.trim();
   if (preferredNumber) {
     const existing = await tx.invoice.findUnique({
@@ -75,7 +69,7 @@ export async function nextAvailableInvoiceNumber(tx: Tx, preferred?: string | nu
   }
 
   for (let attempts = 0; attempts < 20; attempts += 1) {
-    const candidate = await nextDocumentNumber(tx, "INV", "invoice");
+    const candidate = await nextDocumentNumber(tx, "INV", "invoice", orgId);
     const existing = await tx.invoice.findUnique({
       where: { invoiceNumber: candidate },
       select: { id: true },
@@ -128,7 +122,7 @@ export async function ensureQuotationFromJob(tx: Tx, params: { orgId: string; jo
   if (!job) return null;
 
   const totalAmount = job.clientBill ?? 0;
-  const quoteNumber = await nextDocumentNumber(tx, "QT", "quotation");
+  const quoteNumber = await nextDocumentNumber(tx, "QT", "quotation", params.orgId);
   return tx.quotation.create({
     data: {
       orgId: params.orgId,
@@ -175,7 +169,7 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
     }
   }
 
-  const invoiceNumber = await nextAvailableInvoiceNumber(tx);
+  const invoiceNumber = await nextAvailableInvoiceNumber(tx, params.orgId);
   const totalAmount = quotation.totalAmount;
   const taxableSubtotal = quotation.subtotal > 0 ? quotation.subtotal : totalAmount;
   const invoice = await tx.invoice.create({
@@ -238,7 +232,7 @@ export async function createReceiptForPayment(tx: Tx, params: { orgId: string; p
   const receipt = await (async () => {
     const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
     if (existing) return existing;
-    const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt");
+    const receiptNumber = await nextDocumentNumber(tx, "RCT", "receipt", params.orgId);
     try {
       return await tx.receipt.create({
         data: {

@@ -828,6 +828,7 @@ export async function recordClientPaymentAction(formData: FormData) {
       });
       const safeInvoiceNumber = await nextAvailableInvoiceNumber(
         tx,
+        orgId,
         existingInvoice?.invoiceNumber ?? invoiceNumber,
         existingInvoice?.id,
       );

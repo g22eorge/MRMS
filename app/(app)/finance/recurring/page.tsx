@@ -184,7 +184,7 @@ export default async function RecurringInvoicesPage({
     const nextDue = nextDueDateFromFrequency(new Date(), frequency);
 
     await prisma.$transaction(async (tx) => {
-      const invoiceNumber = await nextDocumentNumber(tx, "INV", "invoice");
+      const invoiceNumber = await nextDocumentNumber(tx, "INV", "invoice", orgId);
       const invoice = await tx.invoice.create({
         data: {
           orgId,

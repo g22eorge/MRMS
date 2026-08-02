@@ -200,7 +200,7 @@ export default async function InvoicesPage({
         }
       }
       if (!resolvedClientId) throw new Error("client-not-found");
-      const invoiceNumber = await nextAvailableInvoiceNumber(tx);
+      const invoiceNumber = await nextAvailableInvoiceNumber(tx, orgId);
       const created = await tx.invoice.create({
         data: {
           orgId,
@@ -383,7 +383,7 @@ export default async function InvoicesPage({
 
     // Create the invoice record
     const invoice = await prisma.$transaction(async (tx) => {
-      const invoiceNumber = await nextAvailableInvoiceNumber(tx);
+      const invoiceNumber = await nextAvailableInvoiceNumber(tx, orgId);
       const inv = await tx.invoice.create({
         data: {
           orgId,
@@ -508,7 +508,7 @@ export default async function InvoicesPage({
     if (!invoice || invoice.paidAmount < invoice.totalAmount) return;
 
     await prisma.$transaction(async (tx) => {
-      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote");
+      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
       const desc = invoice.job
         ? `Repair handover for ${invoice.job.jobNumber} (${invoice.job.brand} ${invoice.job.model})`
         : (invoice.subject ?? invoice.invoiceNumber);
