@@ -724,6 +724,27 @@ export default async function InvoicesPage({
                     { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: any) => row.balance },
                   ]}
                   actions={actions}
+                  renderMobileCard={(row: any) => (
+                    <div className="px-4 py-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <RowCheckbox invoiceId={row.id} />
+                          <Link href={`/documents/invoices/${row.id}`} className="mono truncate text-xs font-semibold text-[var(--accent)] hover:underline">{row.invoiceNumber}</Link>
+                          {row.statusBadge}
+                        </div>
+                        {actions(row)}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+                        <span className="font-medium text-[var(--ink)]">{row.client}</span>
+                        <span className="font-bold tabular-nums text-[var(--ink)]">{row.amount}</span>
+                        <span className="text-[var(--ink-muted)]">Bal: {row.balance}</span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] text-[var(--ink-muted)]">
+                        <span>Issued {row.issued}</span>
+                        {row.due !== "—" ? <span>Due {row.due}</span> : null}
+                      </div>
+                    </div>
+                  )}
                 />
               );
             })()}

@@ -265,6 +265,26 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           empty="No quotations found."
           columns={columns}
           actions={actions}
+          renderMobileCard={(row: any) => (
+            <div className="px-4 py-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <RowCheckbox quotationId={row.id} />
+                  <Link href={`/documents/quotations/${row.id}`} className="mono truncate text-xs font-semibold text-[var(--accent)] hover:underline">{row.quoteNumber}</Link>
+                  {row.statusBadge}
+                </div>
+                {actions(row)}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+                <span className="font-medium text-[var(--ink)]">{row.client}</span>
+                <span className="font-bold tabular-nums text-[var(--ink)]">{row.amount}</span>
+              </div>
+              <div className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] text-[var(--ink-muted)]">
+                <span>Created {row.created}</span>
+                {row.validUntil !== "—" ? <span>Valid until {row.validUntil}</span> : null}
+              </div>
+            </div>
+          )}
         />
       );
     })()}
