@@ -250,3 +250,83 @@ export async function shareDeliveryNoteDocument(params: {
     emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\nDownload PDF: ${pdfUrl}`,
   });
 }
+
+export async function shareInvoiceDocument(params: {
+  orgId: string;
+  invoiceId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: params.invoiceId, orgId: params.orgId },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      totalAmount: true,
+      currency: true,
+      client: { select: invoiceClientSelect },
+      job: { select: { id: true, client: { select: invoiceClientSelect } } },
+    },
+  });
+  if (!invoice) return false;
+
+  // Job-linked or standalone: prefer the job's client, else the invoice's own.
+  const recipient = resolveLinkedDocumentRecipient({
+    jobClient: invoice.job?.client ?? null,
+    invoiceClient: invoice.client ?? null,
+  });
+  if (!recipient) return false;
+
+  const pdfUrl = documentPdfUrl(`/api/invoices/${invoice.id}/pdf`);
+  const amountLine = `Amount: ${formatMoney(invoice.totalAmount, invoice.currency)}`;
+  const intro = `Your invoice ${invoice.invoiceNumber} is ready.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    jobId: invoice.job?.id,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Invoice ${invoice.invoiceNumber}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
+export async function shareQuotationDocument(params: {
+  orgId: string;
+  quotationId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const quotation = await prisma.quotation.findFirst({
+    where: { id: params.quotationId, orgId: params.orgId },
+    select: {
+      id: true,
+      quoteNumber: true,
+      totalAmount: true,
+      currency: true,
+      client: { select: invoiceClientSelect },
+      job: { select: { id: true, client: { select: invoiceClientSelect } } },
+    },
+  });
+  if (!quotation) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({
+    jobClient: quotation.job?.client ?? null,
+    invoiceClient: quotation.client ?? null,
+  });
+  if (!recipient) return false;
+
+  // Quotation PDF is served by the [id] route's GET (there is no /pdf subroute).
+  const pdfUrl = documentPdfUrl(`/api/quotations/${quotation.id}`);
+  const amountLine = `Amount: ${formatMoney(quotation.totalAmount, quotation.currency)}`;
+  const intro = `Your quotation ${quotation.quoteNumber} is ready.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    jobId: quotation.job?.id,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Quotation ${quotation.quoteNumber}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
