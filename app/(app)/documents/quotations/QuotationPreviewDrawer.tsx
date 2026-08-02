@@ -1,75 +1,62 @@
 "use client";
 
-import { useQuotationPreview } from "./QuotationPreviewProvider";
 import { useEffect, useState } from "react";
 
+import { useQuotationPreview } from "./QuotationPreviewProvider";
+
+/**
+ * Paper preview — embeds the actual quotation PDF (served by the [id] route's
+ * GET; there is no /pdf subroute), not a re-render of the app detail page.
+ */
 export function QuotationPreviewDrawer() {
   const { previewQuotationId, closePreview } = useQuotationPreview();
-  const [html, setHtml] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!previewQuotationId) {
-      setHtml(null);
-      setError(null);
-      return;
-    }
     setLoading(true);
-    setError(null);
-    fetch(`/documents/quotations/${previewQuotationId}`, {
-      credentials: "same-origin",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.text();
-      })
-      .then((html) => {
-        const injected = html.replace(
-          /<body[^>]*>/,
-          `<body><style>
-            #print-area > :first-child,
-            #print-area > .action-bar { display: none !important; }
-            #print-area { padding-top: 0 !important; }
-          </style>`
-        );
-        setHtml(injected);
-      })
-      .catch((err) => {
-        console.error("Failed to load quotation preview:", err);
-        setError("Failed to load quotation.");
-      })
-      .finally(() => setLoading(false));
   }, [previewQuotationId]);
 
   if (!previewQuotationId) return null;
+  const pdfUrl = `/api/quotations/${previewQuotationId}`;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-start justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={closePreview}></div>
-      <div className="relative h-full w-full max-w-5xl bg-white shadow-2xl overflow-hidden">
-        <button
-          onClick={closePreview}
-          className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow hover:bg-gray-100"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-        {loading ? (
-          <div className="flex items-center justify-center h-full text-sm text-gray-500">
-            Loading quotation…
+    <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">
+      <div className="absolute inset-0 bg-black/50" onClick={closePreview} />
+      <div className="relative flex h-full w-full max-w-3xl flex-col bg-neutral-200 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-2">
+          <span className="text-sm font-semibold text-gray-700">Quotation preview</span>
+          <div className="flex items-center gap-2">
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Open PDF ↗
+            </a>
+            <button
+              onClick={closePreview}
+              aria-label="Close preview"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-full text-sm text-red-600">{error}</div>
-        ) : html ? (
+        </div>
+        <div className="relative flex-1">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">Loading document…</div>
+          )}
           <iframe
-            srcDoc={html}
+            src={pdfUrl}
+            onLoad={() => setLoading(false)}
             className="h-full w-full border-none"
-            title={`Quotation ${previewQuotationId}`}
+            title="Quotation preview"
           />
-        ) : null}
+        </div>
       </div>
     </div>
   );
