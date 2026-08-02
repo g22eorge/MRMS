@@ -9,7 +9,9 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
-  if (!(can.approveInvoices(user) || ["ADMIN", "FINANCE"].includes(user.role))) {
+  // Match the single-invoice void gate (was the broader approveInvoices, letting
+  // e.g. FRONT_DESK void in bulk what they can't void individually).
+  if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

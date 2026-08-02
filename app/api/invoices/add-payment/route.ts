@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   const rawAmount = String(body.amount ?? "").replace(/,/g, "").trim();
   const amount = Number(rawAmount);
   const methodRaw = String(body.method ?? "CASH").trim();
+  const reference = String(body.reference ?? "").trim().slice(0, 120) || null;
 
   if (!invoiceId || !amount || amount <= 0) {
     return new Response("Invalid input", { status: 400 });
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
           currency: invCurrency,
           exchangeRateToBase,
           method,
+          reference,
           kind: "PAYMENT",
           receivedAt: new Date(),
           createdById: user.id,

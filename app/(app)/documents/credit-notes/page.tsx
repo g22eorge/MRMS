@@ -13,6 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { postRefund } from "@/lib/accounting/post";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
@@ -127,20 +128,33 @@ export default async function CreditNotesPage({
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 
-    const refund = await prisma.refund.create({
-      data: {
+    const refund = await prisma.$transaction(async (tx) => {
+      const created = await tx.refund.create({
+        data: {
+          orgId,
+          saleId: cn.saleId,
+          creditNoteId: cn.id,
+          currency: cn.currency,
+          amount: amountRaw,
+          method,
+          reference: reference || null,
+          note: note || null,
+          createdById: user.id,
+          refundedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      // C5: cash-basis ledger post — reverse revenue, pay out cash. This mirrors
+      // the refunds page; without it, refunds issued from a credit note never hit
+      // the ledger (cash would be overstated).
+      await postRefund(tx, {
         orgId,
-        saleId: cn.saleId,
-        creditNoteId: cn.id,
-        currency: cn.currency,
+        userId: user.id,
         amount: amountRaw,
-        method,
-        reference: reference || null,
-        note: note || null,
-        createdById: user.id,
-        refundedAt: new Date(),
-      },
-      select: { id: true },
+        reference: `refund:${created.id}`,
+        description: `Refund from credit note ${cn.creditNoteNumber}`,
+      });
+      return created;
     });
     await writeSystemAuditEvent({
       orgId,

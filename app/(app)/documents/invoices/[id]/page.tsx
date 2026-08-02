@@ -484,7 +484,12 @@ export default async function InvoiceDetailPage({
             const newSubtotal = items.reduce((s, i) => s + i.lineTotal, 0);
             const newTax = taxRate > 0 ? newSubtotal * (taxRate / 100) : 0;
             const totalAmount = newSubtotal + newTax;
-            const clientId = String(fd.get("clientId") ?? "").trim() || null;
+            // Only re-point the invoice at a client that belongs to this org — a
+            // forged clientId must not surface another tenant's name/phone on the PDF.
+            const requestedClientId = String(fd.get("clientId") ?? "").trim() || null;
+            const clientId = requestedClientId
+              ? (await prisma.client.findFirst({ where: { id: requestedClientId, orgId }, select: { id: true } }))?.id ?? null
+              : null;
 
             await prisma.$transaction(async (tx) => {
               await tx.invoiceLine.deleteMany({ where: { invoiceId: fdId, orgId: orgId } });
