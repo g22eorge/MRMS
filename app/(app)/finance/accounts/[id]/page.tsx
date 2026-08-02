@@ -8,7 +8,8 @@ import { orgDb } from "@/lib/db";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 
 export const dynamic = "force-dynamic";
 
@@ -136,37 +137,24 @@ export default async function AccountLedgerPage({
   return (
     <div className="space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance · Accounts</p>
-          <p className="mt-0.5 text-[13px] font-bold text-[var(--ink)]">
-            <span className="font-mono text-[var(--accent)]">{account.code}</span>
-            {" "}
-            {account.name}
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusBadge tone={toneFor(TYPE_TONES, account.type)} className="uppercase tracking-wide">
-              {account.type}
-            </StatusBadge>
-            {account.parent && (
-              <span className="text-[13px] text-[var(--ink-muted)]">
-                under {account.parent.code} {account.parent.name}
-              </span>
-            )}
-            {account.description && (
-              <span className="text-[13px] text-[var(--ink-muted)]">· {account.description}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/finance/reports/pl"
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel)]"
-          >
+      <RecordActionBar
+        backHref="/finance/accounts"
+        eyebrow="Finance · Account"
+        title={`${account.code} · ${account.name}`}
+        status={{ label: account.type, tone: toneFor(TYPE_TONES, account.type) }}
+        secondary={
+          <Link href="/finance/reports/pl" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel)]">
             P&L →
           </Link>
-        </div>
-      </div>
+        }
+      />
+      {(account.parent || account.description) && (
+        <p className="text-[13px] text-[var(--ink-muted)]">
+          {account.parent ? <>under <span className="font-mono">{account.parent.code}</span> {account.parent.name}</> : null}
+          {account.parent && account.description ? " · " : null}
+          {account.description ?? ""}
+        </p>
+      )}
 
       {/* ── PERIOD SELECTOR ──────────────────────────────────────────────── */}
       <form method="GET" className="hidden lg:flex flex-wrap items-center gap-2">
