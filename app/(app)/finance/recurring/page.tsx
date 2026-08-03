@@ -304,6 +304,11 @@ export default async function RecurringInvoicesPage({
         eyebrow="Finance"
         title="Recurring Invoices"
         description={`${activeCount} active${dueNow > 0 ? ` · ${dueNow} due` : ""} — templates that auto-generate or remind you to issue invoices on schedule.`}
+        kpis={[
+          { label: "Templates", value: recurringInvoices.length, sub: "total schedules" },
+          { label: "Active", value: activeCount, sub: "running", tone: activeCount > 0 ? "good" : "neutral" },
+          { label: "Due Now", value: dueNow, sub: "ready to issue", tone: dueNow > 0 ? "warn" : "neutral", muted: dueNow === 0 },
+        ]}
         actions={
         <details className="group relative">
           <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">

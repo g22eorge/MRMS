@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
 import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { ReceiveStockForm } from "./ReceiveStockForm";
 import { POMetaForm } from "./POMetaForm";
@@ -105,26 +106,37 @@ export default async function PurchaseOrderDetailPage({
             {isOverdue ? <span className="self-center rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold text-red-600">Late</span> : null}
             <RecordPreviewButton variant="button" label="Preview" pdfUrl={`/api/procurement/documents/purchase-order/${po.id}`} title={`Purchase Order ${poNumber(po)}`} />
             <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Print / PDF</Link>
-            {po.status === "DRAFT" ? (
-              <form action={setPurchaseOrderStatusAction}>
-                <input type="hidden" name="id" value={po.id} />
-                <input type="hidden" name="status" value="ORDERED" />
-                <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-700">Issue</button>
-              </form>
-            ) : null}
-            {canReceive ? <Link href="#receive" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">Receive</Link> : null}
-            {canCancel ? (
-              <form action={setPurchaseOrderStatusAction}>
-                <input type="hidden" name="id" value={po.id} />
-                <input type="hidden" name="status" value="CANCELLED" />
-                <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-600">Cancel</button>
-              </form>
-            ) : null}
-            <form action={deletePurchaseOrderAction}>
-              <input type="hidden" name="id" value={po.id} />
-              <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-600">Delete</button>
-            </form>
           </>
+        }
+        primary={
+          po.status === "DRAFT" ? (
+            <form action={setPurchaseOrderStatusAction}>
+              <input type="hidden" name="id" value={po.id} />
+              <input type="hidden" name="status" value="ORDERED" />
+              <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-700">Issue</button>
+            </form>
+          ) : canReceive ? (
+            <Link href="#receive" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">Receive</Link>
+          ) : null
+        }
+        overflow={
+          <RowActionsMenu label={`Purchase order actions for ${poNumber(po)}`} size="compact">
+            {canCancel ? (
+              <MenuDestructiveRow>
+                <form action={setPurchaseOrderStatusAction}>
+                  <input type="hidden" name="id" value={po.id} />
+                  <input type="hidden" name="status" value="CANCELLED" />
+                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Order</button>
+                </form>
+              </MenuDestructiveRow>
+            ) : null}
+            <MenuDestructiveRow>
+              <form action={deletePurchaseOrderAction}>
+                <input type="hidden" name="id" value={po.id} />
+                <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Order</button>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
         }
       />
 

@@ -30,6 +30,8 @@ export default async function TaxRatesPage({
   const filteredTaxRates = q
     ? taxRates.filter((r) => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
     : taxRates;
+  const activeRates = taxRates.filter((r) => r.isActive).length;
+  const defaultRate = taxRates.find((r) => r.isDefault);
 
   async function createTaxRateAction(formData: FormData) {
     "use server";
@@ -164,6 +166,11 @@ export default async function TaxRatesPage({
         eyebrow="Finance"
         title="Tax Rates"
         description={`${taxRates.length} configured — VAT, WHT, and other tax codes applied to invoices and purchases.`}
+        kpis={[
+          { label: "Rates", value: taxRates.length, sub: "total configured" },
+          { label: "Active", value: activeRates, sub: "in use", tone: activeRates > 0 ? "good" : "neutral" },
+          { label: "Default", value: defaultRate ? `${defaultRate.rate}%` : "—", sub: defaultRate ? defaultRate.code : "none set", tone: defaultRate ? "accent" : "neutral", muted: !defaultRate },
+        ]}
         actions={
         <details className="group relative">
           <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">

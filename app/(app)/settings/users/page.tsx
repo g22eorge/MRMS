@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { inviteSchema, INVITE_TTL_DAYS, type InviteState } from "@/lib/invites";
 import { InvitePanel } from "@/components/settings/InvitePanel";
+import { RowActionsMenu, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { checkUserLimit, getLimitsForOrg } from "@/lib/plan-limits";
 import { PlanBanner } from "@/components/shared/PlanBanner";
 import { rateLimit } from "@/lib/rate-limit";
@@ -1021,16 +1022,25 @@ export default async function UsersPage({
                   {selectedUser.isActive ? "Active" : "Inactive"}
                 </span>
                 {user.role === "ADMIN" && selectedUser.id !== user.id && (
-                  <form action={toggleUserActive}>
-                    <input type="hidden" name="userId" value={selectedUser.id} />
-                    <input type="hidden" name="q" value={q} />
-                    <button
-                      type="submit"
-                      className={`rounded border px-2 py-0.5 text-[12px] font-semibold transition-colors ${selectedUser.isActive ? "border-red-400/30 text-red-600 hover:bg-red-500/10 dark:text-red-400" : "border-emerald-400/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"}`}
-                    >
-                      {selectedUser.isActive ? "Deactivate" : "Reactivate"}
-                    </button>
-                  </form>
+                  <RowActionsMenu label="User actions" size="compact">
+                    {selectedUser.isActive ? (
+                      <MenuDestructiveRow>
+                        <form action={toggleUserActive}>
+                          <input type="hidden" name="userId" value={selectedUser.id} />
+                          <input type="hidden" name="q" value={q} />
+                          <button type="submit" className="w-full text-left text-[12px] text-red-600">Deactivate User</button>
+                        </form>
+                      </MenuDestructiveRow>
+                    ) : (
+                      <div className="px-3 py-1">
+                        <form action={toggleUserActive}>
+                          <input type="hidden" name="userId" value={selectedUser.id} />
+                          <input type="hidden" name="q" value={q} />
+                          <MenuActionButton icon="save" tone="success">Reactivate User</MenuActionButton>
+                        </form>
+                      </div>
+                    )}
+                  </RowActionsMenu>
                 )}
                 <span className="text-[13px] text-[var(--ink-muted)]">
                   Last seen {formatDateTime(selectedUser.sessions[0]?.updatedAt ?? selectedUser.auditLogs[0]?.createdAt ?? selectedUser.updatedAt)}

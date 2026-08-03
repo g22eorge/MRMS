@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { convertPurchaseRequestToPoAction, deletePurchaseRequestAction, reviewPurchaseRequestAction } from "../actions";
 
@@ -47,13 +48,17 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
             <Link href={`/api/procurement/documents/purchase-request/${request.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
               Print / PDF
             </Link>
-            <form action={deletePurchaseRequestAction}>
-              <input type="hidden" name="id" value={request.id} />
-              <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600">
-                Delete
-              </button>
-            </form>
           </>
+        }
+        overflow={
+          <RowActionsMenu label={`Purchase request actions for ${request.requestNumber}`} size="compact">
+            <MenuDestructiveRow>
+              <form action={deletePurchaseRequestAction}>
+                <input type="hidden" name="id" value={request.id} />
+                <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Request</button>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
         }
       />
       <p className="text-sm text-[var(--ink-muted)]">Requested by {request.requestedBy.name || request.requestedBy.email}</p>

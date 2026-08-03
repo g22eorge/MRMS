@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { cancelSupplierBillAction, createSupplierPaymentAction, deleteSupplierPaymentAction } from "../actions";
 
@@ -49,6 +50,18 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
               Print / PDF
             </Link>
           </>
+        }
+        overflow={
+          bill.status !== "CANCELLED" && bill.paidAmount === 0 ? (
+            <RowActionsMenu label={`Supplier bill actions for ${bill.billNumber}`} size="compact">
+              <MenuDestructiveRow>
+                <form action={cancelSupplierBillAction}>
+                  <input type="hidden" name="id" value={bill.id} />
+                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Bill</button>
+                </form>
+              </MenuDestructiveRow>
+            </RowActionsMenu>
+          ) : undefined
         }
       />
       <p className="text-sm text-[var(--ink-muted)]">Supplier: <Link href={`/inventory/suppliers/${bill.supplier.id}`} className="text-[var(--accent)] hover:underline">{bill.supplier.name}</Link></p>
@@ -147,7 +160,6 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-muted)]">
         <p>Posted by {bill.createdBy.name || bill.createdBy.email}.</p>
-        {bill.status !== "CANCELLED" && bill.paidAmount === 0 ? <form action={cancelSupplierBillAction}><input type="hidden" name="id" value={bill.id} /><button type="submit" className="font-semibold text-red-600 hover:text-red-700">Cancel bill</button></form> : null}
       </div>
     </div>
   );

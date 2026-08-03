@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { approveStockCountAction, cancelStockCountAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,28 @@ export default async function StockCountDetailPage({ params }: { params: Promise
         eyebrow="Inventory · Stock Count"
         title={count.countNumber}
         status={{ label: count.status, tone: count.status === "APPROVED" ? "success" : count.status === "CANCELLED" ? "danger" : "sky" }}
+        primary={
+          count.status === "SUBMITTED" ? (
+            <form action={approveStockCountAction}>
+              <input type="hidden" name="id" value={count.id} />
+              <button type="submit" className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                Approve and adjust stock
+              </button>
+            </form>
+          ) : null
+        }
+        overflow={
+          count.status === "SUBMITTED" ? (
+            <RowActionsMenu label={`Stock count actions for ${count.countNumber}`} size="compact">
+              <MenuDestructiveRow>
+                <form action={cancelStockCountAction}>
+                  <input type="hidden" name="id" value={count.id} />
+                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Count</button>
+                </form>
+              </MenuDestructiveRow>
+            </RowActionsMenu>
+          ) : undefined
+        }
       />
       <p className="text-sm text-[var(--ink-muted)]">
         {count.location.name}{count.location.code ? ` (${count.location.code})` : ""}
@@ -103,25 +126,9 @@ export default async function StockCountDetailPage({ params }: { params: Promise
         </div>
       ) : null}
 
-      {/* Footer actions */}
+      {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-muted)]">
         <p>Created by {count.createdBy.name || count.createdBy.email}.</p>
-        {count.status === "SUBMITTED" ? (
-          <div className="flex gap-2">
-            <form action={approveStockCountAction}>
-              <input type="hidden" name="id" value={count.id} />
-              <button type="submit" className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-400">
-                Approve and adjust stock
-              </button>
-            </form>
-            <form action={cancelStockCountAction}>
-              <input type="hidden" name="id" value={count.id} />
-              <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-2 font-semibold text-red-600 dark:text-red-400">
-                Cancel
-              </button>
-            </form>
-          </div>
-        ) : null}
       </div>
     </div>
   );

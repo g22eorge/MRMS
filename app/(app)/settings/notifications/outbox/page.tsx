@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { RowActionsMenu, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 
 import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageType } from "@prisma/client";
 
@@ -182,6 +183,32 @@ export default async function OutboxPage({
 
   const totalCount = counts.reduce((sum, c) => sum + c._count.status, 0);
 
+  // Named so the same overflow menu renders in the desktop table AND mobile card.
+  const renderRowActions = (r: (typeof rows)[number]) => {
+    if (r.status === "SENT") return null;
+    const canDiscard = r.status !== "DEAD";
+    return (
+      <RowActionsMenu label="Message actions" size="compact">
+        <div className="px-3 py-1">
+          <form action={retryOneAction}>
+            <input type="hidden" name="id" value={r.id} />
+            <MenuActionButton icon="whatsapp">Retry Now</MenuActionButton>
+          </form>
+        </div>
+        {canDiscard ? (
+          <MenuDestructiveRow>
+            <form action={markDeadAction}>
+              <input type="hidden" name="id" value={r.id} />
+              <button type="submit" className="w-full text-left text-[12px] text-red-600">
+                Discard
+              </button>
+            </form>
+          </MenuDestructiveRow>
+        ) : null}
+      </RowActionsMenu>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Status filters + search + actions */}
@@ -272,12 +299,7 @@ export default async function OutboxPage({
                 {r.lastError ? <span className="text-red-600 dark:text-red-400"> · failed</span> : r.sentAt ? ` · ${fmtDate(r.sentAt)}` : ""}
               </p>
             </div>
-            {r.status !== "SENT" && (
-              <form action={retryOneAction} className="shrink-0">
-                <input type="hidden" name="id" value={r.id} />
-                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-muted)]">Retry</button>
-              </form>
-            )}
+            <div className="shrink-0">{renderRowActions(r)}</div>
           </div>
         )}
         columns={[
@@ -331,26 +353,7 @@ export default async function OutboxPage({
               ),
           },
         ]}
-        actions={(r) => (
-          <>
-            {r.status !== "SENT" ? (
-              <form action={retryOneAction}>
-                <input type="hidden" name="id" value={r.id} />
-                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-muted)]">
-                  Retry
-                </button>
-              </form>
-            ) : null}
-            {r.status !== "DEAD" && r.status !== "SENT" ? (
-              <form action={markDeadAction}>
-                <input type="hidden" name="id" value={r.id} />
-                <button type="submit" className="rounded-md px-2.5 py-1 text-[12px] font-medium text-[var(--ink-muted)] transition-colors hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">
-                  Discard
-                </button>
-              </form>
-            ) : null}
-          </>
-        )}
+        actions={renderRowActions}
       />
 
       {/* Pagination */}

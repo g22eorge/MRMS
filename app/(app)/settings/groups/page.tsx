@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { DataTable } from "@/components/ui/DataTable";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 
 type SearchParams = { groupId?: string; new?: string };
 
@@ -243,7 +244,17 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
           {selected ? (
             <>
               <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Group</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Group</p>
+                  <RowActionsMenu label="Group actions" size="compact">
+                    <MenuDestructiveRow>
+                      <form action={deleteGroupAction}>
+                        <input type="hidden" name="id" value={selected.id} />
+                        <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Group</button>
+                      </form>
+                    </MenuDestructiveRow>
+                  </RowActionsMenu>
+                </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
                   <form action={updateGroupAction} className="md:col-span-2 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={selected.id} />
@@ -253,12 +264,6 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                       <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Save</button>
                     </div>
                   </form>
-                  <div className="md:col-span-2 flex items-center justify-between gap-2">
-                    <form action={deleteGroupAction}>
-                      <input type="hidden" name="id" value={selected.id} />
-                      <button type="submit" className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-500/20 dark:text-red-400">Delete</button>
-                    </form>
-                  </div>
                 </div>
               </div>
 
@@ -292,29 +297,35 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                           </>
                         ),
                       },
-                      {
-                        key: "action",
-                        header: "Action",
-                        cell: (m) => (
+                    ]}
+                    actions={(m) => (
+                      <RowActionsMenu label="Member actions" size="compact">
+                        <MenuDestructiveRow>
                           <form action={removeMemberAction}>
                             <input type="hidden" name="id" value={selected.id} />
                             <input type="hidden" name="memberId" value={m.id} />
-                            <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 font-semibold hover:border-[var(--accent)]/40">Remove</button>
+                            <button type="submit" className="w-full text-left text-[12px] text-red-600">Remove Member</button>
                           </form>
-                        ),
-                      },
-                    ]}
+                        </MenuDestructiveRow>
+                      </RowActionsMenu>
+                    )}
                     renderMobileCard={(m) => (
                       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
                         <div className="min-w-0">
                           <p className="truncate font-medium text-[var(--ink)]">{m.user.name}</p>
                           <p className="truncate text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
                         </div>
-                        <form action={removeMemberAction} className="shrink-0">
-                          <input type="hidden" name="id" value={selected.id} />
-                          <input type="hidden" name="memberId" value={m.id} />
-                          <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 font-semibold hover:border-[var(--accent)]/40">Remove</button>
-                        </form>
+                        <div className="shrink-0">
+                          <RowActionsMenu label="Member actions" size="compact">
+                            <MenuDestructiveRow>
+                              <form action={removeMemberAction}>
+                                <input type="hidden" name="id" value={selected.id} />
+                                <input type="hidden" name="memberId" value={m.id} />
+                                <button type="submit" className="w-full text-left text-[12px] text-red-600">Remove Member</button>
+                              </form>
+                            </MenuDestructiveRow>
+                          </RowActionsMenu>
+                        </div>
                       </div>
                     )}
                   />

@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
+import { DataTable } from "@/components/ui/DataTable";
+import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,18 +46,15 @@ function roleLabel(role: string): string {
   return map[role] ?? role;
 }
 
-function roleBadgeColor(role: string): string {
-  const map: Record<string, string> = {
-    ADMIN: "border-violet-500/30 bg-violet-500/10 text-violet-400",
-    MANAGER: "border-blue-500/30 bg-blue-500/10 text-blue-400",
-    TECH_MANAGER: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
-    FINANCE: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    SALES: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-    OPS: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-    FRONT_DESK: "border-pink-500/30 bg-pink-500/10 text-pink-400",
-  };
-  return map[role] ?? "border-[var(--line)] text-[var(--ink-muted)]";
-}
+const ROLE_TONE: Record<string, BadgeTone> = {
+  ADMIN: "violet",
+  MANAGER: "info",
+  TECH_MANAGER: "sky",
+  FINANCE: "success",
+  SALES: "warning",
+  OPS: "orange",
+  FRONT_DESK: "pink",
+};
 
 const STAFF_ROLES = ["ADMIN", "MANAGER", "TECH_MANAGER", "FINANCE", "SALES", "OPS", "FRONT_DESK"];
 
@@ -163,6 +163,70 @@ export default async function SalesTargetsPage({
   const inputClass =
     "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/12 w-full";
 
+  type StaffMember = (typeof staffUsers)[number];
+  // Desktop table and mobile card both render (CSS-hidden), so each variant
+  // gets its own save-form id to avoid duplicate ids in the document.
+  const revenueInput = (member: StaffMember, variant: "d" | "m") => {
+    const existing = targetIndex.get(`${member.id}::${activePeriod}`);
+    return (
+      <input
+        form={`save-${variant}-${member.id}`}
+        name="targetRevenue"
+        type="number"
+        min="0"
+        step="any"
+        defaultValue={existing?.targetRevenue ?? ""}
+        placeholder="Revenue"
+        className={inputClass}
+      />
+    );
+  };
+  const jobsInput = (member: StaffMember, variant: "d" | "m") => {
+    const existing = targetIndex.get(`${member.id}::${activePeriod}`);
+    return (
+      <input
+        form={`save-${variant}-${member.id}`}
+        name="targetJobs"
+        type="number"
+        min="0"
+        step="1"
+        defaultValue={existing?.targetJobs || ""}
+        placeholder="Jobs"
+        className={inputClass}
+      />
+    );
+  };
+  // Save (primary) stays visible; destructive Remove goes into the ⋮ overflow.
+  const renderMemberActions = (member: StaffMember, variant: "d" | "m") => {
+    const existing = targetIndex.get(`${member.id}::${activePeriod}`);
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <form id={`save-${variant}-${member.id}`} action={upsertTarget}>
+          <input type="hidden" name="period" value={activePeriod} />
+          <input type="hidden" name="userId" value={member.id} />
+          <button
+            type="submit"
+            className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2.5 py-1.5 text-[12px] font-medium text-[var(--accent)] transition hover:bg-[var(--accent)]/18"
+          >
+            Save
+          </button>
+        </form>
+        {existing && (
+          <RowActionsMenu label="Target actions" size="compact">
+            <MenuDestructiveRow>
+              <form action={deleteTarget}>
+                <input type="hidden" name="id" value={existing.id} />
+                <button type="submit" className="w-full text-left text-[12px] text-red-600">
+                  Remove Target
+                </button>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -182,7 +246,7 @@ export default async function SalesTargetsPage({
               type="submit"
               className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition ${
                 p === activePeriod
-                  ? "border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent)]"
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
@@ -265,15 +329,16 @@ export default async function SalesTargetsPage({
               {teamTarget ? "Update" : "Set Target"}
             </button>
             {teamTarget && (
-              <form action={deleteTarget}>
-                <input type="hidden" name="id" value={teamTarget.id} />
-                <button
-                  type="submit"
-                  className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] text-[var(--ink-muted)] transition hover:border-red-500/30 hover:text-red-400"
-                >
-                  Remove
-                </button>
-              </form>
+              <RowActionsMenu label="Team target actions">
+                <MenuDestructiveRow>
+                  <form action={deleteTarget}>
+                    <input type="hidden" name="id" value={teamTarget.id} />
+                    <button type="submit" className="w-full text-left text-[12px] text-red-600">
+                      Remove Team Target
+                    </button>
+                  </form>
+                </MenuDestructiveRow>
+              </RowActionsMenu>
             )}
           </div>
         </div>
@@ -287,95 +352,60 @@ export default async function SalesTargetsPage({
           </p>
         </div>
 
-        {staffUsers.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-[var(--ink-muted)]">
-            No active staff found.
-          </p>
-        ) : (
-          <div className="divide-y divide-[var(--line)]">
-            {/* Column headers */}
-            <div className="grid grid-cols-[1fr_auto_160px_120px_auto] items-center gap-3 px-4 py-2">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60">Name</p>
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60 w-24">Role</p>
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60">Revenue Target</p>
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60">Jobs Target</p>
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60 w-24">Actions</p>
-            </div>
-
-            {staffUsers.map((member) => {
-              const existing = targetIndex.get(`${member.id}::${activePeriod}`);
-              const saveFormId = `save-${member.id}`;
-              return (
-                <div key={member.id} className="grid grid-cols-[1fr_auto_160px_120px_auto] items-center gap-3 px-4 py-2.5">
-                  {/* Name */}
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-[var(--ink)]">{member.name}</p>
-                    <p className="truncate text-[13px] text-[var(--ink-muted)]">{member.email}</p>
-                  </div>
-
-                  {/* Role badge */}
-                  <div className="w-24">
-                    <span
-                      className={`inline-block rounded-full border px-2 py-0.5 text-[12px] font-semibold ${roleBadgeColor(member.role)}`}
-                    >
-                      {roleLabel(member.role)}
-                    </span>
-                  </div>
-
-                  {/* Revenue input — belongs to save form via form= attribute */}
-                  <input
-                    form={saveFormId}
-                    name="targetRevenue"
-                    type="number"
-                    min="0"
-                    step="any"
-                    defaultValue={existing?.targetRevenue ?? ""}
-                    placeholder="Revenue"
-                    className={inputClass}
-                  />
-
-                  {/* Jobs input */}
-                  <input
-                    form={saveFormId}
-                    name="targetJobs"
-                    type="number"
-                    min="0"
-                    step="1"
-                    defaultValue={existing?.targetJobs || ""}
-                    placeholder="Jobs"
-                    className={inputClass}
-                  />
-
-                  {/* Actions: Save + Delete as sibling forms */}
-                  <div className="flex w-24 items-center gap-1.5">
-                    <form id={saveFormId} action={upsertTarget}>
-                      <input type="hidden" name="period" value={activePeriod} />
-                      <input type="hidden" name="userId" value={member.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2.5 py-1.5 text-[12px] font-medium text-[var(--accent)] transition hover:bg-[var(--accent)]/18"
-                      >
-                        Save
-                      </button>
-                    </form>
-                    {existing && (
-                      <form action={deleteTarget}>
-                        <input type="hidden" name="id" value={existing.id} />
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-[var(--line)] px-2 py-1.5 text-[12px] text-[var(--ink-muted)] transition hover:border-red-500/30 hover:text-red-400"
-                          title="Remove target"
-                        >
-                          ✕
-                        </button>
-                      </form>
-                    )}
-                  </div>
+        <DataTable
+          frameless
+          rows={staffUsers}
+          getRowKey={(member) => member.id}
+          empty="No active staff found."
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              cell: (member) => (
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-[var(--ink)]">{member.name}</p>
+                  <p className="truncate text-[12px] text-[var(--ink-muted)]">{member.email}</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ),
+            },
+            {
+              key: "role",
+              header: "Role",
+              cell: (member) => (
+                <StatusBadge tone={ROLE_TONE[member.role] ?? "neutral"}>{roleLabel(member.role)}</StatusBadge>
+              ),
+            },
+            {
+              key: "revenue",
+              header: "Revenue Target",
+              className: "w-[180px]",
+              cell: (member) => revenueInput(member, "d"),
+            },
+            {
+              key: "jobs",
+              header: "Jobs Target",
+              className: "w-[140px]",
+              cell: (member) => jobsInput(member, "d"),
+            },
+          ]}
+          actions={(member) => renderMemberActions(member, "d")}
+          renderMobileCard={(member) => (
+            <div className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-[var(--ink)]">{member.name}</p>
+                  <p className="truncate text-[12px] text-[var(--ink-muted)]">{member.email}</p>
+                </div>
+                <StatusBadge tone={ROLE_TONE[member.role] ?? "neutral"}>{roleLabel(member.role)}</StatusBadge>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {revenueInput(member, "m")}
+                {jobsInput(member, "m")}
+              </div>
+              <div className="mt-2 flex justify-end">{renderMemberActions(member, "m")}</div>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
