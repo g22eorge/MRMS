@@ -576,18 +576,18 @@ export default async function SalesPage({
       {/* ══ DESKTOP: Stage chips + search ══ */}
       <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
         {activeTab === "leads" ? (
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
-            {statusChips.map(({ key, long, url, active }) => (
+          <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--line)] px-3 py-2 [scrollbar-width:none]">
+            {statusChips.map(({ key, short, count, url, active }) => (
               <Link
                 key={key}
                 href={url}
-                className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                   active
-                    ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                    : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
+                    ? "bg-[var(--accent)] text-black"
+                    : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
                 }`}
               >
-                {long}
+                {short} {count}
               </Link>
             ))}
           </div>
