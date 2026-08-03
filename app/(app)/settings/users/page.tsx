@@ -15,8 +15,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { inviteSchema, INVITE_TTL_DAYS, type InviteState } from "@/lib/invites";
 import { InvitePanel } from "@/components/settings/InvitePanel";
 import { RowActionsMenu, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
-import { checkUserLimit, getLimitsForOrg } from "@/lib/plan-limits";
-import { PlanBanner } from "@/components/shared/PlanBanner";
+import { checkUserLimit } from "@/lib/plan-limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
@@ -796,15 +795,6 @@ export default async function UsersPage({
     redirect(`/settings/users?${new URLSearchParams({ userId: created.id }).toString()}`);
   }
 
-  // Fetch plan limits and current usage for the banner.
-  const planInfo = await getLimitsForOrg(orgId);
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [activeUserCount, jobsThisMonth, partCount] = await Promise.all([
-    prisma.user.count({ where: { orgId, isActive: true } }),
-    prisma.job.count({ where: { orgId, receivedAt: { gte: monthStart } } }),
-    prisma.part.count({ where: { orgId, isActive: true } }),
-  ]);
 
   const params = await searchParams;
   let q = "";
@@ -928,8 +918,6 @@ export default async function UsersPage({
         <p className="text-[13px] font-bold text-[var(--ink)]">User Management</p>
         <p className="text-[13px] text-[var(--ink-muted)]">Manage team access, roles and permissions</p>
       </div>
-
-      <PlanBanner plan={planInfo.plan} limits={planInfo} usage={{ users: activeUserCount, jobsThisMonth, parts: partCount }} />
 
       {limitError && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-400">

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
-import { PLAN_LIMITS, PLAN_LABELS } from "@/lib/plan-limits";
+import { PLAN_LIMITS, PLAN_LABELS, getLimitsForOrg } from "@/lib/plan-limits";
+import { PlanBanner } from "@/components/shared/PlanBanner";
 import { TRIAL_DAYS } from "@/lib/billing-access";
 import { submitOrder, getOrCreateIpnId, buildMerchantRef, PLAN_PRICES, CURRENCY } from "@/lib/pesapal";
 import { getOrgModules, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
@@ -115,6 +116,15 @@ export default async function BillingPage({
   const trialDaysLeft = org.trialEndsAt
     ? Math.max(0, Math.ceil((org.trialEndsAt.getTime() - now.getTime()) / 86_400_000))
     : null;
+
+  // Current plan usage — shown in the plan banner on the main billing view.
+  const planInfo = await getLimitsForOrg(orgId);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [activeUserCount, jobsThisMonth, partCount] = await Promise.all([
+    prisma.user.count({ where: { orgId, isActive: true } }),
+    prisma.job.count({ where: { orgId, receivedAt: { gte: monthStart } } }),
+    prisma.part.count({ where: { orgId, isActive: true } }),
+  ]);
 
   const isFreeStarter = org.billingStatus === "TRIALING" && org.trialEndsAt == null;
 
@@ -490,6 +500,9 @@ export default async function BillingPage({
           </form>
         )}
       </section>
+
+      {/* Plan usage vs limits */}
+      <PlanBanner plan={planInfo.plan} limits={planInfo} usage={{ users: activeUserCount, jobsThisMonth, parts: partCount }} />
 
       {/* Enabled modules */}
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
