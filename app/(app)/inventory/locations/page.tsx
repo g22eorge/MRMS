@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
@@ -98,11 +97,6 @@ export default async function StockLocationsPage({
           { label: "Active", value: activeLocations, sub: "in use", valueClass: "text-emerald-600" },
           { label: "On Hand", value: totalOnHand.toLocaleString(), sub: "units stocked" },
         ],
-        actions: (
-          <Link href="/inventory" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-            ← Inventory
-          </Link>
-        ),
       }}
       filters={
         <>

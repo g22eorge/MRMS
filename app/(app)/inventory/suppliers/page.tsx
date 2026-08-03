@@ -53,9 +53,6 @@ export default async function SuppliersPage({
         description: `${suppliersTotal} registered`,
         actions: (
           <>
-            <Link href="/inventory" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-              ← Inventory
-            </Link>
             <Link href="/inventory/suppliers/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
               Add Supplier
             </Link>

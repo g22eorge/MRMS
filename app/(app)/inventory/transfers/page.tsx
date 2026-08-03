@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
@@ -88,12 +87,6 @@ export default async function StockTransfersPage({
           { label: "Pending", value: pendingTransfers, sub: "to approve/dispatch", valueClass: pendingTransfers > 0 ? "text-amber-600" : undefined },
           { label: "In Transit", value: inTransitTransfers, sub: "dispatched", valueClass: inTransitTransfers > 0 ? "text-sky-600" : undefined },
         ],
-        actions: (
-          <>
-            <Link href="/inventory/locations" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Locations</Link>
-            <Link href="/inventory" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">← Inventory</Link>
-          </>
-        ),
       }}
       filters={
         <>
