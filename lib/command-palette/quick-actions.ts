@@ -1,6 +1,6 @@
 import { type Role } from "@prisma/client";
 
-import { COMMUNICATIONS_ROUTES, canAccessCommunications } from "@/lib/communications/routes";
+import { canAccessCommunications } from "@/lib/communications/routes";
 import { DOCUMENTS_ROUTES } from "@/lib/documents/routes";
 import { routeLabel } from "@/lib/nav/registry";
 import { can } from "@/lib/permissions";
@@ -128,7 +128,7 @@ export function buildCommandPaletteQuickActions(user: CommandPaletteUser): Comma
       id: "outbox",
       label: "Open Outbox",
       description: "WhatsApp and email delivery queue",
-      href: COMMUNICATIONS_ROUTES.outbox,
+      href: "/settings/notifications/outbox",
       group: "Go to",
       keywords: ["messages", "whatsapp", "failed"],
     });

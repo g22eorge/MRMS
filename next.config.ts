@@ -40,12 +40,11 @@ const CSP = [
 const nextConfig: NextConfig = {
   turbopack: { root: process.cwd() },
   async redirects() {
+    // Communications is absorbed into Settings → Communications; the real pages
+    // live under /settings/notifications/*. The /communications/* routes are
+    // page-level redirect stubs into Settings, so no config redirects for them.
     return [
-      { source: "/outbox", destination: "/communications/outbox", permanent: false },
-      { source: "/settings/notifications/outbox", destination: "/communications/outbox", permanent: false },
-      { source: "/settings/notifications/templates", destination: "/communications/templates", permanent: false },
-      { source: "/settings/notifications/whatsapp", destination: "/communications/whatsapp", permanent: false },
-      { source: "/communications/policies", destination: "/communications/templates#policies", permanent: false },
+      { source: "/outbox", destination: "/settings/notifications/outbox", permanent: false },
     ];
   },
   async headers() {

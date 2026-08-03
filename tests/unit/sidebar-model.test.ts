@@ -66,12 +66,12 @@ describe("sidebar model — super-groups", () => {
     );
   });
 
-  it("puts communications + settings in the admin group", () => {
+  it("puts settings in the workspace group (communications absorbed into settings)", () => {
     const { sections } = buildSidebarModel("ADMIN", []);
-    const admin = sections.find((s) => s.group === "admin");
-    const h = hrefs(admin!.items);
+    const workspace = sections.find((s) => s.group === "workspace");
+    const h = hrefs(workspace!.items);
     expect(h).toContain("/settings");
-    expect(h).toContain("/communications");
+    expect(h).not.toContain("/communications");
   });
 
   it("never lists an item in both pinned and a group", () => {

@@ -1,7 +1,6 @@
 import { Role } from "@prisma/client";
 
 import { can } from "@/lib/permissions";
-import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { hrefModuleAllowed } from "@/lib/nav/href-module";
 import { routeLabel } from "@/lib/nav/registry";
 
@@ -54,9 +53,7 @@ export const NAV: readonly NavItem[] = [
   // quotations, invoices, receipts, and the rest (no sidebar duplication).
   { href: "/documents", label: routeLabel("/documents"), group: "documents", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "FINANCE", "TECHNICIAN_INTERNAL"] },
 
-  // Communications — single hub entry; the in-page tabs cover outbox,
-  // templates, policies, and WhatsApp.
-  { href: COMMUNICATIONS_ROUTES.home, label: routeLabel("/communications"), group: "communications", roles: ["ADMIN", "OPS"] },
+  // Communications is absorbed into Settings → Communications (no sidebar row).
 
   // Finance
   { href: "/finance", label: routeLabel("/finance"), group: "finance", roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"] },
@@ -102,7 +99,6 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
     "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
@@ -113,7 +109,6 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
     "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
@@ -132,7 +127,6 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/communications/outbox", "/communications/templates", "/communications/policies", "/communications/whatsapp",
     "/finance/expenses", "/finance/recurring", "/finance/reports/pl", "/finance/reports/balance-sheet", "/pos/shifts", "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { SettingsShell, type SettingsNavGroup, type SettingsNavItem } from "@/components/settings/SettingsShell";
-import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 
@@ -69,7 +68,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       ),
     } satisfies SettingsNavItem,
     templates: {
-      href: COMMUNICATIONS_ROUTES.templates,
+      href: "/settings/notifications/templates",
       label: "Templates",
       description: "WhatsApp and email",
       icon: (
@@ -79,7 +78,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       ),
     } satisfies SettingsNavItem,
     whatsapp: {
-      href: COMMUNICATIONS_ROUTES.whatsapp,
+      href: "/settings/notifications/whatsapp",
       label: "WhatsApp",
       description: "Provider connection",
       icon: (
@@ -89,7 +88,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       ),
     } satisfies SettingsNavItem,
     outbox: {
-      href: COMMUNICATIONS_ROUTES.outbox,
+      href: "/settings/notifications/outbox",
       label: "Outbox",
       description: "Delivery queue and retries",
       icon: (
@@ -163,7 +162,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       ].filter(Boolean) as SettingsNavItem[],
     },
     {
-      title: "Notifications",
+      title: "Communications",
       items: [
         can.viewNotifications(permUser) ? items.notifications : null,
         isOps ? items.templates : null,

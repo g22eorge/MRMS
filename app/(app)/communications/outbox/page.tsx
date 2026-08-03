@@ -1,1 +1,6 @@
-export { default } from "@/app/(app)/settings/notifications/outbox/page";
+import { redirect } from "next/navigation";
+
+// Absorbed into Settings → Communications → Outbox.
+export default function CommunicationsOutboxRedirect() {
+  redirect("/settings/notifications/outbox");
+}

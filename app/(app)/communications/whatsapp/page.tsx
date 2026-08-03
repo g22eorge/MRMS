@@ -1,1 +1,6 @@
-export { default } from "@/app/(app)/settings/notifications/whatsapp/page";
+import { redirect } from "next/navigation";
+
+// Absorbed into Settings → Communications → WhatsApp.
+export default function CommunicationsWhatsappRedirect() {
+  redirect("/settings/notifications/whatsapp");
+}

@@ -12,7 +12,6 @@ import {
   type ChangePasswordState,
 } from "@/app/(app)/settings/profile/actions";
 import { ProfileForm } from "@/components/settings/ProfileForm";
-import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 
 type QuickLink = {
   label: string;
@@ -59,13 +58,13 @@ const adminLinks: QuickLink[] = [
   },
   {
     label: "WhatsApp Notifications",
-    href: COMMUNICATIONS_ROUTES.whatsapp,
+    href: "/settings/notifications/whatsapp",
     desc: "Provider credentials, test sends",
     icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   },
   {
     label: "Message Templates",
-    href: COMMUNICATIONS_ROUTES.templates,
+    href: "/settings/notifications/templates",
     desc: "Per-status notification messages",
     icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
   },
@@ -86,7 +85,7 @@ const adminLinks: QuickLink[] = [
 const opsLinks: QuickLink[] = [
   {
     label: "Message Templates",
-    href: COMMUNICATIONS_ROUTES.templates,
+    href: "/settings/notifications/templates",
     desc: "Per-status notification messages",
     icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
   },
