@@ -1,5 +1,6 @@
 import { OutboundMessageType } from "@prisma/client";
 
+import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
@@ -12,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 
 export const WHATSAPP_PDF_DOCUMENT_KEY = "WHATSAPP_PDF_DOCUMENT";
 
-export type WhatsAppDocumentKind = "quotation" | "invoice" | "job_card";
+export type WhatsAppDocumentKind = "quotation" | "invoice" | "job_card" | "assessment";
 
 export type WhatsAppDocumentVars = {
   documentKind: WhatsAppDocumentKind;
@@ -40,7 +41,7 @@ export function parseWhatsAppDocumentVars(raw: string | null | undefined): Whats
     ) {
       return null;
     }
-    if (!["quotation", "invoice", "job_card"].includes(parsed.documentKind)) return null;
+    if (!["quotation", "invoice", "job_card", "assessment"].includes(parsed.documentKind)) return null;
     return parsed as WhatsAppDocumentVars;
   } catch {
     return null;
@@ -90,6 +91,16 @@ async function generateDocumentBuffer(
         vars.staffUserId,
         expectedOrgId,
       );
+      if (!result.ok) return result;
+      return { ok: true, buffer: result.buffer, filename: result.filename };
+    }
+    case "assessment": {
+      // Client-facing send: only a published (client-visible) report may go out.
+      const result = await generateAssessmentBuffer({
+        orgId: expectedOrgId ?? "",
+        jobId,
+        requireClientVisible: true,
+      });
       if (!result.ok) return result;
       return { ok: true, buffer: result.buffer, filename: result.filename };
     }

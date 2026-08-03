@@ -19,9 +19,9 @@ export function PortalHeader({
   userName: string;
   role: string;
   company: string;
-  active?: "dashboard" | "repairs";
+  active?: "dashboard" | "repairs" | "documents";
 }) {
-  const link = (href: string, label: string, key: "dashboard" | "repairs") => (
+  const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents") => (
     <Link
       href={href}
       className={`rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition ${
@@ -43,6 +43,7 @@ export function PortalHeader({
       <div className="flex items-center gap-1">
         {link("/portal/dashboard", "Dashboard", "dashboard")}
         {link("/portal/repairs", "Repairs", "repairs")}
+        {link("/portal/documents", "Documents", "documents")}
         <form action={portalLogoutAction}>
           <button type="submit" className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
             Sign out

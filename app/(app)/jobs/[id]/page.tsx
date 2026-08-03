@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
+import { SendAssessmentButton } from "@/components/jobs/SendAssessmentButton";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
 import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -348,6 +349,9 @@ export default async function JobDetailPage({
           <div className="flex items-center gap-2">
             {assessments.length > 0 && canAssess ? (
               <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
+            ) : null}
+            {assessments.some((r) => r.visibility !== "INTERNAL") && canAssess && job.client?.phone ? (
+              <SendAssessmentButton jobId={id} />
             ) : null}
             {canAssess ? (
               <form action={generateAssessmentAction}>

@@ -30,6 +30,7 @@ import {
 import { deliverOutboundMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { enqueueWhatsAppDocument, type WhatsAppDocumentKind } from "@/lib/notifications/whatsapp-document-outbox";
 import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
+import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
@@ -1426,5 +1427,37 @@ export async function sendJobCardViaWhatsAppAction(
     staffRole: user.role,
     auditAction: "JOB_CARD_SENT_WHATSAPP",
     auditDetail: { documentNumber: result.documentNumber },
+  });
+}
+
+export async function sendAssessmentViaWhatsAppAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS", "FRONT_DESK"].includes(user.role)) {
+    return { success: false, error: "Not authorised" };
+  }
+  // Only a published (client-visible) report may be sent to the customer.
+  const result = await generateAssessmentBuffer({ orgId, jobId, requireClientVisible: true });
+  if (!result.ok) return { success: false, error: result.error };
+
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, orgId },
+    select: { jobNumber: true, client: { select: { phone: true } } },
+  });
+  const clientPhone = job?.client?.phone ?? "";
+  if (!clientPhone) return { success: false, error: "This client has no phone number on file." };
+
+  return sendPdfViaWhatsApp({
+    jobId, userId: user.id, orgId,
+    filename: result.filename, clientPhone,
+    caption: `Please find your assessment report (${job?.jobNumber ?? ""}) attached.`,
+    outboxBody: `[Assessment PDF] ${job?.jobNumber ?? jobId}`,
+    documentKind: "assessment",
+    staffName: user.name,
+    staffRole: user.role,
+    auditAction: "ASSESSMENT_SENT_WHATSAPP",
+    auditDetail: { jobNumber: job?.jobNumber ?? "" },
   });
 }
