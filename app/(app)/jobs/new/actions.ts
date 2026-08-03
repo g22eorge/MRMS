@@ -1,9 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
 import { JobStatus, Prisma, type SoftwareInstallerSource } from "@prisma/client";
 import { z } from "zod";
 
@@ -14,7 +11,7 @@ import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import { getUploadsRoot } from "@/lib/storage";
+import { uploadJobImage } from "@/lib/blob-storage";
 import { checkJobLimit } from "@/lib/plan-limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { notifyJobCreated } from "@/lib/notifications";
@@ -75,19 +72,6 @@ const newJobSchema = z.object({
   devicesJson: z.string().min(2),
   receivedAt: z.string().optional(),
 });
-
-function hasValidImageSignature(contentType: string, bytes: Uint8Array) {
-  if (contentType === "image/jpeg") {
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  }
-  if (contentType === "image/png") {
-    return bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
-  }
-  if (contentType === "image/webp") {
-    return bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
-  }
-  return false;
-}
 
 function parseDevices(devicesJson: string) {
   let raw: unknown;
@@ -178,8 +162,6 @@ export async function createJobAction(
       return { error: parsedDevices.error };
     }
     const devices = parsedDevices.devices;
-    const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
-    const maxSize = 5 * 1024 * 1024;
     const receivedAt = parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date();
 
     const openStatuses = filterSupportedJobStatuses([
@@ -362,32 +344,24 @@ export async function createJobAction(
       },
     });
 
+      // Intake "before" photos → Vercel Blob (persistent). Default INTERNAL;
+      // staff can mark them client-visible later from the job's Photos tab.
       const files = formData.getAll(`photos_${i}`) as File[];
-      if (files.length > 0) {
-      const uploadDir = path.join(getUploadsRoot(), "jobs", job.id);
-      await mkdir(uploadDir, { recursive: true });
-
       for (const file of files) {
         if (!file?.size) continue;
-        if (!allowed.has(file.type) || file.size > maxSize) {
-          continue;
-        }
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        if (!hasValidImageSignature(file.type, bytes)) {
-          continue;
-        }
-        const ext = file.type.split("/")[1] || "jpg";
-        const fileName = `${Date.now()}-${randomUUID()}.${ext}`;
-        const absPath = path.join(uploadDir, fileName);
-        await writeFile(absPath, Buffer.from(bytes));
+        const up = await uploadJobImage(job.id, file);
+        if (!up.ok) continue; // skip invalid/oversized (or unconfigured storage)
         await prisma.photo.create({
           data: {
             jobId: job.id,
+            orgId,
             label: "before",
-            url: `/api/uploads/jobs/${job.id}/${fileName}`,
+            visibility: "INTERNAL",
+            url: up.image.url,
+            storageKey: up.image.key,
+            mimeType: up.image.mimeType,
           },
         });
-      }
       }
     }
 

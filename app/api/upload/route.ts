@@ -1,5 +1,4 @@
-import { randomUUID } from "crypto";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { unlink } from "fs/promises";
 import path from "path";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,16 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
 import { getUploadsRoot } from "@/lib/storage";
+import { uploadJobImage, deleteBlobObject } from "@/lib/blob-storage";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
-const MAX_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MIME_TO_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
 const ALLOWED_LABELS = new Set(["before", "during", "after", "other"]);
 
 export async function POST(req: NextRequest) {
@@ -73,33 +66,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const uploadDir = path.join(getUploadsRoot(), "jobs", jobId);
-  await mkdir(uploadDir, { recursive: true });
+  // Client portal: an upload flagged "CLIENT" is shown to the customer; default
+  // INTERNAL (staff-only). Validation + storage handled by the Blob helper.
+  const visibility = String(formData.get("visibility") ?? "INTERNAL").toUpperCase() === "CLIENT" ? "CLIENT" : "INTERNAL";
 
   const created = [];
   for (const file of files) {
-    if (!ALLOWED_TYPES.has(file.type) || file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "Only jpeg/png/webp up to 5MB are allowed" }, { status: 400 });
+    const up = await uploadJobImage(jobId, file);
+    if (!up.ok) {
+      return NextResponse.json({ error: up.error }, { status: 400 });
     }
-
-    const ext = MIME_TO_EXT[file.type];
-    if (!ext) {
-      return NextResponse.json({ error: "Only jpeg/png/webp up to 5MB are allowed" }, { status: 400 });
-    }
-    const arrayBuffer = await file.arrayBuffer();
-    if (!hasValidImageSignature(file.type, new Uint8Array(arrayBuffer))) {
-      return NextResponse.json({ error: "Invalid image file" }, { status: 400 });
-    }
-    const fileName = `${Date.now()}-${randomUUID()}.${ext}`;
-    const absPath = path.join(uploadDir, fileName);
-    await writeFile(absPath, Buffer.from(arrayBuffer));
-
-    const url = `/api/uploads/jobs/${jobId}/${fileName}`;
     const photo = await prisma.photo.create({
       data: {
         jobId,
-        url,
+        orgId,
+        url: up.image.url,
         label,
+        visibility,
+        storageKey: up.image.key,
+        mimeType: up.image.mimeType,
+        uploadedById: session.user.id,
       },
     });
     await prisma.auditLog.create({
@@ -108,13 +94,43 @@ export async function POST(req: NextRequest) {
         jobId,
         userId: session.user.id,
         action: "PHOTO_UPLOADED",
-        detail: JSON.stringify({ photoId: photo.id, label }),
+        detail: JSON.stringify({ photoId: photo.id, label, visibility }),
       },
     }).catch((err) => console.error("[upload] audit log (PHOTO_UPLOADED) failed:", err));
     created.push(photo);
   }
 
   return NextResponse.json(created);
+}
+
+/** Toggle whether a photo is visible to the client portal. ADMIN/OPS only. */
+export async function PATCH(req: NextRequest) {
+  const { session, user, orgId, org } = await requireOrgSession();
+  if (!["ADMIN", "OPS"].includes(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  try {
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Workspace is read-only." }, { status: 403 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  const visibility = req.nextUrl.searchParams.get("visibility") === "CLIENT" ? "CLIENT" : "INTERNAL";
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const photo = await prisma.photo.findUnique({ where: { id }, select: { id: true, jobId: true } });
+  if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Tenant isolation: the photo's job must be in this org.
+  const job = await prisma.job.findFirst({ where: { id: photo.jobId, orgId }, select: { id: true } });
+  if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await prisma.photo.update({ where: { id }, data: { visibility } });
+  await prisma.auditLog.create({
+    data: { orgId, jobId: photo.jobId, userId: session.user.id, action: "PHOTO_VISIBILITY_CHANGED", detail: JSON.stringify({ photoId: id, visibility }) },
+  }).catch(() => {});
+
+  return NextResponse.json({ success: true, visibility });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -145,10 +161,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const relative = photo.url.startsWith("/api/uploads/") ? photo.url.slice("/api/uploads/".length) : "";
-  const uploadsRoot = getUploadsRoot();
-  const absPath = path.resolve(uploadsRoot, relative);
-  const safeToUnlink = absPath.startsWith(path.resolve(uploadsRoot) + path.sep);
+  const isLegacyDisk = photo.url.startsWith("/api/uploads/");
   await prisma.photo.deleteMany({ where: { id, job: { orgId } } });
   await prisma.auditLog.create({
     data: {
@@ -160,26 +173,16 @@ export async function DELETE(req: NextRequest) {
     },
   }).catch((err) => console.error("[upload] audit log (PHOTO_DELETED) failed:", err));
 
-  if (safeToUnlink) {
-    try {
-      await unlink(absPath);
-    } catch {
-      // ignore missing file
+  // Remove the stored object: legacy disk file, or the Blob object.
+  if (isLegacyDisk) {
+    const uploadsRoot = getUploadsRoot();
+    const absPath = path.resolve(uploadsRoot, photo.url.slice("/api/uploads/".length));
+    if (absPath.startsWith(path.resolve(uploadsRoot) + path.sep)) {
+      try { await unlink(absPath); } catch { /* ignore missing file */ }
     }
+  } else {
+    await deleteBlobObject(photo.storageKey || photo.url);
   }
 
   return NextResponse.json({ success: true });
-}
-
-function hasValidImageSignature(contentType: string, bytes: Uint8Array) {
-  if (contentType === "image/jpeg") {
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  }
-  if (contentType === "image/png") {
-    return bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
-  }
-  if (contentType === "image/webp") {
-    return bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
-  }
-  return false;
 }

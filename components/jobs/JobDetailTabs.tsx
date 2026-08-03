@@ -538,7 +538,7 @@ type Props = {
       createdAt: Date;
       user: { name: string };
     }>;
-    photos: Array<{ id: string; url: string; label: string | null }>;
+    photos: Array<{ id: string; url: string; label: string | null; visibility?: string | null }>;
     inboundMessages?: Array<{
       id: string;
       from: string;
@@ -2283,7 +2283,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink-muted)]">{job.photos.length}</span>
             ) : null}
           </div>
-          <PhotoUploader jobId={job.id} photos={job.photos} canDelete={role === "ADMIN"} />
+          <PhotoUploader jobId={job.id} photos={job.photos} canDelete={role === "ADMIN"} canManageVisibility={role === "ADMIN" || role === "OPS"} />
         </div>
       ) : null}
 

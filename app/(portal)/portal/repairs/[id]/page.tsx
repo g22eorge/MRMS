@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { requirePortalSession } from "@/lib/portal-auth";
@@ -53,6 +54,12 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true,
           payments: { select: { id: true, amount: true, currency: true, method: true, receivedAt: true }, orderBy: { receivedAt: "desc" } },
         },
+      },
+      // Only photos staff have marked visible to the client.
+      photos: {
+        where: { visibility: "CLIENT" },
+        select: { id: true, url: true, label: true, uploadedAt: true },
+        orderBy: { uploadedAt: "desc" },
       },
     },
   });
@@ -152,6 +159,21 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           </div>
           <p className="text-[13px] text-[var(--ink)]">{reports[0].summary}</p>
           <p className="mt-1 text-[12px] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
+        </div>
+      ) : null}
+
+      {/* Repair photos shared by the shop */}
+      {job.photos.length > 0 ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repair Photos ({job.photos.length})</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {job.photos.map((ph) => (
+              <a key={ph.id} href={ph.url} target="_blank" rel="noopener" className="group relative block overflow-hidden rounded-lg border border-[var(--line)]">
+                <Image src={ph.url} alt={ph.label ?? "Repair photo"} width={300} height={200} className="h-28 w-full object-cover transition group-hover:opacity-90" />
+                {ph.label ? <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold capitalize text-white">{ph.label}</span> : null}
+              </a>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -1124,9 +1124,18 @@ model Photo {
   job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   url        String
   label      String?
+  // Client portal: photos default to INTERNAL; staff mark ones the customer may
+  // see as "CLIENT". orgId scopes the serving/ownership checks; storageKey lets
+  // us delete the blob when the row is removed.
+  orgId        String?
+  visibility   String  @default("INTERNAL")
+  storageKey   String?
+  mimeType     String?
+  uploadedById String?
   uploadedAt DateTime @default(now())
 
   @@index([jobId, uploadedAt])
+  @@index([jobId, visibility])
 }
 
 model AuditLog {
