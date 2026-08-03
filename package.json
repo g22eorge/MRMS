@@ -86,8 +86,9 @@
   },
   "overrides": {
     "defu": "6.1.7",
-    "postcss": "8.5.15",
-    "ws": "8.20.1"
+    "postcss": "8.5.25",
+    "ws": "8.21.1",
+    "sharp": "0.35.3"
   },
   "ignoreScripts": [
     "sharp",
