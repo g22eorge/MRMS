@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { hashPortalPassword } from "@/lib/portal-auth";
 
 /**
  * Every table that carries a `clientId` foreign key. A merge reassigns each of
@@ -81,7 +82,9 @@ export async function previewClientMerge(sourceId: string, targetId: string): Pr
 export async function mergeClientIntoAction(input: {
   sourceId: string;
   targetId: string;
-}): Promise<{ success: boolean; error?: string; moved?: number }> {
+  /** Optionally turn the source's person into a portal login under the target. */
+  contact?: { name: string; email: string; password: string };
+}): Promise<{ success: boolean; error?: string; moved?: number; contactCreated?: boolean; contactWarning?: string }> {
   const { user, orgId, org } = await requireOrgSession();
   if (user.role !== "ADMIN") return { success: false, error: "Only an administrator can merge clients." };
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -97,6 +100,21 @@ export async function mergeClientIntoAction(input: {
   ]);
   if (!source) return { success: false, error: "Source client not found in this organisation." };
   if (!target) return { success: false, error: "Target client not found in this organisation." };
+
+  // Optional portal login. Validate BEFORE the merge so we never merge-then-fail:
+  // a bad password or a taken email aborts with nothing changed.
+  let contactName = "", contactEmail = "", contactPassword = "";
+  const wantsContact = Boolean(input.contact);
+  if (input.contact) {
+    contactName = input.contact.name?.trim() ?? "";
+    contactEmail = input.contact.email?.trim().toLowerCase() ?? "";
+    contactPassword = input.contact.password ?? "";
+    if (!contactName || !contactEmail || contactPassword.length < 8) {
+      return { success: false, error: "To create a portal login, enter a name, an email and a password of at least 8 characters." };
+    }
+    const clash = await prisma.portalUser.findFirst({ where: { orgId, email: contactEmail }, select: { id: true } });
+    if (clash) return { success: false, error: `A portal login with ${contactEmail} already exists — remove the login option or use a different email.` };
+  }
 
   // Pre-flight OUTSIDE the transaction: determine which child tables actually
   // exist in this database. Doing it here (not inside the txn) avoids poisoning
@@ -137,8 +155,40 @@ export async function mergeClientIntoAction(input: {
     summary: `Merged client "${source.fullName}" (${source.phone}) into "${target.fullName}" — moved ${moved} linked records`,
   }).catch(() => {});
 
+  // Create the portal login under the surviving target. The email was checked
+  // free above; the merge already committed, so a late failure here is a
+  // warning, not a merge failure.
+  let contactCreated: boolean | undefined;
+  let contactWarning: string | undefined;
+  if (wantsContact) {
+    try {
+      const created = await prisma.portalUser.create({
+        data: {
+          orgId,
+          clientId: targetId,
+          name: contactName,
+          email: contactEmail,
+          phone: source.phone || null,
+          role: "IT_OFFICER",
+          passwordHash: await hashPortalPassword(contactPassword),
+          createdById: user.id,
+        },
+        select: { id: true },
+      });
+      contactCreated = true;
+      await writeSystemAuditEvent({
+        orgId, actorUserId: user.id,
+        entityType: "PortalUser", entityId: created.id,
+        action: "PORTAL_USER_CREATED",
+        summary: `Portal login ${contactEmail} created for "${target.fullName}" during a client merge`,
+      }).catch(() => {});
+    } catch (e) {
+      contactWarning = `Merge succeeded, but the portal login could not be created: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`;
+    }
+  }
+
   revalidatePath("/clients");
   revalidatePath(`/clients/${targetId}`);
   revalidatePath(`/clients/${sourceId}`);
-  return { success: true, moved };
+  return { success: true, moved, contactCreated, contactWarning };
 }

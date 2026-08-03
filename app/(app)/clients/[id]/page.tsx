@@ -428,7 +428,7 @@ export default async function ClientDetailPage({
       ) : null}
 
       {isAdmin && mergeCandidates.length > 0 ? (
-        <MergeClientPanel sourceId={client.id} sourceName={client.fullName} candidates={mergeCandidates} />
+        <MergeClientPanel sourceId={client.id} sourceName={client.fullName} sourceEmail={client.email} candidates={mergeCandidates} />
       ) : null}
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">

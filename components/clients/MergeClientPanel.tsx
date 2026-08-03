@@ -24,10 +24,12 @@ const LABELS: Record<string, string> = {
 export function MergeClientPanel({
   sourceId,
   sourceName,
+  sourceEmail,
   candidates,
 }: {
   sourceId: string;
   sourceName: string;
+  sourceEmail: string | null;
   candidates: Candidate[];
 }) {
   const router = useRouter();
@@ -38,6 +40,12 @@ export function MergeClientPanel({
   const [error, setError] = useState<string | null>(null);
   const [loadingPreview, startPreview] = useTransition();
   const [merging, startMerge] = useTransition();
+
+  // Optional: turn this record's person into a portal login under the target.
+  const [createLogin, setCreateLogin] = useState(false);
+  const [loginName, setLoginName] = useState(sourceName);
+  const [loginEmail, setLoginEmail] = useState(sourceEmail ?? "");
+  const [loginPassword, setLoginPassword] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -66,7 +74,11 @@ export function MergeClientPanel({
     if (!targetId) return;
     setError(null);
     startMerge(async () => {
-      const res = await mergeClientIntoAction({ sourceId, targetId });
+      const res = await mergeClientIntoAction({
+        sourceId,
+        targetId,
+        contact: createLogin ? { name: loginName, email: loginEmail, password: loginPassword } : undefined,
+      });
       if (res.success) {
         router.push(`/clients/${targetId}`);
         router.refresh();
@@ -76,7 +88,8 @@ export function MergeClientPanel({
     });
   }
 
-  const canMerge = Boolean(targetId) && preview?.ok && confirmText.trim().toUpperCase() === "MERGE" && !merging;
+  const loginReady = !createLogin || (loginName.trim() && loginEmail.trim() && loginPassword.length >= 8);
+  const canMerge = Boolean(targetId) && preview?.ok && confirmText.trim().toUpperCase() === "MERGE" && Boolean(loginReady) && !merging;
 
   return (
     <div className="rounded-xl border border-red-500/30 bg-red-500/[0.03] p-4">
@@ -133,6 +146,19 @@ export function MergeClientPanel({
           ) : (
             <p className="text-[12px] text-[var(--ink-muted)]">This client has no linked records — it will just be removed.</p>
           )}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]/60 p-2.5">
+            <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--ink)]">
+              <input type="checkbox" checked={createLogin} onChange={(e) => setCreateLogin(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
+              Also create a portal login from this record (under {target.fullName})
+            </label>
+            {createLogin ? (
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <input value={loginName} onChange={(e) => setLoginName(e.target.value)} placeholder="Contact name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+                <input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} type="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+                <input value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} type="text" placeholder="Temp password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+              </div>
+            ) : null}
+          </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <input
               value={confirmText}
