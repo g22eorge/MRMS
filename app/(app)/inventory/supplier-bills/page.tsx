@@ -64,13 +64,16 @@ export default async function SupplierBillsPage({
       header={{
         eyebrow: "Inventory",
         title: "Supplier Bills",
-        description: `${total} bills · outstanding ${totalOutstanding.toLocaleString()}`,
         actions: (
           <>
             <Link href="/api/procurement/export?type=supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
             <Link href="/inventory/supplier-bills/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Bill</Link>
           </>
         ),
+        kpis: [
+          { label: "Total Bills", value: total, sub: "recorded" },
+          { label: "Outstanding", value: totalOutstanding.toLocaleString(), sub: "posted or part-paid", valueClass: "text-amber-600" },
+        ],
       }}
     >
       <DataTable
