@@ -61,6 +61,16 @@ export default async function StockTransfersPage({
   const pageView = paginationView(page, transfersTotal);
   const hrefForPage = pageHrefBuilder("/inventory/transfers", {});
 
+  // Named so the same status actions render in the desktop table AND mobile card.
+  const renderTransferActions = (transfer: (typeof transfers)[number]) => (
+    <>
+      {transfer.status === "REQUESTED" ? <form action={approveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">Approve</button></form> : null}
+      {transfer.status === "APPROVED" ? <form action={dispatchStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-700">Dispatch</button></form> : null}
+      {transfer.status === "DISPATCHED" ? <form action={receiveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-700">Receive</button></form> : null}
+      {transfer.status === "REQUESTED" || transfer.status === "APPROVED" ? <form action={cancelStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-red-500/20 px-2.5 py-1 font-semibold text-red-600">Cancel</button></form> : null}
+    </>
+  );
+
   return (
     <ListPageLayout
       header={{
@@ -144,13 +154,19 @@ export default async function StockTransfersPage({
             cell: (transfer) => fmt(transfer.createdAt),
           },
         ]}
-        actions={(transfer) => (
-          <>
-            {transfer.status === "REQUESTED" ? <form action={approveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">Approve</button></form> : null}
-            {transfer.status === "APPROVED" ? <form action={dispatchStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-700">Dispatch</button></form> : null}
-            {transfer.status === "DISPATCHED" ? <form action={receiveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-700">Receive</button></form> : null}
-            {transfer.status === "REQUESTED" || transfer.status === "APPROVED" ? <form action={cancelStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-red-500/20 px-2.5 py-1 font-semibold text-red-600">Cancel</button></form> : null}
-          </>
+        actions={renderTransferActions}
+        renderMobileCard={(transfer) => (
+          <div className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="mono truncate font-bold text-[var(--ink)]">{transfer.transferNumber}</p>
+                <p className="mt-0.5 truncate text-[var(--ink-muted)]">{locationName.get(transfer.fromLocationId) ?? "From"} → {locationName.get(transfer.toLocationId) ?? "To"}</p>
+                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{transfer.items[0] ? `${transfer.items[0].part.sku} x${transfer.items[0].quantity}` : "No items"} · {fmt(transfer.createdAt)}</p>
+              </div>
+              <StatusBadge tone={toneFor(STATUS_TONES, transfer.status, "sky")}>{transfer.status.replaceAll("_", " ")}</StatusBadge>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderTransferActions(transfer)}</div>
+          </div>
         )}
       />
     </ListPageLayout>
