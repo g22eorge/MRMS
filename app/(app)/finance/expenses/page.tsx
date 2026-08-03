@@ -300,6 +300,25 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const canWrite = can.viewFinancials(user);
   const canDelete = ["ADMIN"].includes(user.role);
 
+  // Named so the same actions menu renders in the desktop table AND mobile card.
+  const renderExpenseActions = canDelete
+    ? (expense: (typeof expenses)[number]) => (
+        <RowActionsMenu label="Expense actions">
+          <MenuDestructiveRow>
+            <form action={deleteExpenseAction}>
+              <input type="hidden" name="expenseId" value={expense.id} />
+              <ConfirmSubmitButton
+                message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
+                className="w-full text-left text-[12px] text-red-600"
+              >
+                Delete
+              </ConfirmSubmitButton>
+            </form>
+          </MenuDestructiveRow>
+        </RowActionsMenu>
+      )
+    : undefined;
+
   const filterUrl = (params: Record<string, string | undefined>) => {
     const base = new URLSearchParams();
     const nextCat = params.category !== undefined ? params.category : catFilter;
@@ -639,25 +658,21 @@ export default async function ExpensesPage({ searchParams }: Props) {
               cell: (expense) => expense.createdBy.name,
             },
           ]}
-          actions={
-            canDelete
-              ? (expense) => (
-                  <RowActionsMenu label="Expense actions">
-                    <MenuDestructiveRow>
-                      <form action={deleteExpenseAction}>
-                        <input type="hidden" name="expenseId" value={expense.id} />
-                        <ConfirmSubmitButton
-                          message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
-                          className="w-full text-left text-[12px] text-red-600"
-                        >
-                          Delete
-                        </ConfirmSubmitButton>
-                      </form>
-                    </MenuDestructiveRow>
-                  </RowActionsMenu>
-                )
-              : undefined
-          }
+          actions={renderExpenseActions}
+          renderMobileCard={(expense) => (
+            <div className="flex items-start justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <p className="mono truncate font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
+                <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
+                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {fmt(expense.paidAt ?? expense.createdAt)}</p>
+                <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <StatusBadge tone={toneFor(CATEGORY_TONES, expense.category)}>{CATEGORY_LABELS[expense.category]}</StatusBadge>
+                {renderExpenseActions ? renderExpenseActions(expense) : null}
+              </div>
+            </div>
+          )}
         />
         {total > 0 && (
           <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5">

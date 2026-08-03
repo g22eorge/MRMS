@@ -304,6 +304,19 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                         ),
                       },
                     ]}
+                    renderMobileCard={(m) => (
+                      <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[var(--ink)]">{m.user.name}</p>
+                          <p className="truncate text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
+                        </div>
+                        <form action={removeMemberAction} className="shrink-0">
+                          <input type="hidden" name="id" value={selected.id} />
+                          <input type="hidden" name="memberId" value={m.id} />
+                          <button type="submit" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 font-semibold hover:border-[var(--accent)]/40">Remove</button>
+                        </form>
+                      </div>
+                    )}
                   />
                 </div>
               </div>

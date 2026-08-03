@@ -122,6 +122,13 @@ export default async function DataHealPage({
               cell: (change) => `${change.to.brand} / ${change.to.model} / ${change.to.deviceType}`,
             },
           ]}
+          renderMobileCard={(change) => (
+            <div className="px-4 py-3">
+              <Link href={`/jobs/${change.id}`} className="mono font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">{change.jobNumber}</Link>
+              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{change.from.brand} / {change.from.model} / {change.from.deviceType}</p>
+              <p className="mt-0.5 truncate text-[12px] text-[var(--ink)]">→ {change.to.brand} / {change.to.model} / {change.to.deviceType}</p>
+            </div>
+          )}
         />
       </section>
     </div>

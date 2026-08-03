@@ -265,6 +265,38 @@ export default async function RecurringInvoicesPage({
   const pageRows = filteredRecurring.slice(pageView.skip, pageView.skip + pageView.take);
   const recurringHref = pageHrefBuilder("/finance/recurring", { q: sp.q?.trim() ?? "" });
 
+  // Named so the same actions menu renders in the desktop table AND mobile card.
+  const renderRecurringActions = (rec: (typeof pageRows)[number]) => (
+    <RowActionsMenu label="Template actions">
+      <MenuSection label="Actions" />
+      <div className="px-3 py-1">
+        <form action={issueNowAction}>
+          <input type="hidden" name="recurringId" value={rec.id} />
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+            Issue Invoice Now
+          </button>
+        </form>
+        <form action={toggleRecurringAction}>
+          <input type="hidden" name="recurringId" value={rec.id} />
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+            {rec.isActive ? "Pause" : "Resume"}
+          </button>
+        </form>
+      </div>
+      <MenuDestructiveRow>
+        <form action={deleteRecurringAction}>
+          <input type="hidden" name="recurringId" value={rec.id} />
+          <ConfirmSubmitButton
+            message={`Delete recurring template "${rec.subject}"? This does not delete already-issued invoices.`}
+            className="w-full text-left text-[12px] text-red-600"
+          >
+            Delete Template
+          </ConfirmSubmitButton>
+        </form>
+      </MenuDestructiveRow>
+    </RowActionsMenu>
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -446,36 +478,25 @@ export default async function RecurringInvoicesPage({
             ),
           },
         ]}
-        actions={(rec) => (
-          <RowActionsMenu label="Template actions">
-            <MenuSection label="Actions" />
-            <div className="px-3 py-1">
-              <form action={issueNowAction}>
-                <input type="hidden" name="recurringId" value={rec.id} />
-                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                  Issue Invoice Now
-                </button>
-              </form>
-              <form action={toggleRecurringAction}>
-                <input type="hidden" name="recurringId" value={rec.id} />
-                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                  {rec.isActive ? "Pause" : "Resume"}
-                </button>
-              </form>
+        actions={renderRecurringActions}
+        renderMobileCard={(rec) => {
+          const isDue = rec.isActive && rec.nextDueAt <= now;
+          return (
+            <div className="flex items-start justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate font-bold text-[var(--ink)]">{rec.subject}</p>
+                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{rec.client.fullName} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
+                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                  {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()} · <span className={isDue ? "font-semibold text-amber-600" : ""}>{isDue ? "Due now" : `Next ${fmt(rec.nextDueAt)}`}</span>
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <StatusBadge tone={rec.isActive ? "success" : "neutral"}>{rec.isActive ? "Active" : "Paused"}</StatusBadge>
+                {renderRecurringActions(rec)}
+              </div>
             </div>
-            <MenuDestructiveRow>
-              <form action={deleteRecurringAction}>
-                <input type="hidden" name="recurringId" value={rec.id} />
-                <ConfirmSubmitButton
-                  message={`Delete recurring template "${rec.subject}"? This does not delete already-issued invoices.`}
-                  className="w-full text-left text-[12px] text-red-600"
-                >
-                  Delete Template
-                </ConfirmSubmitButton>
-              </form>
-            </MenuDestructiveRow>
-          </RowActionsMenu>
-        )}
+          );
+        }}
       />
 
       <TablePagination

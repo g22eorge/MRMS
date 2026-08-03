@@ -153,6 +153,20 @@ export default async function SettingsAuditPage({
             cell: (event) => compactJson(event.afterJson),
           },
         ]}
+        renderMobileCard={(event) => {
+          const actor = event.actorUserId ? actorMap.get(event.actorUserId) : null;
+          return (
+            <div className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="mono truncate font-semibold text-[var(--ink)]">{event.action}</p>
+                <span className="shrink-0 whitespace-nowrap text-[12px] text-[var(--ink-muted)]">{fmt(event.createdAt)}</span>
+              </div>
+              {event.summary && <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{event.summary}</p>}
+              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{actor ? actor.name : event.actorUserId ?? "-"} · {event.entityType}</p>
+              <p className="mono mt-1 truncate text-[12px] text-[var(--ink-muted)]">{compactJson(event.afterJson)}</p>
+            </div>
+          );
+        }}
       />
 
       <TablePagination

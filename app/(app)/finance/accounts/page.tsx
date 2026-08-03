@@ -177,6 +177,50 @@ export default async function ChartOfAccountsPage() {
   const totals: Record<AccountType, number> = { ASSET: 0, LIABILITY: 0, EQUITY: 0, REVENUE: 0, EXPENSE: 0 };
   for (const t of ACCOUNT_TYPES) totals[t] = accounts.filter((a) => a.type === t).length;
 
+  // Named so the same row actions render in the desktop table AND mobile card.
+  const renderAccountActions = (acc: (typeof accounts)[number]) => {
+    const balance = balanceMap.get(acc.id) ?? 0;
+    const monthly = monthlyMap.get(acc.id) ?? 0;
+    const hasActivity = balance !== 0 || monthly !== 0;
+    return (
+      <>
+        {hasActivity && (
+          <Link
+            href={`/finance/accounts/${acc.id}`}
+            className="rounded-lg border border-[var(--line)] px-2 py-1 font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+          >
+            Ledger →
+          </Link>
+        )}
+        {!acc.isSystem && (
+          <RowActionsMenu label="Account actions">
+            <MenuSection label="Actions" />
+            <form action={toggleActive}>
+              <input type="hidden" name="id" value={acc.id} />
+              <button
+                type="submit"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
+              >
+                {acc.isActive ? "Deactivate" : "Activate"}
+              </button>
+            </form>
+            <MenuDestructiveRow>
+              <form action={deleteAccount}>
+                <input type="hidden" name="id" value={acc.id} />
+                <ConfirmSubmitButton
+                  message="Delete this account? Cannot be undone if it has no transactions."
+                  className="w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                >
+                  Delete
+                </ConfirmSubmitButton>
+              </form>
+            </MenuDestructiveRow>
+          </RowActionsMenu>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -430,46 +474,32 @@ export default async function ChartOfAccountsPage() {
                     ),
                 },
               ]}
-              actions={(acc) => {
+              actions={renderAccountActions}
+              renderMobileCard={(acc) => {
                 const balance = balanceMap.get(acc.id) ?? 0;
                 const monthly = monthlyMap.get(acc.id) ?? 0;
-                const hasActivity = balance !== 0 || monthly !== 0;
                 return (
-                  <>
-                    {hasActivity && (
-                      <Link
-                        href={`/finance/accounts/${acc.id}`}
-                        className="rounded-lg border border-[var(--line)] px-2 py-1 font-medium text-[var(--ink-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-                      >
-                        Ledger →
-                      </Link>
-                    )}
-                    {!acc.isSystem && (
-                      <RowActionsMenu label="Account actions">
-                        <MenuSection label="Actions" />
-                        <form action={toggleActive}>
-                          <input type="hidden" name="id" value={acc.id} />
-                          <button
-                            type="submit"
-                            className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
-                          >
-                            {acc.isActive ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
-                        <MenuDestructiveRow>
-                          <form action={deleteAccount}>
-                            <input type="hidden" name="id" value={acc.id} />
-                            <ConfirmSubmitButton
-                              message="Delete this account? Cannot be undone if it has no transactions."
-                              className="w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                            >
-                              Delete
-                            </ConfirmSubmitButton>
-                          </form>
-                        </MenuDestructiveRow>
-                      </RowActionsMenu>
-                    )}
-                  </>
+                  <div className="flex items-start justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate">
+                        <span className="mono font-semibold text-[var(--accent)]">{acc.code}</span>
+                        <span className="ml-2 font-medium text-[var(--ink)]">{acc.name}</span>
+                      </p>
+                      {acc.parent && <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{acc.parent.code} {acc.parent.name}</p>}
+                      <p className="mt-0.5 tabular-nums text-[12px] text-[var(--ink-muted)]">
+                        Balance {balance !== 0 ? `${balance < 0 ? "−" : ""}${formatMoneyCompact(Math.abs(balance), currency)}` : "—"}
+                        {monthly !== 0 ? ` · ${monthly >= 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(monthly), currency)} this month` : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      {acc.isSystem ? (
+                        <span className="text-[12px] text-[var(--ink-muted)]">System</span>
+                      ) : (
+                        <StatusBadge tone={acc.isActive ? "success" : "neutral"}>{acc.isActive ? "Active" : "Inactive"}</StatusBadge>
+                      )}
+                      <div className="flex items-center gap-1.5">{renderAccountActions(acc)}</div>
+                    </div>
+                  </div>
                 );
               }}
             />

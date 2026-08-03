@@ -121,6 +121,42 @@ export default async function TaxRatesPage({
     redirect("/finance/tax-rates");
   }
 
+  // Named so the same actions menu renders in the desktop table AND mobile card.
+  const renderRateActions = (rate: (typeof filteredTaxRates)[number]) => (
+    <RowActionsMenu label="Rate actions">
+      <MenuSection label="Actions" />
+      <div className="px-3 py-1">
+        <form action={toggleTaxRateAction}>
+          <input type="hidden" name="taxRateId" value={rate.id} />
+          <input type="hidden" name="action" value="toggle" />
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+            {rate.isActive ? "Deactivate" : "Activate"}
+          </button>
+        </form>
+        {!rate.isDefault && (
+          <form action={toggleTaxRateAction}>
+            <input type="hidden" name="taxRateId" value={rate.id} />
+            <input type="hidden" name="action" value="setDefault" />
+            <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+              Set as Default
+            </button>
+          </form>
+        )}
+      </div>
+      <MenuDestructiveRow>
+        <form action={deleteTaxRateAction}>
+          <input type="hidden" name="taxRateId" value={rate.id} />
+          <ConfirmSubmitButton
+            message={`Delete tax rate ${rate.code}? This cannot be undone.`}
+            className="w-full text-left text-[12px] text-red-600"
+          >
+            Delete
+          </ConfirmSubmitButton>
+        </form>
+      </MenuDestructiveRow>
+    </RowActionsMenu>
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -250,39 +286,23 @@ export default async function TaxRatesPage({
             ),
           },
         ]}
-        actions={(rate) => (
-          <RowActionsMenu label="Rate actions">
-            <MenuSection label="Actions" />
-            <div className="px-3 py-1">
-              <form action={toggleTaxRateAction}>
-                <input type="hidden" name="taxRateId" value={rate.id} />
-                <input type="hidden" name="action" value="toggle" />
-                <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                  {rate.isActive ? "Deactivate" : "Activate"}
-                </button>
-              </form>
-              {!rate.isDefault && (
-                <form action={toggleTaxRateAction}>
-                  <input type="hidden" name="taxRateId" value={rate.id} />
-                  <input type="hidden" name="action" value="setDefault" />
-                  <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
-                    Set as Default
-                  </button>
-                </form>
-              )}
+        actions={renderRateActions}
+        renderMobileCard={(rate) => (
+          <div className="flex items-start justify-between gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 truncate">
+                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-bold text-[var(--ink)]">{rate.code}</span>
+                <span className="font-semibold tabular-nums text-[var(--ink)]">{rate.rate}%</span>
+                {rate.isDefault && <StatusBadge tone="success">Default</StatusBadge>}
+              </p>
+              <p className="mt-0.5 truncate text-[var(--ink)]">{rate.name}</p>
+              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{[rate.appliesToSales ? "Sales" : null, rate.appliesToPurchases ? "Purchases" : null].filter(Boolean).join(" · ") || "Not applied"}</p>
             </div>
-            <MenuDestructiveRow>
-              <form action={deleteTaxRateAction}>
-                <input type="hidden" name="taxRateId" value={rate.id} />
-                <ConfirmSubmitButton
-                  message={`Delete tax rate ${rate.code}? This cannot be undone.`}
-                  className="w-full text-left text-[12px] text-red-600"
-                >
-                  Delete
-                </ConfirmSubmitButton>
-              </form>
-            </MenuDestructiveRow>
-          </RowActionsMenu>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <StatusBadge tone={rate.isActive ? "success" : "neutral"}>{rate.isActive ? "Active" : "Inactive"}</StatusBadge>
+              {renderRateActions(rate)}
+            </div>
+          </div>
         )}
       />
     </div>
