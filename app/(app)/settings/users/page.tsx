@@ -14,8 +14,10 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { inviteSchema, INVITE_TTL_DAYS, type InviteState } from "@/lib/invites";
 import { InvitePanel } from "@/components/settings/InvitePanel";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { RowActionsMenu, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { checkUserLimit } from "@/lib/plan-limits";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { rateLimit } from "@/lib/rate-limit";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
@@ -23,7 +25,6 @@ type SearchParams = {
   q?: string;
   userId?: string;
   limitError?: string;
-  add?: string;
   tab?: string;
 };
 
@@ -671,6 +672,27 @@ export default async function UsersPage({
     redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
   }
 
+  async function setUserAccessMode(formData: FormData) {
+    "use server";
+    const { session, user: actor, orgId: actorOrgId, org } = await requireOrgSession();
+    if (actor.role !== "ADMIN") return;
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
+    const targetUserId = String(formData.get("userId") ?? "").trim();
+    const accessMode = String(formData.get("accessMode") ?? "");
+    if (!targetUserId || (accessMode !== "FULL" && accessMode !== "READ_ONLY")) return;
+    // Never let an admin lock themselves out of write access.
+    if (targetUserId === session.user.id && accessMode === "READ_ONLY") return;
+    const existing = await prisma.user.findFirst({ where: { id: targetUserId, orgId: actorOrgId }, select: { id: true, accessMode: true } });
+    if (!existing) return;
+    const prev = (existing.accessMode as unknown as "FULL" | "READ_ONLY") ?? "FULL";
+    if (prev === accessMode) return;
+    await prisma.user.updateMany({ where: { id: targetUserId, orgId: actorOrgId }, data: { accessMode } });
+    await prisma.userAccessAudit.create({
+      data: { actorUserId: session.user.id, targetUserId, action: "ACCESS_MODE_UPDATED", detail: JSON.stringify({ from: prev, to: accessMode }) },
+    }).catch(() => {});
+    revalidatePath("/settings/users");
+  }
+
   async function toggleUserActive(formData: FormData) {
     "use server";
     const { user: actor, orgId: actorOrgId, session } = await requireOrgSession();
@@ -804,6 +826,7 @@ export default async function UsersPage({
     email: string;
     phone: string | null;
     role: Role;
+    accessMode: string;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -832,6 +855,7 @@ export default async function UsersPage({
         email: true,
         phone: true,
         role: true,
+        accessMode: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -898,7 +922,6 @@ export default async function UsersPage({
   }
 
   const limitError = typeof params.limitError === "string" ? params.limitError : null;
-  const showAdd = params.add === "1";
   const tab = params.tab ?? "profile";
 
   function tabHref(t: string) {
@@ -913,6 +936,7 @@ export default async function UsersPage({
   ];
 
   return (
+    <Disclosure>
     <div className="space-y-3">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <p className="text-[13px] font-bold text-[var(--ink)]">User Management</p>
@@ -925,12 +949,12 @@ export default async function UsersPage({
         </p>
       )}
 
-      {/* Add User — inline, toggled by URL param */}
-      {showAdd && (
+      {/* Add User — inline, toggled by client state */}
+      <DisclosurePanel>
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add User</p>
-            <Link href="/settings/users" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">✕ Close</Link>
+            <DisclosureButton label="✕ Close" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]" />
           </div>
           <InvitePanel inviteAction={inviteUser} roleOptions={roleOptions} />
           <div className="mt-3 border-t border-[var(--line)] pt-3">
@@ -947,7 +971,7 @@ export default async function UsersPage({
             </form>
           </div>
         </section>
-      )}
+      </DisclosurePanel>
 
       {/* Main two-column layout */}
       <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
@@ -956,12 +980,11 @@ export default async function UsersPage({
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2">
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Users</p>
-            <Link
-              href={showAdd ? "/settings/users" : "/settings/users?add=1"}
+            <DisclosureButton
+              label="+ Add"
+              openLabel="Close"
               className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-            >
-              {showAdd ? "Close" : "+ Add"}
-            </Link>
+            />
           </div>
           <form method="GET" className="flex gap-1 border-b border-[var(--line)] px-2 py-2">
             <input
@@ -1062,18 +1085,43 @@ export default async function UsersPage({
                 />
               )}
               {tab === "access" && (
-                <UserAccessControlPanel
-                  key={selectedUser.id}
-                  userId={selectedUser.id}
-                  queryText={q}
-                  initialRole={selectedUser.role}
-                  initialPermissions={selectedUser.permissionGrants.map((g) => g.permission)}
-                  roleOptions={roleOptions}
-                  roleDefaultPermissions={roleDefaults}
-                  roleDefaultCapabilities={roleCapabilities}
-                  permissions={permissionOptions}
-                  saveAction={saveAccessChanges}
-                />
+                <div className="space-y-4">
+                  <UserAccessControlPanel
+                    key={selectedUser.id}
+                    userId={selectedUser.id}
+                    queryText={q}
+                    initialRole={selectedUser.role}
+                    initialPermissions={selectedUser.permissionGrants.map((g) => g.permission)}
+                    roleOptions={roleOptions}
+                    roleDefaultPermissions={roleDefaults}
+                    roleDefaultCapabilities={roleCapabilities}
+                    permissions={permissionOptions}
+                    saveAction={saveAccessChanges}
+                  />
+                  {user.role === "ADMIN" ? (
+                    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Access mode</p>
+                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Read-only users can view records but cannot create or change anything.</p>
+                      <form action={setUserAccessMode} className="mt-2 flex flex-wrap items-center gap-2">
+                        <input type="hidden" name="userId" value={selectedUser.id} />
+                        <select
+                          name="accessMode"
+                          defaultValue={selectedUser.accessMode ?? "FULL"}
+                          disabled={selectedUser.id === user.id}
+                          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60 disabled:opacity-60"
+                        >
+                          <option value="FULL">Full access</option>
+                          <option value="READ_ONLY">Read-only</option>
+                        </select>
+                        {selectedUser.id === user.id ? (
+                          <span className="text-[12px] text-[var(--ink-muted)]">You can&apos;t set yourself to read-only.</span>
+                        ) : (
+                          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] font-semibold">Update</button>
+                        )}
+                      </form>
+                    </section>
+                  ) : null}
+                </div>
               )}
               {tab === "security" && (
                 <UserPasswordResetForm userId={selectedUser.id} action={resetUserPassword} />
@@ -1116,5 +1164,6 @@ export default async function UsersPage({
         )}
       </div>
     </div>
+    </Disclosure>
   );
 }

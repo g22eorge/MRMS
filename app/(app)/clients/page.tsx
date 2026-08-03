@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
 import { StatCards } from "@/components/ui/StatCards";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { orgDb } from "@/lib/db";
@@ -36,7 +37,6 @@ type SearchParams = {
   q?: string;
   segment?: string;
   page?: string;
-  create?: string;
   createError?: string;
 };
 
@@ -196,7 +196,6 @@ export default async function ClientsPage({
     Object.entries(filters).filter(([, value]) => typeof value === "string" && value.length > 0),
   ) as Record<string, string>;
   const hasClientFilters = Boolean(filters.q || segment !== "all");
-  const showCreate = filters.create === "1" || Boolean(filters.createError);
 
   const preservedWithoutSegment = Object.fromEntries(
     Object.entries(preserved).filter(([key]) => key !== "segment" && key !== "page"),
@@ -214,6 +213,7 @@ export default async function ClientsPage({
   });
 
   return (
+    <DisclosureProvider defaultOpen={Boolean(filters.createError)}>
     <div className="space-y-4">
 
       {/* ══ MOBILE HEADER ══ */}
@@ -225,10 +225,11 @@ export default async function ClientsPage({
             <p className="text-[13px] text-[var(--ink-muted)]">{kpiTotal} total</p>
           </div>
           {(user.role === "ADMIN" || user.role === "OPS") ? (
-            <Link href="/clients?create=1"
-              className="btn-premium rounded-xl px-4 py-2 text-[13px] font-bold">
-              + New
-            </Link>
+            <DisclosureTrigger
+              className="btn-premium rounded-xl px-4 py-2 text-[13px] font-bold"
+              label="+ New"
+              openLabel="Close"
+            />
           ) : null}
         </div>
 
@@ -319,9 +320,11 @@ export default async function ClientsPage({
           ))}
         </div>
         {(user.role === "ADMIN" || user.role === "OPS") ? (
-          <Link href="/clients?create=1" className="btn-premium shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-bold">
-            + New Client
-          </Link>
+          <DisclosureTrigger
+            className="btn-premium shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-bold"
+            label="+ New Client"
+            openLabel="Close"
+          />
         ) : null}
       </div>
 
@@ -343,13 +346,15 @@ export default async function ClientsPage({
           </div>
         </form>
 
-        {/* Quick create form for OPS/ADMIN — collapsed by default */}
+        {/* Quick create form for OPS/ADMIN — collapsed by default, toggled client-side */}
         {(user.role === "ADMIN" || user.role === "OPS") ? (
-          <details open={showCreate} className="border-t border-[var(--line)]">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
-              Quick create client
-              <span className="text-[13px] font-semibold text-[var(--accent)]">{showCreate ? "Hide" : "Show"}</span>
-            </summary>
+          <div className="border-t border-[var(--line)]">
+            <DisclosureTrigger
+              className="flex w-full cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30"
+              label={<>Quick create client<span className="text-[13px] font-semibold text-[var(--accent)]">Show</span></>}
+              openLabel={<>Quick create client<span className="text-[13px] font-semibold text-[var(--accent)]">Hide</span></>}
+            />
+            <DisclosurePanel>
             <form action={createClientAction} noValidate className="px-3 pb-3">
               {filters.createError ? (
                 <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
@@ -367,12 +372,13 @@ export default async function ClientsPage({
                 <button type="submit" className="btn-premium rounded-lg px-4 py-2.5 text-[13px] font-bold">
                   Create
                 </button>
-                <Link href="/clients" className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">
+                <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">
                   Cancel
-                </Link>
+                </DisclosureClose>
               </div>
             </form>
-          </details>
+            </DisclosurePanel>
+          </div>
         ) : null}
       </div>
 
@@ -542,5 +548,6 @@ export default async function ClientsPage({
       />
 
     </div>
+    </DisclosureProvider>
   );
 }

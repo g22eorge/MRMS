@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
@@ -53,7 +54,6 @@ export default async function InventoryPage({
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const created = String(params.created ?? "") === "1";
   const error = typeof params.error === "string" ? params.error : "";
-  const showAdd = String(params.add ?? "") === "1";
   const stockFilter = (params.stock ?? "all") as "all" | "low" | "out";
   const requestedStatus = String(params.status ?? "active");
   const statusFilter: StockStatusFilter = requestedStatus === "inactive" || requestedStatus === "all" ? requestedStatus : "active";
@@ -136,6 +136,7 @@ export default async function InventoryPage({
   });
 
   return (
+    <Disclosure>
     <div className="space-y-4">
 
       <HubTabs items={INVENTORY_TABS} />
@@ -253,7 +254,8 @@ export default async function InventoryPage({
 
 
       {/* Add Item panel */}
-      {canManage && showAdd && (
+      {canManage && (
+        <DisclosurePanel>
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Item</p>
@@ -269,6 +271,7 @@ export default async function InventoryPage({
             </div>
           </form>
         </div>
+        </DisclosurePanel>
       )}
 
       {/* Items table */}
@@ -281,14 +284,12 @@ export default async function InventoryPage({
             </span>
           </p>
           {canManage && (
-            <Button
-              href={showAdd ? `/inventory?status=${statusFilter}` : `/inventory?add=1&status=${statusFilter}`}
-              variant={showAdd ? "ghost" : "primary"}
-              size="sm"
-              className="px-4 font-bold"
-            >
-              {showAdd ? "Cancel" : "+ Add Item"}
-            </Button>
+            <DisclosureButton
+              label="+ Add Item"
+              openLabel="Cancel"
+              className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}
+              openClassName={buttonClasses("ghost", "sm", { className: "px-4 font-bold" })}
+            />
           )}
         </div>
 
@@ -305,7 +306,7 @@ export default async function InventoryPage({
               : statusFilter === "inactive" ? "No inactive items."
               : stockFilter === "low" ? "No items at or below reorder level."
               : stockFilter === "out" ? "No items out of stock."
-              : <>No inventory items yet.{canManage ? <> <Link href="/inventory?add=1" className="text-[var(--accent)] hover:underline">Add your first item.</Link></> : null}</>
+              : <>No inventory items yet.{canManage ? <> <DisclosureButton label="Add your first item." className="text-[var(--accent)] hover:underline" /></> : null}</>
           }
           columns={[
             {
@@ -455,5 +456,6 @@ export default async function InventoryPage({
         </div>
       </div>
     </div>
+    </Disclosure>
   );
 }

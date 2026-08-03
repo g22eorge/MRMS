@@ -56,7 +56,6 @@ export default async function BankPage({
       data: { name, bankName, accountNumber, openingBalance: openingBal, currentBalance: openingBal },
     });
     revalidatePath("/finance/bank");
-    redirect("/finance/bank");
   }
 
   async function addTransaction(fd: FormData) {
@@ -82,7 +81,6 @@ export default async function BankPage({
       }),
     ]);
     revalidatePath("/finance/bank");
-    redirect("/finance/bank");
   }
 
   async function reconcile(fd: FormData) {
@@ -98,7 +96,6 @@ export default async function BankPage({
       data: { reconciledAt: tx.reconciledAt ? null : new Date() },
     });
     revalidatePath("/finance/bank");
-    redirect("/finance/bank");
   }
 
   async function deleteBankAccount(fd: FormData) {
@@ -108,7 +105,6 @@ export default async function BankPage({
     const id = fd.get("id") as string;
     await db.bankAccount.delete({ where: { id } });
     revalidatePath("/finance/bank");
-    redirect("/finance/bank");
   }
 
   const [bankAccounts, globalMonthStats] = await Promise.all([

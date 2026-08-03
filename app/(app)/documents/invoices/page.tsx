@@ -72,9 +72,6 @@ export default async function InvoicesPage({
   const orgCurrency = normalizeCurrency(orgRow?.baseCurrency, "UGX");
 
   const params = await searchParams;
-  const createMode  = params.create === "1"; // mobile "New Invoice" → show creation form
-  const collectMode = params.collect === "1"; // mobile "Collect Revenue" button → show panel
-  const payInvoiceId = (params.pay ?? "").trim(); // inline payment form for this invoice ID
   const typeFilter = params.type ?? "all";
   const statusFilter = params.status ?? "all";
   const agingFilter = params.aging ?? "all";
@@ -260,7 +257,7 @@ export default async function InvoicesPage({
       summary: `${invoice.invoiceNumber} created: ${invoiceSubject}${taxAmount > 0 ? ` with ${taxLabel} ${taxRate}%` : ""}`,
     });
     revalidatePath("/documents/invoices");
-    redirect(`/documents/invoices?pay=${invoice.id}`);
+    redirect(`/documents/invoices/${invoice.id}?pay=1`);
   }
 
   // Row-menu Send — works for standalone AND job-linked invoices, logs to the

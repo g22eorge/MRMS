@@ -25,20 +25,20 @@ import {
 } from "@/components/documents";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
 export default async function DeliveryNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; method?: string; create?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const periodFilter = sp.period ?? "all";
   const methodFilter = sp.method ?? "all";
-  const createMode = sp.create === "1";
   const page = parsePage(sp.page);
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
@@ -369,13 +369,16 @@ export default async function DeliveryNotesPage({
   const hasDeliverySources = invoiceOptions.length > 0 || saleOptions.length > 0;
 
   return (
+    <Disclosure>
     <section className="space-y-4">
       <DocumentPageHeader
         title="Delivery Notes"
         action={
-          <Link href="/documents/delivery-notes?create=1#create-delivery-note" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
-            Create Delivery Note
-          </Link>
+          <DisclosureButton
+            label="Create Delivery Note"
+            openLabel="Cancel"
+            className="btn-premium rounded-lg px-3 py-1.5 text-[12px]"
+          />
         }
         kpis={[
           { label: "Total Notes", value: totalNotes, sub: "all time" },
@@ -385,11 +388,12 @@ export default async function DeliveryNotesPage({
         ]}
       />
 
+      <DisclosurePanel>
       {hasDeliverySources ? (
-        <details id="create-delivery-note" open={createMode} className="group rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <summary className="cursor-pointer select-none px-4 py-2.5 text-[12px] font-semibold text-[var(--ink)] group-open:border-b group-open:border-[var(--line)]">
+        <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-semibold text-[var(--ink)]">
             Create Delivery Note from paid invoice or sale
-          </summary>
+          </div>
           <form action={createDeliveryNoteAction} className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <select name="sourceKey" required className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm sm:col-span-2">
               <option value="">Select paid invoice or sale...</option>
@@ -417,8 +421,8 @@ export default async function DeliveryNotesPage({
             <input name="note" placeholder="Optional note" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm" />
             <button type="submit" className="btn-premium h-9 rounded-lg px-5 text-sm font-semibold">Create Delivery Note</button>
           </form>
-        </details>
-      ) : createMode ? (
+        </div>
+      ) : (
         <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
           <p className="text-[13px] font-semibold text-[var(--ink)]">No paid invoices or sales are ready for delivery notes.</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -426,7 +430,8 @@ export default async function DeliveryNotesPage({
             <Link href="/pos" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open POS</Link>
           </div>
         </div>
-      ) : null}
+      )}
+      </DisclosurePanel>
 
       <DocumentFilterBar
         basePath="/documents/delivery-notes"
@@ -586,5 +591,6 @@ export default async function DeliveryNotesPage({
         hrefForPage={deliveryNotesHref}
       />
     </section>
+    </Disclosure>
   );
 }

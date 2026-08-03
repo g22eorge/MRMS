@@ -11,7 +11,8 @@ import { RowActionsMenu, MenuSection, MenuActionButton, MenuDestructiveRow } fro
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SendCampaignButton } from "@/components/shared/SendCampaignButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -92,7 +93,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const page = parsePage(sp.page);
   const statusFilter = CAMPAIGN_STATUSES.includes(sp.status as CampaignStatus) ? (sp.status as CampaignStatus) : null;
   const q = (sp.q ?? "").trim();
-  const showNew = sp.new === "1";
 
   async function createCampaign(fd: FormData) {
     "use server";
@@ -233,7 +233,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     q,
   });
 
-  function href(next: { id?: string | null; status?: CampaignStatus | null; q?: string; showNew?: boolean }) {
+  function href(next: { id?: string | null; status?: CampaignStatus | null; q?: string }) {
     const params = new URLSearchParams();
     const id = next.id === undefined ? selectedId : next.id;
     const status = next.status === undefined ? statusFilter : next.status;
@@ -241,7 +241,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     if (id) params.set("id", id);
     if (status) params.set("status", status);
     if (search) params.set("q", search);
-    if (next.showNew) params.set("new", "1");
     const query = params.toString();
     return query ? `/sales/campaigns?${query}` : "/sales/campaigns";
   }
@@ -284,6 +283,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   );
 
   return (
+    <DisclosureProvider>
     <ListPageLayout
       headerNode={
         <>
@@ -294,9 +294,11 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 <h1 className="text-[22px] font-black text-[var(--ink)]">Campaigns</h1>
                 <p className="text-[13px] text-[var(--ink-muted)]">{campaigns.length} total · {totalActive} active</p>
               </div>
-              <Button href={showNew ? href({}) : href({ showNew: true })} size="md" className="rounded-xl font-bold">
-                {showNew ? "Close" : "+ New"}
-              </Button>
+              <DisclosureTrigger
+                className={buttonClasses("primary", "md", { className: "rounded-xl font-bold" })}
+                label="+ New"
+                openLabel="Close"
+              />
             </div>
 
             <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
@@ -358,9 +360,11 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               title="Campaigns"
               description="Outreach campaigns for leads and clients"
               actions={
-                <Button href={showNew ? href({}) : href({ showNew: true })} size="sm" className="px-4 font-bold">
-                  {showNew ? "Close" : "+ New Campaign"}
-                </Button>
+                <DisclosureTrigger
+                  className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}
+                  label="+ New Campaign"
+                  openLabel="Close"
+                />
               }
             />
           </div>
@@ -413,7 +417,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       </div>
 
       {/* ── New campaign ── */}
-      {showNew ? (
+      <DisclosurePanel>
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className={cardLabel}>New Campaign</p>
@@ -437,11 +441,11 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Button type="submit" size="sm" className="px-4 font-bold">Create Campaign</Button>
-              <Link href={href({})} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+              <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
             </div>
           </form>
         </section>
-      ) : null}
+      </DisclosurePanel>
 
       {campaigns.length === 0 ? (
         <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
@@ -450,7 +454,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             <path d="M11 22v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
           <p className="text-sm font-medium text-[var(--ink-muted)]">No campaigns yet</p>
-          <Link href={href({ showNew: true })} className="text-xs text-[var(--accent)] hover:underline">Create the first one</Link>
+          <DisclosureTrigger className="text-xs text-[var(--accent)] hover:underline" label="Create the first one" />
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
@@ -680,5 +684,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         </div>
       )}
     </ListPageLayout>
+    </DisclosureProvider>
   );
 }

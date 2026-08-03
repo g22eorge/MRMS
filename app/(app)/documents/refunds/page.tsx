@@ -26,13 +26,14 @@ import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 
 export const dynamic = "force-dynamic";
 
 export default async function RefundsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; method?: string; type?: string; new?: string; period?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -50,7 +51,6 @@ export default async function RefundsPage({
   const thisMonthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
   const lastMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
   const lastMonthEnd = new Date(now2.getFullYear(), now2.getMonth(), 0, 23, 59, 59);
-  const showNewRefundForm = params.new === "1";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   // ── Server actions ───────────────────────────────────────────────────────────
@@ -450,6 +450,7 @@ export default async function RefundsPage({
   };
 
   return (
+    <Disclosure>
     <div className="space-y-4">
       {/* Header + KPIs */}
       <PageHeader
@@ -458,9 +459,11 @@ export default async function RefundsPage({
         description="All cash refunds issued against invoices and sales"
         actions={
           ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) ? (
-            <Link href="/documents/refunds?new=1" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
-              + New Refund
-            </Link>
+            <DisclosureButton
+              label="+ New Refund"
+              openLabel="Cancel"
+              className="btn-premium rounded-lg px-3 py-1.5 text-[12px]"
+            />
           ) : undefined
         }
         kpis={[
@@ -471,16 +474,18 @@ export default async function RefundsPage({
         ]}
       />
 
-      {showNewRefundForm && ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) && (
+      {["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) && (
+        <DisclosurePanel>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Issue New Refund</p>
               <p className="text-[13px] text-[var(--ink-muted)]">Record cash-out against an invoice, sale, or credit note.</p>
             </div>
-            <Link href="/documents/refunds" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
-              Cancel
-            </Link>
+            <DisclosureButton
+              label="Cancel"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            />
           </div>
           {hasRefundSources ? (
           <form action={createRefundAction} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -582,6 +587,7 @@ export default async function RefundsPage({
             </div>
           )}
         </div>
+        </DisclosurePanel>
       )}
 
       {/* Filters: period chips + search + type/method */}
@@ -752,5 +758,6 @@ export default async function RefundsPage({
         hrefForPage={refundsHref}
       />
     </div>
+    </Disclosure>
   );
 }

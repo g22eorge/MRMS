@@ -58,7 +58,6 @@ export default async function ChartOfAccountsPage() {
       data: { code: code.trim(), name: name.trim(), type, parentId, description },
     });
     revalidatePath("/finance/accounts");
-    redirect("/finance/accounts");
   }
 
   async function toggleActive(fd: FormData) {
@@ -70,7 +69,6 @@ export default async function ChartOfAccountsPage() {
     if (!acc || acc.isSystem) return;
     await db.chartOfAccount.update({ where: { id }, data: { isActive: !acc.isActive } });
     revalidatePath("/finance/accounts");
-    redirect("/finance/accounts");
   }
 
   async function deleteAccount(fd: FormData) {
@@ -84,7 +82,6 @@ export default async function ChartOfAccountsPage() {
     if (hasLines) return;
     await db.chartOfAccount.delete({ where: { id } });
     revalidatePath("/finance/accounts");
-    redirect("/finance/accounts");
   }
 
   async function seedDefaults() {
@@ -113,7 +110,6 @@ export default async function ChartOfAccountsPage() {
       })),
     });
     revalidatePath("/finance/accounts");
-    redirect("/finance/accounts");
   }
 
   const now = new Date();

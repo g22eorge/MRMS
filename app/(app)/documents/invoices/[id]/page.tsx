@@ -239,6 +239,7 @@ export default async function InvoiceDetailPage({
       currency={invoiceCurrency}
       baseCurrency={baseCurrency}
       balance={balance}
+      autoOpen={sp.pay === "1"}
     />
   ) : null;
 

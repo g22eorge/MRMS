@@ -1,5 +1,4 @@
 // @ts-nocheck
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LeadStatus } from "@prisma/client";
 
@@ -8,7 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
 import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
@@ -46,7 +46,6 @@ type SearchParams = {
   statusError?: string;
   activityError?: string;
   editError?: string;
-  edit?: string;
 };
 
 export default async function LeadDetailPage({
@@ -85,7 +84,6 @@ export default async function LeadDetailPage({
 
   const canEdit = can.createLeads(user);
   const currency = getAppCurrency();
-  const showEdit = filters.edit === "1" || Boolean(filters.editError);
 
   const orgUsers = can.viewAllSales(user)
     ? await prisma.user.findMany({
@@ -128,7 +126,7 @@ export default async function LeadDetailPage({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to update lead";
-      redirect(`/sales/leads/${id}?edit=1&editError=${encodeURIComponent(msg)}`);
+      redirect(`/sales/leads/${id}?editError=${encodeURIComponent(msg)}`);
     }
     redirect(`/sales/leads/${id}`);
   }
@@ -159,6 +157,7 @@ export default async function LeadDetailPage({
   const errorBox = "mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400";
 
   return (
+    <DisclosureProvider defaultOpen={Boolean(filters.editError)}>
     <div className="space-y-4 pb-24 lg:pb-8">
       <RecordActionBar
         backHref="/sales"
@@ -171,9 +170,11 @@ export default async function LeadDetailPage({
               <Button href={`/sales/quotations/new?leadId=${lead.id}`} variant="secondary" size="sm">New Quotation</Button>
             ) : null}
             {canEdit ? (
-              <Button href={showEdit ? `/sales/leads/${lead.id}` : `/sales/leads/${lead.id}?edit=1`} variant={showEdit ? "ghost" : "secondary"} size="sm">
-                {showEdit ? "Close" : "Edit"}
-              </Button>
+              <DisclosureTrigger
+                className={(open) => buttonClasses(open ? "ghost" : "secondary", "sm")}
+                label="Edit"
+                openLabel="Close"
+              />
             ) : null}
           </>
         }
@@ -201,7 +202,8 @@ export default async function LeadDetailPage({
           ) : null}
 
           {/* ── Edit details (opened from the action bar) ── */}
-          {canEdit && showEdit ? (
+          {canEdit ? (
+            <DisclosurePanel>
             <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
               <div className="border-b border-[var(--line)] px-4 py-2.5">
                 <p className={cardLabel}>Edit Lead</p>
@@ -236,10 +238,11 @@ export default async function LeadDetailPage({
                 </div>
                 <div className="mt-2 flex items-center gap-2">
                   <Button type="submit" size="sm" className="px-4 font-bold">Save Lead</Button>
-                  <Link href={`/sales/leads/${lead.id}`} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+                  <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
                 </div>
               </form>
             </section>
+            </DisclosurePanel>
           ) : null}
 
           {/* ── Interest / Notes ── */}
@@ -329,5 +332,6 @@ export default async function LeadDetailPage({
         />
       </div>
     </div>
+    </DisclosureProvider>
   );
 }

@@ -145,7 +145,6 @@ export default async function JournalPage({
       summary: `${entry.entryNumber} posted`,
     });
     revalidatePath("/finance/journal");
-    redirect("/finance/journal");
   }
 
   async function voidEntry(fd: FormData) {
@@ -158,7 +157,6 @@ export default async function JournalPage({
     if (!entry) return;
     await _db.journalEntry.update({ where: { id }, data: { status: "VOID" } });
     revalidatePath("/finance/journal");
-    redirect("/finance/journal");
   }
 
   async function deleteEntry(fd: FormData) {
@@ -171,7 +169,6 @@ export default async function JournalPage({
     if (!entry) return;
     await _db.journalEntry.delete({ where: { id } });
     revalidatePath("/finance/journal");
-    redirect("/finance/journal");
   }
 
   // ── Data fetch ────────────────────────────────────────────────────────────

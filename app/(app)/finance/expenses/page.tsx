@@ -265,7 +265,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
 
     revalidatePath("/finance/expenses");
-    redirect("/finance/expenses");
   }
 
   async function deleteExpenseAction(formData: FormData) {
@@ -294,7 +293,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
 
     revalidatePath("/finance/expenses");
-    redirect("/finance/expenses");
   }
 
   const canWrite = can.viewFinancials(user);

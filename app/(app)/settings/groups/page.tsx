@@ -10,6 +10,7 @@ import { EXTRA_PERMISSIONS } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { DataTable } from "@/components/ui/DataTable";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 
 type SearchParams = { groupId?: string; new?: string };
 
@@ -205,24 +206,26 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
 
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <Disclosure>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Groups</p>
-            <Link
-              href={params.new === "1" ? `/settings/groups${params.groupId ? `?groupId=${params.groupId}` : ""}` : `/settings/groups?${new URLSearchParams({ ...(params.groupId ? { groupId: params.groupId } : {}), new: "1" }).toString()}`}
-              className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${params.new === "1" ? "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]" : "border-[var(--accent)]/40 bg-[var(--accent)] text-black hover:bg-[var(--accent)]/90"}`}
-            >
-              {params.new === "1" ? "✕ Cancel" : "+ New"}
-            </Link>
+            <DisclosureButton
+              label="+ New"
+              openLabel="✕ Cancel"
+              className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1.5 text-[12px] font-semibold text-black transition hover:bg-[var(--accent)]/90"
+              openClassName="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+            />
           </div>
-          {params.new === "1" ? (
+          <DisclosurePanel>
             <div className="mt-3 border-t border-[var(--line)] pt-3">
               <form action={createGroupAction} className="space-y-2">
                 <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
                 <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] text-white">Create Group</button>
+                <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px]">Create Group</button>
               </form>
             </div>
-          ) : null}
+          </DisclosurePanel>
+          </Disclosure>
 
           <div className="mt-3 space-y-2">
             {groups.map((g) => (

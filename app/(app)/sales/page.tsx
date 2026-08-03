@@ -10,7 +10,8 @@ import { formatEATDate } from "@/lib/date-eat";
 import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -88,7 +89,6 @@ type SearchParams = {
   overdue?: string;
   q?: string;
   createError?: string;
-  newLead?: string;
   page?: string;
 };
 
@@ -294,7 +294,6 @@ export default async function SalesPage({
     q: searchQ,
   });
 
-  const showNewLead = filters.newLead === "1" || Boolean(filters.createError);
   const hasLeadFilters = Boolean(searchQ) || Boolean(statusFilter) || overdueOnly;
 
   // Org users for the assign-to dropdown
@@ -327,7 +326,7 @@ export default async function SalesPage({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create lead";
-      redirect(`/sales?tab=leads&newLead=1&createError=${encodeURIComponent(msg)}`);
+      redirect(`/sales?tab=leads&createError=${encodeURIComponent(msg)}`);
     }
     redirect("/sales?tab=leads");
   }
@@ -380,12 +379,11 @@ export default async function SalesPage({
     })),
   ];
 
-  const primaryAction =
-    activeTab === "leads" && can.createLeads(user)
-      ? { label: "+ New Lead", url: "/sales?tab=leads&newLead=1" }
-      : activeTab === "quotations" && can.createQuotations(user)
-        ? { label: "+ New Quotation", url: "/sales/quotations/new" }
-        : null;
+  // Leads open the on-page create form via client state; quotations still route
+  // to a dedicated new-quotation page.
+  const canNewLead = activeTab === "leads" && can.createLeads(user);
+  const newQuotationUrl =
+    activeTab === "quotations" && can.createQuotations(user) ? "/sales/quotations/new" : null;
 
   const tabs = [
     { key: "leads" as const, label: "Leads", count: totalLeads },
@@ -403,6 +401,7 @@ export default async function SalesPage({
   );
 
   return (
+    <DisclosureProvider defaultOpen={Boolean(filters.createError)}>
     <ListPageLayout
       headerNode={
         <>
@@ -415,8 +414,14 @@ export default async function SalesPage({
                   {totalLeads} leads · {quoteCount} quotations · {currency}
                 </p>
               </div>
-              {primaryAction ? (
-                <Button href={primaryAction.url} size="md" className="rounded-xl font-bold">{primaryAction.label}</Button>
+              {canNewLead ? (
+                <DisclosureTrigger
+                  className={buttonClasses("primary", "md", { className: "rounded-xl font-bold" })}
+                  label="+ New Lead"
+                  openLabel="Close"
+                />
+              ) : newQuotationUrl ? (
+                <Button href={newQuotationUrl} size="md" className="rounded-xl font-bold">+ New Quotation</Button>
               ) : null}
             </div>
 
@@ -503,7 +508,17 @@ export default async function SalesPage({
               eyebrow="CRM"
               title="Sales"
               description="Leads pipeline and quotations"
-              actions={primaryAction ? <Button href={primaryAction.url} size="sm" className="px-4 font-bold">{primaryAction.label}</Button> : undefined}
+              actions={
+                canNewLead ? (
+                  <DisclosureTrigger
+                    className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}
+                    label="+ New Lead"
+                    openLabel="Close"
+                  />
+                ) : newQuotationUrl ? (
+                  <Button href={newQuotationUrl} size="sm" className="px-4 font-bold">+ New Quotation</Button>
+                ) : undefined
+              }
             />
           </div>
         </>
@@ -612,7 +627,8 @@ export default async function SalesPage({
       </div>
 
       {/* ── New lead form ── */}
-      {activeTab === "leads" && showNewLead && can.createLeads(user) ? (
+      {activeTab === "leads" && can.createLeads(user) ? (
+        <DisclosurePanel>
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
@@ -651,10 +667,11 @@ export default async function SalesPage({
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Button type="submit" size="sm" className="px-4 font-bold">Create Lead</Button>
-              <Link href={href({ tab: "leads" })} className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</Link>
+              <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
             </div>
           </form>
         </div>
+        </DisclosurePanel>
       ) : null}
 
       {/* ── Leads ── */}
@@ -955,5 +972,6 @@ export default async function SalesPage({
         hrefForPage={listHref}
       />
     </ListPageLayout>
+    </DisclosureProvider>
   );
 }

@@ -70,7 +70,6 @@ export default async function TaxRatesPage({
     });
 
     revalidatePath("/finance/tax-rates");
-    redirect("/finance/tax-rates");
   }
 
   async function toggleTaxRateAction(formData: FormData) {
@@ -94,7 +93,6 @@ export default async function TaxRatesPage({
     }
 
     revalidatePath("/finance/tax-rates");
-    redirect("/finance/tax-rates");
   }
 
   async function deleteTaxRateAction(formData: FormData) {
@@ -121,7 +119,6 @@ export default async function TaxRatesPage({
     });
 
     revalidatePath("/finance/tax-rates");
-    redirect("/finance/tax-rates");
   }
 
   // Named so the same actions menu renders in the desktop table AND mobile card.

@@ -20,14 +20,17 @@ export function CollectPaymentButton({
   currency,
   baseCurrency,
   balance,
+  autoOpen = false,
 }: {
   invoiceId: string;
   currency: string;
   baseCurrency: string;
   balance: number;
+  /** Open the modal immediately (e.g. arriving via ?pay=1). */
+  autoOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [amount, setAmount] = useState(String(balance > 0 ? Math.round(balance) : ""));
