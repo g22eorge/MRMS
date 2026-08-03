@@ -6,6 +6,8 @@ import { can } from "@/lib/permissions";
 import { getCurrentUserRole } from "@/lib/session";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
@@ -44,6 +46,7 @@ export default async function SuppliersPage({
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
         eyebrow: "Inventory",
         title: "Suppliers",

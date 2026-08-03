@@ -6,6 +6,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { can } from "@/lib/permissions";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -87,6 +89,7 @@ export default async function StockLocationsPage({
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
         eyebrow: "Inventory",
         title: "Stock Locations",

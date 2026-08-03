@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
@@ -117,6 +119,7 @@ export default async function ProcurementPage() {
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={PROCUREMENT_TABS} />}
       header={{
         eyebrow: "Procurement",
         title: "Control Desk",
@@ -136,6 +139,20 @@ export default async function ProcurementPage() {
           { key: "payables", label: "Payables", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
         ],
       }}
+      footer={
+        <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-[12px] text-[var(--ink-muted)]">
+          <span className="font-semibold uppercase tracking-[0.14em]">Export CSV</span>
+          {EXPORTS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="rounded-md border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      }
     >
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -143,12 +160,14 @@ export default async function ProcurementPage() {
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Review queue</p>
             <Link href="/inventory/purchase-requests" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
+          {reviewQueue.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No requests waiting for review.</p>
+          ) : (
           <DataTable
             frameless
             dense
             rows={reviewQueue}
             getRowKey={(request) => request.id}
-            empty="No pending requests."
             columns={[
               {
                 key: "request",
@@ -175,6 +194,7 @@ export default async function ProcurementPage() {
               },
             ]}
           />
+          )}
         </section>
 
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -182,12 +202,14 @@ export default async function ProcurementPage() {
             <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Receiving queue</p>
             <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All POs</Link>
           </div>
+          {receivingQueue.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No open receiving work.</p>
+          ) : (
           <DataTable
             frameless
             dense
             rows={receivingQueue}
             getRowKey={(order) => order.id}
-            empty="No open receiving work."
             columns={[
               {
                 key: "po",
@@ -227,20 +249,9 @@ export default async function ProcurementPage() {
               },
             ]}
           />
+          )}
         </section>
 
-      </div>
-
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Exports</p>
-          <span className="text-[12px] text-[var(--ink-muted)]">CSV</span>
-        </div>
-        <div className="flex flex-wrap gap-2 p-3">
-          {EXPORTS.map((item) => (
-            <Button key={item.href} href={item.href} external variant="secondary" size="sm">{item.label}</Button>
-          ))}
-        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -259,7 +270,7 @@ export default async function ProcurementPage() {
                 <p className="shrink-0 text-right text-xs font-bold tabular-nums text-[var(--ink)]">{bill.currency} {Math.max(0, bill.totalAmount - bill.paidAmount).toLocaleString()}</p>
               </Link>
             ))}
-            {billQueue.length === 0 ? <p className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No supplier bills due.</p> : null}
+            {billQueue.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No supplier bills due.</p> : null}
           </div>
         </section>
 
@@ -278,7 +289,7 @@ export default async function ProcurementPage() {
                 <p className="shrink-0 text-xs text-[var(--ink-muted)]">{grn.po ? poRef(grn.po) : "No PO"}</p>
               </Link>
             ))}
-            {recentGrns.length === 0 ? <p className="px-3 py-6 text-center text-sm text-[var(--ink-muted)]">No GRNs posted.</p> : null}
+            {recentGrns.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No GRNs posted.</p> : null}
           </div>
         </section>
       </div>
