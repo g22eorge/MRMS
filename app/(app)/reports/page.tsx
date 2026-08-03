@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
 import { DataTable } from "@/components/ui/DataTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TechnicianBarChart } from "@/components/reports/ReportsCharts";
 import { MobileActivityFeed } from "@/components/reports/MobileActivityFeed";
 import { getClientBill, getExternalTechBill, resolveTechCost } from "@/lib/billing";
@@ -743,7 +744,7 @@ export default async function ReportsPage({
                 <p className="text-sm font-medium text-[var(--ink)]">{deviceLabel[d.device] ?? d.device}</p>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--ink-muted)]">{d.total} jobs</span>
-                  <span className="text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(d.revenue, currency)}</span>
+                  <span className="text-sm font-bold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoneyCompact(d.revenue, currency)}</span>
                 </div>
               </div>
             ))}
@@ -756,47 +757,43 @@ export default async function ReportsPage({
 
       {/* ── HEADER (desktop) ─────────────────────────────────────────────────── */}
       <div className="hidden lg:block">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Analytics</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Reports</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">
-              {period === "year" ? `${selectedYear} Annual` : selectedMonthString}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Period toggle */}
-            <div className="flex rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5">
+        <PageHeader
+          eyebrow="Analytics"
+          title="Reports"
+          description={period === "year" ? `${selectedYear} Annual` : selectedMonthString}
+          actions={
+            <>
+              {/* Period toggle */}
+              <div className="flex rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5">
+                <Link
+                  href={`/reports?period=month&month=${selectedMonthString}&tab=${tab}`}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${period === "month" ? "bg-[var(--panel)] text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                >
+                  Monthly
+                </Link>
+                <Link
+                  href={`/reports?period=year&year=${selectedYear}&tab=${tab}`}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${period === "year" ? "bg-[var(--panel)] text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                >
+                  Annual
+                </Link>
+              </div>
+              {/* Month / year selector */}
+              <MonthSelectForm
+                options={selectableMonths}
+                name={period === "year" ? "year" : "month"}
+                value={period === "year" ? String(selectedYear) : selectedMonthString}
+                hiddenFields={{ period, tab }}
+              />
               <Link
-                href={`/reports?period=month&month=${selectedMonthString}&tab=${tab}`}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${period === "month" ? "bg-[var(--panel)] text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                href="/jobs"
+                className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
               >
-                Monthly
+                View Jobs
               </Link>
-              <Link
-                href={`/reports?period=year&year=${selectedYear}&tab=${tab}`}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${period === "year" ? "bg-[var(--panel)] text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
-              >
-                Annual
-              </Link>
-            </div>
-            {/* Month / year selector */}
-            <MonthSelectForm
-              options={selectableMonths}
-              name={period === "year" ? "year" : "month"}
-              value={period === "year" ? String(selectedYear) : selectedMonthString}
-              hiddenFields={{ period, tab }}
-            />
-            <Link
-              href="/jobs"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
-            >
-              View Jobs
-            </Link>
-          </div>
-        </div>
-      </div>
+            </>
+          }
+        />
       </div>{/* end hidden lg:block header */}
 
       {/* ── TAB NAV (desktop only) ──────────────────────────────────────────── */}
@@ -999,14 +996,14 @@ export default async function ReportsPage({
                       key: "period",
                       header: period === "year" ? String(selectedYear) : selectedMonthString,
                       align: "right",
-                      className: "w-32 whitespace-nowrap",
+                      className: "w-32 whitespace-nowrap tabular-nums",
                       cell: (row) => amountCell(row, row.period),
                     },
                     {
                       key: "ytd",
                       header: `${new Date().getFullYear()} YTD`,
                       align: "right",
-                      className: "w-32 whitespace-nowrap",
+                      className: "w-32 whitespace-nowrap tabular-nums",
                       cell: (row) => amountCell(row, row.ytd),
                     },
                   ]}
@@ -1248,10 +1245,10 @@ export default async function ReportsPage({
                   empty="No jobs in this period"
                   columns={[
                     { key: "device", header: "Device", className: "font-medium text-[var(--ink)]", cell: (row) => row.device },
-                    { key: "total", header: "Total", align: "right", className: "text-[var(--ink)]", cell: (row) => row.total },
-                    { key: "done", header: "Done", align: "right", className: "text-[var(--ink)]", cell: (row) => row.completed },
+                    { key: "total", header: "Total", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (row) => row.total },
+                    { key: "done", header: "Done", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (row) => row.completed },
                     { key: "rate", header: "Rate", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => `${Math.round(row.completionRate)}%` },
-                    { key: "revenue", header: "Revenue", align: "right", className: "text-[var(--ink)]", cell: (row) => (row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—") },
+                    { key: "revenue", header: "Revenue", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (row) => (row.revenue > 0 ? formatMoneyCompact(row.revenue, currency) : "—") },
                   ]}
                 />
               </div>
@@ -1337,7 +1334,7 @@ export default async function ReportsPage({
                   empty="All inventory items stocked above reorder level"
                   columns={[
                     { key: "item", header: "Item", className: "font-medium text-[var(--ink)]", cell: (part) => part.name },
-                    { key: "onHand", header: "On Hand", align: "right", className: "text-[var(--ink)]", cell: (part) => part.qtyOnHand },
+                    { key: "onHand", header: "On Hand", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (part) => part.qtyOnHand },
                     {
                       key: "status",
                       header: "Status",
@@ -1498,10 +1495,10 @@ export default async function ReportsPage({
                   getRowKey={(row) => row.name}
                   columns={[
                     { key: "name", header: "Name", className: "font-medium text-[var(--ink)]", cell: (row) => row.name },
-                    { key: "repairs", header: "Repairs", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.repairRev, currency) },
-                    { key: "pos", header: "POS", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.posRev, currency) },
-                    { key: "total", header: "Total", align: "right", className: "font-semibold text-[var(--ink)]", cell: (row) => formatMoneyCompact(row.total, currency) },
-                    { key: "target", header: "Target", align: "right", className: "text-[var(--ink-muted)]", cell: (row) => (row.target > 0 ? formatMoneyCompact(row.target, currency) : "—") },
+                    { key: "repairs", header: "Repairs", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.repairRev, currency) },
+                    { key: "pos", header: "POS", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (row) => formatMoneyCompact(row.posRev, currency) },
+                    { key: "total", header: "Total", align: "right", className: "whitespace-nowrap tabular-nums font-semibold text-[var(--ink)]", cell: (row) => formatMoneyCompact(row.total, currency) },
+                    { key: "target", header: "Target", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (row) => (row.target > 0 ? formatMoneyCompact(row.target, currency) : "—") },
                     {
                       key: "pct",
                       header: "%",
@@ -1560,8 +1557,8 @@ export default async function ReportsPage({
                     columns={[
                       { key: "name", header: "Name", className: "font-medium text-[var(--ink)]", cell: (t) => t.name },
                       { key: "role", header: "Role", className: "text-[12px] text-[var(--ink-muted)]", cell: (t) => (t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal") },
-                      { key: "total", header: "Total", align: "right", className: "text-[var(--ink)]", cell: (t) => t.total },
-                      { key: "done", header: "Done", align: "right", className: "text-[var(--ink)]", cell: (t) => t.completed },
+                      { key: "total", header: "Total", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (t) => t.total },
+                      { key: "done", header: "Done", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (t) => t.completed },
                       {
                         key: "rate",
                         header: "Rate",
@@ -1573,7 +1570,7 @@ export default async function ReportsPage({
                         ),
                       },
                       { key: "avgTime", header: "Avg Time", align: "right", className: "text-[var(--ink-muted)]", cell: (t) => (t.avgTurnaround > 0 ? turnaroundLabel(t.avgTurnaround) : "—") },
-                      { key: "revenue", header: "Revenue", align: "right", className: "text-[var(--ink)]", cell: (t) => (t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—") },
+                      { key: "revenue", header: "Revenue", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (t) => (t.revenue > 0 ? formatMoneyCompact(t.revenue, currency) : "—") },
                     ]}
                   />
                 </div>

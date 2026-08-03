@@ -642,6 +642,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               key: "amount",
               header: "Amount",
               align: "right",
+              className: "whitespace-nowrap tabular-nums",
               cell: (expense) => (
                 <span className="font-semibold tabular-nums text-[var(--ink)]">
                   {expense.currency} {expense.amount.toLocaleString()}

@@ -290,14 +290,14 @@ export default async function FieldPage({
                     </>
                   ),
                 },
-                { key: "total", header: "Total", align: "right", className: "font-semibold tabular-nums text-[var(--ink)]", cell: (row) => row.total },
-                { key: "pending", header: "Pending", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (row) => row.pending },
-                { key: "completed", header: "Completed", align: "right", className: "tabular-nums text-emerald-700 font-semibold", cell: (row) => row.completed },
+                { key: "total", header: "Total", align: "right", className: "font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]", cell: (row) => row.total },
+                { key: "pending", header: "Pending", align: "right", className: "tabular-nums whitespace-nowrap text-[var(--ink-muted)]", cell: (row) => row.pending },
+                { key: "completed", header: "Completed", align: "right", className: "tabular-nums whitespace-nowrap text-emerald-700 font-semibold", cell: (row) => row.completed },
                 {
                   key: "failed",
                   header: "Failed",
                   align: "right",
-                  className: "tabular-nums",
+                  className: "tabular-nums whitespace-nowrap",
                   cell: (row) => <span className={row.failed > 0 ? "font-semibold text-red-600" : "text-[var(--ink-muted)]"}>{row.failed}</span>,
                 },
                 {

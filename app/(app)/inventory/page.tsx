@@ -338,7 +338,7 @@ export default async function InventoryPage({
               key: "unitCost",
               header: "Unit Cost",
               align: "right",
-              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] lg:table-cell",
               headerClassName: "hidden lg:table-cell",
               cell: (part) => (part.unitCost != null ? formatMoney(part.unitCost) : "—"),
             },
@@ -346,7 +346,7 @@ export default async function InventoryPage({
               key: "onHand",
               header: "On Hand",
               align: "right",
-              className: "font-semibold tabular-nums",
+              className: "font-semibold tabular-nums whitespace-nowrap",
               cell: (part) => {
                 const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
                 const isOut = part.qtyOnHand === 0;
@@ -361,7 +361,7 @@ export default async function InventoryPage({
               key: "reserved",
               header: "Reserved",
               align: "right",
-              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
               headerClassName: "hidden sm:table-cell",
               cell: (part) => part.qtyReserved,
             },
@@ -369,7 +369,7 @@ export default async function InventoryPage({
               key: "available",
               header: "Available",
               align: "right",
-              className: "font-semibold tabular-nums",
+              className: "font-semibold tabular-nums whitespace-nowrap",
               cell: (part) => {
                 const available = part.qtyOnHand - part.qtyReserved;
                 return <span className={available <= 0 ? "text-red-500" : "text-[var(--ink)]"}>{available}</span>;
@@ -379,7 +379,7 @@ export default async function InventoryPage({
               key: "value",
               header: "Value",
               align: "right",
-              className: "hidden tabular-nums text-[12px] text-[var(--ink)] xl:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink)] xl:table-cell",
               headerClassName: "hidden xl:table-cell",
               cell: (part) => formatMoney((part.unitCost ?? 0) * part.qtyOnHand),
             },
@@ -387,7 +387,7 @@ export default async function InventoryPage({
               key: "reorder",
               header: "Reorder",
               align: "right",
-              className: "hidden tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
               headerClassName: "hidden sm:table-cell",
               cell: (part) => part.reorderLevel || "—",
             },
@@ -419,7 +419,7 @@ export default async function InventoryPage({
                   <p className="truncate text-xs text-[var(--ink-muted)]">{movement.part.sku} · {movement.reason ?? "Stock movement"} · {movement.createdBy?.name ?? movement.createdBy?.email ?? "System"}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className={`text-sm font-black tabular-nums ${movement.type === "IN" ? "text-emerald-600" : movement.type === "OUT" ? "text-red-600" : "text-amber-600"}`}>
+                  <p className={`text-sm font-black tabular-nums whitespace-nowrap ${movement.type === "IN" ? "text-emerald-600" : movement.type === "OUT" ? "text-red-600" : "text-amber-600"}`}>
                     {movement.type === "IN" ? "+" : movement.type === "OUT" ? "-" : ""}{Math.abs(movement.quantity)}
                   </p>
                   <p className="text-[11px] text-[var(--ink-muted)]">{movement.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
@@ -445,7 +445,7 @@ export default async function InventoryPage({
                     <p className="truncate text-xs text-[var(--ink-muted)]">{part.sku} · reorder at {part.reorderLevel || "not set"}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className={`text-sm font-black tabular-nums ${part.qtyOnHand === 0 ? "text-red-600" : "text-amber-600"}`}>{part.qtyOnHand}</p>
+                    <p className={`text-sm font-black tabular-nums whitespace-nowrap ${part.qtyOnHand === 0 ? "text-red-600" : "text-amber-600"}`}>{part.qtyOnHand}</p>
                     <p className="text-[11px] text-[var(--ink-muted)]">{gap} gap</p>
                   </div>
                 </Link>

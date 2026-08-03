@@ -392,6 +392,7 @@ export default async function CashFlowPage({
                 key: "current",
                 header: periodLabel,
                 align: "right",
+                className: "whitespace-nowrap tabular-nums",
                 cell: (row) => row.current,
               },
               {
@@ -399,7 +400,7 @@ export default async function CashFlowPage({
                 header: priorLabel,
                 align: "right",
                 headerClassName: "hidden md:table-cell",
-                className: "hidden md:table-cell",
+                className: "hidden md:table-cell whitespace-nowrap tabular-nums",
                 cell: (row) => row.prior,
               },
               {
@@ -429,7 +430,7 @@ export default async function CashFlowPage({
                     {EXPENSE_CATEGORY_LABELS[cat] ?? cat}
                   </span>
                   <span className="flex-1" />
-                  <span className="w-[90px] shrink-0 text-right text-[13px] font-semibold tabular-nums text-[var(--ink)]">
+                  <span className="w-[90px] shrink-0 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">
                     {formatMoney(amount, currency)}
                   </span>
                   <span className="w-[36px] shrink-0 text-right text-[12px] text-[var(--ink-muted)]">

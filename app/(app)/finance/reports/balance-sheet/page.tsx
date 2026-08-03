@@ -63,7 +63,7 @@ function AccountSection({
                 <span className="mono text-xs text-[var(--accent)]">{item.code}</span>
                 <span className="text-[var(--ink)]">{item.name}</span>
               </div>
-              <span className="tabular-nums font-medium text-[var(--ink)]">
+              <span className="tabular-nums whitespace-nowrap font-medium text-[var(--ink)]">
                 {formatMoney(item.balance, currency)}
               </span>
             </div>
@@ -293,13 +293,13 @@ export default async function BalanceSheetPage({
                       <span className="mono text-xs text-[var(--accent)]">{e.code}</span>
                       <span className="text-[var(--ink)]">{e.name}</span>
                     </div>
-                    <span className="tabular-nums font-medium">{formatMoney(e.balance, currency)}</span>
+                    <span className="tabular-nums whitespace-nowrap font-medium">{formatMoney(e.balance, currency)}</span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between px-4 py-2.5 text-sm odd:bg-[var(--bg)]">
                   <span className="italic text-[var(--ink-muted)]">Retained Earnings (net income)</span>
                   <span
-                    className={`tabular-nums font-medium ${retainedEarnings >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                    className={`tabular-nums whitespace-nowrap font-medium ${retainedEarnings >= 0 ? "text-emerald-600" : "text-red-500"}`}
                   >
                     {formatMoney(retainedEarnings, currency)}
                   </span>

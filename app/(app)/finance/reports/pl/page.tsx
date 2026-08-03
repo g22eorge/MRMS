@@ -395,7 +395,7 @@ export default async function PLPage({
                 key: "current",
                 header: periodLabel,
                 align: "right",
-                className: "w-28 whitespace-nowrap",
+                className: "w-28 whitespace-nowrap tabular-nums",
                 cell: (row) => {
                   if (row.kind === "empty") return null;
                   if (row.kind === "total")
@@ -417,7 +417,7 @@ export default async function PLPage({
                 key: "prior",
                 header: priorLabel,
                 align: "right",
-                className: "w-28 whitespace-nowrap",
+                className: "w-28 whitespace-nowrap tabular-nums",
                 cell: (row) => {
                   if (row.kind === "empty") return null;
                   if (row.kind === "total")
@@ -526,20 +526,21 @@ export default async function PLPage({
                       key: "revenue",
                       header: "Revenue",
                       align: "right",
-                      className: "tabular-nums text-emerald-600",
+                      className: "tabular-nums whitespace-nowrap text-emerald-600",
                       cell: (row) => formatMoneyCompact(row.revenue, currency),
                     },
                     {
                       key: "expenses",
                       header: "Expenses",
                       align: "right",
-                      className: "tabular-nums text-[var(--ink-muted)]",
+                      className: "tabular-nums whitespace-nowrap text-[var(--ink-muted)]",
                       cell: (row) => formatMoneyCompact(row.expenses, currency),
                     },
                     {
                       key: "net",
                       header: "Net",
                       align: "right",
+                      className: "whitespace-nowrap tabular-nums",
                       cell: (row) => (
                         <span
                           className={`text-sm font-semibold tabular-nums ${

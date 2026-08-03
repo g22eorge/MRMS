@@ -422,6 +422,7 @@ export default async function ChartOfAccountsPage() {
                   key: "balance",
                   header: "Balance",
                   align: "right",
+                  className: "whitespace-nowrap tabular-nums",
                   cell: (acc) => {
                     const balance = balanceMap.get(acc.id) ?? 0;
                     return balance !== 0 ? (
@@ -442,7 +443,7 @@ export default async function ChartOfAccountsPage() {
                   header: "This Month",
                   align: "right",
                   headerClassName: "hidden lg:table-cell",
-                  className: "hidden lg:table-cell",
+                  className: "hidden lg:table-cell whitespace-nowrap tabular-nums",
                   cell: (acc) => {
                     const monthly = monthlyMap.get(acc.id) ?? 0;
                     return monthly !== 0 ? (

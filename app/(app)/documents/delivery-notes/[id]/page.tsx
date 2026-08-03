@@ -134,7 +134,7 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
                 dense
                 columns={[
                   { key: "description", header: "Description", cell: (row) => <span className="font-medium">{row.description}</span> },
-                  { key: "quantity", header: "Qty", align: "right", className: "w-[80px]", cell: (row) => <span className="tabular-nums">{row.quantity}</span> },
+                  { key: "quantity", header: "Qty", align: "right", className: "w-[80px] whitespace-nowrap tabular-nums", cell: (row) => <span className="tabular-nums">{row.quantity}</span> },
                 ]}
               />
             ) : <div className="p-4 text-[13px] text-[var(--ink-muted)]">No itemised lines.</div>}

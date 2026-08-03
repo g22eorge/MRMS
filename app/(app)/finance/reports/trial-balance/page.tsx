@@ -165,8 +165,8 @@ export default async function TrialBalancePage({
                       <span className="text-[var(--ink)]">{r.name}</span>
                     </td>
                     <td className="px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">{r.type}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{r.debit ? formatMoney(r.debit, currency) : "—"}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{r.credit ? formatMoney(r.credit, currency) : "—"}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{r.debit ? formatMoney(r.debit, currency) : "—"}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{r.credit ? formatMoney(r.credit, currency) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

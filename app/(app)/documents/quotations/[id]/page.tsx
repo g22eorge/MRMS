@@ -235,7 +235,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                     dense
                     columns={[
                       { key: "description", header: "Description", cell: (row) => <span className="font-medium">{row.description}</span> },
-                      { key: "quantity", header: "Qty", align: "center", className: "w-[60px]", cell: (row) => <span>{row.quantity}</span> },
+                      { key: "quantity", header: "Qty", align: "center", className: "w-[60px] whitespace-nowrap tabular-nums", cell: (row) => <span>{row.quantity}</span> },
                       { key: "unitPrice", header: "Unit Price", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row) => <span className="mono tabular-nums">{formatMoney(row.unitPrice, currency)}</span> },
                       { key: "total", header: "Total", align: "right", className: "min-w-[100px] whitespace-nowrap", cell: (row) => <span className="mono font-bold tabular-nums">{formatMoney(row.lineTotal, currency)}</span> },
                     ]}

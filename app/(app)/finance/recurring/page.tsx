@@ -447,6 +447,7 @@ export default async function RecurringInvoicesPage({
             key: "amount",
             header: "Amount",
             align: "right",
+            className: "whitespace-nowrap tabular-nums",
             cell: (rec) => (
               <span className="font-semibold tabular-nums text-[var(--ink)]">
                 {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()}

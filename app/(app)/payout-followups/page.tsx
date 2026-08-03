@@ -558,13 +558,14 @@ export default async function PayoutFollowupsPage({
                 cell: (inv) => <StatusBadge tone="violet" className="capitalize">{inv.invoiceType.toLowerCase()}</StatusBadge>,
               },
               { key: "subject", header: "Subject", className: "max-w-[180px] truncate text-[var(--ink-muted)]", cell: (inv) => inv.subject ?? "—" },
-              { key: "total", header: "Total", cell: (inv) => formatMoneyCompact(inv.totalAmount, currency) },
+              { key: "total", header: "Total", className: "whitespace-nowrap tabular-nums", cell: (inv) => formatMoneyCompact(inv.totalAmount, currency) },
               {
                 key: "paid",
                 header: "Paid",
+                className: "whitespace-nowrap tabular-nums",
                 cell: (inv) => inv.paidAmount > 0 ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(inv.paidAmount, currency)}</span> : <span className="text-[var(--ink-muted)]">—</span>,
               },
-              { key: "balance", header: "Balance", className: "font-semibold text-violet-700 dark:text-violet-400", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
+              { key: "balance", header: "Balance", className: "font-semibold text-violet-700 dark:text-violet-400 whitespace-nowrap tabular-nums", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
               { key: "due", header: "Due Date", className: "text-[12px] text-[var(--ink-muted)]", cell: (inv) => inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—" },
               {
                 key: "overdue",
@@ -646,12 +647,13 @@ export default async function PayoutFollowupsPage({
               {
                 key: "repairCost",
                 header: "Repair Cost",
+                className: "whitespace-nowrap tabular-nums",
                 cell: (job) => {
                   const repairCost = resolveTechCost(job.externalTechFee, job.externalTechBill);
                   return repairCost > 0 ? formatMoneyCompact(repairCost, currency) : <span className="text-[var(--ink-muted)]">—</span>;
                 },
               },
-              { key: "clientBill", header: "Client Bill", className: "font-semibold text-amber-700 dark:text-amber-400", cell: (job) => formatMoneyCompact(job.clientBill ?? 0, currency) },
+              { key: "clientBill", header: "Client Bill", className: "font-semibold text-amber-700 dark:text-amber-400 whitespace-nowrap tabular-nums", cell: (job) => formatMoneyCompact(job.clientBill ?? 0, currency) },
               {
                 key: "doneAt",
                 header: "Done At",
@@ -722,15 +724,16 @@ export default async function PayoutFollowupsPage({
                   </StatusBadge>
                 ),
               },
-              { key: "total", header: "Total", cell: (bill) => formatMoneyCompact(bill.totalAmount, currency) },
+              { key: "total", header: "Total", className: "whitespace-nowrap tabular-nums", cell: (bill) => formatMoneyCompact(bill.totalAmount, currency) },
               {
                 key: "paid",
                 header: "Paid",
+                className: "whitespace-nowrap tabular-nums",
                 cell: (bill) => bill.paidAmount > 0
                   ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(bill.paidAmount, currency)}</span>
                   : <span className="text-[var(--ink-muted)]">—</span>,
               },
-              { key: "balance", header: "Balance", className: "font-semibold text-rose-700 dark:text-rose-400", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
+              { key: "balance", header: "Balance", className: "font-semibold text-rose-700 dark:text-rose-400 whitespace-nowrap tabular-nums", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
               { key: "due", header: "Due", className: "text-[12px] text-[var(--ink-muted)]", cell: (bill) => bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—" },
               {
                 key: "overdue",
@@ -809,11 +812,11 @@ export default async function PayoutFollowupsPage({
               },
               { key: "technician", header: "Technician", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
               { key: "status", header: "Status", cell: (job) => job.status },
-              { key: "clientBill", header: "Client Bill", cell: (job) => (typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "—") },
+              { key: "clientBill", header: "Client Bill", className: "whitespace-nowrap tabular-nums", cell: (job) => (typeof job.clientBill === "number" ? formatMoneyCompact(job.clientBill, currency) : "—") },
               {
                 key: "payoutDue",
                 header: "Payout Due",
-                className: "font-semibold text-blue-700 dark:text-blue-400",
+                className: "font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap tabular-nums",
                 cell: (job) => {
                   const payoutDue = resolveTechCost(job.externalTechFee, job.externalTechBill);
                   const alreadyPaid = paidToTechnician(job.id);

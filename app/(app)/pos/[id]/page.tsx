@@ -1092,7 +1092,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 empty="No items on this sale."
                 columns={[
                   { key: "item", header: "Item", cell: (it) => it.description },
-                  { key: "sold", header: "Sold", className: "w-20 tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                  { key: "sold", header: "Sold", className: "w-20 whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
                   {
                     key: "returnQty",
                     header: "Return qty",
@@ -1160,7 +1160,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                         <StatusBadge tone={cn.itemsReceivedBackAt ? "success" : "warning"} dot>
                           {cn.itemsReceivedBackAt ? "Stock received" : "Awaiting stock"}
                         </StatusBadge>
-                        <p className="text-[13px] font-bold tabular-nums text-[var(--ink)]">
+                        <p className="text-[13px] font-bold tabular-nums whitespace-nowrap text-[var(--ink)]">
                           {formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}
                         </p>
                       </div>
@@ -1174,7 +1174,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                         getRowKey={(it) => it.id}
                         columns={[
                           { key: "item", header: "Item", cell: (it) => it.description },
-                          { key: "qty", header: "Qty", className: "w-20 tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
+                          { key: "qty", header: "Qty", className: "w-20 whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (it) => it.quantity },
                           { key: "total", header: "Total", className: "whitespace-nowrap tabular-nums", cell: (it) => formatMoney(it.lineTotal, normalizeCurrency(cn.currency, saleCurrency)) },
                         ]}
                       />

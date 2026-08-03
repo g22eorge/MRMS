@@ -544,14 +544,14 @@ export default async function JournalPage({
                         key: "debit",
                         header: "Debit",
                         align: "right",
-                        className: "font-medium text-[var(--ink)]",
+                        className: "font-medium text-[var(--ink)] whitespace-nowrap tabular-nums",
                         cell: (line) => (line.debit > 0 ? formatMoney(line.debit, currency) : ""),
                       },
                       {
                         key: "credit",
                         header: "Credit",
                         align: "right",
-                        className: "text-[var(--ink-muted)]",
+                        className: "text-[var(--ink-muted)] whitespace-nowrap tabular-nums",
                         cell: (line) => (line.credit > 0 ? formatMoney(line.credit, currency) : ""),
                       },
                     ]}

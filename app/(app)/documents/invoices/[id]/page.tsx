@@ -332,7 +332,7 @@ export default async function InvoiceDetailPage({
                         key: "quantity",
                         header: "Qty",
                         align: "center",
-                        className: "w-[60px]",
+                        className: "w-[60px] whitespace-nowrap tabular-nums",
                         cell: (row) => <span>{row.quantity}</span>,
                       },
                       {
@@ -399,7 +399,7 @@ export default async function InvoiceDetailPage({
                   empty="No payments."
                   columns={[
                     { key: "date", header: "Date", cell: (row) => formatEATDate(row.receivedAt) },
-                    { key: "amount", header: "Amount", align: "right", cell: (row) => formatMoney(row.amount, currency) },
+                    { key: "amount", header: "Amount", align: "right", className: "whitespace-nowrap tabular-nums", cell: (row) => formatMoney(row.amount, currency) },
                     { key: "method", header: "Method", cell: (row) => row.method },
                     { key: "reference", header: "Reference", cell: (row) => row.reference ?? "—" },
                     { key: "by", header: "Recorded by", cell: (row) => row.createdBy?.name ?? "—" },

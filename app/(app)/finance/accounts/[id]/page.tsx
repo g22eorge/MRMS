@@ -309,7 +309,7 @@ export default async function AccountLedgerPage({
             key: "debit",
             header: "Debit",
             align: "right",
-            className: "tabular-nums",
+            className: "tabular-nums whitespace-nowrap",
             cell: (row) =>
               row.id === "__opening__" ? null : row.debit > 0 ? (
                 <span className="font-medium text-[var(--ink)]">{formatMoney(row.debit, currency)}</span>
@@ -321,7 +321,7 @@ export default async function AccountLedgerPage({
             key: "credit",
             header: "Credit",
             align: "right",
-            className: "tabular-nums",
+            className: "tabular-nums whitespace-nowrap",
             cell: (row) =>
               row.id === "__opening__" ? null : row.credit > 0 ? (
                 <span className="text-[var(--ink-muted)]">{formatMoney(row.credit, currency)}</span>
@@ -333,6 +333,7 @@ export default async function AccountLedgerPage({
             key: "balance",
             header: "Balance",
             align: "right",
+            className: "whitespace-nowrap tabular-nums",
             cell: (row) =>
               row.id === "__opening__" ? (
                 <span className="font-semibold tabular-nums text-[var(--ink-muted)]">

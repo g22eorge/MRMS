@@ -534,7 +534,7 @@ export default async function PosPage({
                     </p>
                   </Link>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <p className="text-[14px] font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
+                    <p className="text-[14px] font-black tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
                     {balance > 0 && s.status !== "VOID" ? (
                       <span className="text-[12px] font-semibold text-amber-600">{formatMoneyCompact(balance, cur)} due</span>
                     ) : (

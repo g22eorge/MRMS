@@ -111,7 +111,7 @@ export default async function StockCountsPage({
             key: "items",
             header: "Items",
             align: "center",
-            className: "text-[var(--ink-muted)]",
+            className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]",
             cell: (count) => count._count.items,
           },
           {

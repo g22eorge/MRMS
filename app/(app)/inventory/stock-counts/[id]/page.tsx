@@ -107,9 +107,9 @@ export default async function StockCountDetailPage({ params }: { params: Promise
               </>
             ),
           },
-          { key: "system", header: "System", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.systemQty },
-          { key: "counted", header: "Counted", align: "right", className: "tabular-nums text-[var(--ink)]", cell: (item) => item.countedQty },
-          { key: "variance", header: "Variance", align: "right", className: "font-semibold tabular-nums text-[var(--ink)]", cell: (item) => item.varianceQty },
+          { key: "system", header: "System", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (item) => item.systemQty },
+          { key: "counted", header: "Counted", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (item) => item.countedQty },
+          { key: "variance", header: "Variance", align: "right", className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]", cell: (item) => item.varianceQty },
           {
             key: "note",
             header: "Note",

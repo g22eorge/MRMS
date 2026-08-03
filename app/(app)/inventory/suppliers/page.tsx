@@ -1,7 +1,9 @@
 // @ts-nocheck
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { orgDb } from "@/lib/db";
+import { createSupplierAction } from "./actions";
 import { can } from "@/lib/permissions";
 import { getCurrentUserRole } from "@/lib/session";
 import { DataTable } from "@/components/ui/DataTable";
@@ -65,6 +67,28 @@ export default async function SuppliersPage({
           { label: "Overdue Bills", value: overdueBills, sub: "past due date", valueClass: "text-red-500" },
         ],
       }}
+      filters={
+        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Supplier</p>
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await createSupplierAction(formData);
+              revalidatePath("/inventory/suppliers");
+            }}
+            className="grid gap-2 md:grid-cols-[1.3fr_1fr_1fr_0.9fr_1.2fr_auto]"
+          >
+            <input name="name" placeholder="Supplier name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+            <input name="contactName" placeholder="Contact" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+            <input name="email" type="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+            <input name="phone" placeholder="Phone" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+            <input name="address" placeholder="Address" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+            {/* createSupplierAction reads notes via .trim(); a missing field would be null and throw. */}
+            <input type="hidden" name="notes" value="" />
+            <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px] font-semibold">Add</button>
+          </form>
+        </div>
+      }
     >
       <DataTable
         rows={suppliers}

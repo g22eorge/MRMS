@@ -320,8 +320,8 @@ export default async function SupplierDetailPage({
                     </>
                   ),
                 },
-                { key: "unitCost", header: "Unit Cost", align: "right", className: "font-semibold tabular-nums text-[var(--ink)]", cell: (price) => formatMoney(price.unitCost, price.currency) },
-                { key: "moq", header: "MOQ", align: "right", className: "text-[var(--ink-muted)]", cell: (price) => price.minQuantity ?? "-" },
+                { key: "unitCost", header: "Unit Cost", align: "right", className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]", cell: (price) => formatMoney(price.unitCost, price.currency) },
+                { key: "moq", header: "MOQ", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]", cell: (price) => price.minQuantity ?? "-" },
                 { key: "lead", header: "Lead", align: "right", className: "text-[var(--ink-muted)]", cell: (price) => (price.leadTimeDays != null ? `${price.leadTimeDays}d` : "-") },
               ]}
               actions={(price) => (

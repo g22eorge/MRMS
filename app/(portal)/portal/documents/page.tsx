@@ -74,7 +74,7 @@ export default async function PortalDocumentsPage() {
                 <span className="ml-2 text-[var(--ink-muted)]">{q.jobNumber}{q.validUntil ? ` · valid until ${fmtDate(q.validUntil)}` : ""}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
+                <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
                 <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-muted)]">{q.status}</span>
                 <a href={`/api/portal/quotation/${q.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
               </div>
@@ -98,8 +98,8 @@ export default async function PortalDocumentsPage() {
                   <span className="ml-2 text-[var(--ink-muted)]">{inv.jobNumber} · {fmtDate(inv.issuedAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(inv.totalAmount, inv.currency)}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${outstanding > 0 ? "bg-red-500/15 text-red-500" : "bg-emerald-500/15 text-emerald-600"}`}>
+                  <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(inv.totalAmount, inv.currency)}</span>
+                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${outstanding > 0 ? "bg-red-500/15 text-red-500" : "bg-emerald-500/15 text-emerald-600"}`}>
                     {outstanding > 0 ? `${formatMoney(outstanding, inv.currency)} due` : "Paid"}
                   </span>
                   <a href={`/api/portal/invoice/${inv.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
@@ -123,7 +123,7 @@ export default async function PortalDocumentsPage() {
                 <span className="ml-2 text-[var(--ink-muted)]">{r.invoiceNumber} · {r.method.replaceAll("_", " ")}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(r.amount, r.currency)}</span>
+                <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(r.amount, r.currency)}</span>
                 <a href={`/api/portal/receipt/${r.id}`} target="_blank" rel="noopener" className={dlClass}>↓ Receipt</a>
               </div>
             </div>

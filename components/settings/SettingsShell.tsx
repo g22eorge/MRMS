@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 
+import { PageHeader } from "@/components/ui/PageHeader";
+
 export type SettingsNavItem = {
   href: string;
   label: string;
@@ -43,18 +45,12 @@ export function SettingsShell({
 
   return (
     <section className="space-y-4">
-      {/* Calmed header: a small eyebrow + the current section title. */}
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
-          Settings
-        </p>
-        <h1 className="mt-1 text-xl font-black text-[var(--ink)] sm:text-2xl">
-          {activeItem?.label ?? "Overview"}
-        </h1>
-        {activeItem?.description ? (
-          <p className="mt-0.5 text-sm text-[var(--ink-muted)]">{activeItem.description}</p>
-        ) : null}
-      </header>
+      {/* Shared app-wide header so the settings title matches every other hub. */}
+      <PageHeader
+        eyebrow="Settings"
+        title={activeItem?.label ?? "Overview"}
+        description={activeItem?.description}
+      />
 
       {/* Mobile: a single compact horizontally-scrollable pill row (grouping
           collapses to the flat pill list). */}

@@ -149,14 +149,14 @@ export default async function StockLocationsPage({
             key: "items",
             header: "Items",
             align: "right",
-            className: "tabular-nums text-[var(--ink-muted)]",
+            className: "whitespace-nowrap tabular-nums text-[var(--ink-muted)]",
             cell: (location) => stats.get(location.id)?._count.partId ?? 0,
           },
           {
             key: "onHand",
             header: "On Hand",
             align: "right",
-            className: "font-semibold tabular-nums text-[var(--ink)]",
+            className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]",
             cell: (location) => stats.get(location.id)?._sum.qtyOnHand ?? 0,
           },
           {
@@ -164,7 +164,7 @@ export default async function StockLocationsPage({
             header: "Reserved",
             align: "right",
             headerClassName: "hidden md:table-cell",
-            className: "hidden tabular-nums text-[var(--ink-muted)] md:table-cell",
+            className: "hidden whitespace-nowrap tabular-nums text-[var(--ink-muted)] md:table-cell",
             cell: (location) => stats.get(location.id)?._sum.qtyReserved ?? 0,
           },
           {

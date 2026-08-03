@@ -8,9 +8,11 @@ import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
+import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { createSupplierPaymentAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -120,7 +122,7 @@ export default async function SupplierBillsPage({
             key: "total",
             header: "Total",
             align: "right",
-            className: "font-semibold tabular-nums text-[var(--ink)]",
+            className: "whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]",
             cell: (bill) => `${bill.currency} ${bill.totalAmount.toLocaleString()}`,
           },
           {
@@ -128,7 +130,7 @@ export default async function SupplierBillsPage({
             header: "Balance",
             align: "right",
             headerClassName: "hidden sm:table-cell",
-            className: "hidden tabular-nums text-[var(--ink-muted)] sm:table-cell",
+            className: "hidden whitespace-nowrap tabular-nums text-[var(--ink-muted)] sm:table-cell",
             cell: (bill) => (bill.totalAmount - bill.paidAmount).toLocaleString(),
           },
           {
@@ -149,9 +151,37 @@ export default async function SupplierBillsPage({
             <StatusBadge tone={toneFor(STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>
           </Link>
         )}
-        actions={(bill) => (
-          <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
-        )}
+        actions={(bill) => {
+          const balance = bill.totalAmount - bill.paidAmount;
+          const payable = balance > 0 && bill.status !== "CANCELLED";
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <Link href={`/inventory/supplier-bills/${bill.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+              {payable ? (
+                <RowActionsMenu label={`Record payment for ${bill.billNumber}`}>
+                  <div className="w-72 p-3">
+                    <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">Record payment</p>
+                    <p className="mb-2 text-[12px] text-[var(--ink-muted)]">Balance <span className="whitespace-nowrap tabular-nums font-semibold text-[var(--ink)]">{bill.currency} {balance.toLocaleString()}</span></p>
+                    <form action={createSupplierPaymentAction} className="grid gap-2 text-left">
+                      <input type="hidden" name="billId" value={bill.id} />
+                      <input name="amount" type="number" min={0.01} max={balance} step={0.01} placeholder={`Amount (max ${balance.toLocaleString()})`} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <select name="method" defaultValue="BANK_TRANSFER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+                        <option value="CASH">Cash</option>
+                        <option value="MOBILE_MONEY">Mobile money</option>
+                        <option value="BANK_TRANSFER">Bank transfer</option>
+                        <option value="CARD">Card</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                      <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
+                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] font-semibold">Record payment</button>
+                    </form>
+                  </div>
+                </RowActionsMenu>
+              ) : null}
+            </div>
+          );
+        }}
       />
     </ListPageLayout>
   );

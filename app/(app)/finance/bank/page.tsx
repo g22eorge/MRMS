@@ -510,7 +510,7 @@ export default async function BankPage({
                       header: "In",
                       align: "right",
                       headerClassName: "text-emerald-700",
-                      className: "font-medium text-emerald-700",
+                      className: "font-medium text-emerald-700 whitespace-nowrap tabular-nums",
                       cell: (tx) => (tx.type === "CREDIT" ? formatMoney(tx.amount, currency) : ""),
                     },
                     {
@@ -518,13 +518,14 @@ export default async function BankPage({
                       header: "Out",
                       align: "right",
                       headerClassName: "text-red-700",
-                      className: "font-medium text-red-600",
+                      className: "font-medium text-red-600 whitespace-nowrap tabular-nums",
                       cell: (tx) => (tx.type === "DEBIT" ? formatMoney(tx.amount, currency) : ""),
                     },
                     {
                       key: "balance",
                       header: "Balance",
                       align: "right",
+                      className: "whitespace-nowrap tabular-nums",
                       cell: (tx) => {
                         const rb = balanceById.get(tx.id);
                         return (

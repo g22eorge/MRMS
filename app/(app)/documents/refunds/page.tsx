@@ -716,7 +716,7 @@ export default async function RefundsPage({
             key: "amount",
             header: "Amount",
             align: "right",
-            className: "whitespace-nowrap font-bold text-[var(--ink)]",
+            className: "whitespace-nowrap font-bold tabular-nums text-[var(--ink)]",
             cell: (r) => formatMoney(r.amount, refundDerived(r).refundCurrency),
           },
           {

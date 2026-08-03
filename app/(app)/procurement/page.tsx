@@ -12,6 +12,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
+import { reviewPurchaseRequestAction, convertPurchaseRequestToPoAction } from "../inventory/purchase-requests/actions";
 
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
@@ -187,11 +188,35 @@ export default async function ProcurementPage() {
                 key: "action",
                 header: "Action",
                 align: "right",
-                cell: (request) => (
-                  <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">
-                    {request.status === "APPROVED" ? "Convert" : "Review"}
-                  </Button>
-                ),
+                cell: (request) => {
+                  if (request.status === "APPROVED") {
+                    // One-click convert when a supplier is already chosen; otherwise
+                    // fall back to the detail page to pick one.
+                    return request.supplierId ? (
+                      <form action={convertPurchaseRequestToPoAction} className="inline-flex justify-end">
+                        <input type="hidden" name="id" value={request.id} />
+                        <input type="hidden" name="supplierId" value={request.supplierId} />
+                        <button type="submit" className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-violet-700">Convert</button>
+                      </form>
+                    ) : (
+                      <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">Convert</Button>
+                    );
+                  }
+                  return (
+                    <div className="inline-flex justify-end gap-1.5">
+                      <form action={reviewPurchaseRequestAction}>
+                        <input type="hidden" name="id" value={request.id} />
+                        <input type="hidden" name="action" value="APPROVED" />
+                        <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700">Approve</button>
+                      </form>
+                      <form action={reviewPurchaseRequestAction}>
+                        <input type="hidden" name="id" value={request.id} />
+                        <input type="hidden" name="action" value="REJECTED" />
+                        <button type="submit" className="rounded-lg border border-red-500/25 px-2.5 py-1.5 text-[12px] font-semibold text-red-600">Reject</button>
+                      </form>
+                    </div>
+                  );
+                },
               },
             ]}
           />
