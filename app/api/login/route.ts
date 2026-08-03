@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { resolveLoginRedirect } from "@/lib/platform/login-redirect";
-import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -32,17 +31,14 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as LoginPayload;
     const email = String(body.email ?? "").trim();
 
-    // Platform super admin is never rate-limited.
-    const isSuperAdmin = checkIsPlatformAdmin(email);
-
-    if (!isSuperAdmin) {
-      const rl = await checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
-      if (!rl.allowed) {
-        return NextResponse.json(
-          { message: "Too many login attempts. Please wait a minute.", code: "RATE_LIMITED" },
-          { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
-        );
-      }
+    // Rate-limit every login attempt by IP — no account is exempt (the
+    // platform-admin email must not be the least-protected login path).
+    const rl = await checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { message: "Too many login attempts. Please wait a minute.", code: "RATE_LIMITED" },
+        { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
+      );
     }
     const password = String(body.password ?? "");
     const callbackURL = typeof body.callbackURL === "string" && body.callbackURL.length > 0 ? body.callbackURL : "/dashboard";

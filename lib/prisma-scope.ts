@@ -29,6 +29,22 @@ import { ORG_SCOPED_MODELS, SOFT_DELETE_MODELS } from "@/lib/org-scoped-models";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+// ── findUnique org resolution ──────────────────────────────────────────────────
+// findUnique can't inject orgId into the where (it uses unique fields), so the
+// result is post-validated. A narrow `select` can omit orgId from the result,
+// which would silently skip that guard — so when orgId is absent we re-query the
+// same record with a minimal `{ orgId }` projection to verify membership.
+async function resolveResultOrgId(
+  result: unknown,
+  args: { where?: unknown },
+  query: (a: unknown) => Promise<unknown>,
+): Promise<unknown> {
+  const rec = result as Record<string, unknown> | null;
+  if (rec && "orgId" in rec) return rec.orgId;
+  const check = (await query({ where: args?.where, select: { orgId: true } })) as { orgId?: unknown } | null;
+  return check?.orgId ?? null;
+}
+
 // ── Where clause injection helpers ─────────────────────────────────────────────
 
 function injectOrgId(
@@ -111,11 +127,10 @@ export function scopedDb(orgId: string) {
           const result = await query(args);
           if (result === null) return result;
           if (ORG_SCOPED_MODELS.has(model)) {
-            const rec = result as Record<string, unknown>;
-            if ("orgId" in rec && rec.orgId !== orgId) {
-              // Record belongs to a different org — treat as not found.
-              return null;
-            }
+            // A narrow `select` can omit orgId, which would otherwise skip the
+            // cross-org guard entirely. Re-verify with a minimal projection.
+            const recOrgId = await resolveResultOrgId(result, args, query);
+            if (recOrgId !== orgId) return null; // different org — treat as not found
           }
           return result;
         },
@@ -123,8 +138,8 @@ export function scopedDb(orgId: string) {
         async findUniqueOrThrow({ model, args, query }) {
           const result = await query(args);
           if (ORG_SCOPED_MODELS.has(model)) {
-            const rec = result as Record<string, unknown>;
-            if ("orgId" in rec && rec.orgId !== orgId) {
+            const recOrgId = await resolveResultOrgId(result, args, query);
+            if (recOrgId !== orgId) {
               throw new Prisma.PrismaClientKnownRequestError(
                 `Record not found in org ${orgId}`,
                 { code: "P2025", clientVersion: Prisma.prismaVersion.client },

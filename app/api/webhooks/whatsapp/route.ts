@@ -146,7 +146,14 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   const appSecret = process.env.WHATSAPP_WEBHOOK_APP_SECRET;
-  if (appSecret) {
+  // Fail closed in production: an unsigned/unverifiable webhook must be rejected,
+  // never accepted. Without the secret an attacker could forge delivery statuses
+  // and inject inbound "client" messages. (Dev/test may run without it.)
+  if (!appSecret) {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ ok: false, error: "Webhook not configured" }, { status: 500 });
+    }
+  } else {
     const signature = request.headers.get("x-hub-signature-256");
     const ok = verifySignature({ rawBody, signature, appSecret });
     if (!ok) {

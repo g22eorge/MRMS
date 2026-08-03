@@ -92,6 +92,23 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // Auth endpoints (BetterAuth sign-in / sign-up) — throttle hard by IP to stop
+  // credential stuffing and password brute-force. BetterAuth's built-in limiter
+  // is in-memory/per-instance and useless on serverless, so gate it here on the
+  // shared Turso-backed limiter (matches the /api/login wrapper).
+  if (pathname.startsWith("/api/auth/sign-in") || pathname.startsWith("/api/auth/sign-up")) {
+    const { allowed, retryAfterMs } = await checkRateLimit(`auth:${ip}`, {
+      limit: 10,
+      windowMs: 60 * 1000,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many login attempts. Please try again in a minute." },
+        { status: 429, headers: rateLimitHeaders(retryAfterMs) },
+      );
+    }
+  }
+
   // General API: 100 req / min per IP (catches scrapers and runaway clients).
   if (
     pathname.startsWith("/api/") &&
