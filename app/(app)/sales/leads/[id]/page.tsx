@@ -178,7 +178,7 @@ export default async function LeadDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
           {/* ── Stage update ── */}
           {canEdit ? (

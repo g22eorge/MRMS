@@ -235,7 +235,7 @@ export default async function ClientDetailPage({
         ) : undefined}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-5">
           <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">

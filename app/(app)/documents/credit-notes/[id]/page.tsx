@@ -126,7 +126,7 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <div className={cardClass}>
             <div className={cardHeadClass}>Credited Items</div>

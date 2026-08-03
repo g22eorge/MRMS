@@ -841,7 +841,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
           {/* -- Sale settings -- */}
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">

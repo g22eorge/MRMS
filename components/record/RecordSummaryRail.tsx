@@ -70,7 +70,7 @@ export function RecordSummaryRail({
           : "text-[var(--ink)]";
 
   return (
-    <aside className="flex flex-col gap-4">
+    <aside className="flex flex-col gap-4 lg:order-first">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
           {headline.label}

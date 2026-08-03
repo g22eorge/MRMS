@@ -54,7 +54,7 @@ Rules:
 
 ```
 <RecordActionBar backHref eyebrow title status primary secondary overflow />
-<div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+<div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
   <div className="space-y-4"> …main content… </div>
   <RecordSummaryRail headline rows party related activity />
 </div>

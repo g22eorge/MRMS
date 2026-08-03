@@ -99,7 +99,7 @@ export default async function FieldVisitDetailPage({
         status={{ label: STATUS_LABELS[visit.status], tone: visit.status === "COMPLETED" ? "success" : visit.status === "CANCELLED" || visit.status === "FAILED" ? "danger" : visit.status === "EN_ROUTE" || visit.status === "ARRIVED" ? "warning" : "sky" }}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
       {canAct && !["COMPLETED", "FAILED", "CANCELLED"].includes(visit.status) && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
