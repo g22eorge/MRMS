@@ -143,7 +143,7 @@ export default async function InventoryPage({
       <PageHeader
         eyebrow="Inventory"
         title="Items"
-        description="Stock health, movements, replenishment, and item controls."
+        description="See what you have, what is running low, and what it is worth."
         actions={canManage ? (
           <>
             <Button href="/api/reports/export?type=inventory-stock" external variant="secondary" size="sm">Export</Button>
@@ -407,7 +407,7 @@ export default async function InventoryPage({
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent Movements</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent stock changes</p>
             <Link href="/inventory/stock-counts" className="text-xs font-semibold text-[var(--accent)] hover:underline">Audit stock</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
@@ -431,7 +431,7 @@ export default async function InventoryPage({
 
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Replenishment Shortlist</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Running low</p>
             <Link href="/inventory/purchase-requests/new" className="text-xs font-semibold text-[var(--accent)] hover:underline">New request</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">

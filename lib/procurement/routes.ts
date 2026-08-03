@@ -5,7 +5,7 @@ import type { HubTab } from "@/components/shared/HubTabs";
 export const PROCUREMENT_TABS: HubTab[] = [
   { href: "/procurement", label: "Overview", exact: true },
   { href: "/inventory/purchase-requests", label: "Requests" },
-  { href: "/inventory/purchase-orders", label: "Purchase Orders" },
+  { href: "/inventory/purchase-orders", label: "Orders" },
   { href: "/inventory/supplier-bills", label: "Bills" },
   { href: "/inventory/goods-received", label: "Received" },
 ];

@@ -16,7 +16,7 @@ import { reviewPurchaseRequestAction, convertPurchaseRequestToPoAction } from ".
 const EXPORTS = [
   { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
   { label: "Orders", href: "/api/procurement/export?type=purchase-orders" },
-  { label: "GRNs", href: "/api/procurement/export?type=goods-received" },
+  { label: "Received", href: "/api/procurement/export?type=goods-received" },
   { label: "Bills", href: "/api/procurement/export?type=supplier-bills" },
 ] as const;
 
@@ -123,21 +123,21 @@ export default async function ProcurementPage() {
       topBar={<HubTabs items={PROCUREMENT_TABS} />}
       header={{
         eyebrow: "Procurement",
-        title: "Control Desk",
-        description: `${formatMoney(openOrderValue)} open PO value · ${formatMoney(payableBalance)} supplier balance`,
+        title: "Buying & suppliers",
+        description: `${formatMoney(openOrderValue)} on order · ${formatMoney(payableBalance)} still owed to suppliers`,
         actions: (
           <>
             <Button href="/inventory/purchase-requests/new" size="sm" className="px-4 font-bold">New request</Button>
-            <Button href="/inventory/purchase-orders/new" variant="secondary" size="sm">New PO</Button>
+            <Button href="/inventory/purchase-orders/new" variant="secondary" size="sm">New order</Button>
             <Button href="/inventory/supplier-bills/new" variant="secondary" size="sm">New bill</Button>
           </>
         ),
         kpis: [
-          { key: "demand", label: "Demand", value: submittedRequests, sub: "requests to review", tone: submittedRequests > 0 ? "warn" : "neutral", muted: submittedRequests === 0, href: "/inventory/purchase-requests" },
-          { key: "approved", label: "Approved", value: approvedRequests, sub: "ready for PO", tone: "good", muted: approvedRequests === 0, href: "/inventory/purchase-requests" },
-          { key: "ordered", label: "Ordered", value: openOrders, sub: "open POs", tone: "accent", muted: openOrders === 0, href: "/inventory/purchase-orders" },
-          { key: "receiving", label: "Receiving", value: dueOrders, sub: "due soon", tone: dueOrders > 0 ? "warn" : "neutral", muted: dueOrders === 0, href: "/inventory/purchase-orders" },
-          { key: "payables", label: "Payables", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
+          { key: "demand", label: "To review", value: submittedRequests, sub: "requests waiting", tone: submittedRequests > 0 ? "warn" : "neutral", muted: submittedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "approved", label: "Approved", value: approvedRequests, sub: "ready to order", tone: "good", muted: approvedRequests === 0, href: "/inventory/purchase-requests" },
+          { key: "ordered", label: "On order", value: openOrders, sub: "open orders", tone: "accent", muted: openOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "receiving", label: "To receive", value: dueOrders, sub: "arriving soon", tone: dueOrders > 0 ? "warn" : "neutral", muted: dueOrders === 0, href: "/inventory/purchase-orders" },
+          { key: "payables", label: "Bills to pay", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
         ],
       }}
       footer={
@@ -158,7 +158,7 @@ export default async function ProcurementPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Review queue</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Requests to review</p>
             <Link href="/inventory/purchase-requests" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
           {reviewQueue.length === 0 ? (
@@ -224,11 +224,11 @@ export default async function ProcurementPage() {
 
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Receiving queue</p>
-            <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All POs</Link>
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Waiting to arrive</p>
+            <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All orders</Link>
           </div>
           {receivingQueue.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No open receiving work.</p>
+            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">Nothing waiting to arrive.</p>
           ) : (
           <DataTable
             frameless
@@ -301,8 +301,8 @@ export default async function ProcurementPage() {
 
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recent GRNs</p>
-            <Link href="/inventory/goods-received" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All GRNs</Link>
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recently received</p>
+            <Link href="/inventory/goods-received" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All receipts</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {recentGrns.map((grn) => (
@@ -314,7 +314,7 @@ export default async function ProcurementPage() {
                 <p className="shrink-0 text-xs text-[var(--ink-muted)]">{grn.po ? poRef(grn.po) : "No PO"}</p>
               </Link>
             ))}
-            {recentGrns.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No GRNs posted.</p> : null}
+            {recentGrns.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">Nothing received yet.</p> : null}
           </div>
         </section>
       </div>
