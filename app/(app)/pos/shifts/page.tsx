@@ -269,7 +269,7 @@ export default async function CashierShiftsPage({
                 min="0"
                 step="0.01"
                 defaultValue="0"
-                className="h-9 w-40 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="h-9 w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
             <div className="space-y-1">
@@ -283,7 +283,7 @@ export default async function CashierShiftsPage({
                 placeholder="e.g. 1234"
                 maxLength={8}
                 autoComplete="new-password"
-                className="h-9 w-36 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="h-9 w-36 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
             <div className="space-y-1">
@@ -293,7 +293,7 @@ export default async function CashierShiftsPage({
               <input
                 name="notes"
                 placeholder="Handover note, branch info…"
-                className="h-9 w-56 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="h-9 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
             <button
@@ -333,7 +333,7 @@ export default async function CashierShiftsPage({
                 step="0.01"
                 defaultValue="0"
                 required
-                className="h-9 w-40 rounded-lg border border-emerald-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                className="h-9 w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             {myOpenShift.shiftPin && (
@@ -349,7 +349,7 @@ export default async function CashierShiftsPage({
                   maxLength={8}
                   required
                   autoComplete="current-password"
-                  className="h-9 w-32 rounded-lg border border-emerald-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="h-9 w-32 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             )}
@@ -360,7 +360,7 @@ export default async function CashierShiftsPage({
               <input
                 name="notes"
                 placeholder="End-of-day notes…"
-                className="h-9 w-56 rounded-lg border border-emerald-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                className="h-9 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <ConfirmSubmitButton
@@ -389,7 +389,7 @@ export default async function CashierShiftsPage({
                     maxLength={8}
                     required
                     autoComplete="new-password"
-                    className="h-9 w-32 rounded-lg border border-emerald-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="h-9 w-32 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <button type="submit" className="h-9 rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-500/30 dark:text-emerald-300">
@@ -428,8 +428,8 @@ export default async function CashierShiftsPage({
             type="submit"
             className={`h-8 rounded-lg px-3 text-sm font-semibold capitalize transition-colors ${
               statusFilter === s
-                ? "bg-[var(--accent)] text-white"
-                : "border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--surface-raised)]"
+                ? "bg-[var(--accent)] text-black"
+                : "border border-[var(--line)] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
             }`}
           >
             {s}
