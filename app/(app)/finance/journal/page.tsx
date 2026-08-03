@@ -441,7 +441,7 @@ export default async function JournalPage({
             return (
               <div
                 key={entry.id}
-                className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--bg)]"
+                className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
               >
                 {/* ── Entry header row ─────────────────────────── */}
                 <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--panel)]/50 px-4 py-3">

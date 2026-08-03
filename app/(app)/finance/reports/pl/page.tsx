@@ -2,6 +2,7 @@
 import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 // @ts-nocheck
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
@@ -165,14 +166,12 @@ export default async function PLPage({
   return (
     <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Profit &amp; Loss</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">{periodLabel}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Finance"
+        title="Profit & Loss"
+        description={periodLabel}
+        actions={
+          <>
             <PrintReportButton />
             <Link
               href={`/finance/reports/balance-sheet?year=${year}&month=${month}`}
@@ -192,9 +191,9 @@ export default async function PLPage({
             >
               Chart of Accounts
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── BOTTOM LINE SUMMARY ─────────────────────────────────────────── */}
       {hasData && (

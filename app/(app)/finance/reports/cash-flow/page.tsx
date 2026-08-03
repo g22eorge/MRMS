@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -303,14 +304,12 @@ export default async function CashFlowPage({
   return (
     <div className="print-area space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance · Reports</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Cash Flow Statement</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">{periodLabel}</p>
-          </div>
-          <div className="no-print flex flex-wrap gap-2">
+      <PageHeader
+        eyebrow="Finance · Reports"
+        title="Cash Flow Statement"
+        description={periodLabel}
+        actions={
+          <div className="no-print flex flex-wrap items-center gap-2">
             <PrintReportButton />
             <Link href="/finance/reports" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs">← Reports</Link>
             <form className="flex flex-wrap gap-1.5" method="GET">
@@ -329,8 +328,8 @@ export default async function CashFlowPage({
               <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Apply</button>
             </form>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── KPI Strip ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

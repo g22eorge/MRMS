@@ -5,6 +5,7 @@ import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SetTargetDialog } from "./SetTargetDialog";
 
 type SearchParams = Promise<{ period?: string; label?: string }>;
@@ -196,14 +197,12 @@ export default async function TargetsPage({ searchParams }: { searchParams: Sear
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Analytics</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Targets &amp; Productivity</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">{periodLabel} — {label}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Analytics"
+        title="Targets & Productivity"
+        description={`${periodLabel} — ${label}`}
+        actions={
+          <>
             <form className="flex gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-0.5" method="GET" action="/targets">
               {PERIOD_OPTIONS.map((opt) => (
                 <button
@@ -224,9 +223,9 @@ export default async function TargetsPage({ searchParams }: { searchParams: Sear
             {canSet && (
               <SetTargetDialog users={allUsers} departments={departments} branches={branches} />
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <TargetSection title="User Targets" targets={userTargets} currency={currency} />
       <TargetSection title="Department Targets" targets={departmentTargets} currency={currency} />

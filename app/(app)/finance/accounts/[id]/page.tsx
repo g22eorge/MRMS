@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,19 @@ export default async function AccountLedgerPage({
 
   const availableYears = [now.getFullYear() - 1, now.getFullYear()];
 
+  // Most-recent postings for the summary rail activity trail.
+  const recentActivity = [...rows]
+    .slice(-6)
+    .reverse()
+    .map((r) => ({
+      label: `${r.journalEntry.entryNumber} · ${r.net < 0 ? "−" : "+"}${formatMoney(Math.abs(r.net), currency)}`,
+      at: new Date(r.journalEntry.date).toLocaleDateString("en-UG", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    }));
+
   return (
     <div className="space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
@@ -148,6 +162,9 @@ export default async function AccountLedgerPage({
           </Link>
         }
       />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
       {(account.parent || account.description) && (
         <p className="text-[13px] text-[var(--ink-muted)]">
           {account.parent ? <>under <span className="mono">{account.parent.code}</span> {account.parent.name}</> : null}
@@ -353,6 +370,26 @@ export default async function AccountLedgerPage({
           </tr>
         }
       />
+        </div>
+
+        <RecordSummaryRail
+          headline={{
+            label: "All-time balance",
+            value: `${allTimeBalance < 0 ? "−" : ""}${formatMoney(Math.abs(allTimeBalance), currency)}`,
+            tone: allTimeBalance >= 0 ? "good" : "crit",
+          }}
+          rows={[
+            { label: "Code", value: <span className="mono">{account.code}</span> },
+            { label: "Type", value: account.type },
+            { label: "Normal balance", value: isDebitNormal ? "Debit" : "Credit" },
+            { label: "Postings", value: allLines.length },
+            ...(account.parent
+              ? [{ label: "Parent", value: `${account.parent.code} · ${account.parent.name}` }]
+              : []),
+          ]}
+          activity={recentActivity}
+        />
+      </div>
     </div>
   );
 }

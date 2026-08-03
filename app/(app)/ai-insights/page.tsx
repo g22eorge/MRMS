@@ -7,6 +7,7 @@ import { buildBusinessDataPack, pctChange, trendLabel } from "@/lib/ai/business-
 import { formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { getCurrentUserRole } from "@/lib/session";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 function statusLabel(status: string) {
   return status
@@ -17,7 +18,7 @@ function statusLabel(status: string) {
 }
 
 function KpiCard({ title, value, caption, tone = "neutral" }: { title: string; value: string; caption: string; tone?: "neutral" | "good" | "risk" }) {
-  const toneClass = tone === "good" ? "text-emerald-600" : tone === "risk" ? "text-amber-600" : "text-[var(--accent-text)]";
+  const toneClass = tone === "good" ? "text-emerald-600" : tone === "risk" ? "text-amber-600" : "text-[var(--accent)]";
   return (
     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
       <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
@@ -79,16 +80,16 @@ export default async function AiInsightsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">AI · Analytics</p>
-          <p className="mt-0.5 text-[13px] font-bold text-[var(--ink)]">Business Insights</p>
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-          <Link href="/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Operations Reports</Link>
-          <Link href="/finance/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Finance Reports</Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="AI · Analytics"
+        title="Business Insights"
+        actions={
+          <div className="flex flex-wrap gap-2 text-xs font-semibold">
+            <Link href="/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Operations Reports</Link>
+            <Link href="/finance/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Finance Reports</Link>
+          </div>
+        }
+      />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard

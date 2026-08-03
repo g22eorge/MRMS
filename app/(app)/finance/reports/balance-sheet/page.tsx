@@ -3,6 +3,7 @@
 import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
 
@@ -143,14 +144,12 @@ export default async function BalanceSheetPage({
   return (
     <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance · Reports</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Balance Sheet</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">As of {MONTHS[month - 1]} {year}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Finance · Reports"
+        title="Balance Sheet"
+        description={`As of ${MONTHS[month - 1]} ${year}`}
+        actions={
+          <>
             <PrintReportButton />
             <Link
               href={`/finance/reports/pl?year=${year}&month=${month}`}
@@ -164,9 +163,9 @@ export default async function BalanceSheetPage({
             >
               Chart of Accounts
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── PERIOD SELECTOR ──────────────────────────────────────────────── */}
       <form method="GET" className="no-print flex items-center gap-2">
