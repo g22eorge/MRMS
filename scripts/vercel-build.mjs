@@ -14,14 +14,15 @@ function run(command, args, options = {}) {
 // cleared for Prisma's SQLite build validation. Applies recent additive
 // columns/tables via @libsql/client (independent of Prisma) so the freshly
 // deployed code never boots against a stale prod schema. Safe to repeat.
-// Set STRICT_SCHEMA_HEAL=1 to fail the build if the heal errors; by default a
-// heal failure only warns (the /api/admin/db-fix endpoint is the manual
-// fallback), so a transient DB blip doesn't block an otherwise-fine deploy.
+// Fail-closed by default: a failed reconcile ABORTS the build, so a deploy can
+// never ship code against a stale prod schema. Set STRICT_SCHEMA_HEAL=0 to
+// revert to warn-and-continue (relying on /api/admin/db-fix as the manual
+// fallback) if a transient DB blip must not block an otherwise-fine deploy.
 if (process.env.TURSO_DATABASE_URL) {
   // sync-schema-to-db reconciles EVERY model/column from schema.prisma (creates
   // missing tables/columns/indexes); prod-job-column-safety then normalizes Job
-  // data. Both idempotent. A failure warns and continues (DB Fix endpoint is the
-  // manual fallback) unless STRICT_SCHEMA_HEAL=1.
+  // data. Both idempotent.
+  const strict = process.env.STRICT_SCHEMA_HEAL !== "0";
   const healSteps = [
     ["Reconciling full schema", "scripts/sync-schema-to-db.mjs"],
     ["Normalizing Job data", "scripts/prod-job-column-safety.mjs"],
@@ -34,11 +35,11 @@ if (process.env.TURSO_DATABASE_URL) {
       env: process.env,
     });
     if (heal.status !== 0) {
-      if (process.env.STRICT_SCHEMA_HEAL === "1") {
-        console.error(`[vercel-build] ${script} failed and STRICT_SCHEMA_HEAL=1 — aborting build.`);
+      if (strict) {
+        console.error(`[vercel-build] ${script} failed — aborting build so the deploy never ships against a stale schema. Set STRICT_SCHEMA_HEAL=0 to override (then run DB Fix after deploy).`);
         process.exit(heal.status ?? 1);
       }
-      console.warn(`[vercel-build] ${script} did not complete cleanly; continuing build. Run DB Fix (/api/admin/db-fix) after deploy to finish.`);
+      console.warn(`[vercel-build] ${script} did not complete cleanly; STRICT_SCHEMA_HEAL=0 set — continuing. Run DB Fix (/api/admin/db-fix) after deploy to finish.`);
     }
   }
 }

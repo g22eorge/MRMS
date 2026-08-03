@@ -913,8 +913,12 @@ export async function seedCommercialData() {
     completed: Date,
   ) {
     const existing = await prisma.job.findUnique({ where: { jobNumber }, select: { id: true } });
-    if (existing) return existing;
-    return prisma.job.create({
+    if (existing) {
+      // Backfill the creation audit log real jobs get, so a re-seed heals older fixtures.
+      await ensureAudit(existing.id, createdById, "JOB_CREATED", { seeded: true, jobNumber });
+      return existing;
+    }
+    const job = await prisma.job.create({
       data: {
         orgId,
         jobNumber,
@@ -932,7 +936,10 @@ export async function seedCommercialData() {
         receivedAt: received,
         completedAt: completed,
       },
+      select: { id: true },
     });
+    await ensureAudit(job.id, createdById, "JOB_CREATED", { seeded: true, jobNumber });
+    return job;
   }
 
   const invJob1 = await ensureJobForInvoice(techfix.id, "TFX-INV-J001", invClientA.id, tfOps.id, "PHONE_IPHONE", "Apple", "iPhone 12 mini", "Home button flex replacement", "Home button flex cable replaced", 95000, daysAgo(30), daysAgo(27));
