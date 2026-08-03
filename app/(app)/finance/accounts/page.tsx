@@ -30,11 +30,11 @@ const TYPE_TONES: Record<AccountType, BadgeTone> = {
 };
 
 const TYPE_HEADER: Record<AccountType, string> = {
-  ASSET:     "bg-blue-500/5 text-blue-800",
-  LIABILITY: "bg-red-500/5 text-red-800",
-  EQUITY:    "bg-purple-500/5 text-purple-800",
-  REVENUE:   "bg-green-500/5 text-green-800",
-  EXPENSE:   "bg-amber-500/5 text-amber-800",
+  ASSET:     "bg-blue-500/10 text-blue-600",
+  LIABILITY: "bg-red-500/10 text-red-600",
+  EQUITY:    "bg-purple-500/10 text-purple-600",
+  REVENUE:   "bg-green-500/10 text-green-600",
+  EXPENSE:   "bg-amber-500/10 text-amber-600",
 };
 
 export const dynamic = "force-dynamic";

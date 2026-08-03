@@ -16,7 +16,7 @@ export default async function OnboardingPage() {
       <div className="w-full max-w-2xl space-y-8">
         {/* Logo / wordmark */}
         <div className="space-y-2 text-center">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--gold)] text-black">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] text-black">
             <svg viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>

@@ -59,7 +59,7 @@ function AccountSection({
               className="flex items-center justify-between px-4 py-2.5 text-sm odd:bg-[var(--bg)] even:bg-[var(--panel)]/40"
             >
               <div className="flex items-center gap-1.5">
-                <span className="font-mono text-xs text-[var(--accent)]">{item.code}</span>
+                <span className="mono text-xs text-[var(--accent)]">{item.code}</span>
                 <span className="text-[var(--ink)]">{item.name}</span>
               </div>
               <span className="tabular-nums font-medium text-[var(--ink)]">
@@ -291,7 +291,7 @@ export default async function BalanceSheetPage({
                     className="flex items-center justify-between px-4 py-2.5 text-sm odd:bg-[var(--bg)] even:bg-[var(--panel)]/40"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-[var(--accent)]">{e.code}</span>
+                      <span className="mono text-xs text-[var(--accent)]">{e.code}</span>
                       <span className="text-[var(--ink)]">{e.name}</span>
                     </div>
                     <span className="tabular-nums font-medium">{formatMoney(e.balance, currency)}</span>

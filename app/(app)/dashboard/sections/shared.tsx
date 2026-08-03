@@ -30,8 +30,8 @@ const repairFlowReference = [
   { key: "REFERRED", label: "Referred", href: "/jobs?status=REFERRED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", href: "/jobs?status=AWAITING_APPROVAL", tone: "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]" },
   { key: "IN_REPAIR", label: "In Repair", href: "/jobs?status=IN_REPAIR", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink)]" },
-  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[var(--accent)] bg-[var(--accent)] text-white" },
-  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[var(--accent)] bg-[var(--accent)] text-white" },
+  { key: "READY_FOR_PICKUP", label: "Ready for Pickup", href: "/jobs?status=READY_FOR_PICKUP", tone: "border-[var(--accent)] bg-[var(--accent)] text-black" },
+  { key: "COMPLETED", label: "Completed", href: "/jobs?status=COMPLETED", tone: "border-[var(--accent)] bg-[var(--accent)] text-black" },
   { key: "CLOSED", label: "Closed", href: "/jobs?status=CLOSED", tone: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]" },
 ] as const;
 
@@ -90,7 +90,7 @@ export function DashboardPeriodBar({
           href={monthHref}
           className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all ${
             period === "month"
-              ? "bg-[var(--accent)] text-white shadow-sm"
+              ? "bg-[var(--accent)] text-black shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
           }`}
         >
@@ -100,7 +100,7 @@ export function DashboardPeriodBar({
           href={yearHref}
           className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all ${
             period === "year"
-              ? "bg-[var(--accent)] text-white shadow-sm"
+              ? "bg-[var(--accent)] text-black shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
           }`}
         >

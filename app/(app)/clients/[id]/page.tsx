@@ -335,7 +335,7 @@ export default async function ClientDetailPage({
                     <tr key={`${l.type}-${l.number}`} className="border-b border-[var(--line)]/60 last:border-0">
                       <td className="px-3 py-2">
                         <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
-                        <span className="font-mono text-[var(--ink)]">{l.number}</span>
+                        <span className="mono text-[var(--ink)]">{l.number}</span>
                       </td>
                       <td className="px-3 py-2 text-[var(--ink-muted)]">{l.date.toISOString().slice(0, 10)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{formatMoney(l.billed, statement.currency)}</td>
@@ -503,7 +503,7 @@ export default async function ClientDetailPage({
 
         <div className="space-y-2 px-4 pb-4">
           {!notesFeatureAvailable ? (
-            <p className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">Notes timeline needs the latest DB migration — run <code className="font-mono">bunx prisma migrate dev</code> and restart.</p>
+            <p className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">Notes timeline needs the latest DB migration — run <code className="mono">bunx prisma migrate dev</code> and restart.</p>
           ) : null}
 
           {client.notesEntries.length === 0 ? (

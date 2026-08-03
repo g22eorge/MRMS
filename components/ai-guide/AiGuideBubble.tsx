@@ -81,7 +81,7 @@ function inlineFormat(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
   return parts.map((p, i) => {
     if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
-    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} className="rounded bg-black/10 px-1 py-0.5 text-[13px] font-mono">{p.slice(1, -1)}</code>;
+    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} className="rounded bg-black/10 px-1 py-0.5 text-[13px] mono">{p.slice(1, -1)}</code>;
     return p;
   });
 }

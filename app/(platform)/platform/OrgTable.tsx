@@ -64,13 +64,13 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
             placeholder="Search name or slug…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 py-1.5 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+            className="w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 py-1.5 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="all">All statuses</option>
           <option value="TRIALING">Trialing</option>
@@ -81,7 +81,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
         <select
           value={planFilter}
           onChange={(e) => setPlanFilter(e.target.value)}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="all">All plans</option>
           <option value="STARTER">Starter</option>
@@ -178,7 +178,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                   <select
                     name="plan"
                     defaultValue={org.plan}
-                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   >
                     <option value="STARTER">Starter</option>
                     <option value="STANDARD">Standard</option>
@@ -186,7 +186,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                     <option value="PREMIUM">Premium</option>
                     <option value="ENTERPRISE">Enterprise</option>
                   </select>
-                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-[var(--gold)]/60 hover:text-[var(--gold)]">
+                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]">
                     Plan
                   </button>
                 </form>
@@ -197,7 +197,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                   <select
                     name="status"
                     defaultValue={org.billingStatus}
-                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+                    className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   >
                     <option value="TRIALING">Trialing</option>
                     <option value="ACTIVE">Active</option>

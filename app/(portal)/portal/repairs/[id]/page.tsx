@@ -106,7 +106,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="font-mono text-lg font-black text-[var(--ink)]">{job.jobNumber}</p>
+            <p className="mono text-lg font-black text-[var(--ink)]">{job.jobNumber}</p>
             <p className="text-[13px] text-[var(--ink-muted)]">{device}{job.serialOrImei ? ` · ${job.serialOrImei}` : ""}</p>
           </div>
           <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-[12px] font-bold text-[var(--accent)]">
@@ -184,7 +184,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           {job.quotations.map((q) => (
             <div key={q.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 py-2 text-[13px] last:border-0">
               <div>
-                <span className="font-mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
+                <span className="mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
                 {q.validUntil ? <span className="ml-2 text-[12px] text-[var(--ink-muted)]">valid until {fmtDate(q.validUntil)}</span> : null}
               </div>
               <div className="flex items-center gap-2">

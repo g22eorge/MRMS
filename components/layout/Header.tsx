@@ -253,7 +253,7 @@ export function Header({
                       <Link
                         role="menuitem"
                         href="/platform"
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-[12px] font-semibold text-[var(--gold)] transition hover:bg-[var(--gold)]/8"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-[12px] font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/8"
                         onClick={closeMenu}
                       >
                         <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

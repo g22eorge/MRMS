@@ -12,7 +12,7 @@ import { Fragment, type ReactNode } from "react";
  * ── Cell typography (one scale for every table in the app) ──
  * Cells inherit the table's 13px body size — do NOT set `text-xs`/`text-sm`/
  * `text-[13px]` on cells; that is what made tables disagree page to page.
- *   • identifiers / document numbers → `mono font-semibold` (never `font-mono`)
+ *   • identifiers / document numbers → `mono font-semibold` (never `mono`)
  *   • money + quantities            → `tabular-nums whitespace-nowrap`
  *                                     (`font-semibold` for the emphasis column)
  *   • secondary line inside a cell  → `text-[12px] text-[var(--ink-muted)]`
@@ -28,7 +28,7 @@ export type DataTableColumn<T> = {
   header?: ReactNode;
   /** Cell renderer. */
   cell: (row: T, index: number) => ReactNode;
-  /** Extra classes on each <td> (e.g. font-mono, max-w-[220px] truncate, whitespace-nowrap). */
+  /** Extra classes on each <td> (e.g. mono, max-w-[220px] truncate, whitespace-nowrap). */
   className?: string;
   /** Extra classes on the <th>. */
   headerClassName?: string;

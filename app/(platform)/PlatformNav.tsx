@@ -25,7 +25,7 @@ export function PlatformNav() {
             href={n.href}
             className={`relative px-3.5 py-3 text-xs font-semibold transition-colors border-b-2 ${
               active
-                ? "border-[var(--gold)] text-[var(--ink)]"
+                ? "border-[var(--accent)] text-[var(--ink)]"
                 : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)] hover:border-[var(--line)]"
             }`}
           >

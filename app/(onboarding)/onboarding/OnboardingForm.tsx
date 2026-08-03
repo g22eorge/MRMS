@@ -106,7 +106,7 @@ export function OnboardingForm() {
           <div key={s.n} className="flex items-center">
             <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
               step === s.n
-                ? "bg-[var(--gold)] text-black"
+                ? "bg-[var(--accent)] text-black"
                 : step > s.n
                 ? "bg-emerald-500 text-white"
                 : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -145,7 +145,7 @@ export function OnboardingForm() {
               minLength={2}
               maxLength={100}
               autoFocus
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>
           <button
@@ -179,8 +179,8 @@ export function OnboardingForm() {
                   onClick={() => toggle(m)}
                   className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${
                     active
-                      ? "border-[var(--gold)] bg-[var(--gold)]/5 shadow-sm"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--gold)]/40"
+                      ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
+                      : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/40"
                   }`}
                 >
                   <span className="mt-0.5 text-xl leading-none">{MODULE_ICONS[m]}</span>
@@ -198,7 +198,7 @@ export function OnboardingForm() {
                     </p>
                   </div>
                   <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition-colors ${
-                    active ? "border-[var(--gold)] bg-[var(--gold)]" : "border-[var(--line)]"
+                    active ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--line)]"
                   }`} />
                 </button>
               );

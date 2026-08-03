@@ -126,7 +126,7 @@ export default async function FeedbackPage({
               Complaint Received
             </p>
             <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
-              Reference: <span className="font-mono font-bold">{submitted}</span>
+              Reference: <span className="mono font-bold">{submitted}</span>
             </p>
             <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
               We will acknowledge your complaint within 24 hours and aim to resolve it within 3
@@ -171,7 +171,7 @@ export default async function FeedbackPage({
               defaultValue={ref}
               placeholder="e.g. EI-2024-0001"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50"
             />
             {jobInfo && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10">

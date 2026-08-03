@@ -55,7 +55,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
       {/* Template notice */}
       <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 px-3 py-2.5">
         <p className="text-[13px] text-[var(--ink-muted)]">
-          Sends the approved <span className="font-mono font-semibold text-[var(--ink)]">hello_world</span> template — the only message type Meta delivers for business-initiated conversations.
+          Sends the approved <span className="mono font-semibold text-[var(--ink)]">hello_world</span> template — the only message type Meta delivers for business-initiated conversations.
         </p>
       </div>
 
@@ -105,9 +105,9 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
               <div>
                 <p className="text-sm font-semibold text-emerald-800">Message sent successfully</p>
                 <p className="mt-0.5 text-xs text-emerald-700">
-                  From <span className="font-mono font-semibold">{result.from}</span> → <span className="font-mono font-semibold">{result.to}</span>
+                  From <span className="mono font-semibold">{result.from}</span> → <span className="mono font-semibold">{result.to}</span>
                 </p>
-                <p className="mt-1 font-mono text-[13px] text-emerald-600 break-all">
+                <p className="mt-1 mono text-[13px] text-emerald-600 break-all">
                   Message ID: {result.messageId}
                 </p>
               </div>

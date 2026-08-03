@@ -510,9 +510,9 @@ export default async function NotificationTemplatesPage({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] text-[var(--ink-muted)]">
           Use{" "}
-          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 font-mono text-[12px] text-[var(--ink)]">{"{customerName}"}</code>{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[12px] text-[var(--ink)]">{"{customerName}"}</code>{" "}
           and{" "}
-          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 font-mono text-[12px] text-[var(--ink)]">{"{jobNumber}"}</code>{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[12px] text-[var(--ink)]">{"{jobNumber}"}</code>{" "}
           as placeholders.
         </p>
         {user.role === "ADMIN" ? (
@@ -584,13 +584,13 @@ export default async function NotificationTemplatesPage({
           <input
             name="metaTemplateName"
             placeholder="Meta template name (e.g. job_created)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
           />
           <input
             name="metaLanguageCode"
             placeholder="Language (e.g. en)"
             defaultValue="en"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
           />
           <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</button>
         </form>
@@ -608,11 +608,11 @@ export default async function NotificationTemplatesPage({
                 <details key={t.id} className={`group/details ${ti > 0 ? "border-t border-[var(--line)]/50" : ""}`} open={false}>
                   <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[var(--panel-strong)]/40">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${t.isActive ? "bg-emerald-500" : "bg-[var(--ink-muted)]/40"}`} title={t.isActive ? "Active" : "Inactive"} />
-                    <span className="font-mono text-[13px] font-medium text-[var(--ink)]">{t.key}</span>
+                    <span className="mono text-[13px] font-medium text-[var(--ink)]">{t.key}</span>
                     <span className="text-[12px] text-[var(--ink-muted)]">{t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</span>
                     <span className="truncate text-[13px] text-[var(--ink-muted)]">{t.label}</span>
                     {t.metaTemplateName ? (
-                      <span className="hidden shrink-0 rounded-full bg-emerald-500/12 px-2 py-0.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 sm:inline">meta ✓</span>
+                      <span className="hidden shrink-0 rounded-full bg-emerald-500/12 px-2 py-0.5 mono text-[11px] text-emerald-600 dark:text-emerald-400 sm:inline">meta ✓</span>
                     ) : t.channel === "WHATSAPP" ? (
                       <span className="hidden shrink-0 rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 sm:inline">no meta</span>
                     ) : null}
@@ -624,7 +624,7 @@ export default async function NotificationTemplatesPage({
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <span className="text-[12px] font-bold uppercase tracking-[0.13em] text-[var(--ink-muted)]">Variables:</span>
                       {vars.map((v, i) => (
-                        <span key={v} className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[13px] font-mono">
+                        <span key={v} className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[13px] mono">
                           <span className="text-[var(--accent)] font-bold">{`{{${i + 1}}}`}</span>
                           <span className="text-[var(--ink-muted)]">=</span>
                           <span className="text-[var(--ink)]">{v}</span>
@@ -678,28 +678,28 @@ export default async function NotificationTemplatesPage({
                         </p>
                         <p className="mb-2 text-[13px] text-[var(--ink-muted)]">
                           Once your template is approved in Meta Business Manager, enter its name here.
-                          Variables in the <code className="font-mono">variables</code> array above map positionally to{" "}
-                          <code className="font-mono">{"{{1}}"}</code>,{" "}
-                          <code className="font-mono">{"{{2}}"}</code>… in the approved template body.
+                          Variables in the <code className="mono">variables</code> array above map positionally to{" "}
+                          <code className="mono">{"{{1}}"}</code>,{" "}
+                          <code className="mono">{"{{2}}"}</code>… in the approved template body.
                         </p>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <input
                             name="metaTemplateName"
                             defaultValue={t.metaTemplateName ?? ""}
                             placeholder="Template name (e.g. repair_status_update)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                           <input
                             name="metaLanguageCode"
                             defaultValue={t.metaLanguageCode ?? "en"}
                             placeholder="Language code (e.g. en)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                         </div>
                         {t.metaTemplateName ? (
                           <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Using template: <span className="font-mono">{t.metaTemplateName}</span> · lang: {t.metaLanguageCode ?? "en"}
+                            Using template: <span className="mono">{t.metaTemplateName}</span> · lang: {t.metaLanguageCode ?? "en"}
                           </p>
                         ) : (
                           <p className="mt-1.5 text-[13px] text-[var(--ink-muted)]">

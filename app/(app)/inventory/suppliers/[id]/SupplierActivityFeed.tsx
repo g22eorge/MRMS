@@ -53,8 +53,8 @@ export function SupplierActivityFeed({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
         <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">History ({items.length})</p>
         <div className="flex gap-1.5">
-          <Link href={newPoHref} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New PO</Link>
-          <Link href={newBillHref} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">New Bill</Link>
+          <Link href={newPoHref} className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25">New PO</Link>
+          <Link href={newBillHref} className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25">New Bill</Link>
         </div>
       </div>
 

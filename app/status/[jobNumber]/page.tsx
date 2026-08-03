@@ -141,7 +141,7 @@ export default async function PublicStatusPage({
             <p className="font-semibold text-gray-800">{job.brand} {job.model}</p>
             <p className="text-sm text-gray-500">{formatDeviceType(job.deviceType)}</p>
             {job.serialOrImei && (
-              <p className="text-xs text-gray-400 font-mono">S/N: {job.serialOrImei}</p>
+              <p className="text-xs text-gray-400 mono">S/N: {job.serialOrImei}</p>
             )}
           </div>
 

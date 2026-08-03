@@ -298,7 +298,7 @@ export function NewSupplierBillForm({
             ) : null
           }
           tableFooter={
-            <tr className="bg-[var(--gold)]/5">
+            <tr className="bg-[var(--accent)]/5">
               <td colSpan={3} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Subtotal</td>
               <td className="px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td>
               <td />

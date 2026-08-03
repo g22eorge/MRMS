@@ -31,7 +31,7 @@ export function LineItemsPanel({
         <button
           type="button"
           onClick={onAddLine}
-          className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25"
+          className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
         >
           {addLabel}
         </button>

@@ -146,7 +146,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         <div>
           <p className="text-lg font-bold text-white">Repair Request Received!</p>
           {requestNum && (
-            <p className="mt-1 font-mono text-sm font-semibold text-green-400">{requestNum}</p>
+            <p className="mt-1 mono text-sm font-semibold text-green-400">{requestNum}</p>
           )}
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/55">
             Hello {data.customer_name || "Customer"}

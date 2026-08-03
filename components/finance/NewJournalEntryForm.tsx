@@ -169,7 +169,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
           >
             <span className="text-base">📋</span>
             {showPicker ? "Hide standard templates" : "Use a standard template"}
-            <span className="rounded bg-[var(--accent)]/10 px-1.5 py-0.5 font-mono text-[12px] text-[var(--accent)]">
+            <span className="rounded bg-[var(--accent)]/10 px-1.5 py-0.5 mono text-[12px] text-[var(--accent)]">
               12
             </span>
           </button>

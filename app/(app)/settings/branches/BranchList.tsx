@@ -27,7 +27,7 @@ export function BranchList({ branches }: { branches: Branch[] }) {
           <button
             type="button"
             onClick={() => { setCreating(true); setEditingId(null); }}
-            className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25"
+            className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25"
           >
             + Add Branch
           </button>
@@ -50,7 +50,7 @@ export function BranchList({ branches }: { branches: Branch[] }) {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-[var(--ink)] text-sm">{b.name}</span>
                       {b.isDefault && (
-                        <span className="rounded-full bg-[var(--gold)]/15 px-2 py-0.5 text-[12px] font-bold text-[var(--gold)]">DEFAULT</span>
+                        <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[12px] font-bold text-[var(--accent)]">DEFAULT</span>
                       )}
                       {!b.isActive && (
                         <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">INACTIVE</span>
@@ -65,7 +65,7 @@ export function BranchList({ branches }: { branches: Branch[] }) {
                   <button
                     type="button"
                     onClick={() => { setEditingId(b.id); setCreating(false); }}
-                    className="shrink-0 text-xs font-semibold text-[var(--gold)] hover:underline"
+                    className="shrink-0 text-xs font-semibold text-[var(--accent)] hover:underline"
                   >
                     Edit
                   </button>
@@ -110,7 +110,7 @@ function BranchForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 bg-[var(--gold)]/5">
+    <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 bg-[var(--accent)]/5">
       <p className="text-xs font-semibold text-[var(--ink)]">{branch ? "Edit Branch" : "New Branch"}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -121,7 +121,7 @@ function BranchForm({
             name="name"
             required
             defaultValue={branch?.name ?? ""}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
           />
         </div>
         <div>
@@ -129,7 +129,7 @@ function BranchForm({
           <input
             name="phone"
             defaultValue={branch?.phone ?? ""}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
           />
         </div>
       </div>
@@ -139,7 +139,7 @@ function BranchForm({
           name="address"
           rows={2}
           defaultValue={branch?.address ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div className="flex gap-4">
@@ -149,7 +149,7 @@ function BranchForm({
             name="isDefault"
             value="1"
             defaultChecked={branch?.isDefault ?? false}
-            className="h-4 w-4 rounded border-[var(--line)] accent-[var(--gold)]"
+            className="h-4 w-4 rounded border-[var(--line)] accent-[var(--accent)]"
           />
           Set as default branch
         </label>
@@ -160,7 +160,7 @@ function BranchForm({
               name="isActive"
               value="1"
               defaultChecked={branch.isActive}
-              className="h-4 w-4 rounded border-[var(--line)] accent-[var(--gold)]"
+              className="h-4 w-4 rounded border-[var(--line)] accent-[var(--accent)]"
             />
             Active
           </label>
@@ -180,7 +180,7 @@ function BranchForm({
         <button
           type="button"
           onClick={onDone}
-          className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--gold)]/5"
+          className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--accent)]/5"
         >
           Cancel
         </button>

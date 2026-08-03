@@ -148,8 +148,8 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
       <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4 text-[13px] text-blue-900 dark:text-blue-300 space-y-1">
         <p className="font-semibold">Requirements</p>
         <ul className="list-disc list-inside space-y-0.5">
-          <li><code className="bg-blue-100 px-1 rounded font-mono text-xs">WHATSAPP_ACCESS_TOKEN</code> needs <strong>whatsapp_business_management</strong> permission</li>
-          <li><code className="bg-blue-100 px-1 rounded font-mono text-xs">WHATSAPP_BUSINESS_ACCOUNT_ID</code> must be your WABA ID (not phone number ID)</li>
+          <li><code className="bg-[var(--panel-strong)] px-1 rounded mono text-xs">WHATSAPP_ACCESS_TOKEN</code> needs <strong>whatsapp_business_management</strong> permission</li>
+          <li><code className="bg-[var(--panel-strong)] px-1 rounded mono text-xs">WHATSAPP_BUSINESS_ACCOUNT_ID</code> must be your WABA ID (not phone number ID)</li>
           <li>All templates are <strong>UTILITY</strong> — approved within minutes</li>
           <li>Once approved, the system sends with real customer data automatically — no further config</li>
         </ul>
@@ -169,9 +169,9 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                   className="flex-1 flex items-start gap-3 text-left min-w-0">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-bold text-[var(--ink)]">{t.metaName}</span>
+                      <span className="mono text-sm font-bold text-[var(--ink)]">{t.metaName}</span>
                       <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[12px] font-bold uppercase text-blue-700">{t.category}</span>
-                      <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-mono text-[var(--ink-muted)]">{t.language}</span>
+                      <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] mono text-[var(--ink-muted)]">{t.language}</span>
                     </div>
                     <p className="mt-0.5 text-xs text-[var(--ink-muted)] truncate">{t.label} — {t.description}</p>
                   </div>
@@ -223,7 +223,7 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                   )}
                   {st.state === "ok" && (
                     <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-                      {st.action === "updated" ? "↻ Updated existing template" : "✓ Submitted new template"} · Status: <strong>{st.metaStatus}</strong> · ID: <code className="font-mono">{st.id}</code>
+                      {st.action === "updated" ? "↻ Updated existing template" : "✓ Submitted new template"} · Status: <strong>{st.metaStatus}</strong> · ID: <code className="mono">{st.id}</code>
                     </div>
                   )}
 
@@ -232,7 +232,7 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                     <div>
                       <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)] mb-1">Name</p>
                       <div className="flex items-center gap-2">
-                        <code className="font-mono text-sm font-bold text-[var(--ink)]">{t.metaName}</code>
+                        <code className="mono text-sm font-bold text-[var(--ink)]">{t.metaName}</code>
                         <CopyButton text={t.metaName} />
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                     </div>
                     <div>
                       <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)] mb-1">Language</p>
-                      <p className="font-mono text-sm font-semibold">{t.language}</p>
+                      <p className="mono text-sm font-semibold">{t.language}</p>
                     </div>
                   </div>
 
@@ -263,10 +263,10 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                     <div className="rounded-lg border border-[var(--line)] divide-y divide-[var(--line)] overflow-hidden">
                       {t.varOrder.map((v) => (
                         <div key={v.n} className="grid grid-cols-12 items-center gap-3 px-3 py-2.5 bg-[var(--panel)] text-xs">
-                          <span className="col-span-2 font-mono font-bold text-[var(--accent)]">{`{{${v.n}}}`}</span>
-                          <span className="col-span-3 font-mono text-[var(--ink-muted)]">{`{${v.systemKey}}`}</span>
+                          <span className="col-span-2 mono font-bold text-[var(--accent)]">{`{{${v.n}}}`}</span>
+                          <span className="col-span-3 mono text-[var(--ink-muted)]">{`{${v.systemKey}}`}</span>
                           <span className="col-span-3 text-[var(--ink)] font-medium">{v.name}</span>
-                          <span className="col-span-4 font-mono text-[var(--ink-muted)] text-right truncate">{v.liveExample}</span>
+                          <span className="col-span-4 mono text-[var(--ink-muted)] text-right truncate">{v.liveExample}</span>
                         </div>
                       ))}
                     </div>

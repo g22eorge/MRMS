@@ -446,7 +446,7 @@ export default async function JournalPage({
                 {/* ── Entry header row ─────────────────────────── */}
                 <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--panel)]/50 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="font-mono text-xs font-bold text-[var(--accent)]">
+                    <span className="mono text-xs font-bold text-[var(--accent)]">
                       {entry.entryNumber}
                     </span>
                     <StatusBadge tone={toneFor(STATUS_TONES, entry.status)} dot>
@@ -513,7 +513,7 @@ export default async function JournalPage({
                 <div className="flex items-baseline gap-3 px-4 py-2.5">
                   <p className="text-sm font-medium text-[var(--ink)]">{entry.description}</p>
                   {entry.reference && (
-                    <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 font-mono text-[13px] text-[var(--ink-muted)]">
+                    <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 mono text-[13px] text-[var(--ink-muted)]">
                       {entry.reference}
                     </span>
                   )}

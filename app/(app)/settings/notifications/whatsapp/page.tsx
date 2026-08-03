@@ -65,15 +65,15 @@ export default async function WhatsAppSettingsPage() {
             {stats.map((s) => (
               <div key={s.label} className="bg-[var(--panel-strong)] px-3 py-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]/70">{s.label}</p>
-                <p className="mt-1 truncate font-mono text-[13px] font-semibold text-[var(--ink)]" title={s.value}>{s.value}</p>
+                <p className="mt-1 truncate mono text-[13px] font-semibold text-[var(--ink)]" title={s.value}>{s.value}</p>
               </div>
             ))}
           </div>
         ) : (
           <div className="mt-3 rounded-lg bg-amber-500/10 px-4 py-3 text-[12px] text-amber-700 dark:text-amber-400">
-            WhatsApp is not configured. Set <code className="font-mono">WHATSAPP_ACCESS_TOKEN</code>,{" "}
-            <code className="font-mono">WHATSAPP_PHONE_NUMBER_ID</code>, and{" "}
-            <code className="font-mono">WHATSAPP_BUSINESS_NUMBER</code> in your environment.
+            WhatsApp is not configured. Set <code className="mono">WHATSAPP_ACCESS_TOKEN</code>,{" "}
+            <code className="mono">WHATSAPP_PHONE_NUMBER_ID</code>, and{" "}
+            <code className="mono">WHATSAPP_BUSINESS_NUMBER</code> in your environment.
           </div>
         )}
 

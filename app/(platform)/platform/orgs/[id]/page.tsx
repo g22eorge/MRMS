@@ -145,7 +145,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <Field label="Plan" value={org.plan} />
           <Field label="Trial ends" value={fmt(org.trialEndsAt)} />
           <Field label="Renews" value={fmt(org.planRenewsAt)} />
-          <Field label="Pesapal ID" value={<span className="font-mono text-xs">{org.flwSubscriptionId ?? "—"}</span>} />
+          <Field label="Pesapal ID" value={<span className="mono text-xs">{org.flwSubscriptionId ?? "—"}</span>} />
         </div>
       </div>
 
@@ -158,14 +158,14 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setPlanAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Plan</label>
-            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="plan" defaultValue={org.plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]">
               <option value="STARTER">Starter</option>
               <option value="STANDARD">Standard</option>
               <option value="GROWTH">Growth</option>
               <option value="PREMIUM">Premium</option>
               <option value="ENTERPRISE">Enterprise</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/30">
+            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Set Plan
             </button>
           </form>
@@ -176,7 +176,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={setBillingStatusAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Status</label>
-            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="status" defaultValue={org.billingStatus} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]">
               <option value="TRIALING">Trialing</option>
               <option value="ACTIVE">Active</option>
               <option value="PAST_DUE">Past Due</option>
@@ -193,7 +193,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <form action={extendTrialAction} className="flex items-center gap-2">
             <input type="hidden" name="orgId" value={org.id} />
             <label className="text-xs font-semibold text-[var(--ink-muted)]">Trial</label>
-            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]">
+            <select name="days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]">
               <option value="7">+7 days</option>
               <option value="14">+14 days</option>
               <option value="30">+30 days</option>
@@ -223,13 +223,13 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               defaultValue={orgWaCfg?.atSenderId ?? ""}
               placeholder="e.g. EagleInfo"
               maxLength={11} pattern="[A-Za-z0-9]*"
-              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
-            <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/30">
+            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Save
             </button>
             {orgWaCfg?.atSenderId && (
-              <span className="text-xs text-[var(--ink-muted)]">Current: <span className="font-mono font-semibold text-[var(--ink)]">{orgWaCfg.atSenderId}</span></span>
+              <span className="text-xs text-[var(--ink-muted)]">Current: <span className="mono font-semibold text-[var(--ink)]">{orgWaCfg.atSenderId}</span></span>
             )}
           </form>
         </div>
@@ -244,19 +244,19 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             <input type="hidden" name="orgId" value={org.id} />
             <select
               name="aiModel" defaultValue={org.aiModel ?? ""}
-              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 font-mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
               <option value="">Platform default</option>
               <option value="claude-haiku-4-5-20251001">Haiku 4.5 — fast / cheap</option>
               <option value="claude-sonnet-4-6">Sonnet 4.6 — balanced</option>
               <option value="claude-opus-4-7">Opus 4.7 — most capable</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/30">
+            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Save
             </button>
           </form>
           {org.aiModel && (
-            <p className="text-xs text-[var(--ink-muted)]">Active: <span className="font-mono font-semibold text-[var(--ink)]">{org.aiModel}</span></p>
+            <p className="text-xs text-[var(--ink-muted)]">Active: <span className="mono font-semibold text-[var(--ink)]">{org.aiModel}</span></p>
           )}
         </div>
       </div>

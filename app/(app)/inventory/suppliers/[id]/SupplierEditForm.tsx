@@ -48,7 +48,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="address"
           rows={2}
           defaultValue={supplier.address ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div>
@@ -57,7 +57,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="notes"
           rows={2}
           defaultValue={supplier.notes ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           id="isActive"
           value="1"
           defaultChecked={supplier.isActive}
-          className="h-4 w-4 rounded border-[var(--line)] accent-[var(--gold)]"
+          className="h-4 w-4 rounded border-[var(--line)] accent-[var(--accent)]"
         />
         <label htmlFor="isActive" className="text-sm text-[var(--ink)]">Active</label>
       </div>
@@ -99,7 +99,7 @@ function Field({
         type={type}
         required={required}
         defaultValue={defaultValue}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
       />
     </div>
   );

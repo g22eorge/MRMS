@@ -278,7 +278,7 @@ export function NewQuotationForm({
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Customer</p>
-              <Link href="/clients?create=1" className="text-xs font-semibold text-[var(--gold)] hover:underline">New client</Link>
+              <Link href="/clients?create=1" className="text-xs font-semibold text-[var(--accent)] hover:underline">New client</Link>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-1">
               {(["existing", "new"] as const).map((mode) => (
@@ -387,7 +387,7 @@ export function NewQuotationForm({
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
-              <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--gold)] hover:underline">Tax rates</Link>
+              <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--accent)] hover:underline">Tax rates</Link>
             </div>
             <LineItemTotals
               className="mt-3"

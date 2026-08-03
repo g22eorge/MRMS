@@ -63,12 +63,12 @@ export default async function PlatformSettingsPage() {
           {(["GROWTH", "ENTERPRISE"] as const).map((plan) => (
             <div key={plan} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3">
               <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{plan}</p>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--ink)]">{formatMoney(PLAN_PRICES[plan])} / month</p>
+              <p className="mt-0.5 mono text-sm font-semibold text-[var(--ink)]">{formatMoney(PLAN_PRICES[plan])} / month</p>
             </div>
           ))}
         </div>
         <p className="mt-3 text-xs text-[var(--ink-muted)]">
-          Prices are defined in <code className="font-mono">lib/pesapal.ts</code> → <code className="font-mono">PLAN_PRICES</code>.
+          Prices are defined in <code className="mono">lib/pesapal.ts</code> → <code className="mono">PLAN_PRICES</code>.
         </p>
       </div>
 
@@ -84,7 +84,7 @@ export default async function PlatformSettingsPage() {
             {process.env.PESAPAL_ENV === "production" ? "Production" : "Sandbox"}
           </span>
           <p className="text-xs text-[var(--ink-muted)]">
-            Set <code className="font-mono">PESAPAL_ENV=production</code> in env vars to switch to live payments.
+            Set <code className="mono">PESAPAL_ENV=production</code> in env vars to switch to live payments.
           </p>
         </div>
       </div>

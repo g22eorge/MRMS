@@ -321,7 +321,7 @@ export default async function BankPage({
                   <p className="text-sm font-semibold text-[var(--ink)]">{acc.name}</p>
                   <p className="text-xs text-[var(--ink-muted)]">{acc.bankName}</p>
                   {acc.accountNumber && (
-                    <p className="font-mono text-xs text-[var(--ink-muted)]">{acc.accountNumber}</p>
+                    <p className="mono text-xs text-[var(--ink-muted)]">{acc.accountNumber}</p>
                   )}
                   <p className="mt-2 text-base font-bold tabular-nums text-[var(--ink)]">
                     {formatMoney(acc.currentBalance, currency)}

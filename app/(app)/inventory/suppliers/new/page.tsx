@@ -40,7 +40,7 @@ export default function NewSupplierPage() {
           <textarea
             name="address"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
           />
         </div>
         <div>
@@ -48,7 +48,7 @@ export default function NewSupplierPage() {
           <textarea
             name="notes"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
           />
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
@@ -56,7 +56,7 @@ export default function NewSupplierPage() {
           <button type="submit" disabled={pending} className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
             {pending ? "Saving…" : "Save Supplier"}
           </button>
-          <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--gold)]/5">
+          <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--accent)]/5">
             Cancel
           </Link>
         </div>
@@ -75,7 +75,7 @@ function Field({ name, label, required, type = "text" }: { name: string; label: 
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
       />
     </div>
   );

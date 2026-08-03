@@ -148,7 +148,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
             ) : null
           }
           tableFooter={
-            <tr className="bg-[var(--gold)]/5">
+            <tr className="bg-[var(--accent)]/5">
               <td colSpan={4} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Estimated Total</td>
               <td className="px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td>
               <td />

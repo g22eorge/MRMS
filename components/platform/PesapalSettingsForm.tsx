@@ -61,7 +61,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
                   type="password"
                   autoComplete="off"
                   placeholder={isSet ? "Leave blank to keep existing value" : f.placeholder}
-                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
                   <form action={clearAction}>
@@ -94,7 +94,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">IPN (Webhook) URL</p>
-            <p className="mt-0.5 font-mono text-xs text-[var(--ink)] break-all">{webhookUrl}</p>
+            <p className="mt-0.5 mono text-xs text-[var(--ink)] break-all">{webhookUrl}</p>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
           <div>
             <p className="text-[12px] text-[var(--ink-muted)]">
               IPN ID:{" "}
-              <span className={`font-mono font-semibold ${(ipnState?.ipnId ?? ipnId) ? "text-emerald-600" : "text-[var(--ink-muted)]"}`}>
+              <span className={`mono font-semibold ${(ipnState?.ipnId ?? ipnId) ? "text-emerald-600" : "text-[var(--ink-muted)]"}`}>
                 {ipnState?.ipnId ?? ipnId ?? "Not registered"}
               </span>
             </p>
@@ -111,7 +111,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
             <button
               type="submit"
               disabled={registering}
-              className="rounded-md bg-[var(--gold)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25 transition-colors disabled:opacity-50"
+              className="rounded-md bg-[var(--accent)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors disabled:opacity-50"
             >
               {registering ? "Registering…" : (ipnState?.ipnId ?? ipnId) ? "Re-register IPN" : "Register IPN"}
             </button>
@@ -129,7 +129,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
 
         <p className="text-[12px] text-[var(--ink-muted)]">
           Register this URL in your Pesapal dashboard, or click &quot;Register IPN&quot; above to do it automatically via the API.
-          Set <code className="font-mono">PESAPAL_ENV=production</code> in env vars for live payments.
+          Set <code className="mono">PESAPAL_ENV=production</code> in env vars for live payments.
         </p>
       </div>
     </div>

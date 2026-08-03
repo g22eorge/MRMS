@@ -467,7 +467,7 @@ export default async function CreditNotesPage({
                   </select>
                 </div>
                 <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]" />
-                <button type="submit" className="w-full rounded bg-[var(--gold)]/20 py-1.5 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/30">Issue Refund</button>
+                <button type="submit" className="w-full rounded bg-[var(--accent)]/20 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/30">Issue Refund</button>
               </form>
             </div>
           </>

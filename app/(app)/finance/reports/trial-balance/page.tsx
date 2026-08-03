@@ -162,7 +162,7 @@ export default async function TrialBalancePage({
                 {rows.map((r) => (
                   <tr key={r.code} className="border-b border-[var(--line)]/60 last:border-0 odd:bg-[var(--bg)]/40">
                     <td className="px-4 py-2.5">
-                      <span className="mr-2 font-mono text-xs text-[var(--accent)]">{r.code}</span>
+                      <span className="mr-2 mono text-xs text-[var(--accent)]">{r.code}</span>
                       <span className="text-[var(--ink)]">{r.name}</span>
                     </td>
                     <td className="px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">{r.type}</td>

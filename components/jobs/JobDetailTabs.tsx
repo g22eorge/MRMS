@@ -996,7 +996,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <JobStatusBadge status={job.status} />
-              <span className="font-mono text-[13px] text-[var(--ink-muted)]">{job.jobNumber}</span>
+              <span className="mono text-[13px] text-[var(--ink-muted)]">{job.jobNumber}</span>
             </div>
             <h1 className="text-[22px] font-black leading-tight tracking-tight text-[var(--ink)]">
               {[job.brand, job.model].filter((v) => v && v !== "Unknown").join(" ") || job.deviceType}
@@ -2582,7 +2582,7 @@ function StatusShareButton({ jobNumber, compact = false }: { jobNumber: string; 
       <div className="panel-shadow absolute left-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="p-3 space-y-2">
           <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client status link</p>
-          <p className="break-all rounded bg-[var(--panel-strong)] px-2 py-1.5 font-mono text-[12px] text-[var(--ink-muted)]">
+          <p className="break-all rounded bg-[var(--panel-strong)] px-2 py-1.5 mono text-[12px] text-[var(--ink-muted)]">
             /status/{jobNumber}
           </p>
           <button

@@ -236,7 +236,7 @@ export default async function SupplierDetailPage({
           supplier.isActive ? (
             <>
               <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">New PO</Link>
-              <Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 px-3 py-2 text-xs font-semibold text-[var(--gold)] transition hover:bg-[var(--gold)]/15">New Bill</Link>
+              <Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/15">New Bill</Link>
             </>
           ) : undefined
         }

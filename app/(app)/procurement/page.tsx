@@ -253,7 +253,7 @@ export default async function ProcurementPage() {
             {billQueue.map((bill) => (
               <Link key={bill.id} href={`/inventory/supplier-bills/${bill.id}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-[var(--panel-strong)]/40">
                 <div className="min-w-0">
-                  <p className="font-mono text-sm font-bold text-[var(--ink)]">{bill.billNumber}</p>
+                  <p className="mono text-sm font-bold text-[var(--ink)]">{bill.billNumber}</p>
                   <p className="truncate text-xs text-[var(--ink-muted)]">{bill.supplier.name} · due {fmt(bill.dueAt)}</p>
                 </div>
                 <p className="shrink-0 text-right text-xs font-bold tabular-nums text-[var(--ink)]">{bill.currency} {Math.max(0, bill.totalAmount - bill.paidAmount).toLocaleString()}</p>
@@ -272,7 +272,7 @@ export default async function ProcurementPage() {
             {recentGrns.map((grn) => (
               <Link key={grn.id} href={`/inventory/goods-received/${grn.id}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-[var(--panel-strong)]/40">
                 <div className="min-w-0">
-                  <p className="font-mono text-sm font-bold text-[var(--ink)]">{grn.grnNumber}</p>
+                  <p className="mono text-sm font-bold text-[var(--ink)]">{grn.grnNumber}</p>
                   <p className="truncate text-xs text-[var(--ink-muted)]">{grn.supplier.name} · {fmt(grn.receivedAt)}</p>
                 </div>
                 <p className="shrink-0 text-xs text-[var(--ink-muted)]">{grn.po ? poRef(grn.po) : "No PO"}</p>

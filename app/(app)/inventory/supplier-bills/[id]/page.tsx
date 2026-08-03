@@ -51,7 +51,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
           </>
         }
       />
-      <p className="text-sm text-[var(--ink-muted)]">Supplier: <Link href={`/inventory/suppliers/${bill.supplier.id}`} className="text-[var(--gold)] hover:underline">{bill.supplier.name}</Link></p>
+      <p className="text-sm text-[var(--ink-muted)]">Supplier: <Link href={`/inventory/suppliers/${bill.supplier.id}`} className="text-[var(--accent)] hover:underline">{bill.supplier.name}</Link></p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issued</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(bill.issuedAt)}</p></div>
@@ -64,8 +64,8 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
         <div className="px-5 py-3 border-b border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
           <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Bill Lines</p>
           <div className="flex gap-2 text-xs font-semibold">
-            {bill.po ? <Link href={`/inventory/purchase-orders/${bill.po.id}`} className="text-[var(--gold)] hover:underline">{bill.po.reference ?? "Purchase Order"}</Link> : null}
-            {bill.grn ? <Link href={`/inventory/goods-received/${bill.grn.id}`} className="text-[var(--gold)] hover:underline">{bill.grn.grnNumber}</Link> : null}
+            {bill.po ? <Link href={`/inventory/purchase-orders/${bill.po.id}`} className="text-[var(--accent)] hover:underline">{bill.po.reference ?? "Purchase Order"}</Link> : null}
+            {bill.grn ? <Link href={`/inventory/goods-received/${bill.grn.id}`} className="text-[var(--accent)] hover:underline">{bill.grn.grnNumber}</Link> : null}
           </div>
         </div>
         <DataTable

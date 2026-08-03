@@ -70,7 +70,7 @@ export default async function PortalRepairsPage({
             {pending.map((r) => (
               <li key={r.id} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
                 <div>
-                  <span className="font-mono font-semibold text-[var(--ink)]">{r.requestNumber}</span>
+                  <span className="mono font-semibold text-[var(--ink)]">{r.requestNumber}</span>
                   <span className="ml-2 text-[var(--ink-muted)]">{[r.brand, r.model].filter(Boolean).join(" ") || r.deviceType.replaceAll("_", " ")}</span>
                 </div>
                 <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">Pending review</span>
@@ -100,7 +100,7 @@ export default async function PortalRepairsPage({
               <li key={job.id} className="border-b border-[var(--line)]/60 last:border-0">
                 <Link href={`/portal/repairs/${job.id}`} className="flex items-center justify-between px-4 py-3 transition hover:bg-[var(--panel-strong)]/40">
                   <div className="min-w-0">
-                    <span className="font-mono text-[13px] font-semibold text-[var(--ink)]">{job.jobNumber}</span>
+                    <span className="mono text-[13px] font-semibold text-[var(--ink)]">{job.jobNumber}</span>
                     <span className="ml-2 text-[13px] text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
                     {job.serialOrImei ? <span className="ml-2 text-[11px] text-[var(--ink-muted)]">· {job.serialOrImei}</span> : null}
                   </div>

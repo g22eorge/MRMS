@@ -131,7 +131,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
         }
       />
       <p className="text-[13px] text-[var(--ink-muted)]">
-        Received from <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="font-semibold text-[var(--gold)] hover:underline">{grn.supplier.name}</Link> into {locationLabel}
+        Received from <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="font-semibold text-[var(--accent)] hover:underline">{grn.supplier.name}</Link> into {locationLabel}
       </p>
 
       <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -172,7 +172,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                   <span className="tabular-nums text-[var(--ink)]">{poReceivedQty}/{poOrderedQty}</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg)]">
-                  <div className="h-full rounded-full bg-[var(--gold)]" style={{ width: `${poProgress ?? 0}%` }} />
+                  <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${poProgress ?? 0}%` }} />
                 </div>
               </div>
             ) : null}
@@ -181,7 +181,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Contact</p>
-              <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="text-xs font-semibold text-[var(--gold)] hover:underline">Open Supplier</Link>
+              <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="text-xs font-semibold text-[var(--accent)] hover:underline">Open Supplier</Link>
             </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
               <InfoRow label="Person">{grn.supplier.contactName || "-"}</InfoRow>
@@ -193,7 +193,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
           <ActivitySection
             title="Billing Trail"
             count={grn.supplierBills.length}
-            action={<Link href={newBillHref} className="rounded-md bg-[var(--gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/25">Create Bill</Link>}
+            action={<Link href={newBillHref} className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25">Create Bill</Link>}
           >
             {grn.supplierBills.length === 0 ? (
               <EmptyText>No supplier bill has been linked to this GRN.</EmptyText>
@@ -205,7 +205,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                     <Link key={bill.id} href={`/inventory/supplier-bills/${bill.id}`} className="block px-4 py-3 hover:bg-[var(--panel-strong)]/40">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <p className="font-mono text-xs font-bold text-[var(--ink)]">{bill.billNumber}</p>
+                          <p className="mono text-xs font-bold text-[var(--ink)]">{bill.billNumber}</p>
                           <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{fmt(bill.issuedAt)} · due {fmt(bill.dueAt)}{bill.supplierRef ? ` · ref ${bill.supplierRef}` : ""}</p>
                         </div>
                         <StatusBadge tone={toneFor(BILL_STATUS_TONES, bill.status, "sky")}>{bill.status}</StatusBadge>

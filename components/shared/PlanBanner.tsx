@@ -29,7 +29,7 @@ function UsageBar({ current, max, label }: { current: number; max: number; label
       {max !== Infinity && (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
           <div
-            className={`h-full rounded-full transition-all ${isHit ? "bg-red-500" : isNear ? "bg-amber-500" : "bg-[var(--gold)]"}`}
+            className={`h-full rounded-full transition-all ${isHit ? "bg-red-500" : isNear ? "bg-amber-500" : "bg-[var(--accent)]"}`}
             style={{ width: `${pct}%` }}
           />
         </div>

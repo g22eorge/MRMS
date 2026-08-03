@@ -10,7 +10,7 @@ export default function PlatformError({
   return (
     <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-6 space-y-3">
       <p className="font-semibold text-red-700 dark:text-red-400">Platform error</p>
-      <p className="font-mono text-xs text-red-600 dark:text-red-400 break-all">{error.message}</p>
+      <p className="mono text-xs text-red-600 dark:text-red-400 break-all">{error.message}</p>
       {error.digest && (
         <p className="text-xs text-red-500 dark:text-red-400">Digest: {error.digest}</p>
       )}

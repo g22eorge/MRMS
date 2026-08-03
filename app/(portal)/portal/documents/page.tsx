@@ -69,7 +69,7 @@ export default async function PortalDocumentsPage() {
           quotations.map((q) => (
             <div key={q.id} className={rowClass}>
               <div className="min-w-0">
-                <span className="font-mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
+                <span className="mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
                 <span className="ml-2 text-[var(--ink-muted)]">{q.jobNumber}{q.validUntil ? ` · valid until ${fmtDate(q.validUntil)}` : ""}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export default async function PortalDocumentsPage() {
             return (
               <div key={inv.id} className={rowClass}>
                 <div className="min-w-0">
-                  <span className="font-mono font-semibold text-[var(--ink)]">{inv.invoiceNumber}</span>
+                  <span className="mono font-semibold text-[var(--ink)]">{inv.invoiceNumber}</span>
                   <span className="ml-2 text-[var(--ink-muted)]">{inv.jobNumber} · {fmtDate(inv.issuedAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">

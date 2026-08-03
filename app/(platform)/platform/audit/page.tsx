@@ -104,7 +104,7 @@ export default async function PlatformAuditPage({
               <option key={item} value={item}>{item}</option>
             ))}
           </select>
-          <button type="submit" className="rounded-lg bg-[var(--gold)]/20 px-3 py-2 text-sm font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/30">
+          <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/30">
             Apply filters
           </button>
         </div>

@@ -150,7 +150,7 @@ export default async function AccountLedgerPage({
       />
       {(account.parent || account.description) && (
         <p className="text-[13px] text-[var(--ink-muted)]">
-          {account.parent ? <>under <span className="font-mono">{account.parent.code}</span> {account.parent.name}</> : null}
+          {account.parent ? <>under <span className="mono">{account.parent.code}</span> {account.parent.name}</> : null}
           {account.parent && account.description ? " · " : null}
           {account.description ?? ""}
         </p>

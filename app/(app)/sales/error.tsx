@@ -9,7 +9,7 @@ export default function SalesError({ error, reset }: { error: Error; reset: () =
       <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Could not load this sales page</h2>
       <p className="mt-1 text-sm text-[var(--ink-muted)]">
         Please retry. If this keeps happening, refresh the page or contact support
-        {digest ? <> with code: <code className="font-mono text-xs">{digest}</code></> : null}.
+        {digest ? <> with code: <code className="mono text-xs">{digest}</code></> : null}.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button

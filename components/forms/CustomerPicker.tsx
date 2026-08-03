@@ -48,7 +48,7 @@ export function CustomerPicker({
     <section className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Customer</p>
-        <Link href={clientsPageHref} className="text-xs font-semibold text-[var(--gold)] hover:underline">
+        <Link href={clientsPageHref} className="text-xs font-semibold text-[var(--accent)] hover:underline">
           Client page
         </Link>
       </div>

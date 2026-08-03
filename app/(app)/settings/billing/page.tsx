@@ -251,7 +251,7 @@ export default async function BillingPage({
                 key={key}
                 className={`rounded-xl border p-5 space-y-4 ${
                   highlight
-                    ? "border-[var(--gold)] bg-[var(--gold)]/5"
+                    ? "border-[var(--accent)] bg-[var(--accent)]/5"
                     : "border-[var(--line)] bg-[var(--panel)]"
                 }`}
               >
@@ -259,7 +259,7 @@ export default async function BillingPage({
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-[var(--ink)]">{PLAN_LABELS[key]}</p>
                     {highlight && (
-                      <span className="rounded-full bg-[var(--gold)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--gold)] uppercase tracking-wide">
+                      <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)] uppercase tracking-wide">
                         Popular
                       </span>
                     )}
@@ -273,7 +273,7 @@ export default async function BillingPage({
                 <ul className="space-y-1.5">
                   {features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
-                      <span className="text-[var(--gold)]">✓</span> {f}
+                      <span className="text-[var(--accent)]">✓</span> {f}
                     </li>
                   ))}
                 </ul>
@@ -285,7 +285,7 @@ export default async function BillingPage({
                       className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${
                         highlight
                           ? "btn-premium text-white"
-                          : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--gold)]/10"
+                          : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--accent)]/10"
                       }`}
                     >
                       Subscribe to {PLAN_LABELS[key]}
@@ -295,7 +295,7 @@ export default async function BillingPage({
                     <form action={startGrowthTrial}>
                       <button
                         type="submit"
-                        className="w-full rounded-lg border border-[var(--gold)] py-2 text-sm font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/10 transition-colors"
+                        className="w-full rounded-lg border border-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
                       >
                         Try Growth free for 14 days
                       </button>
@@ -524,7 +524,7 @@ export default async function BillingPage({
               key={key}
               className={`panel-shadow rounded-xl border p-5 space-y-4 ${
                 isCurrent
-                  ? "border-[var(--gold)] bg-[var(--gold)]/5"
+                  ? "border-[var(--accent)] bg-[var(--accent)]/5"
                   : "border-[var(--line)] bg-[var(--panel)]"
               }`}
             >
@@ -532,7 +532,7 @@ export default async function BillingPage({
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-[var(--ink)]">{PLAN_LABELS[key]}</p>
                   {isCurrent && (
-                    <span className="rounded-full bg-[var(--gold)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--gold)]">
+                    <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)]">
                       Current
                     </span>
                   )}
@@ -553,7 +553,7 @@ export default async function BillingPage({
               <ul className="space-y-1.5">
                 {features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
-                    <span className="text-[var(--gold)]">✓</span>
+                    <span className="text-[var(--accent)]">✓</span>
                     {f}
                   </li>
                 ))}

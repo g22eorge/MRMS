@@ -72,7 +72,7 @@ export default async function PortalDashboardPage() {
               <li key={job.id} className="border-b border-[var(--line)]/60 text-[13px] last:border-0">
                 <Link href={`/portal/repairs/${job.id}`} className="flex items-center justify-between px-4 py-2.5 transition hover:bg-[var(--panel-strong)]/40">
                   <div>
-                    <span className="font-mono font-semibold text-[var(--ink)]">{job.jobNumber}</span>
+                    <span className="mono font-semibold text-[var(--ink)]">{job.jobNumber}</span>
                     <span className="ml-2 text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
                   </div>
                   <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
