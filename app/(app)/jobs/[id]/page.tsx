@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { SendAssessmentButton } from "@/components/jobs/SendAssessmentButton";
+import { MoveJobPanel } from "@/components/jobs/MoveJobPanel";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
 import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -303,6 +304,18 @@ export default async function JobDetailPage({
     && Boolean(((warrantyInfo?.recommendedRepair ?? "") + (warrantyInfo?.workDone ?? "")).trim());
   const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50";
 
+  // ADMIN/OPS can move this job to a different client account (e.g. sort a
+  // C-Care job that belongs to IMC but was booked under IHK).
+  const canMoveJob = ["ADMIN", "OPS"].includes(user.role);
+  const moveCandidates = canMoveJob
+    ? await prisma.client.findMany({
+        where: { orgId, id: { not: job.clientId } },
+        select: { id: true, fullName: true, phone: true, organization: true },
+        orderBy: [{ organization: "asc" }, { fullName: "asc" }],
+        take: 500,
+      }).catch(() => [])
+    : [];
+
   return (
     <>
       <JobDetailTabs
@@ -318,6 +331,12 @@ export default async function JobDetailPage({
         initialTab={tab}
         documentTimeline={documentTimeline}
       />
+
+      {canMoveJob && moveCandidates.length > 0 ? (
+        <div className="mx-auto mt-3 flex max-w-5xl justify-end">
+          <MoveJobPanel jobId={job.id} currentClientName={job.client?.fullName ?? "this account"} candidates={moveCandidates} />
+        </div>
+      ) : null}
 
       {/* Client portal thread — visible to staff; two-way with the customer's portal. */}
       {portalMessages.length > 0 ? (
