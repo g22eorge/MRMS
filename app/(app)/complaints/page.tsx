@@ -15,6 +15,7 @@ import { RowActionsMenu, MenuSection } from "@/components/shared/RowActionsMenu"
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -159,8 +160,9 @@ export default async function ComplaintsPage({
 
   return (
     <ListPageLayout
+      topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Support",
+        eyebrow: "Service",
         title: "Complaints",
         actions: (
           <>

@@ -9,6 +9,8 @@ import { PageHeader, type PageHeaderProps } from "./PageHeader";
  */
 
 type ListPageLayoutProps = {
+  /** Rendered above the header — e.g. a module hub tab bar (ServiceHubNav). */
+  topBar?: ReactNode;
   /** Either structured header props or a fully custom node. */
   header?: PageHeaderProps;
   headerNode?: ReactNode;
@@ -19,9 +21,10 @@ type ListPageLayoutProps = {
   footer?: ReactNode;
 };
 
-export function ListPageLayout({ header, headerNode, filters, children, footer }: ListPageLayoutProps) {
+export function ListPageLayout({ topBar, header, headerNode, filters, children, footer }: ListPageLayoutProps) {
   return (
     <div className="space-y-4 pb-24 lg:pb-8">
+      {topBar}
       {header ? <PageHeader {...header} /> : headerNode}
       {filters}
       {children}

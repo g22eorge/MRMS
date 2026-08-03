@@ -9,6 +9,7 @@ import { orgDb } from "@/lib/db";
 import { formatEATDateTime } from "@/lib/date-eat";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
@@ -193,6 +194,7 @@ export default async function FieldPage({
 
   return (
     <ListPageLayout
+      topBar={<ServiceHubNav />}
       header={{
         eyebrow: "Service",
         title: "Field Visits",

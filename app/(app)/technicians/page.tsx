@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { Role } from "@prisma/client";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatCards } from "@/components/ui/StatCards";
 
 function deviceName(brand?: string | null, model?: string | null) {
@@ -243,8 +244,9 @@ export default async function TechniciansPage({
   ];
   return (
     <ListPageLayout
+      topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Workbench",
+        eyebrow: "Service",
         title: "Technicians",
         description: "Active assignments and repair board",
         actions: <Link href="/settings/users" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px]">Manage staff →</Link>,
