@@ -74,6 +74,27 @@ export default async function PurchaseOrdersPage({
   const pageView = paginationView(page, total);
   const poHref = pageHrefBuilder("/inventory/purchase-orders", {});
 
+  // Named so the same actions render in the desktop table AND the mobile card.
+  const renderPoActions = (po: (typeof orders)[number]) => (
+    <>
+      {po.status === "DRAFT" ? (
+        <form action={setPurchaseOrderStatusAction}>
+          <input type="hidden" name="id" value={po.id} />
+          <input type="hidden" name="status" value="ORDERED" />
+          <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 font-semibold text-sky-700">Issue</button>
+        </form>
+      ) : ["ORDERED", "PARTIAL"].includes(po.status) ? (
+        <Link href={`/inventory/purchase-orders/${po.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-700">Receive</Link>
+      ) : null}
+      <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</Link>
+      <Link href={`/inventory/purchase-orders/${po.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open</Link>
+      <form action={deletePurchaseOrderAction}>
+        <input type="hidden" name="id" value={po.id} />
+        <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2 py-1 font-semibold text-red-600">Delete</button>
+      </form>
+    </>
+  );
+
   return (
     <ListPageLayout
       header={{
@@ -180,37 +201,23 @@ export default async function PurchaseOrdersPage({
           const receivedQty = po.items.reduce((sum, item) => sum + item.qtyReceived, 0);
           const isOverdue = ["ORDERED", "PARTIAL"].includes(po.status) && po.expectedAt && po.expectedAt < now;
           return (
-            <Link href={`/inventory/purchase-orders/${po.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
-              <div className="min-w-0">
-                <p className="mono truncate font-bold text-[var(--ink)]">{poNumber(po)}</p>
-                <p className="mt-0.5 truncate text-[var(--ink-muted)]">{po.supplier.name} · {receivedQty}/{orderedQty} received · {formatMoney(po.items.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0))}</p>
+            <div className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/inventory/purchase-orders/${po.id}`} className="min-w-0 active:opacity-70">
+                  <p className="mono truncate font-bold text-[var(--ink)]">{poNumber(po)}</p>
+                  <p className="mt-0.5 truncate text-[var(--ink-muted)]">{po.supplier.name} · {receivedQty}/{orderedQty} received · {formatMoney(po.items.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0))}</p>
+                </Link>
+                <span className="flex shrink-0 items-center gap-1">
+                  <StatusBadge tone={toneFor(STATUS_TONES, po.status)}>{po.status}</StatusBadge>
+                  {isOverdue ? <StatusBadge tone="danger">Late</StatusBadge> : null}
+                </span>
               </div>
-              <span className="flex shrink-0 items-center gap-1">
-                <StatusBadge tone={toneFor(STATUS_TONES, po.status)}>{po.status}</StatusBadge>
-                {isOverdue ? <StatusBadge tone="danger">Late</StatusBadge> : null}
-              </span>
-            </Link>
+              {/* Actions reachable on mobile (were desktop-table-only). */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderPoActions(po)}</div>
+            </div>
           );
         }}
-        actions={(po) => (
-          <>
-            {po.status === "DRAFT" ? (
-              <form action={setPurchaseOrderStatusAction}>
-                <input type="hidden" name="id" value={po.id} />
-                <input type="hidden" name="status" value="ORDERED" />
-                <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 font-semibold text-sky-700">Issue</button>
-              </form>
-            ) : ["ORDERED", "PARTIAL"].includes(po.status) ? (
-              <Link href={`/inventory/purchase-orders/${po.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-700">Receive</Link>
-            ) : null}
-            <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</Link>
-            <Link href={`/inventory/purchase-orders/${po.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open</Link>
-            <form action={deletePurchaseOrderAction}>
-              <input type="hidden" name="id" value={po.id} />
-              <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2 py-1 font-semibold text-red-600">Delete</button>
-            </form>
-          </>
-        )}
+        actions={renderPoActions}
       />
     </ListPageLayout>
   );

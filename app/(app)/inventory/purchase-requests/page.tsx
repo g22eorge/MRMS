@@ -53,6 +53,17 @@ export default async function PurchaseRequestsPage({
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
+  // Named so the same actions render in the desktop table AND the mobile card.
+  const renderRequestActions = (request: (typeof requests)[number]) => (
+    <>
+      <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+      <form action={deletePurchaseRequestAction}>
+        <input type="hidden" name="id" value={request.id} />
+        <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 font-semibold text-red-600">Delete</button>
+      </form>
+    </>
+  );
+
   return (
     <ListPageLayout
       header={{
@@ -113,23 +124,19 @@ export default async function PurchaseRequestsPage({
           },
         ]}
         renderMobileCard={(request) => (
-          <Link href={`/inventory/purchase-requests/${request.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
-            <div className="min-w-0">
-              <p className="mono truncate font-bold text-[var(--ink)]">{request.requestNumber}</p>
-              <p className="mt-0.5 truncate text-[var(--ink-muted)]">{request.priority} · {request.supplier?.name ?? "No preference"} · {request._count.items} item{request._count.items === 1 ? "" : "s"}</p>
+          <div className="px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <Link href={`/inventory/purchase-requests/${request.id}`} className="min-w-0 active:opacity-70">
+                <p className="mono truncate font-bold text-[var(--ink)]">{request.requestNumber}</p>
+                <p className="mt-0.5 truncate text-[var(--ink-muted)]">{request.priority} · {request.supplier?.name ?? "No preference"} · {request._count.items} item{request._count.items === 1 ? "" : "s"}</p>
+              </Link>
+              <StatusBadge tone={toneFor(STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>
             </div>
-            <StatusBadge tone={toneFor(STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>
-          </Link>
+            {/* Actions reachable on mobile (were desktop-table-only). */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderRequestActions(request)}</div>
+          </div>
         )}
-        actions={(request) => (
-          <>
-            <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
-            <form action={deletePurchaseRequestAction}>
-              <input type="hidden" name="id" value={request.id} />
-              <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 font-semibold text-red-600">Delete</button>
-            </form>
-          </>
-        )}
+        actions={renderRequestActions}
       />
     </ListPageLayout>
   );
