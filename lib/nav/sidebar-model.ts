@@ -20,7 +20,7 @@ export type NavGroup =
   | "finance"
   | "personal";
 
-export type SuperGroup = "work" | "money" | "stock" | "admin";
+export type SuperGroup = "service" | "sales" | "finance" | "inventory" | "workspace";
 
 export type NavItem = {
   href: string;
@@ -38,12 +38,11 @@ export const NAV: readonly NavItem[] = [
   { href: "/intake", label: routeLabel("/intake"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL", "SALES_MANAGER"] },
   { href: "/service", label: routeLabel("/service"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK"] },
 
-  // Stock & Supply — daily items + ops hub for less-frequent tasks
+  // Inventory & Supply — the two hubs only. Purchase requests, purchase orders
+  // and the stock ops hub are reached from inside these pages (they link to each
+  // other), so they no longer clutter the sidebar as separate top-level rows.
   { href: "/inventory", label: routeLabel("/inventory"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "TECHNICIAN_INTERNAL"] },
   { href: "/procurement", label: routeLabel("/procurement"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/purchase-requests", label: routeLabel("/inventory/purchase-requests"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/purchase-orders", label: routeLabel("/inventory/purchase-orders"), group: "stock", roles: ["ADMIN", "MANAGER", "OPS"] },
-  { href: "/inventory/ops", label: routeLabel("/inventory/ops"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
 
   // Customers
   { href: "/clients", label: routeLabel("/clients"), group: "customers", roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "FINANCE"] },
@@ -70,27 +69,28 @@ export const NAV: readonly NavItem[] = [
 // ── super-group folding ─────────────────────────────────────────────────────────
 
 const SUPER_GROUP: Record<NavGroup, SuperGroup> = {
-  overview: "work", // dashboard is pinned, so this mapping only matters if it ever leaves the pinned set
-  service: "work",
-  customers: "work",
-  stock: "stock",
-  documents: "money",
-  finance: "money",
-  communications: "admin",
-  personal: "admin",
+  overview: "service", // dashboard is pinned, so this mapping only matters if it ever leaves the pinned set
+  service: "service",
+  customers: "sales",
+  documents: "finance", // quotations/invoices/receipts are billing output
+  finance: "finance",
+  stock: "inventory",
+  communications: "workspace",
+  personal: "workspace",
 };
 
 export const SUPER_GROUP_LABEL: Record<SuperGroup, string> = {
-  work: "Work",
-  money: "Money",
-  stock: "Stock",
-  admin: "Admin",
+  service: "Service",
+  sales: "Sales",
+  finance: "Finance",
+  inventory: "Inventory",
+  workspace: "Workspace",
 };
 
-export const SUPER_GROUP_ORDER: readonly SuperGroup[] = ["work", "money", "stock", "admin"] as const;
+export const SUPER_GROUP_ORDER: readonly SuperGroup[] = ["service", "sales", "finance", "inventory", "workspace"] as const;
 
 /** Daily-driver destinations, pinned above the groups in this priority order. */
-export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/intake", "/clients", "/pos"] as const;
+export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/clients", "/pos"] as const;
 
 // ── role ordering ────────────────────────────────────────────────────────────────
 
