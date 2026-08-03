@@ -39,7 +39,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
     <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
         <p className="text-sm font-bold text-[var(--ink)]">Receive stock</p>
-        <p className="text-xs text-[var(--ink-muted)]">Post GRN quantities</p>
+        <p className="text-xs text-[var(--ink-muted)]">Confirm what arrived</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3 p-3">
         <label className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">

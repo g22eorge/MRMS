@@ -25,8 +25,8 @@ export default function NewSupplierPage() {
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="px-4 py-3">
           <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">New Supplier</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Add a supplier to raise purchase orders against.</p>
+          <p className="text-[13px] font-bold text-[var(--ink)]">New supplier</p>
+          <p className="text-[13px] text-[var(--ink-muted)]">Add a supplier you buy stock from.</p>
         </div>
       </div>
 
