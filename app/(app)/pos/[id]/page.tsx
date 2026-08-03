@@ -15,6 +15,9 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMenuSection";
+import { shareSaleReceiptDocument } from "@/lib/notifications/share-document";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -94,7 +97,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     notes: string | null;
     branchId: string | null;
     branch: { name: string } | null;
-    client: { fullName: string } | null;
+    client: { fullName: string; phone: string | null; email: string | null } | null;
     items: Array<{ id: string; partId: string | null; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
     payments: Array<{ id: string; amount: number; method: PaymentMethod; reference: string | null; receivedAt: Date; currency: string | null }>;
     _count: { payments: number; creditNotes: number; refunds: number };
@@ -147,7 +150,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         notes: true,
         branchId: true,
         branch: { select: { name: true } },
-        client: { select: { fullName: true } },
+        client: { select: { fullName: true, phone: true, email: true } },
         items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
         payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
@@ -765,6 +768,24 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
   const isOpen = sale.status === "OPEN";
   const refundedTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
 
+  // Share the sale receipt PDF with the customer through the outbox (WhatsApp/email).
+  async function shareSaleReceiptWhatsAppAction(formData: FormData) {
+    "use server";
+    const { user, orgId } = await requireOrgSession();
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    const saleId = String(formData.get("saleId") ?? "").trim();
+    if (saleId) await shareSaleReceiptDocument({ orgId, saleId, channel: "whatsapp" });
+    revalidatePath(`/pos/${saleId}`);
+  }
+  async function shareSaleReceiptEmailAction(formData: FormData) {
+    "use server";
+    const { user, orgId } = await requireOrgSession();
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    const saleId = String(formData.get("saleId") ?? "").trim();
+    if (saleId) await shareSaleReceiptDocument({ orgId, saleId, channel: "email" });
+    revalidatePath(`/pos/${saleId}`);
+  }
+
   // One control scale for the whole page — same language as the clients workspace.
   const field =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
@@ -801,6 +822,22 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
               </form>
             ) : null}
           </>
+        }
+        overflow={
+          sale.client && sale.items.length > 0 ? (
+            <RowActionsMenu label="Share receipt">
+              <DocumentShareMenuSection
+                hiddenFieldName="saleId"
+                hiddenFieldValue={sale.id}
+                recipientPhone={sale.client.phone}
+                recipientEmail={sale.client.email}
+                whatsAppAction={shareSaleReceiptWhatsAppAction}
+                emailAction={shareSaleReceiptEmailAction}
+                whatsAppLabel="Send receipt via WhatsApp"
+                emailLabel="Email receipt"
+              />
+            </RowActionsMenu>
+          ) : undefined
         }
       />
 
