@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -59,7 +61,7 @@ export default async function InventoryPage({
 
   const canManage = can.manageInventory(user);
 
-  const [parts, partStatusCounts, locationCount, openTransfers, openStockCounts, openPurchaseOrders, recentMovements] = await Promise.all([
+  const [parts, partStatusCounts, locationCount, recentMovements] = await Promise.all([
     prisma.part
       .findMany({
         where: {
@@ -89,9 +91,6 @@ export default async function InventoryPage({
       })
       .catch(() => []),
     prisma.stockLocation.count({ where: { orgId, isActive: true } }).catch(() => 0),
-    prisma.stockTransfer.count({ where: { orgId, status: { in: ["REQUESTED", "APPROVED", "DISPATCHED"] } } }).catch(() => 0),
-    prisma.stockCount.count({ where: { orgId, status: { in: ["DRAFT", "SUBMITTED"] } } }).catch(() => 0),
-    prisma.purchaseOrder.count({ where: { orgId, status: { in: ["DRAFT", "ORDERED", "PARTIAL"] } } }).catch(() => 0),
     prisma.partStockTransaction.findMany({
       where: { part: { orgId } },
       include: {
@@ -138,10 +137,12 @@ export default async function InventoryPage({
   return (
     <div className="space-y-4">
 
+      <HubTabs items={INVENTORY_TABS} />
+
       <PageHeader
-        eyebrow="Warehouse"
-        title="Inventory Control Desk"
-        description="Stock health, movements, locations, replenishment, and item controls."
+        eyebrow="Inventory"
+        title="Items"
+        description="Stock health, movements, replenishment, and item controls."
         actions={canManage ? (
           <>
             <Button href="/api/reports/export?type=inventory-stock" external variant="secondary" size="sm">Export</Button>
@@ -181,28 +182,6 @@ export default async function InventoryPage({
           },
         ]}
       />
-
-      {/* ── Work in flight — the live counts that used to be a whole card ── */}
-      {canManage ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {([
-            { label: "Transfers", count: openTransfers, href: "/inventory/transfers" },
-            { label: "Stock counts", count: openStockCounts, href: "/inventory/stock-counts" },
-            { label: "Open POs", count: openPurchaseOrders, href: "/inventory/purchase-orders" },
-            { label: "Locations", count: locationCount, href: "/inventory/locations" },
-          ] as const).map(({ label, count, href }) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
-            >
-              {label}
-              <span className="tabular-nums text-[var(--ink)]">{count}</span>
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
 
       {/* ── Filter panel: chips + search, same shape as every other list page ── */}
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
