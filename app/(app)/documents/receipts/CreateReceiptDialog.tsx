@@ -53,22 +53,28 @@ export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethod
           </select>
 
           <div className="grid grid-cols-2 gap-3">
-            <input
-              name="amount"
-              required
-              inputMode="decimal"
-              placeholder="Amount"
-              className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
-            />
-            <select
-              name="method"
-              defaultValue="CASH"
-              className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm text-[var(--ink)]"
-            >
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Amount <span className="text-red-500">*</span>
+              <input
+                name="amount"
+                required
+                inputMode="decimal"
+                placeholder="How much was paid"
+                className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm font-normal text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Paid by
+              <select
+                name="method"
+                defaultValue="CASH"
+                className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm font-normal text-[var(--ink)]"
+              >
               {paymentMethods.map((m) => (
                 <option key={m} value={m}>{m.replaceAll("_", " ")}</option>
               ))}
-            </select>
+              </select>
+            </label>
           </div>
 
           <input

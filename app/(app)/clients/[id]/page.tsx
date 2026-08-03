@@ -218,9 +218,11 @@ export default async function ClientDetailPage({
   const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
   const latestActivity = client.jobs[0]?.updatedAt ?? client.updatedAt;
   const hasHistoryFilters = Boolean(filters.q || filters.status);
+  // Only worth a banner when the job list is filtered; otherwise the page speaks
+  // for itself — no filler "client workspace" prose.
   const clientBrief = hasHistoryFilters
-    ? "Job history below is filtered. Use profile details for contact updates, then clear filters to review the full client timeline."
-    : "Use this page as the single client workspace for profile updates, repair history review, and communication continuity.";
+    ? "Showing filtered jobs. Clear the filters to see all of this client's repairs."
+    : null;
   const controlClass =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
@@ -237,12 +239,13 @@ export default async function ClientDetailPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-5">
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-            <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Client Brief</p>
-              <p className="mt-1 text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
+          {clientBrief ? (
+            <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
+                <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
+              </div>
             </div>
-          </div>
+          ) : null}
 
       <form action={updateClient} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div>
@@ -327,7 +330,7 @@ export default async function ClientDetailPage({
                     <th className="px-3 py-2 text-right font-bold">Billed</th>
                     <th className="px-3 py-2 text-right font-bold">Paid</th>
                     <th className="px-3 py-2 text-right font-bold">Balance</th>
-                    <th className="px-3 py-2 text-right font-bold">Running</th>
+                    <th className="px-3 py-2 text-right font-bold">Running balance</th>
                   </tr>
                 </thead>
                 <tbody>

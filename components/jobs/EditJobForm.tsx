@@ -51,34 +51,54 @@ export function EditJobForm({ job, returnTo }: EditJobFormProps) {
         <input type="hidden" name="id" value={job.id} />
         <input type="hidden" name="returnTo" value={returnTo} />
 
-        <input
-          name="brand"
-          defaultValue={job.brand}
-          required
-          className="rounded-md border border-[var(--line)] px-3 py-2"
-        />
-        <input
-          name="model"
-          defaultValue={job.model}
-          required
-          className="rounded-md border border-[var(--line)] px-3 py-2"
-        />
-        <input
-          name="serialOrImei"
-          defaultValue={job.serialOrImei ?? ""}
-          className="rounded-md border border-[var(--line)] px-3 py-2"
-        />
-        <textarea
-          name="technicianNotes"
-          defaultValue={job.technicianNotes ?? ""}
-          className="rounded-md border border-[var(--line)] px-3 py-2"
-        />
-        <textarea
-          name="issueDescription"
-          defaultValue={job.issueDescription}
-          required
-          className="rounded-md border border-[var(--line)] px-3 py-2 md:col-span-2"
-        />
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">Brand <span className="text-red-500">*</span></span>
+          <input
+            name="brand"
+            defaultValue={job.brand}
+            required
+            placeholder="e.g. Apple, Samsung, HP"
+            className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">Model <span className="text-red-500">*</span></span>
+          <input
+            name="model"
+            defaultValue={job.model}
+            required
+            placeholder="e.g. iPhone 11, Galaxy A12"
+            className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">Serial / IMEI <span className="font-normal">(optional)</span></span>
+          <input
+            name="serialOrImei"
+            defaultValue={job.serialOrImei ?? ""}
+            placeholder="Serial or IMEI number"
+            className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">Technician notes <span className="font-normal">(optional)</span></span>
+          <textarea
+            name="technicianNotes"
+            defaultValue={job.technicianNotes ?? ""}
+            placeholder="Internal notes for the repair team"
+            className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+          />
+        </label>
+        <label className="block text-sm md:col-span-2">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">What&apos;s wrong <span className="font-normal">(in the customer&apos;s words)</span> <span className="text-red-500">*</span></span>
+          <textarea
+            name="issueDescription"
+            defaultValue={job.issueDescription}
+            required
+            placeholder="e.g. Screen cracked, won't turn on"
+            className="w-full rounded-md border border-[var(--line)] px-3 py-2"
+          />
+        </label>
         <div className="md:col-span-2 flex gap-2">
           <button
             disabled={isPending}

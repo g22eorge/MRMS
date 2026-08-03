@@ -197,14 +197,14 @@ export default async function BankPage({
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
         eyebrow="Finance"
-        title="Bank Accounts"
-        description="Manage accounts, record transactions, and reconcile"
+        title="Bank & cash"
+        description="Track the money in your bank and cash accounts."
         actions={
           <Link
             href="/finance/accounts"
             className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
           >
-            Chart of Accounts
+            Accounts
           </Link>
         }
       />
@@ -373,16 +373,16 @@ export default async function BankPage({
                 {allTransactions.length > 0 && (
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-semibold text-[var(--ink)]">Reconciliation Status</p>
+                      <p className="text-[13px] font-semibold text-[var(--ink)]">Checked off</p>
                       <p className="text-[13px] text-[var(--ink-muted)]">
                         {allTransactions.filter((t) => t.reconciledAt).length} of{" "}
-                        {allTransactions.length} reconciled
+                        {allTransactions.length} checked
                       </p>
                     </div>
                     {unreconciledTx.length > 0 && (
                       <p className="mt-1.5 text-[13px] text-amber-600">
-                        {unreconciledTx.length} unreconciled ·{" "}
-                        {formatMoneyCompact(Math.abs(unreconciledAmount), currency)} net exposure
+                        {unreconciledTx.length} not checked yet ·{" "}
+                        {formatMoneyCompact(Math.abs(unreconciledAmount), currency)}
                       </p>
                     )}
                   </div>
@@ -553,7 +553,7 @@ export default async function BankPage({
                     <form action={reconcile}>
                       <input type="hidden" name="id" value={tx.id} />
                       <button type="submit" className="text-[var(--accent)] hover:underline">
-                        {tx.reconciledAt ? "Unmark" : "Reconcile"}
+                        {tx.reconciledAt ? "Undo" : "Mark checked"}
                       </button>
                     </form>
                   )}
@@ -599,7 +599,7 @@ export default async function BankPage({
                               <form action={reconcile}>
                                 <input type="hidden" name="id" value={tx.id} />
                                 <button type="submit" className="text-[13px] text-[var(--accent)] hover:underline">
-                                  {tx.reconciledAt ? "Unmark" : "Reconcile"}
+                                  {tx.reconciledAt ? "Undo" : "Mark checked"}
                                 </button>
                               </form>
                             </div>

@@ -426,50 +426,60 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
-                    Date Paid
-                  </label>
-                  <input
-                    name="paidAt"
-                    type="date"
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
-                  />
-                </div>
-                {suppliers.length > 0 && (
-                  <div>
-                    <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
-                      Supplier (optional)
-                    </label>
-                    <select
-                      name="supplierId"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
-                    >
-                      <option value="">— none —</option>
-                      {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
+                {/* Rarely-needed fields stay in the form (native <details> keeps
+                    them in the DOM so they still submit) but collapse by default
+                    so "rent, 500k, cash" is a three-field job. */}
+                <details className="rounded-lg border border-[var(--line)]">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-[13px] font-semibold text-[var(--ink)]">
+                    More details <span className="font-normal text-[var(--ink-muted)]">— optional</span>
+                  </summary>
+                  <div className="space-y-3 px-3 pb-3">
+                    <div>
+                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                        Date paid <span className="font-normal">(defaults to today)</span>
+                      </label>
+                      <input
+                        name="paidAt"
+                        type="date"
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      />
+                    </div>
+                    {suppliers.length > 0 && (
+                      <div>
+                        <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                          Supplier
+                        </label>
+                        <select
+                          name="supplierId"
+                          className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                        >
+                          <option value="">— none —</option>
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                        Reference / Receipt #
+                      </label>
+                      <input
+                        name="reference"
+                        placeholder="Invoice or receipt number"
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Notes</label>
+                      <textarea
+                        name="notes"
+                        rows={2}
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      />
+                    </div>
                   </div>
-                )}
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
-                    Reference / Receipt #
-                  </label>
-                  <input
-                    name="reference"
-                    placeholder="Invoice or receipt number"
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Notes</label>
-                  <textarea
-                    name="notes"
-                    rows={2}
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
-                  />
-                </div>
+                </details>
                 <button
                   type="submit"
                   className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold"

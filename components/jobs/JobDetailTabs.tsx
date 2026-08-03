@@ -1701,7 +1701,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           {clientBillValue > 0 ? (
             <div className="rounded-xl bg-[var(--panel-strong)] p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Cash Position</p>
+                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Payment progress</p>
                 <span className={`rounded-full px-2 py-0.5 text-[13px] font-semibold ${paymentStatus === "Paid" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : paymentStatus === "Overpaid" ? "bg-blue-500/20 text-blue-700 dark:text-blue-400" : "bg-amber-400/20 text-amber-700"}`}>
                   {paymentStatus}
                 </span>

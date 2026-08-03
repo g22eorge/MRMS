@@ -53,16 +53,16 @@ function defaultPeriodLabel(period: TargetPeriod): string {
   return `${year}-${month}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-function PeriodLabelHint({ period }: { period: TargetPeriod }) {
-  const hints: Record<TargetPeriod, string> = {
-    MONTHLY: "Format: YYYY-MM (e.g. 2026-05)",
-    QUARTERLY: "Format: YYYY-Q# (e.g. 2026-Q2)",
-    ANNUAL: "Format: YYYY (e.g. 2026)",
-    YEARLY: "Format: YYYY (e.g. 2026)",
-    WEEKLY: "Format: YYYY-W## (e.g. 2026-W20)",
-    DAILY: "Format: YYYY-MM-DD (e.g. 2026-05-17)",
-  };
-  return <p className="mt-1 text-xs text-[var(--ink-muted)]">{hints[period]}</p>;
+// Plain-English name for the current period, so a starter never types a coded
+// label like "2026-Q2" — the machine label is still derived internally.
+function friendlyPeriod(period: TargetPeriod): string {
+  switch (period) {
+    case "DAILY": return "today";
+    case "WEEKLY": return "this week";
+    case "MONTHLY": return "this month";
+    case "QUARTERLY": return "this quarter";
+    default: return "this year";
+  }
 }
 
 export function SetTargetDialog({ users, departments, branches }: Props) {
@@ -155,7 +155,7 @@ export function SetTargetDialog({ users, departments, branches }: Props) {
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--ink)]">Entity Type</label>
+                <label className="block text-sm font-medium text-[var(--ink)]">Set target for</label>
                 <select
                   value={entityType}
                   onChange={(e) => { setEntityType(e.target.value as TargetEntityType); setEntityId(""); }}
@@ -197,30 +197,18 @@ export function SetTargetDialog({ users, departments, branches }: Props) {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Period Type</label>
-                  <select
-                    value={period}
-                    onChange={(e) => handlePeriodChange(e.target.value as TargetPeriod)}
-                    className="input mt-1 w-full"
-                  >
-                    {(Object.keys(PERIOD_LABELS) as TargetPeriod[]).map((p) => (
-                      <option key={p} value={p}>{PERIOD_LABELS[p]}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Period Label</label>
-                  <input
-                    type="text"
-                    value={periodLabel}
-                    onChange={(e) => setPeriodLabel(e.target.value)}
-                    className="input mt-1 w-full"
-                    required
-                  />
-                  <PeriodLabelHint period={period} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--ink)]">How often</label>
+                <select
+                  value={period}
+                  onChange={(e) => handlePeriodChange(e.target.value as TargetPeriod)}
+                  className="input mt-1 w-full"
+                >
+                  {(Object.keys(PERIOD_LABELS) as TargetPeriod[]).map((p) => (
+                    <option key={p} value={p}>{PERIOD_LABELS[p]}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">Applies to {friendlyPeriod(period)} ({periodLabel})</p>
               </div>
 
               <div>

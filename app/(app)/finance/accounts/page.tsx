@@ -20,6 +20,15 @@ import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
+// Plain-English names so a non-accountant can pick the right type.
+const TYPE_LABELS: Record<AccountType, string> = {
+  ASSET: "Asset — things you own",
+  LIABILITY: "Liability — money you owe",
+  EQUITY: "Equity — owner's stake",
+  REVENUE: "Revenue — money coming in",
+  EXPENSE: "Expense — money going out",
+};
+
 const TYPE_TONES: Record<AccountType, BadgeTone> = {
   ASSET:     "info",
   LIABILITY: "danger",
@@ -224,8 +233,8 @@ export default async function ChartOfAccountsPage() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Finance"
-        title="Chart of Accounts"
-        description="Double-entry accounting structure — click any account to view its ledger"
+        title="Accounts"
+        description="The categories your money flows through. Click any account to see its history."
         actions={
           <Link
             href="/finance/reports/pl"
@@ -318,7 +327,7 @@ export default async function ChartOfAccountsPage() {
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
             >
               {ACCOUNT_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>{TYPE_LABELS[t]}</option>
               ))}
             </select>
           </div>

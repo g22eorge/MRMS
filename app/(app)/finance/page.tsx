@@ -160,7 +160,7 @@ export default async function FinancePage() {
         cards={[
           {
             key: "in",
-            label: "Cash in MTD",
+            label: "Money in this month",
             value: formatMoney(revTotal, currency),
             sub: revPctStr ?? "collections received",
             tone: "good",
@@ -168,7 +168,7 @@ export default async function FinancePage() {
           },
           {
             key: "out",
-            label: "Cash out MTD",
+            label: "Money out this month",
             value: formatMoney(expTotal, currency),
             sub: `${formatMoneyCompact(payoutsThisMonth, currency)} tech payouts`,
             tone: "crit",
@@ -176,7 +176,7 @@ export default async function FinancePage() {
           },
           {
             key: "net",
-            label: "Net MTD",
+            label: "Net this month",
             value: formatMoney(netMtd, currency),
             sub: netMtd >= 0 ? "positive cash flow" : "cash flow negative",
             tone: netMtd >= 0 ? "good" : "crit",
@@ -184,7 +184,7 @@ export default async function FinancePage() {
           },
           {
             key: "receivables",
-            label: "Receivables",
+            label: "Owed to you",
             value: formatMoney(receivables.total, currency),
             sub: `${receivables.invoiceCount + receivables.saleCount} open invoices`,
             tone: "warn",

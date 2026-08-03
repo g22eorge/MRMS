@@ -418,7 +418,7 @@ export default async function CashierShiftsPage({
           { label: "Total Shifts", value: totalShifts, sub: "all time" },
           { label: "Open Shifts", value: openCount, sub: "currently open" },
           { label: "Closed This Month", value: closedThisMonth, sub: "this month" },
-          { label: "Cash Collected MTD", value: formatMoney(cashCollectedThisMonth, currency), sub: "closing cash, this month" },
+          { label: "Cash collected this month", value: formatMoney(cashCollectedThisMonth, currency), sub: "closing cash, this month" },
         ]} />
 
       {/* Filter */}
@@ -517,7 +517,7 @@ export default async function CashierShiftsPage({
           { key: "closingCash", header: "Closing Cash", align: "right", className: "whitespace-nowrap tabular-nums text-[var(--ink)]", cell: (shift) => (shift.closingCash != null ? formatMoney(shift.closingCash, currency) : "—") },
           {
             key: "variance",
-            header: "Variance",
+            header: "Over / short",
             align: "right",
             className: "whitespace-nowrap tabular-nums",
             cell: (shift) => {

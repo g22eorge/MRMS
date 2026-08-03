@@ -335,7 +335,7 @@ export default async function PosPage({
               {([
                 { label: "Today", value: compactAmount(kpiTodayTotal) },
                 { label: "Month", value: compactAmount(kpiMonthTotal) },
-                { label: "Txns", value: String(kpiMonthCount) },
+                { label: "Sales", value: String(kpiMonthCount) },
                 { label: "Avg", value: compactAmount(kpiAvgSale) },
               ] as const).map(({ label, value }) => (
                 <div key={label} className="min-w-0 px-1.5 py-3 text-center">
@@ -434,7 +434,7 @@ export default async function PosPage({
           },
           {
             key: "count",
-            label: "Transactions MTD",
+            label: "Sales this month",
             value: kpiMonthCount,
             sub: "this month",
             muted: kpiMonthCount === 0,
