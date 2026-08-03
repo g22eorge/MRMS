@@ -12,6 +12,8 @@ import { DataTable } from "@/components/ui/DataTable";
 import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
 import { JobDocumentTimeline } from "@/components/jobs/JobDocumentTimeline";
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import type { BadgeTone } from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
@@ -42,6 +44,18 @@ function prettyEnum(value: string) {
     .toLowerCase()
     .replace(/(^|\s)\S/g, (char) => char.toUpperCase());
 }
+
+// Job status → RecordActionBar pill tone (mirrors JobStatusBadge colors).
+const JOB_BAR_TONE: Record<ReturnType<typeof normalizeJobStatus>, BadgeTone> = {
+  RECEIVED: "neutral",
+  DIAGNOSING: "info",
+  REFERRED: "violet",
+  AWAITING_APPROVAL: "warning",
+  IN_REPAIR: "success",
+  READY_FOR_PICKUP: "accent",
+  COMPLETED: "success",
+  CLOSED: "neutral",
+};
 
 function communicationLabel(value: Props["job"]["communicationStatus"]) {
   if (!value || value === "NONE") return "No update yet";
@@ -574,7 +588,7 @@ type Props = {
   };
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", returnLabel = "All jobs", initialTab, documentTimeline = [] }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [] }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -878,26 +892,24 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
   return (
     <div className="jobdetail-cal min-w-0 space-y-4">
-      {/* Back link — desktop only (mobile uses header back button) */}
+      {/* ── Canonical record action bar (desktop): Back · Repair Job # · status · actions ── */}
       <div className="hidden lg:block">
-        <Link href={returnTo} className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          {returnLabel}
-        </Link>
-      </div>
-
-      {/* ── Slim page header (desktop) ── */}
-      <div className="hidden items-center gap-3 lg:flex">
-        <JobStatusBadge status={job.status} />
-        <h1 className="text-[16px] font-bold tracking-[-0.01em] text-[var(--ink)]">Repair Job {job.jobNumber}</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <StatusShareButton jobNumber={job.jobNumber} />
-          {role !== "TECHNICIAN_EXTERNAL" ? (
-            <button type="button" onClick={() => router.push(`/jobs/${job.id}/edit`)} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[13px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-              Edit
-            </button>
-          ) : null}
-        </div>
+        <RecordActionBar
+          backHref={returnTo}
+          eyebrow="Service · Repair"
+          title={`Repair Job ${job.jobNumber}`}
+          status={{ label: prettyEnum(normalizeJobStatus(job.status)), tone: JOB_BAR_TONE[normalizeJobStatus(job.status)] }}
+          secondary={
+            <>
+              <StatusShareButton jobNumber={job.jobNumber} />
+              {role !== "TECHNICIAN_EXTERNAL" ? (
+                <button type="button" onClick={() => router.push(`/jobs/${job.id}/edit`)} className="btn-premium-secondary rounded-lg px-3.5 py-2 text-[13px] font-semibold">
+                  Edit
+                </button>
+              ) : null}
+            </>
+          }
+        />
       </div>
 
       {/* ── DESKTOP next-step strip: the primary action + every valid alternative ── */}
