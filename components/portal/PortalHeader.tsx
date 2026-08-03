@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { portalLogoutAction } from "@/app/(portal)/portal/actions";
+import { portalLogoutAction, switchPortalClientAction } from "@/app/(portal)/portal/actions";
 
 const ROLE_LABEL: Record<string, string> = {
   ORG_ADMIN: "Organization Administrator",
@@ -8,18 +8,24 @@ const ROLE_LABEL: Record<string, string> = {
   MEMBER: "Member",
 };
 
+type Account = { id: string; fullName: string; organization: string | null };
+
 export function PortalHeader({
   orgName,
   userName,
   role,
   company,
   active,
+  accounts = [],
+  activeClientId,
 }: {
   orgName: string;
   userName: string;
   role: string;
   company: string;
   active?: "dashboard" | "repairs" | "documents";
+  accounts?: Account[];
+  activeClientId?: string;
 }) {
   const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents") => (
     <Link
@@ -39,6 +45,21 @@ export function PortalHeader({
         <p className="text-[13px] text-[var(--ink-muted)]">
           <span className="font-semibold text-[var(--ink)]">{userName}</span> · {company} · {ROLE_LABEL[role] ?? role}
         </p>
+        {accounts.length > 1 ? (
+          <form action={switchPortalClientAction} className="mt-1.5 flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Acting for</span>
+            <select
+              name="clientId"
+              defaultValue={activeClientId}
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] font-semibold text-[var(--ink)] outline-none"
+            >
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.organization ? `${a.organization} — ${a.fullName}` : a.fullName}</option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[12px] font-semibold text-[var(--accent)]">Switch</button>
+          </form>
+        ) : null}
       </div>
       <div className="flex items-center gap-1">
         {link("/portal/dashboard", "Dashboard", "dashboard")}

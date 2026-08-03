@@ -10,7 +10,7 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function PortalDocumentsPage() {
-  const { portalUser, client, org } = await requirePortalSession();
+  const { portalUser, client, org, accessibleClients } = await requirePortalSession();
 
   // Every document is scoped to THIS client + shop, aggregated across all their
   // repairs into one place. Downloads reuse the per-repair portal PDF routes.
@@ -54,7 +54,7 @@ export default async function PortalDocumentsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="documents" />
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="documents" accounts={accessibleClients} activeClientId={client.id} />
       <div>
         <h1 className="text-xl font-black text-[var(--ink)]">Documents</h1>
         <p className="text-[13px] text-[var(--ink-muted)]">Every quotation, invoice and receipt on your account with {org.name}.</p>

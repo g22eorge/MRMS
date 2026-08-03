@@ -34,7 +34,7 @@ function fmtDate(d: Date | null) {
 
 export default async function PortalRepairDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { portalUser, client, org } = await requirePortalSession();
+  const { portalUser, client, org, accessibleClients } = await requirePortalSession();
 
   // Isolation: the repair must belong to THIS customer + shop, or it doesn't exist.
   const job = await prisma.job.findFirst({
@@ -91,7 +91,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" />
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" accounts={accessibleClients} activeClientId={client.id} />
 
       <Link href="/portal/repairs" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
 

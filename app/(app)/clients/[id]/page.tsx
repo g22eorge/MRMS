@@ -11,7 +11,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
-import { createPortalUserAction, togglePortalUserAction } from "./portal-actions";
+import { createPortalUserAction, togglePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -137,9 +137,12 @@ export default async function ClientDetailPage({
   const portalUsers = canEdit
     ? await prisma.portalUser.findMany({
         where: { orgId, clientId: id },
-        select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true },
+        select: {
+          id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true,
+          linkedClients: { select: { client: { select: { id: true, fullName: true, organization: true } } } },
+        },
         orderBy: { createdAt: "asc" },
-      })
+      }).catch(() => [])
     : [];
 
   // De-duplication: ADMINs can merge this client into another (moves every
@@ -358,19 +361,52 @@ export default async function ClientDetailPage({
           {portalUsers.length > 0 && (
             <div className="mb-3 space-y-1.5">
               {portalUsers.map((pu) => (
-                <div key={pu.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[13px]">
-                  <div>
-                    <span className="font-medium text-[var(--ink)]">{pu.name}</span>
-                    <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
-                    {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">revoked</span>}
+                <div key={pu.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[13px]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="font-medium text-[var(--ink)]">{pu.name}</span>
+                      <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
+                      {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">revoked</span>}
+                    </div>
+                    <form action={togglePortalUserAction}>
+                      <input type="hidden" name="portalUserId" value={pu.id} />
+                      <input type="hidden" name="clientId" value={client.id} />
+                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
+                        {pu.isActive ? "Revoke" : "Restore"}
+                      </button>
+                    </form>
                   </div>
-                  <form action={togglePortalUserAction}>
-                    <input type="hidden" name="portalUserId" value={pu.id} />
-                    <input type="hidden" name="clientId" value={client.id} />
-                    <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
-                      {pu.isActive ? "Revoke" : "Restore"}
-                    </button>
-                  </form>
+                  {/* Multi-account: this login also manages these client accounts. */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]/80">Also manages</span>
+                    {pu.linkedClients.length === 0 ? (
+                      <span className="text-[12px] text-[var(--ink-muted)]">— this account only</span>
+                    ) : (
+                      pu.linkedClients.map((l) => (
+                        <form key={l.client.id} action={unlinkPortalUserFromClientAction} className="inline-flex">
+                          <input type="hidden" name="portalUserId" value={pu.id} />
+                          <input type="hidden" name="clientId" value={l.client.id} />
+                          <input type="hidden" name="fromClientId" value={client.id} />
+                          <button type="submit" title="Remove this account" className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--ink)] hover:bg-red-500/10">
+                            {l.client.organization ? `${l.client.organization} — ${l.client.fullName}` : l.client.fullName} <span className="text-red-500">×</span>
+                          </button>
+                        </form>
+                      ))
+                    )}
+                    {mergeCandidates.length > 0 ? (
+                      <form action={linkPortalUserToClientAction} className="inline-flex items-center gap-1">
+                        <input type="hidden" name="portalUserId" value={pu.id} />
+                        <input type="hidden" name="fromClientId" value={client.id} />
+                        <select name="clientId" defaultValue="" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[11.5px]">
+                          <option value="" disabled>+ add account…</option>
+                          {mergeCandidates.map((c) => (
+                            <option key={c.id} value={c.id}>{c.organization ? `${c.organization} — ${c.fullName}` : c.fullName}</option>
+                          ))}
+                        </select>
+                        <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[11.5px] font-semibold text-[var(--accent)]">Add</button>
+                      </form>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>

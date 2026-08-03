@@ -67,6 +67,67 @@ export async function createPortalUserAction(formData: FormData): Promise<void> 
   revalidatePath(`/clients/${clientId}`);
 }
 
+/** Grant a portal login access to an additional client account (multi-account). */
+export async function linkPortalUserToClientAction(formData: FormData): Promise<void> {
+  const { user, orgId, org } = await requireOrgSession();
+  if (!canManagePortal(user.role)) return;
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+  const portalUserId = String(formData.get("portalUserId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim(); // account to grant
+  const fromClientId = String(formData.get("fromClientId") ?? "").trim(); // page to revalidate
+  if (!portalUserId || !clientId) return;
+
+  // Portal user + target client must both belong to this org.
+  const [pu, client] = await Promise.all([
+    prisma.portalUser.findFirst({ where: { id: portalUserId, orgId }, select: { id: true, clientId: true } }),
+    prisma.client.findFirst({ where: { id: clientId, orgId }, select: { id: true } }),
+  ]);
+  if (!pu || !client) return;
+  if (pu.clientId === clientId) return; // already the primary account
+
+  await prisma.portalUserClient.upsert({
+    where: { portalUserId_clientId: { portalUserId, clientId } },
+    create: { portalUserId, clientId, orgId },
+    update: {},
+  });
+
+  await writeSystemAuditEvent({
+    orgId, actorUserId: user.id,
+    entityType: "PortalUser", entityId: portalUserId,
+    action: "PORTAL_USER_ACCOUNT_LINKED",
+    summary: `Granted portal login access to an additional client account`,
+  }).catch(() => {});
+
+  if (fromClientId) revalidatePath(`/clients/${fromClientId}`);
+}
+
+/** Remove an additional client account from a portal login. */
+export async function unlinkPortalUserFromClientAction(formData: FormData): Promise<void> {
+  const { user, orgId, org } = await requireOrgSession();
+  if (!canManagePortal(user.role)) return;
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+  const portalUserId = String(formData.get("portalUserId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const fromClientId = String(formData.get("fromClientId") ?? "").trim();
+  if (!portalUserId || !clientId) return;
+
+  // Scope the delete to this org's portal user.
+  const pu = await prisma.portalUser.findFirst({ where: { id: portalUserId, orgId }, select: { id: true } });
+  if (!pu) return;
+  await prisma.portalUserClient.deleteMany({ where: { portalUserId, clientId } });
+
+  await writeSystemAuditEvent({
+    orgId, actorUserId: user.id,
+    entityType: "PortalUser", entityId: portalUserId,
+    action: "PORTAL_USER_ACCOUNT_UNLINKED",
+    summary: `Removed an additional client account from a portal login`,
+  }).catch(() => {});
+
+  if (fromClientId) revalidatePath(`/clients/${fromClientId}`);
+}
+
 /** Deactivate (revoke) a portal login. */
 export async function togglePortalUserAction(formData: FormData): Promise<void> {
   const { user, orgId, org } = await requireOrgSession();

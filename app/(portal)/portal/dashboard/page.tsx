@@ -17,7 +17,7 @@ const ROLE_LABEL: Record<string, string> = {
 const ACTIVE_STATUSES: JobStatus[] = ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"];
 
 export default async function PortalDashboardPage() {
-  const { portalUser, client, org } = await requirePortalSession();
+  const { portalUser, client, org, accessibleClients } = await requirePortalSession();
 
   // Every query is scoped to THIS portal user's org (tenant) AND client
   // (their corporate account) — a portal login can never see another
@@ -39,7 +39,7 @@ export default async function PortalDashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="dashboard" />
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="dashboard" accounts={accessibleClients} activeClientId={client.id} />
       <div>
         <h1 className="text-xl font-black text-[var(--ink)]">Welcome, {portalUser.name}</h1>
         <p className="text-[13px] text-[var(--ink-muted)]">{companyName} · {ROLE_LABEL[portalUser.role] ?? portalUser.role}</p>

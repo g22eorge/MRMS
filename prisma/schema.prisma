@@ -534,6 +534,7 @@ model Client {
   campaignContacts  CampaignContact[]
   receipts          Receipt[]
   portalUsers       PortalUser[] @relation("ClientPortalUsers")
+  linkedPortalUsers PortalUserClient[] @relation("ClientLinkedPortalUsers")
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -3230,9 +3231,31 @@ model PortalUser {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  sessions PortalSession[]
+  sessions      PortalSession[]
+  linkedClients PortalUserClient[]
 
   @@unique([orgId, email])
+  @@index([clientId])
+  @@index([orgId])
+}
+
+/**
+ * Extra client accounts a portal login may act for, beyond its primary
+ * `PortalUser.clientId`. Lets one corporate employee manage several sibling
+ * accounts (e.g. C-Care IHK and C-Care IMC) and switch between them in the
+ * portal. The primary client is always accessible; rows here add the rest.
+ */
+model PortalUserClient {
+  id           String     @id @default(cuid())
+  portalUserId String
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client     @relation("ClientLinkedPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
+  orgId        String
+  createdAt    DateTime   @default(now())
+
+  @@unique([portalUserId, clientId])
+  @@index([portalUserId])
   @@index([clientId])
   @@index([orgId])
 }

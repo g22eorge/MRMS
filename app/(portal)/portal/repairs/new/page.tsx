@@ -7,12 +7,12 @@ import { SubmitForm } from "./SubmitForm";
 export const dynamic = "force-dynamic";
 
 export default async function NewPortalRepairPage() {
-  const { portalUser, client, org } = await requirePortalSession();
+  const { portalUser, client, org, accessibleClients } = await requirePortalSession();
   const companyName = client.organization || client.fullName;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" />
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" accounts={accessibleClients} activeClientId={client.id} />
 
       <Link href="/portal/repairs" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
 

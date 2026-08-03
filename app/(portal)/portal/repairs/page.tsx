@@ -11,7 +11,7 @@ export default async function PortalRepairsPage({
 }: {
   searchParams: Promise<{ q?: string; submitted?: string }>;
 }) {
-  const { portalUser, client, org } = await requirePortalSession();
+  const { portalUser, client, org, accessibleClients } = await requirePortalSession();
   const { q, submitted } = await searchParams;
   const query = (q ?? "").trim();
 
@@ -48,7 +48,7 @@ export default async function PortalRepairsPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" />
+      <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" accounts={accessibleClients} activeClientId={client.id} />
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-black text-[var(--ink)]">Repairs</h1>
