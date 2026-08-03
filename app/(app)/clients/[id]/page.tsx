@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { createPortalUserAction, togglePortalUserAction } from "./portal-actions";
+import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
@@ -139,6 +140,18 @@ export default async function ClientDetailPage({
         select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true },
         orderBy: { createdAt: "asc" },
       })
+    : [];
+
+  // De-duplication: ADMINs can merge this client into another (moves every
+  // linked record, then removes this one). Candidates = the org's other clients.
+  const isAdmin = user.role === "ADMIN";
+  const mergeCandidates = isAdmin
+    ? await prisma.client.findMany({
+        where: { orgId, id: { not: id } },
+        select: { id: true, fullName: true, phone: true, organization: true },
+        orderBy: [{ organization: "asc" }, { fullName: "asc" }],
+        take: 500,
+      }).catch(() => [])
     : [];
 
   async function updateClient(formData: FormData) {
@@ -376,6 +389,10 @@ export default async function ClientDetailPage({
             <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white sm:col-span-2">Create portal login</button>
           </form>
         </div>
+      ) : null}
+
+      {isAdmin && mergeCandidates.length > 0 ? (
+        <MergeClientPanel sourceId={client.id} sourceName={client.fullName} candidates={mergeCandidates} />
       ) : null}
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
