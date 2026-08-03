@@ -1,4 +1,7 @@
-import { JobStatus } from "@prisma/client";
+// Type-only import: these are pure status helpers reused by client components
+// (e.g. JobDetailTabs), so we must not pull the @prisma/client runtime into the
+// browser bundle. String-literal comparisons keep it a compile-time-only type.
+import type { JobStatus } from "@prisma/client";
 
 export function formatQuotationNumber(
   jobNumber: string,
@@ -24,21 +27,21 @@ export function formatQuotationNumber(
 }
 
 export function canGenerateInvoiceForStatus(status: JobStatus) {
-  return status === JobStatus.READY_FOR_PICKUP || status === JobStatus.COMPLETED || status === JobStatus.CLOSED;
+  return status === "READY_FOR_PICKUP" || status === "COMPLETED" || status === "CLOSED";
 }
 
 export function canGenerateQuotationForStatus(status: JobStatus) {
   const allowed: JobStatus[] = [
-    JobStatus.DIAGNOSING,
-    JobStatus.REFERRED,
-    JobStatus.IN_EXTERNAL_REPAIR,
-    JobStatus.WAITING_FOR_PARTS,
-    JobStatus.RETURNED_FROM_EXTERNAL,
-    JobStatus.AWAITING_APPROVAL,
-    JobStatus.IN_REPAIR,
-    JobStatus.READY_FOR_PICKUP,
-    JobStatus.COMPLETED,
-    JobStatus.CLOSED,
+    "DIAGNOSING",
+    "REFERRED",
+    "IN_EXTERNAL_REPAIR",
+    "WAITING_FOR_PARTS",
+    "RETURNED_FROM_EXTERNAL",
+    "AWAITING_APPROVAL",
+    "IN_REPAIR",
+    "READY_FOR_PICKUP",
+    "COMPLETED",
+    "CLOSED",
   ];
   return allowed.includes(status);
 }
