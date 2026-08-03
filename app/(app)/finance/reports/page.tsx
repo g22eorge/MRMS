@@ -42,32 +42,12 @@ export default async function FinanceReportsPage() {
       ),
     },
     {
-      href: "/finance/reports/customer-statement",
-      title: "Customer Statement",
-      desc: "Per-client running ledger — invoiced, paid, and balance due.",
+      href: "/finance/reports/trial-balance",
+      title: "Trial Balance",
+      desc: "Every account's debit and credit balance, proving the books balance.",
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-        </svg>
-      ),
-    },
-    {
-      href: "/finance/reports/aged-receivables",
-      title: "Aged Receivables",
-      desc: "Outstanding invoices grouped by 0–30, 31–60, 61–90, 90+ days overdue.",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-      ),
-    },
-    {
-      href: "/finance/reports/inventory-value",
-      title: "Inventory Valuation",
-      desc: "Total stock value at cost, broken down by category and location.",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>
+          <path d="M12 3v18M3 7h18M6 7l-3 6h6l-3-6zM18 7l-3 6h6l-3-6z"/>
         </svg>
       ),
     },
