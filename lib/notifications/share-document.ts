@@ -128,6 +128,34 @@ export async function shareReceiptDocument(params: {
   });
 }
 
+/** Share a POS sale receipt (the whole-sale receipt, not a single payment). */
+export async function shareSaleReceiptDocument(params: {
+  orgId: string;
+  saleId: string;
+  channel: DocumentShareChannel;
+}): Promise<boolean> {
+  const sale = await prisma.sale.findFirst({
+    where: { id: params.saleId, orgId: params.orgId },
+    select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: invoiceClientSelect } },
+  });
+  if (!sale) return false;
+
+  const recipient = resolveLinkedDocumentRecipient({ saleClient: sale.client });
+  if (!recipient) return false;
+
+  const pdfUrl = documentPdfUrl(`/api/sales/${sale.id}/receipt`);
+  const amountLine = `Total: ${formatMoney(sale.totalAmount, sale.currency ?? "UGX")}`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, your receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailSubject: `Receipt for sale ${sale.saleNumber}`,
+    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
 export async function shareCreditNoteDocument(params: {
   orgId: string;
   creditNoteId: string;
