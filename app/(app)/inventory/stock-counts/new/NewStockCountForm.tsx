@@ -47,9 +47,11 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-4">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Count Details</p>
+    <form onSubmit={submit} className="space-y-4">
+      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+        Pick a location, then for each item type in how many you actually counted. We work out the difference for you.
+      </p>
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">Location
             <select name="locationId" required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]"><option value="">Select location</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}{location.code ? ` (${location.code})` : ""}</option>)}</select>
@@ -58,7 +60,7 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
             <input name="countedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
         </div>
-        <textarea name="note" rows={2} placeholder="Count note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+        <textarea name="note" rows={2} placeholder="Note (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
       </div>
 
       <LineItemsPanel title="Items" onAddLine={addLine}>
@@ -108,7 +110,7 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
         />
       </LineItemsPanel>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <div className="flex gap-2"><button disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving..." : "Submit Count"}</button><Link href="/inventory/stock-counts" className="rounded-lg border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</Link></div>
+      <div className="flex gap-2"><button disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving..." : "Save count"}</button><Link href="/inventory/stock-counts" className="rounded-lg border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</Link></div>
     </form>
   );
 }

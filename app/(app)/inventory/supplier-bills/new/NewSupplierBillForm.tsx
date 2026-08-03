@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
-import { LineItemsPanel, LineItemTotals, lineItemInputClass } from "@/components/forms";
+import { LineItemsPanel, lineItemInputClass } from "@/components/forms";
 import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 
@@ -54,6 +54,7 @@ export function NewSupplierBillForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
   const defaultGrn = goodsReceived.find((item) => item.id === (defaultGrnId ?? ""));
   const defaultPo = purchaseOrders.find((item) => item.id === (defaultPoId ?? defaultGrn?.poId ?? ""));
   const initialSupplierId = defaultSupplierId ?? defaultGrn?.supplierId ?? defaultPo?.supplierId ?? "";
@@ -138,50 +139,15 @@ export function NewSupplierBillForm({
   }
 
   const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
-  const readyLines = lines.filter((line) => line.description.trim() && line.quantity > 0).length;
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Three-Way Match</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-            Record supplier invoices against the purchasing trail. Link a PO and GRN whenever possible so finance can compare what was ordered, what arrived, and what the supplier billed.
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] font-black text-[var(--accent)]">PO</p>
-              <p className="text-xs font-semibold text-[var(--ink)]">Ordered</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] font-black text-[var(--accent)]">GRN</p>
-              <p className="text-xs font-semibold text-[var(--ink)]">Received</p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-              <p className="text-[11px] font-black text-[var(--accent)]">Bill</p>
-              <p className="text-xs font-semibold text-[var(--ink)]">Payable</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Posting Check</p>
-          <LineItemTotals
-            className="mt-3"
-            currency={baseCurrency}
-            formatMoney={(value) => value.toLocaleString()}
-            leadingRows={[
-              { label: "Lines ready", value: <>{readyLines}/{lines.length}</> },
-              { label: "Supplier POs", value: supplierPOs.length },
-              { label: "Supplier GRNs", value: supplierGRNs.length },
-            ]}
-            subtotal={subtotal}
-          />
-        </div>
-      </div>
+    <form onSubmit={submit} className="space-y-4">
+      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+        Enter the bill your supplier gave you: who it is from, and the items and prices. Link it to an order only if you want to.
+      </p>
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-4">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Bill Details</p>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Supplier
             <select
@@ -199,49 +165,65 @@ export function NewSupplierBillForm({
             </select>
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Supplier invoice/reference
-            <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Purchase order
-            <select name="poId" value={selectedPoId} onChange={(e) => setLinesFromPo(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
-              <option value="">No linked PO</option>
-              {supplierPOs.map((po) => (
-                <option key={po.id} value={po.id}>
-                  {po.reference ?? `PO-${po.id.slice(-6).toUpperCase()}`} · {po.items.length} line{po.items.length === 1 ? "" : "s"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Goods received
-            <select name="grnId" value={selectedGrnId} onChange={(e) => setLinesFromGrn(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
-              <option value="">No linked GRN</option>
-              {supplierGRNs.map((grn) => (
-                <option key={grn.id} value={grn.id}>
-                  {grn.grnNumber} · {grn.items.length} line{grn.items.length === 1 ? "" : "s"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Issued date
+            Bill date
             <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Due date
+            Payment due
             <input name="dueAt" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
           </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Currency
-            <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase text-[var(--ink)]" />
-          </label>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Tax amount
-            <input name="taxAmount" type="number" min={0} step={0.01} defaultValue={0} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-right text-sm text-[var(--ink)]" />
-          </label>
         </div>
-        <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+
+        {/* Match-to-order, tax and reference are for shops that run formal
+            purchasing — hidden by default so a starter is not slowed down. */}
+        <div className="border-t border-[var(--line)] pt-3">
+          <button
+            type="button"
+            onClick={() => setShowMore((v) => !v)}
+            aria-expanded={showMore}
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span className="text-[13px] font-semibold text-[var(--ink)]">Match to an order, tax &amp; reference <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-[var(--ink-muted)] transition-transform ${showMore ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div className={showMore ? "mt-3 grid gap-4 sm:grid-cols-2" : "hidden"}>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Supplier invoice/reference
+              <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+            </label>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Tax amount
+              <input name="taxAmount" type="number" min={0} step={0.01} defaultValue={0} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-right text-sm text-[var(--ink)]" />
+            </label>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Purchase order <span className="font-normal">(fills items in)</span>
+              <select name="poId" value={selectedPoId} onChange={(e) => setLinesFromPo(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
+                <option value="">No linked PO</option>
+                {supplierPOs.map((po) => (
+                  <option key={po.id} value={po.id}>
+                    {po.reference ?? `PO-${po.id.slice(-6).toUpperCase()}`} · {po.items.length} line{po.items.length === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Goods received <span className="font-normal">(fills items in)</span>
+              <select name="grnId" value={selectedGrnId} onChange={(e) => setLinesFromGrn(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]">
+                <option value="">No linked GRN</option>
+                {supplierGRNs.map((grn) => (
+                  <option key={grn.id} value={grn.id}>
+                    {grn.grnNumber} · {grn.items.length} line{grn.items.length === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+              Currency
+              <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase text-[var(--ink)]" />
+            </label>
+            <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] sm:col-span-2" />
+          </div>
+        </div>
       </div>
 
       <LineItemsPanel
@@ -309,7 +291,7 @@ export function NewSupplierBillForm({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving..." : "Create Bill"}</button>
+        <button type="submit" disabled={pending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving..." : "Save bill"}</button>
         <Link href="/inventory/supplier-bills" className="rounded-lg border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</Link>
       </div>
     </form>

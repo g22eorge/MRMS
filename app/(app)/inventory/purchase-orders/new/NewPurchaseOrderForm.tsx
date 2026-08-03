@@ -31,6 +31,7 @@ export function NewPurchaseOrderForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState(defaultSupplierId ?? "");
+  const [showDetails, setShowDetails] = useState(false);
   const { lines, addLine, removeLine, updateLine, appendToFormData } = useLineItemsState<LineData>(() => ({
     description: "",
     qtyOrdered: 1,
@@ -79,21 +80,12 @@ export function NewPurchaseOrderForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
-          <div>
-            <p className="text-sm font-bold text-[var(--ink)]">PO entry</p>
-            <p className="text-xs text-[var(--ink-muted)]">Compact supplier order form</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)]">{totals.readyLines}/{lines.length} lines</span>
-            <span className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)]">{totals.quantity} units</span>
-            {totals.zeroCostLines ? <span className="rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-700">{totals.zeroCostLines} zero-cost</span> : null}
-            <span className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold text-[var(--ink)]">{totals.subtotal.toLocaleString()}</span>
-          </div>
-        </div>
+      <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+        Pick the supplier, then list what you are ordering and the price. Save it as a draft, or issue it to the supplier straight away.
+      </p>
 
-        <div className="grid gap-3 p-3 lg:grid-cols-4">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+        <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className={labelClass}>
             Supplier
             <select name="supplierId" required value={supplierId} onChange={(event) => setSupplierId(event.target.value)} className={fieldClass}>
@@ -104,27 +96,42 @@ export function NewPurchaseOrderForm({
             </select>
           </label>
           <label className={labelClass}>
-            Reference
-            <input name="reference" type="text" placeholder="Optional" className={fieldClass} />
-          </label>
-          <label className={labelClass}>
-            Order date
-            <input name="orderedAt" type="date" className={fieldClass} />
-          </label>
-          <label className={labelClass}>
-            Expected
+            Expected delivery
             <input name="expectedAt" type="date" className={fieldClass} />
           </label>
-          <label className={`${labelClass} lg:col-span-4`}>
-            Notes
-            <textarea name="notes" rows={2} placeholder="Terms, delivery instructions, warranty, approval note" className={`${fieldClass} resize-none`} />
-          </label>
+          <div className="flex items-end">
+            <span className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-muted)]">
+              {totals.quantity} unit{totals.quantity === 1 ? "" : "s"} · <span className="font-bold text-[var(--ink)]">{totals.subtotal.toLocaleString()}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Reference, order date and notes are optional — hidden until needed. */}
+        <div className="border-t border-[var(--line)] px-3 py-2.5">
+          <button type="button" onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails} className="flex w-full items-center justify-between gap-2 text-left">
+            <span className="text-[13px] font-semibold text-[var(--ink)]">Reference, order date &amp; notes <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-[var(--ink-muted)] transition-transform ${showDetails ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div className={showDetails ? "mt-3 grid gap-3 sm:grid-cols-2" : "hidden"}>
+            <label className={labelClass}>
+              Reference
+              <input name="reference" type="text" placeholder="Optional" className={fieldClass} />
+            </label>
+            <label className={labelClass}>
+              Order date
+              <input name="orderedAt" type="date" className={fieldClass} />
+            </label>
+            <label className={`${labelClass} sm:col-span-2`}>
+              Notes
+              <textarea name="notes" rows={2} placeholder="Terms, delivery instructions, warranty, approval note" className={`${fieldClass} resize-none`} />
+            </label>
+          </div>
         </div>
 
         {suppliers.length === 0 ? (
           <div className="mx-3 mb-3 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm">
-            <span className="font-semibold text-amber-700">Supplier required.</span>{" "}
-            <Link href="/inventory/suppliers/new" className="font-semibold text-[var(--accent)] hover:underline">Create supplier</Link>
+            <span className="font-semibold text-amber-700">You need a supplier first.</span>{" "}
+            <Link href="/inventory/suppliers/new" className="font-semibold text-[var(--accent)] hover:underline">Add a supplier</Link>
           </div>
         ) : null}
       </div>
@@ -224,14 +231,17 @@ export function NewPurchaseOrderForm({
       {error ? <p className="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600">{error}</p> : null}
 
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] bg-[var(--bg)]/95 py-2 backdrop-blur">
+        {totals.zeroCostLines > 0 ? (
+          <span className="mr-auto text-xs text-amber-600">Add a cost to every line to issue this order. You can still save it as a draft.</span>
+        ) : null}
         <Link href="/inventory/purchase-orders" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
           Cancel
         </Link>
         <button type="submit" disabled={pending || !canSubmit} className="btn-premium rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50">
-          {pending ? "Saving..." : "Save draft"}
+          {pending ? "Saving..." : "Save as draft"}
         </button>
         <button type="submit" name="issueNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-500/15 disabled:opacity-50">
-          {pending ? "Issuing..." : "Issue now"}
+          {pending ? "Issuing..." : "Send to supplier"}
         </button>
       </div>
     </form>
