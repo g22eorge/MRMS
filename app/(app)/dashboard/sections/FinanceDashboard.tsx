@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 import { DashboardHero } from "./shared";
 
-export async function FinanceDashboard() {
+export async function FinanceDashboard({ orgId }: { orgId: string }) {
   const currency = getAppCurrency();
   const today = new Date();
   const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
@@ -17,18 +17,19 @@ export async function FinanceDashboard() {
 
   const [invoices, recentPayments, salesRevenue] = await Promise.all([
     prisma.invoice.findMany({
+      where: { orgId },
       select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true } } } } },
       orderBy: { issuedAt: "desc" },
       take: 50,
     }),
     prisma.payment.findMany({
-      where: { createdAt: { gte: mtdStart } },
+      where: { orgId, createdAt: { gte: mtdStart } },
       select: { amount: true, method: true, receivedAt: true, currency: true },
       orderBy: { receivedAt: "desc" },
       take: 20,
     }),
     prisma.sale.findMany({
-      where: { status: "PAID", paidAt: { gte: mtdStart } },
+      where: { orgId, status: "PAID", paidAt: { gte: mtdStart } },
       select: { totalAmount: true },
     }),
   ]);

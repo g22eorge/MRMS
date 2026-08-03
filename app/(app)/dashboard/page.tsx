@@ -39,7 +39,7 @@ export default async function DashboardPage({
       return <ExternalTechDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;
 
     case "TECHNICIAN_INTERNAL":
-      return <InternalTechDashboard userId={session.user.id} permissionUser={permissionUser} period={period} filters={filters} />;
+      return <InternalTechDashboard userId={session.user.id} orgId={orgId ?? ""} permissionUser={permissionUser} period={period} filters={filters} />;
 
     case "TECH_MANAGER":
       return <TechManagerDashboard orgId={orgId} />;
@@ -52,13 +52,13 @@ export default async function DashboardPage({
 
     case "FRONT_DESK":
     case "INTAKE":
-      return <IntakeDashboard userId={session.user.id} period={period} filters={filters} />;
+      return <IntakeDashboard userId={session.user.id} orgId={orgId ?? ""} period={period} filters={filters} />;
 
     case "MANAGER":
       return <ManagerDashboard orgId={orgId} />;
 
     case "FINANCE":
-      return <FinanceDashboard />;
+      return <FinanceDashboard orgId={orgId ?? ""} />;
 
     case "SALES":
       return <SalesDashboard userId={user.id} orgId={orgId} />;
@@ -79,6 +79,6 @@ export default async function DashboardPage({
       return <TechFieldDashboard userId={session.user.id} />;
 
     default:
-      return <SystemOverviewDashboard />;
+      return <SystemOverviewDashboard orgId={orgId ?? ""} />;
   }
 }

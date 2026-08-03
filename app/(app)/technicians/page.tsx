@@ -130,6 +130,7 @@ export default async function TechniciansPage({
 
   const jobs = await prisma.job.findMany({
     where: {
+      orgId: user.orgId, // tenant scope — the role branches below only filter by assignee
       ...where,
       ...(filters.q
         ? {

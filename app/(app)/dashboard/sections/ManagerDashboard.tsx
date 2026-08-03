@@ -17,16 +17,20 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
   const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
   const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
+  // Tenant scope for every job query. Empty string fails closed (matches no rows)
+  // rather than leaking across orgs if orgId is ever absent.
+  const org = orgId ?? "";
 
   const [statusGroup, completedMtd, overdueJobs, techWorkloadJobs, unassignedCount, receivedToday, completedToday, awaitingApprovalCount, revenueTrend] = await Promise.all([
-    prisma.job.groupBy({ by: ["status"], _count: { status: true } }),
+    prisma.job.groupBy({ by: ["status"], where: { orgId: org }, _count: { status: true } }),
     prisma.job.aggregate({
-      where: { status: "COMPLETED", completedAt: { gte: mtdStart } },
+      where: { orgId: org, status: "COMPLETED", completedAt: { gte: mtdStart } },
       _sum: { clientBill: true },
       _count: true,
     }),
     prisma.job.findMany({
       where: {
+        orgId: org,
         status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"]) as JobStatus[] },
         receivedAt: { lt: threeDaysAgo },
       },
@@ -35,7 +39,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
       take: 8,
     }).catch(async () => {
       const fb = await prisma.job.findMany({
-        where: { status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"]) as JobStatus[] }, receivedAt: { lt: threeDaysAgo } },
+        where: { orgId: org, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR"]) as JobStatus[] }, receivedAt: { lt: threeDaysAgo } },
         select: { id: true, jobNumber: true, status: true, receivedAt: true },
         orderBy: { receivedAt: "asc" }, take: 8,
       });
@@ -43,6 +47,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
     }),
     prisma.job.findMany({
       where: {
+        orgId: org,
         status: { in: filterSupportedJobStatuses(["DIAGNOSING", "IN_REPAIR", "REFERRED", "AWAITING_APPROVAL", "READY_FOR_PICKUP"]) as JobStatus[] },
         assignedToId: { not: null },
       },
@@ -50,13 +55,14 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
     }),
     prisma.job.count({
       where: {
+        orgId: org,
         status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_REPAIR"]) as JobStatus[] },
         assignedToId: null,
       },
     }),
-    prisma.job.count({ where: { receivedAt: { gte: todayStart } } }),
-    prisma.job.count({ where: { completedAt: { gte: todayStart } } }),
-    prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
+    prisma.job.count({ where: { orgId: org, receivedAt: { gte: todayStart } } }),
+    prisma.job.count({ where: { orgId: org, completedAt: { gte: todayStart } } }),
+    prisma.job.count({ where: { orgId: org, status: "AWAITING_APPROVAL" } }),
     loadTotalRevenueTrend(trendMonthsSinceStartOfYear(today), orgId, currency),
   ]);
 

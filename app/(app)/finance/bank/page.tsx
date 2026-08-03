@@ -87,9 +87,11 @@ export default async function BankPage({
 
   async function reconcile(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user } = await getCurrentUserRole();
     const id = fd.get("id") as string;
-    const tx = await prisma.bankTransaction.findFirst({ where: { id } });
+    // Verify org ownership before toggling — otherwise any staff could reconcile
+    // another tenant's bank transaction by posting its id.
+    const tx = await prisma.bankTransaction.findFirst({ where: { id, orgId: user.orgId } });
     if (!tx) return;
     await prisma.bankTransaction.update({
       where: { id },

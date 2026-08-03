@@ -12,11 +12,13 @@ import { DashboardHero, DashboardPeriodBar, RepairStatusReference, statusLabel, 
 
 export async function InternalTechDashboard({
   userId,
+  orgId,
   permissionUser,
   period,
   filters,
 }: {
   userId: string;
+  orgId: string;
   permissionUser: PermissionUser;
   period: "month" | "year";
   filters: PeriodFilters;
@@ -59,7 +61,11 @@ export async function InternalTechDashboard({
   const inRepair = assignedJobs.filter((job) => job.status === "IN_REPAIR").length;
   const completed = assignedJobs.filter((job) => job.status === "COMPLETED").length;
   const canUpdatePricing = can.approveInvoices(permissionUser);
+  // Always tenant-scoped. When the viewer can price org-wide (approveInvoices)
+  // we drop the assignee filter but MUST keep orgId, or the billing aggregate
+  // would sum across every tenant.
   const pricingScopeWhere = {
+    orgId,
     ...(canUpdatePricing ? {} : { assignedToId: userId }),
   };
   const [pricingPendingCount, pricedCount, assignedFinancials] = canUpdatePricing

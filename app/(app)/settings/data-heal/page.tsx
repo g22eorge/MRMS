@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { runDataHeal } from "@/lib/data-heal";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { DataTable } from "@/components/ui/DataTable";
 
 export default async function DataHealPage({
@@ -12,7 +13,9 @@ export default async function DataHealPage({
   searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
-  if (user.role !== "ADMIN") {
+  // runDataHeal operates ACROSS ALL orgs (it's a system maintenance job, also run
+  // by cron) — so restrict it to the platform operator, not every tenant admin.
+  if (!checkIsPlatformAdmin(user.email)) {
     redirect("/dashboard");
   }
 
@@ -33,7 +36,7 @@ export default async function DataHealPage({
   async function runDry() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (actor.role !== "ADMIN") return;
+    if (!checkIsPlatformAdmin(actor.email)) return;
     const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
     redirect(
       `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,
@@ -43,7 +46,7 @@ export default async function DataHealPage({
   async function runApply() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (actor.role !== "ADMIN") return;
+    if (!checkIsPlatformAdmin(actor.email)) return;
     const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
     redirect(
       `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,

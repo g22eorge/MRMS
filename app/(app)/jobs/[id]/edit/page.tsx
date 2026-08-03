@@ -15,10 +15,11 @@ export default async function EditJobPage({
   const { returnTo } = await searchParams;
   const { session, user } = await getCurrentUserRole();
 
+  // Always tenant-scoped by orgId; technicians are further limited to their own jobs.
   const where =
     user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
-      ? { id, assignedToId: session.user.id }
-      : { id };
+      ? { id, orgId: user.orgId, assignedToId: session.user.id }
+      : { id, orgId: user.orgId };
 
   const job = await prisma.job.findFirst({ where });
 

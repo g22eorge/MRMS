@@ -12,10 +12,12 @@ import { DashboardHero, DashboardPeriodBar, RepairStatusReference } from "./shar
 /** FRONT_DESK / INTAKE dashboard. */
 export async function IntakeDashboard({
   userId,
+  orgId,
   period,
   filters,
 }: {
   userId: string;
+  orgId: string;
   period: "month" | "year";
   filters: PeriodFilters;
 }) {
@@ -38,8 +40,8 @@ export async function IntakeDashboard({
         status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] },
       },
     }),
-    prisma.job.count({ where: { status: "AWAITING_APPROVAL" } }),
-    prisma.job.count({ where: { status: "READY_FOR_PICKUP" } }),
+    prisma.job.count({ where: { orgId, status: "AWAITING_APPROVAL" } }),
+    prisma.job.count({ where: { orgId, status: "READY_FOR_PICKUP" } }),
   ]);
 
   return (

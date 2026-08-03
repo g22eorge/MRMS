@@ -47,7 +47,8 @@ export default async function StockCountsPage({
     db.stockCount.count({ where: {} }).catch(() => 0),
     db.stockCount.count({ where: { status: { in: ["DRAFT", "SUBMITTED"] } } }).catch(() => 0),
     db.stockCount.count({ where: { status: "APPROVED", countedAt: { gte: monthStart } } }).catch(() => 0),
-    prisma.stockCountItem.count({ where: { varianceQty: { not: 0 } } }).catch(() => 0),
+    // StockCountItem has no orgId of its own — scope through its parent count.
+    prisma.stockCountItem.count({ where: { varianceQty: { not: 0 }, stockCount: { orgId: user.orgId } } }).catch(() => 0),
   ]);
 
   const varianceCount = varianceItems;

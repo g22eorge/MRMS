@@ -112,9 +112,10 @@ async function deleteTarget(formData: FormData) {
   }
 
   const id = (formData.get("id") as string | null)?.trim();
-  if (!id) return;
+  if (!id || !user.orgId) return;
 
-  await prisma.salesTarget.delete({ where: { id } });
+  // Scope the delete to the caller's org so an id from another tenant can't be removed.
+  await prisma.salesTarget.deleteMany({ where: { id, orgId: user.orgId } });
   revalidatePath("/settings/targets");
 }
 

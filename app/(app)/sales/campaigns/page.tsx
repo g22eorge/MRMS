@@ -174,15 +174,15 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function updateContactStatus(fd: FormData) {
     "use server";
-    const { user: _user } = await getCurrentUserRole();
-    // (org write check removed — single-tenant)
+    const { user } = await getCurrentUserRole();
     const id = fd.get("id") as string;
     const status = fd.get("status") as CampaignContactStatus;
     const updates: Record<string, Date> = {};
     if (status === "SENT") updates.sentAt = new Date();
     if (status === "OPENED") updates.openedAt = new Date();
     if (status === "RESPONDED") updates.repliedAt = new Date();
-    await prisma.campaignContact.updateMany({ where: { id, campaign: { } }, data: { status, ...updates } });
+    // Tenant scope — an id from another org must not be writable.
+    await prisma.campaignContact.updateMany({ where: { id, orgId: user.orgId }, data: { status, ...updates } });
     revalidatePath("/sales/campaigns");
   }
 

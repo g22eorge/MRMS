@@ -8,15 +8,16 @@ import { prisma } from "@/lib/prisma";
 import { DashboardHero } from "./shared";
 
 /** Fallback dashboard for roles without a dedicated view. */
-export async function SystemOverviewDashboard() {
+export async function SystemOverviewDashboard({ orgId }: { orgId: string }) {
   const [totalJobs, openJobs, completedJobs] = await Promise.all([
-    prisma.job.count(),
+    prisma.job.count({ where: { orgId } }),
     prisma.job.count({
       where: {
+        orgId,
         status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"]) as JobStatus[] },
       },
     }),
-    prisma.job.count({ where: { status: "COMPLETED" } }),
+    prisma.job.count({ where: { orgId, status: "COMPLETED" } }),
   ]);
 
   return (
