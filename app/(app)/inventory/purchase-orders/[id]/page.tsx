@@ -7,7 +7,7 @@ import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { ReceiveStockForm } from "./ReceiveStockForm";

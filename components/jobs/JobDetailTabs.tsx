@@ -877,54 +877,92 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       </div>
 
-      {/* ── DESKTOP next-step strip: the one action this job needs now ── */}
-      <div className="hidden items-center gap-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 lg:flex">
-        <div className="flex flex-1 items-center">
-          {stageLabels.map((label, i) => (
-            <div key={label} className={`flex items-center ${i < stageLabels.length - 1 ? "flex-1" : ""}`}>
-              <span className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                  i < currentStageIndex
-                    ? "bg-emerald-500"
-                    : i === currentStageIndex
-                      ? "bg-[var(--accent)] ring-2 ring-[var(--accent)]/30"
-                      : "bg-[var(--panel-strong)] ring-1 ring-[var(--line)]"
-                }`} />
-                <span className={`whitespace-nowrap text-[12px] font-bold uppercase tracking-wide ${
-                  i === currentStageIndex ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
-                }`}>{label}</span>
-              </span>
-              {i < stageLabels.length - 1 && (
-                <span className={`mx-2 h-px flex-1 ${i < currentStageIndex ? "bg-emerald-500" : "bg-[var(--line)]"}`} />
-              )}
+      {/* ── DESKTOP next-step strip: the primary action + every valid alternative ── */}
+      <div className="hidden overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+        <div className="flex items-center gap-4 px-4 py-3">
+          <div className="flex flex-1 items-center">
+            {stageLabels.map((label, i) => (
+              <div key={label} className={`flex items-center ${i < stageLabels.length - 1 ? "flex-1" : ""}`}>
+                <span className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                    i < currentStageIndex
+                      ? "bg-emerald-500"
+                      : i === currentStageIndex
+                        ? "bg-[var(--accent)] ring-2 ring-[var(--accent)]/30"
+                        : "bg-[var(--panel-strong)] ring-1 ring-[var(--line)]"
+                  }`} />
+                  <span className={`whitespace-nowrap text-[12px] font-bold uppercase tracking-wide ${
+                    i === currentStageIndex ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
+                  }`}>{label}</span>
+                </span>
+                {i < stageLabels.length - 1 && (
+                  <span className={`mx-2 h-px flex-1 ${i < currentStageIndex ? "bg-emerald-500" : "bg-[var(--line)]"}`} />
+                )}
+              </div>
+            ))}
+          </div>
+          {!isTerminal && statusActions.length > 0 ? (
+            <form
+              action={(fd) => {
+                fd.set("jobId", job.id);
+                fd.set("nextStatus", statusActions[0]);
+                fd.set("expectedUpdatedAt", expectedUpdatedAt);
+                startStatusTransition(async () => {
+                  const res = await updateJobAction(fd);
+                  handleStatusUpdateResult(res, statusActions[0]);
+                });
+              }}
+            >
+              <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[13px] font-bold text-white shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
+                {isStatusPending ? "Updating…" : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+                    {nextActionByStatus[statusKey]}
+                  </>
+                )}
+              </button>
+            </form>
+          ) : isTerminal ? (
+            <div className="flex shrink-0 items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+              <span className="text-[13px] font-semibold text-emerald-600">{prettyEnum(job.status)}</span>
             </div>
-          ))}
+          ) : null}
         </div>
-        {!isTerminal && statusActions.length > 0 ? (
-          <form
-            action={(fd) => {
-              fd.set("jobId", job.id);
-              fd.set("nextStatus", statusActions[0]);
-              fd.set("expectedUpdatedAt", expectedUpdatedAt);
-              startStatusTransition(async () => {
-                const res = await updateJobAction(fd);
-                handleStatusUpdateResult(res, statusActions[0]);
-              });
-            }}
-          >
-            <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[13px] font-bold text-white shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
-              {isStatusPending ? "Updating…" : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
-                  {nextActionByStatus[statusKey]}
-                </>
-              )}
-            </button>
-          </form>
-        ) : isTerminal ? (
-          <div className="flex shrink-0 items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
-            <span className="text-[13px] font-semibold text-emerald-600">{prettyEnum(job.status)}</span>
+        {/* Every other valid transition stays one click away — nothing is hidden. */}
+        {!isTerminal && statusActions.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Or move to</span>
+            {statusActions.slice(1).map((status) =>
+              status === "CLOSED" ? (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setConfirmClose(true)}
+                  disabled={isStatusPending}
+                  className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60"
+                >
+                  {prettyEnum(status)}
+                </button>
+              ) : (
+                <form
+                  key={status}
+                  action={(fd) => {
+                    fd.set("jobId", job.id);
+                    fd.set("nextStatus", status);
+                    fd.set("expectedUpdatedAt", expectedUpdatedAt);
+                    startStatusTransition(async () => {
+                      const res = await updateJobAction(fd);
+                      handleStatusUpdateResult(res, status);
+                    });
+                  }}
+                >
+                  <button type="submit" disabled={isStatusPending} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60">
+                    {prettyEnum(status)}
+                  </button>
+                </form>
+              ),
+            )}
           </div>
         ) : null}
       </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
-import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
