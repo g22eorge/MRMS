@@ -21,6 +21,12 @@ const url = process.env.TURSO_DATABASE_URL?.trim() || process.env.DATABASE_URL?.
 const authToken = process.env.TURSO_AUTH_TOKEN;
 const client = createClient(authToken ? { url, authToken } : { url });
 
+// Dry-run: report the tables/columns that WOULD be created/added without touching
+// the DB, and exit non-zero if any are pending. This is the authoritative drift
+// check for this repo (prod schema reaches Turso via this reconciler, not Prisma
+// Migrate — so `prisma migrate status` gives false negatives).
+const CHECK_ONLY = process.argv.includes("--check") || process.env.RECONCILE_CHECK === "1";
+
 function generateDdl() {
   // migrate diff --from-empty does not connect to any DB; give the CLI a valid
   // file: URL so prisma.config.ts is happy, and clear Turso for the subprocess.
@@ -109,6 +115,7 @@ async function run() {
     const name = tableName(stmt);
     if (!name) continue;
     if (!tables.has(name)) {
+      if (CHECK_ONLY) { createdTables.push(name); continue; }
       try {
         await client.execute(stmt);
         createdTables.push(name);
@@ -126,6 +133,7 @@ async function run() {
         addDef = def.replace(/\s*NOT NULL/i, "").trim();
         warnings.push(`${name}.${col} added as NULLABLE (schema is NOT NULL without default — backfill may be needed)`);
       }
+      if (CHECK_ONLY) { addedColumns.push(`${name}.${col}`); continue; }
       try {
         await client.execute(`ALTER TABLE "${name}" ADD COLUMN "${col}" ${addDef}`);
         addedColumns.push(`${name}.${col}`);
@@ -138,7 +146,7 @@ async function run() {
   // Pre-index remediation — fix known legacy-data violations so the UNIQUE
   // indexes below can be created. Both are safe and idempotent.
   const remediations = [];
-  {
+  if (!CHECK_ONLY) {
     const tablesNow = await existingTables();
     // Empty-string invoiceNumber duplicates → NULL (SQLite allows many NULLs in a unique index).
     if (tablesNow.has("Job")) {
@@ -164,8 +172,8 @@ async function run() {
     }
   }
 
-  // Pass 2 — indexes (idempotent via IF NOT EXISTS)
-  for (const stmt of indexes) {
+  // Pass 2 — indexes (idempotent via IF NOT EXISTS). Skipped in --check dry-run.
+  if (!CHECK_ONLY) for (const stmt of indexes) {
     const idempotent = stmt
       .replace(/^CREATE UNIQUE INDEX\s+"/i, 'CREATE UNIQUE INDEX IF NOT EXISTS "')
       .replace(/^CREATE INDEX\s+"/i, 'CREATE INDEX IF NOT EXISTS "');
@@ -205,7 +213,18 @@ async function run() {
 
 try {
   const result = await run();
-  console.log(JSON.stringify(result, null, 2));
+  if (CHECK_ONLY) {
+    const pending = result.createdTables.length + result.addedColumns.length;
+    if (pending > 0) {
+      console.error(`DRIFT: database is behind prisma/schema.prisma (${url})`);
+      console.error(JSON.stringify({ missingTables: result.createdTables, missingColumns: result.addedColumns }, null, 2));
+      console.error("Run `bun run db:sync-schema` (the reconciler) against the target DB to apply.");
+      process.exit(1);
+    }
+    console.log(`OK: database matches prisma/schema.prisma (reconciler dry-run against ${url}).`);
+  } else {
+    console.log(JSON.stringify(result, null, 2));
+  }
 } catch (error) {
   console.error(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }, null, 2));
   process.exit(1);

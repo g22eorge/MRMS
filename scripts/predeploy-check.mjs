@@ -10,8 +10,11 @@ function warn(message) {
   console.log(`WARN: ${message}`);
 }
 
-function run(cmd, args) {
-  const result = spawnSync(cmd, args, { stdio: "inherit", env: process.env });
+function run(cmd, args, extraEnv) {
+  const result = spawnSync(cmd, args, {
+    stdio: "inherit",
+    env: extraEnv ? { ...process.env, ...extraEnv } : process.env,
+  });
   if (result.status !== 0) {
     fail(`command failed: ${cmd} ${args.join(" ")}`);
   }
@@ -54,11 +57,17 @@ if (publicUrl.includes("localhost") || authUrl.includes("localhost")) {
   process.env.PROD = "false";
 }
 
-run("bunx", ["prisma", "migrate", "status"]);
+// Prod schema reaches Turso via the reconciler (scripts/sync-schema-to-db.mjs),
+// NOT Prisma Migrate — so we gate on the reconciler, not `prisma migrate status`.
 if (process.env.PROD !== "true") {
-  run("bunx", ["prisma", "migrate", "deploy"]);
+  // Apply the schema to the local check DB the same way prod gets it, then seed.
+  // Clear TURSO so this local apply can never touch the production database.
+  run("node", ["scripts/sync-schema-to-db.mjs"], { TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "" });
   run("bun", ["run", process.env.PREDEPLOY_DEMO_SEED === "1" ? "seed" : "seed:base"]);
 }
+// Drift gate: the target DB (local after apply, or the live DB when PROD) must
+// match prisma/schema.prisma. Read-only dry-run — exits non-zero on any drift.
+run("node", ["scripts/sync-schema-to-db.mjs", "--check"]);
 run("bun", ["run", "lint"]);
 run("bun", ["run", "build"]);
 run("bun", ["run", "qa:data-integrity"]);

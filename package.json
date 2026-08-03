@@ -37,7 +37,7 @@
     "seed:demo": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun run prisma/seed.ts",
     "seed:commercial": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma db push --skip-generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bunx prisma generate && TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./dev.db}\" bun run prisma/seed-commercial.ts",
     "db:reconcile-empty": "node scripts/reconcile-empty-schema.mjs",
-    "db:drift-check": "node scripts/schema-drift-check.mjs",
+    "db:drift-check": "TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"${DATABASE_URL:-file:./prisma/dev.db}\" node scripts/schema-drift-check.mjs",
     "test:setup": "ALLOW_SQLITE_PRODUCTION=1 TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_URL=\"file:$(pwd)/prisma/test.db\" bunx prisma db push --schema ../../../prisma/schema.prisma --skip-generate",
     "test:unit:watch": "bun test tests/unit --watch",
     "worker:start": "bun lib/queue/worker.ts"
