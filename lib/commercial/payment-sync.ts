@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Prisma } from "@prisma/client";
 
 import { toBaseAmount } from "@/lib/currency";

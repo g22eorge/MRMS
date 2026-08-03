@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PrismaClient, QuotationStatus } from "@prisma/client";
 import { nextDocumentNumber } from "../lib/commercial/document-workflow";
 

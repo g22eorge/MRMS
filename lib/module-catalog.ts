@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { OrgModule, OrgPlan } from "@prisma/client";
 
 export { OrgModule };

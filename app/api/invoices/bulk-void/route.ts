@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";

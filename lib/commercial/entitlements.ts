@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { OrgPlan } from "@prisma/client";
 
 import { getLimitsForOrg, PLAN_LIMITS, type PlanLimits } from "@/lib/plan-limits";

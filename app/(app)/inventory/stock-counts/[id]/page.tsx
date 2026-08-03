@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";

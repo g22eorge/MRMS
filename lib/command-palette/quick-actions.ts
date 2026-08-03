@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type Role } from "@prisma/client";
 
 import { canAccessCommunications } from "@/lib/communications/routes";

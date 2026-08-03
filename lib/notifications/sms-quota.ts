@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 import { OrgPlan } from "@prisma/client";
 

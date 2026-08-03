@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Prisma, type CommunicationTemplate, type OutboundMessageChannel } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";

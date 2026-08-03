@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";

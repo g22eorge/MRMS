@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";

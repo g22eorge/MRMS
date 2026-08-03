@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { PaymentMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";

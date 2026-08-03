@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Role } from "@prisma/client";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";

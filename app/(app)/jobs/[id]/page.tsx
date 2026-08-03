@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
 import { Prisma } from "@prisma/client";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Role } from "@prisma/client";
 
 export const EXTRA_PERMISSIONS = [

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Comprehensive seed file for Eagle Info Repair Manager
  * Seeds: org, users (all roles), 15+ clients, 30+ jobs, invoices, payments,

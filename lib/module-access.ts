@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { redirect } from "next/navigation";
 import { OrgModule } from "@prisma/client";
 

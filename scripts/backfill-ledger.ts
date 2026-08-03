@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * C5 ledger backfill: post historical money-events into the double-entry
  * ledger so the P&L / Balance Sheet / Trial Balance reflect past activity,

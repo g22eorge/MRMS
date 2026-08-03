@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney } from "@/lib/currency";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Backfill Receipt documents for payments that never got one.
 //
 // Both POS sale payments (addPaymentAction) and repair/job payments

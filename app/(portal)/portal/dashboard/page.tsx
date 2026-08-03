@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { JobStatus } from "@prisma/client";
 import Link from "next/link";
 

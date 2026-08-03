@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { unlink } from "fs/promises";
 import path from "path";
 

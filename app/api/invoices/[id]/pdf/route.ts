@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";

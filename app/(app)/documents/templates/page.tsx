@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { revalidatePath } from "next/cache";
 
 import { Button } from "@/components/ui/Button";

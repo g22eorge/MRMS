@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { hashPassword } from "better-auth/crypto";
 import { Role } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";

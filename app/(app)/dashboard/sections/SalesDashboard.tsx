@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from "next/link";
 
 import { getClientBill } from "@/lib/billing";

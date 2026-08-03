@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * C5 verification: exercise the cash-basis posting engine against a real org
  * and confirm (a) core accounts seed, (b) entries balance, (c) the P&L

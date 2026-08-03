@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";

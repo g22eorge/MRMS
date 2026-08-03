@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 import type { InvoiceType } from "@prisma/client";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";

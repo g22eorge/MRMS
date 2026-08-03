@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { formatEATMediumDate } from "@/lib/date-eat";

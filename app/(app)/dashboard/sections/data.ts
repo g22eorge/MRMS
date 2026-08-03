@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";

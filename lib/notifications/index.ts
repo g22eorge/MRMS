@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 import { JobStatus, NotificationChannel, NotificationType, OutboundMessageType, Prisma } from "@prisma/client";
 

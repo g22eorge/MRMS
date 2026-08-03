@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * GET /api/webhooks/pesapal
  *

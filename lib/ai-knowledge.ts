@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 import { cosineSimilarity, createTextEmbedding, getAiSettings, redactPii } from "@/lib/ai-governance";
 

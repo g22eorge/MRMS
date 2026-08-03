@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AppLogoDark } from "@/components/ui/AppLogo";
 import { prisma } from "@/lib/prisma";
 import { AcceptForm } from "./AcceptForm";

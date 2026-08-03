@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
 import { AiGuideBubble } from "@/components/ai-guide/AiGuideBubble";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";

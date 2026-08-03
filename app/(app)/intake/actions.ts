@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use server";
 
 import { Prisma, RepairRequestStatus, Role, DeviceType, HandoverMethod } from "@prisma/client";

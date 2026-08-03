@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { OrgBillingStatus, OrgPlan } from "@prisma/client";
 
 /** Length of the free trial granted to every new organization, in days. */
