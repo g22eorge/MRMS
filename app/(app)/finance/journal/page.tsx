@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
 import { redirect } from "next/navigation";

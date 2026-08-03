@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { PageHeader } from "@/components/ui/PageHeader";

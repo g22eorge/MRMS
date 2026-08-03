@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";

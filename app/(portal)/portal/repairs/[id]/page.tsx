@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -53,7 +52,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       invoice: {
         select: {
           id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true,
-          payments: { select: { id: true, amount: true, currency: true, method: true, receivedAt: true }, orderBy: { receivedAt: "desc" } },
+          payments: { where: { kind: "PAYMENT" }, select: { id: true, amount: true, currency: true, method: true, receivedAt: true }, orderBy: { receivedAt: "desc" } },
         },
       },
       // Only photos staff have marked visible to the client.

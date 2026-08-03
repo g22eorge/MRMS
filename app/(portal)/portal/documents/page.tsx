@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";

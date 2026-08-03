@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FieldVisitStatus } from "@prisma/client";
@@ -394,7 +393,7 @@ export default async function FieldPage({
                   key: "assignedTo",
                   header: "Assigned To",
                   className: "whitespace-nowrap text-[var(--ink)]",
-                  cell: (visit) => visit.assignedTo.name,
+                  cell: (visit: (typeof visits)[number]) => visit.assignedTo.name,
                 },
               ]
             : []),

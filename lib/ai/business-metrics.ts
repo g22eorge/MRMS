@@ -1,5 +1,4 @@
 // orgDb is loosely typed; keep this module aligned with AI surfaces until scoper types land.
-// @ts-nocheck
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
 import { daysBetween, monthRangeFromDate, previousMonthRange } from "@/lib/date-ranges";

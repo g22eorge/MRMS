@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 
 import { resolveTechCost } from "@/lib/billing";

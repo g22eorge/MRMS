@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
 import { loadCashCollectionsByChannelWide, loadReceivablesTotal } from "@/lib/finance/reconciliation";

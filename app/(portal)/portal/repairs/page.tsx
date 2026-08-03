@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 
 import { requirePortalSession } from "@/lib/portal-auth";

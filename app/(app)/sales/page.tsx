@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Prisma, LeadStatus, LeadSource } from "@prisma/client";

@@ -1,9 +1,7 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import { StatCards } from "@/components/ui/StatCards";
 import Link from "next/link";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-// @ts-nocheck
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
 
@@ -162,6 +160,25 @@ export default async function PLPage({
     : month === 1
       ? `${MONTHS[11]} ${year - 1}`
       : `${MONTHS[month - 2]} ${year}`;
+
+  // Explicit discriminated union for the statement table: the synthetic
+  // empty/total rows are unioned with real account rows, and each `kind`
+  // carries exactly the fields the cells read.
+  type PLRow =
+    | { id: string; kind: "empty"; section: string; label: string }
+    | { id: string; kind: "total"; section: string; label: string; amount: number; priorAmount: number }
+    | { id: string; kind: "account"; section: string; code: string; name: string; amount: number; priorAmount: number };
+
+  const plRows: PLRow[] = [
+    ...(revenues.length === 0
+      ? [{ id: "rev-empty", kind: "empty", section: "REVENUE", label: "No revenue accounts with activity" } as PLRow]
+      : revenues.map((r): PLRow => ({ id: `rev-${r.code}`, kind: "account", section: "REVENUE", ...r }))),
+    { id: "rev-total", kind: "total", section: "REVENUE", label: "Total Revenue", amount: totalRevenue, priorAmount: priorRevenue },
+    ...(expenses.length === 0
+      ? [{ id: "exp-empty", kind: "empty", section: "EXPENSE", label: "No expense accounts with activity" } as PLRow]
+      : expenses.map((e): PLRow => ({ id: `exp-${e.code}`, kind: "account", section: "EXPENSE", ...e }))),
+    { id: "exp-total", kind: "total", section: "EXPENSE", label: "Total Expenses", amount: totalExpense, priorAmount: priorExpense },
+  ];
 
   return (
     <div className="print-area space-y-4">
@@ -333,16 +350,7 @@ export default async function PLPage({
           {/* ── P&L TABLE ──────────────────────────────────────────────────── */}
           <DataTable
             dense
-            rows={[
-              ...(revenues.length === 0
-                ? [{ id: "rev-empty", kind: "empty", section: "REVENUE", label: "No revenue accounts with activity" }]
-                : revenues.map((r) => ({ id: `rev-${r.code}`, kind: "account", section: "REVENUE", ...r }))),
-              { id: "rev-total", kind: "total", section: "REVENUE", label: "Total Revenue", amount: totalRevenue, priorAmount: priorRevenue },
-              ...(expenses.length === 0
-                ? [{ id: "exp-empty", kind: "empty", section: "EXPENSE", label: "No expense accounts with activity" }]
-                : expenses.map((e) => ({ id: `exp-${e.code}`, kind: "account", section: "EXPENSE", ...e }))),
-              { id: "exp-total", kind: "total", section: "EXPENSE", label: "Total Expenses", amount: totalExpense, priorAmount: priorExpense },
-            ]}
+            rows={plRows}
             getRowKey={(row) => row.id}
             renderSectionRow={(row, i) => {
               if (i === 0)

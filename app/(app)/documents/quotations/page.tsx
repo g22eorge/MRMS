@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -22,7 +21,7 @@ import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
 import { RowCheckbox } from "./RowCheckbox";
 import { QuotationCreateDialog, QuotationNewButton } from "./QuotationCreateDialog";
-import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { DataTable, TablePagination, type DataTableColumn } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -42,6 +41,7 @@ export const dynamic = "force-dynamic";
 export default async function QuotationsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { user } = await getCurrentUserRole();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+  if (!user.orgId) redirect("/dashboard");
 
   const sp = await searchParams;
   const statusFilter = typeof sp.status === "string" ? sp.status.toUpperCase() : "ALL";
@@ -160,7 +160,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   }
 
   const pageView = paginationView(page, totalItems, pageSize);
-  const hrefForPage = (p: number) => pageHrefBuilder(`/documents/quotations`, { page: p.toString(), status: statusFilter, q });
+  const hrefForPage = pageHrefBuilder(`/documents/quotations`, { status: statusFilter, q });
 
   const [clients, parts, taxRates, leads, jobs, branding] = await Promise.all([
     db.client.findMany({ where: { orgId: user.orgId }, orderBy: { fullName: "asc" }, take: 300, select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } }),
@@ -231,7 +231,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
   <BulkSelectionProvider pageIds={rows.map((r) => r.id)}>
     <BulkActionBar />
     {(() => {
-      const columns = [
+      const columns: DataTableColumn<any>[] = [
         { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox quotationId={row.id} /> },
         { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: any) => (
           <Link href={`/documents/quotations/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">{row.quoteNumber}</Link>
@@ -252,25 +252,25 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           {["ACCEPTED", "SENT"].includes(row.status) && (
             <form action={convertToInvoiceAction}>
               <input type="hidden" name="id" value={row.id} />
-              <MenuActionButton icon="save" tone="success" type="submit">Convert to Invoice</MenuActionButton>
+              <MenuActionButton icon="save" tone="success">Convert to Invoice</MenuActionButton>
             </form>
           )}
           <MenuSection label="Send" />
           <form action={sendQuotationRowShareAction}>
             <input type="hidden" name="quotationId" value={row.id} />
             <input type="hidden" name="channel" value="email" />
-            <MenuActionButton icon="receipt" type="submit">Send by Email</MenuActionButton>
+            <MenuActionButton icon="receipt">Send by Email</MenuActionButton>
           </form>
           <form action={sendQuotationRowShareAction}>
             <input type="hidden" name="quotationId" value={row.id} />
             <input type="hidden" name="channel" value="whatsapp" />
-            <MenuActionButton icon="whatsapp" tone="success" type="submit">Send by WhatsApp</MenuActionButton>
+            <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
           </form>
           <MenuSection label="Danger zone" />
           {canDelete && (
             <form action={deleteQuotationAction}>
               <input type="hidden" name="id" value={row.id} />
-              <MenuDestructiveRow icon="delete" type="submit">Delete</MenuDestructiveRow>
+              <MenuDestructiveRow>Delete</MenuDestructiveRow>
             </form>
           )}
         </RowActionsMenu>

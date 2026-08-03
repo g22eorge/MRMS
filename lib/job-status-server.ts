@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Prisma } from "@prisma/client";
 
 // In production it is possible for the running Prisma Client to be temporarily

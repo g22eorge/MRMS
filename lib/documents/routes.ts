@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type Role } from "@prisma/client";
 
 import { can } from "@/lib/permissions";

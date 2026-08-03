@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { OrgPlan } from "@prisma/client";
 
 import type { ComponentType } from "react";

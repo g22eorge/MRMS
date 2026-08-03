@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { redirect } from "next/navigation";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";

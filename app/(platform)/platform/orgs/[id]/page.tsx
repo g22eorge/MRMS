@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -183,7 +182,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               <option value="PAST_DUE">Past Due</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
-            <button type="submit" className="rounded-lg bg-sky-100 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-200">
+            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Set Status
             </button>
           </form>
@@ -201,7 +200,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               <option value="60">+60 days</option>
               <option value="90">+90 days</option>
             </select>
-            <button type="submit" className="rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-200">
+            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Extend Trial
             </button>
           </form>

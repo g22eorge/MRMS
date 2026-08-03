@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * GET /api/billing/callback
  *

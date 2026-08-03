@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Type-only import: these are pure status helpers reused by client components
 // (e.g. JobDetailTabs), so we must not pull the @prisma/client runtime into the
 // browser bundle. String-literal comparisons keep it a compile-time-only type.

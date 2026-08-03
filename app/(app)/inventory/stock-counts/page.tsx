@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
@@ -29,8 +28,9 @@ export default async function StockCountsPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { user } = await getCurrentUserRole();
-  const db = orgDb(user.orgId);
   if (!can.manageInventory(user)) redirect("/inventory");
+  if (!user.orgId) redirect("/inventory");
+  const db = orgDb(user.orgId);
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);

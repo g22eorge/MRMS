@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
@@ -40,7 +39,9 @@ export default async function CashFlowPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { user } = await getCurrentUserRole();
-  const db = orgDb(user.orgId);
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
+  const db = orgDb(orgId);
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
   const sp = await searchParams;
@@ -84,11 +85,11 @@ export default async function CashFlowPage({
     bankAccountsCount,
   ] = await Promise.all([
     prisma.payment.findMany({
-      where: { orgId: user.orgId, invoiceId: { not: null }, receivedAt: { gte: from, lte: to } },
+      where: { orgId, invoiceId: { not: null }, receivedAt: { gte: from, lte: to } },
       select: { amount: true, currency: true, exchangeRateToBase: true, method: true },
     }).catch(() => []),
     prisma.payment.findMany({
-      where: { orgId: user.orgId, saleId: { not: null }, receivedAt: { gte: from, lte: to } },
+      where: { orgId, saleId: { not: null }, receivedAt: { gte: from, lte: to } },
       select: { amount: true, currency: true, exchangeRateToBase: true, method: true },
     }).catch(() => []),
     db.expense.findMany({
@@ -96,23 +97,23 @@ export default async function CashFlowPage({
       select: { amount: true, currency: true, exchangeRateToBase: true, category: true },
     }).catch(() => []),
     prisma.supplierPayment.findMany({
-      where: { orgId: user.orgId, paidAt: { gte: from, lte: to } },
+      where: { orgId, paidAt: { gte: from, lte: to } },
       select: { amount: true, currency: true },
     }).catch(() => []),
     prisma.bankTransaction.aggregate({
-      where: { orgId: user.orgId, type: "CREDIT", date: { gte: from, lte: to } },
+      where: { orgId, type: "CREDIT", date: { gte: from, lte: to } },
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: null } })),
     prisma.bankTransaction.aggregate({
-      where: { orgId: user.orgId, type: "DEBIT", date: { gte: from, lte: to } },
+      where: { orgId, type: "DEBIT", date: { gte: from, lte: to } },
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: null } })),
     prisma.payment.findMany({
-      where: { orgId: user.orgId, invoiceId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId, invoiceId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     prisma.payment.findMany({
-      where: { orgId: user.orgId, saleId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId, saleId: { not: null }, receivedAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     db.expense.findMany({
@@ -120,7 +121,7 @@ export default async function CashFlowPage({
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     prisma.supplierPayment.findMany({
-      where: { orgId: user.orgId, paidAt: { gte: priorFrom, lte: priorTo } },
+      where: { orgId, paidAt: { gte: priorFrom, lte: priorTo } },
       select: { amount: true, currency: true },
     }).catch(() => []),
     db.bankAccount.count().catch(() => 0),
@@ -138,8 +139,8 @@ export default async function CashFlowPage({
   const netOperating = totalInflow - totalOutflow;
   const operatingMarginPct = totalInflow > 0 ? Math.round((netOperating / totalInflow) * 100) : 0;
 
-  const bankCreditTotal = bankCreditsAgg._sum.amount ?? 0;
-  const bankDebitTotal = bankDebitsAgg._sum.amount ?? 0;
+  const bankCreditTotal = bankCreditsAgg._sum?.amount ?? 0;
+  const bankDebitTotal = bankDebitsAgg._sum?.amount ?? 0;
   const netBank = bankCreditTotal - bankDebitTotal;
 
   // ── Prior period ────────────────────────────────────────────────────────────

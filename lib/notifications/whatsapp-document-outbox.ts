@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { OutboundMessageType } from "@prisma/client";
 
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";

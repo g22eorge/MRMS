@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use server";
 
 import { hashPassword } from "better-auth/crypto";

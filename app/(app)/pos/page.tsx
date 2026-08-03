@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -7,6 +6,7 @@ import { formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate } from "@/lib/date-eat";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
@@ -68,14 +68,14 @@ export default async function PosPage({
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  function segmentFilter(seg: Segment) {
+  function segmentFilter(seg: Segment): Prisma.SaleWhereInput {
     if (seg === "today") return { createdAt: { gte: todayStart } };
     if (seg === "month") return { createdAt: { gte: monthStart } };
     if (seg === "open") return { status: "OPEN" };
     return {};
   }
 
-  const searchFilter = q
+  const searchFilter: Prisma.SaleWhereInput = q
     ? {
         OR: [
           { saleNumber: { contains: q } },
@@ -128,6 +128,7 @@ export default async function PosPage({
     const branding = await getDocumentBrandingSettings(_orgId2);
     const sale = await db.sale.create({
       data: {
+        orgId: _orgId2,
         saleNumber,
         status: "OPEN",
         // currency uses schema default

@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";

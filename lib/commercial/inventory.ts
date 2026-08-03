@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Prisma } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;

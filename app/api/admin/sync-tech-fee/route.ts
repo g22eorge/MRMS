@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";

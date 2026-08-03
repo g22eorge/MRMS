@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { notFound, redirect } from "next/navigation";
 import { LeadStatus } from "@prisma/client";
 

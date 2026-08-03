@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { JobStatus } from "@prisma/client";
 
 export type CompletionFlowStep = 1 | 2 | 3;

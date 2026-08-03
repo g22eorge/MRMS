@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * invites.ts — shared helpers for user invite token logic.
  */

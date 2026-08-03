@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -85,8 +84,10 @@ export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { user } = await getCurrentUserRole();
-  const db = orgDb(user.orgId);
   if (!["ADMIN", "OPS"].includes(user.role)) redirect("/dashboard");
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
+  const db = orgDb(orgId);
 
   const sp = await searchParams;
   const selectedId = sp.id ?? null;
@@ -107,7 +108,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     if (!name || !type || !body) return;
     await db.campaign.create({
       data: {
-        name, type, subject, body, createdById: user.id,
+        orgId, name, type, subject, body, createdById: user.id,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       },
     });
@@ -155,7 +156,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       for (const l of leads) {
         await prisma.campaignContact.upsert({
           where: { campaignId_leadId: { campaignId, leadId: l.id } },
-          create: { campaignId, leadId: l.id },
+          create: { campaignId, leadId: l.id, orgId },
           update: {},
         });
       }
@@ -164,7 +165,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       for (const c of clients) {
         await prisma.campaignContact.upsert({
           where: { campaignId_clientId: { campaignId, clientId: c.id } },
-          create: { campaignId, clientId: c.id },
+          create: { campaignId, clientId: c.id, orgId },
           update: {},
         });
       }
@@ -175,6 +176,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   async function updateContactStatus(fd: FormData) {
     "use server";
     const { user } = await getCurrentUserRole();
+    if (!user.orgId) return;
     const id = fd.get("id") as string;
     const status = fd.get("status") as CampaignContactStatus;
     const updates: Record<string, Date> = {};

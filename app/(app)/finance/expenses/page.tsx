@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -195,7 +194,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
   async function createExpenseAction(formData: FormData) {
     "use server";
     const { user } = await getCurrentUserRole();
-    const db = orgDb(user.orgId);
+    if (!user.orgId) redirect("/dashboard");
+    const orgId = user.orgId;
+    const db = orgDb(orgId);
     if (!can.viewFinancials(user)) redirect("/dashboard");
 
     const description = String(formData.get("description") ?? "").trim();
@@ -221,7 +222,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
     const inner = `EXP-${new Date().getFullYear()}-`;
     const [tag, existingNumbers] = await Promise.all([
-      orgTagFor(user.orgId),
+      orgTagFor(orgId),
       db.expense.findMany({ where: { expenseNumber: { contains: inner } }, select: { expenseNumber: true } }),
     ]);
     const expenseSeq = maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1;
@@ -240,6 +241,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
         notes,
         paidAt,
         createdById: user.id,
+        orgId,
       },
     });
 
@@ -247,7 +249,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // on the expense id, so a retry or backfill won't double-post.
     await prisma.$transaction((tx) =>
       postExpensePayment(tx, {
-        orgId: user.orgId,
+        orgId,
         userId: user.id,
         amount: amountRaw,
         date: paidAt ?? undefined,

@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -27,7 +26,9 @@ export default async function BankPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { user } = await getCurrentUserRole();
-  const db = orgDb(user.orgId);
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
+  const db = orgDb(orgId);
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
   const sp = await searchParams;
@@ -53,7 +54,7 @@ export default async function BankPage({
     const openingBal = parseFloat(fd.get("openingBalance") as string) || 0;
     if (!name || !bankName) return;
     await db.bankAccount.create({
-      data: { name, bankName, accountNumber, openingBalance: openingBal, currentBalance: openingBal },
+      data: { name, bankName, accountNumber, openingBalance: openingBal, currentBalance: openingBal, orgId },
     });
     revalidatePath("/finance/bank");
   }
@@ -73,7 +74,7 @@ export default async function BankPage({
     const balanceDelta = type === "CREDIT" ? amount : -amount;
     await prisma.$transaction([
       prisma.bankTransaction.create({
-        data: { bankAccountId, date: new Date(date), description, amount, type, reference },
+        data: { bankAccountId, date: new Date(date), description, amount, type, reference, orgId },
       }),
       db.bankAccount.update({
         where: { id: bankAccountId },
@@ -87,6 +88,7 @@ export default async function BankPage({
     "use server";
     const { user } = await getCurrentUserRole();
     const id = fd.get("id") as string;
+    if (!user.orgId) return;
     // Verify org ownership before toggling — otherwise any staff could reconcile
     // another tenant's bank transaction by posting its id.
     const tx = await prisma.bankTransaction.findFirst({ where: { id, orgId: user.orgId } });

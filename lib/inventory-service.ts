@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * InventoryService — the ONLY module authorised to mutate stock balances.
  *

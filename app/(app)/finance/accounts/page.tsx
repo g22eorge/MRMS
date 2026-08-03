@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -41,7 +40,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ChartOfAccountsPage() {
   const { user } = await getCurrentUserRole();
-  const db = orgDb(user.orgId);
+  if (!user.orgId) redirect("/dashboard");
+  const orgId = user.orgId;
+  const db = orgDb(orgId);
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
   async function createAccount(fd: FormData) {
@@ -55,7 +56,7 @@ export default async function ChartOfAccountsPage() {
     const description = (fd.get("description") as string) || null;
     if (!code || !name || !type) return;
     await db.chartOfAccount.create({
-      data: { code: code.trim(), name: name.trim(), type, parentId, description },
+      data: { code: code.trim(), name: name.trim(), type, parentId, description, orgId },
     });
     revalidatePath("/finance/accounts");
   }
@@ -90,7 +91,8 @@ export default async function ChartOfAccountsPage() {
     if (!_u.orgId) return;
     // Only ADMIN and MANAGER can seed default accounts
     if (!["ADMIN", "MANAGER"].includes(_u.role)) return;
-    const db = orgDb(_u.orgId);
+    const seedOrgId = _u.orgId;
+    const db = orgDb(seedOrgId);
 
     // Fetch codes that already exist so we can skip them
     const existing = await db.chartOfAccount.findMany({ select: { code: true } });
@@ -107,6 +109,7 @@ export default async function ChartOfAccountsPage() {
         description: a.description ?? null,
         isSystem:    false,
         isActive:    true,
+        orgId:       seedOrgId,
       })),
     });
     revalidatePath("/finance/accounts");
@@ -124,14 +127,14 @@ export default async function ChartOfAccountsPage() {
     }),
     // All posted lines for running balance
     prisma.journalLine.findMany({
-      where: { journalEntry: { orgId: user.orgId, status: "POSTED" } },
+      where: { journalEntry: { orgId, status: "POSTED" } },
       select: { accountId: true, debit: true, credit: true },
     }),
     // This month's lines for activity
     prisma.journalLine.findMany({
       where: {
         journalEntry: {
-          orgId: user.orgId,
+          orgId,
           status: "POSTED",
           date: { gte: thisMonthStart, lte: thisMonthEnd },
         },

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Scoped Prisma client — the safe path for all API routes and Server Components.
  *

@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const dynamic = "force-dynamic";
 
 /* Edit handled via ?edit=1 inline form */

@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import Link from "next/link";
 import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -57,6 +56,7 @@ export default async function InvoicesPage({
   searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; page?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
+  if (!user.orgId) redirect("/dashboard");
   const db = orgDb(user.orgId);
   const canCreateInvoice = can.createInvoices(user);
   const canManageInvoicePayments = "ADMIN" === user.role || "OPS" === user.role || can.approveInvoices(user);
@@ -92,6 +92,7 @@ export default async function InvoicesPage({
     "use server";
     const { user } = await getCurrentUserRole();
     const orgId = user.orgId;
+    if (!orgId) redirect("/dashboard");
     const db = orgDb(orgId);
     if (!can.createInvoices(user)) redirect("/dashboard");
 
@@ -99,9 +100,9 @@ export default async function InvoicesPage({
     const requestedNewClient = {
       fullName: sanitizeText(String(formData.get("newClientFullName") ?? "")),
       phone: sanitizeText(String(formData.get("newClientPhone") ?? "")),
-      email: sanitizeOptionalText(formData.get("newClientEmail")),
-      organization: sanitizeOptionalText(formData.get("newClientOrganization")),
-      address: sanitizeOptionalText(formData.get("newClientAddress")),
+      email: sanitizeOptionalText(String(formData.get("newClientEmail") ?? "")),
+      organization: sanitizeOptionalText(String(formData.get("newClientOrganization") ?? "")),
+      address: sanitizeOptionalText(String(formData.get("newClientAddress") ?? "")),
     };
     const hasNewClient = Boolean(requestedNewClient.fullName || requestedNewClient.phone);
     const subject = String(formData.get("subject") ?? "").trim();
@@ -687,12 +688,12 @@ export default async function InvoicesPage({
                   <form action={sendInvoiceRowShareAction}>
                     <input type="hidden" name="invoiceId" value={row.id} />
                     <input type="hidden" name="channel" value="email" />
-                    <MenuActionButton icon="open" type="submit">Send by Email</MenuActionButton>
+                    <MenuActionButton icon="open">Send by Email</MenuActionButton>
                   </form>
                   <form action={sendInvoiceRowShareAction}>
                     <input type="hidden" name="invoiceId" value={row.id} />
                     <input type="hidden" name="channel" value="whatsapp" />
-                    <MenuActionButton icon="whatsapp" tone="success" type="submit">Send by WhatsApp</MenuActionButton>
+                    <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
                   </form>
                   <MenuSection label="Danger zone" />
                   {row.isPaid ? (

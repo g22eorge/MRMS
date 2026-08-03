@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 
 import { PersistedDisclosure } from "@/components/mobile/PersistedDisclosure";

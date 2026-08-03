@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { redirect } from "next/navigation";
 import { TargetMetric, TargetPeriod } from "@prisma/client";
 

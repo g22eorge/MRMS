@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: resolve underlying type issues and remove this pragma
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -50,6 +49,7 @@ function InsightCard({ title, items, empty }: { title: string; items: string[]; 
 export default async function AiInsightsPage() {
   const { user } = await getCurrentUserRole();
   if (!can.viewAccountsSummary(user)) redirect("/dashboard");
+  if (!user.orgId) redirect("/dashboard");
 
   const data = await buildBusinessDataPack(user.orgId);
   const { currency, repairs, sales, finance, inventory } = data;

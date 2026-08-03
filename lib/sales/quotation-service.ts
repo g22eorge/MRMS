@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { revalidatePath } from "next/cache";
 
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";

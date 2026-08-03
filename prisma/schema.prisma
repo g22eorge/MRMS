@@ -685,6 +685,7 @@ model Job {
   @@index([orgId, completedAt])
   @@index([orgId, receivedAt])
   @@index([orgId, repairPath, status])
+  @@index([orgId, jobNumber])
   @@index([deviceId])
   @@index([clientId])
   @@index([createdById])
@@ -2772,6 +2773,7 @@ model Lead {
   @@index([orgId, status])
   @@index([assignedToId])
   @@index([createdAt])
+  @@index([orgId, updatedAt])
 }
 
 model LeadActivity {
@@ -3007,6 +3009,7 @@ model JournalEntry {
   @@unique([orgId, entryNumber])
   @@index([orgId, date])
   @@index([orgId, status])
+  @@index([orgId, status, date])
 }
 
 model JournalLine {

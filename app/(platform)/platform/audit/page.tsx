@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PLATFORM_ROUTES } from "@/lib/platform/routes";

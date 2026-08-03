@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
@@ -135,6 +134,37 @@ export default async function AccountLedgerPage({
 
   const availableYears = [now.getFullYear() - 1, now.getFullYear()];
 
+  // Explicit ledger-row shape so the synthetic opening-balance row and the real
+  // journal lines share one type. `journalEntry` is null only for the opening
+  // row; `runningBalance` has a real home on the type instead of being attached
+  // untyped.
+  type LedgerRow = {
+    id: string;
+    journalEntry: { entryNumber: string; date: Date; description: string; reference: string | null } | null;
+    description: string | null;
+    debit: number;
+    credit: number;
+    net: number;
+    runningBalance: number;
+  };
+
+  const openingRow: LedgerRow = {
+    id: "__opening__",
+    journalEntry: null,
+    description: null,
+    debit: 0,
+    credit: 0,
+    net: 0,
+    runningBalance: openingBalance,
+  };
+
+  const ledgerRows: LedgerRow[] =
+    lines.length === 0
+      ? []
+      : openingBalance !== 0
+        ? [openingRow, ...rows]
+        : rows;
+
   // Most-recent postings for the summary rail activity trail.
   const recentActivity = [...rows]
     .slice(-6)
@@ -253,7 +283,7 @@ export default async function AccountLedgerPage({
 
       {/* ── LEDGER TABLE ─────────────────────────────────────────────────── */}
       <DataTable
-        rows={lines.length === 0 ? [] : openingBalance !== 0 ? [{ id: "__opening__" }, ...rows] : rows}
+        rows={ledgerRows}
         getRowKey={(row) => row.id}
         empty="No posted transactions for this period."
         rowClassName={(row) => (row.id === "__opening__" ? "bg-[var(--panel-strong)]/50" : undefined)}
@@ -263,7 +293,7 @@ export default async function AccountLedgerPage({
             header: "Date",
             className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
             cell: (row) =>
-              row.id === "__opening__"
+              !row.journalEntry
                 ? "—"
                 : new Date(row.journalEntry.date).toLocaleDateString("en-UG", {
                     day: "numeric",
@@ -275,7 +305,7 @@ export default async function AccountLedgerPage({
             key: "entry",
             header: "Entry",
             cell: (row) =>
-              row.id === "__opening__" ? null : (
+              !row.journalEntry ? null : (
                 <span className="mono font-semibold text-[var(--accent)]">
                   {row.journalEntry.entryNumber}
                 </span>
@@ -285,7 +315,7 @@ export default async function AccountLedgerPage({
             key: "description",
             header: "Description",
             cell: (row) =>
-              row.id === "__opening__" ? (
+              !row.journalEntry ? (
                 <span className="italic text-[var(--ink-muted)]">Opening balance</span>
               ) : (
                 <span className="font-medium text-[var(--ink)]">

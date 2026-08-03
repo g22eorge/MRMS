@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUserRole } from "@/lib/session";
@@ -44,6 +43,10 @@ export default async function CashierShiftsPage({
   const { user } = await getCurrentUserRole();
 
   if (!["ADMIN", "OPS", "FRONT_DESK"].includes(user.role)) {
+    redirect("/dashboard");
+  }
+
+  if (!user.orgId) {
     redirect("/dashboard");
   }
 
@@ -223,7 +226,7 @@ export default async function CashierShiftsPage({
     prisma.cashierShift.count({ where: { orgId: user.orgId, status: "CLOSED", closedAt: { gte: monthStart } } }).catch(() => 0),
     prisma.cashierShift.aggregate({ _sum: { closingCash: true }, where: { orgId: user.orgId, status: "CLOSED", closedAt: { gte: monthStart } } }).catch(() => ({ _sum: { closingCash: 0 } })),
   ]);
-  const cashCollectedThisMonth = cashCollectedAgg._sum.closingCash ?? 0;
+  const cashCollectedThisMonth = cashCollectedAgg._sum?.closingCash ?? 0;
   const pageView = paginationView(page, shiftsTotal);
   const shiftsHref = pageHrefBuilder("/pos/shifts", { status: params.status ?? "" });
 

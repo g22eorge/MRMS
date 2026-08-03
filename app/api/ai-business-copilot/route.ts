@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest } from "next/server";
 
@@ -198,6 +197,7 @@ export async function POST(request: NextRequest) {
   const { user } = await getCurrentUserRoleOptional();
   if (!user) return new Response("Unauthorized", { status: 401 });
   if (!can.viewAccountsSummary(user)) return new Response("Forbidden", { status: 403 });
+  if (!user.orgId) return new Response("Forbidden", { status: 403 });
   const settings = await getAiSettings(user.orgId);
   if (!settings.aiEnabled || !settings.insightsEnabled) return new Response("AI Insights is disabled for this workspace.", { status: 403 });
 

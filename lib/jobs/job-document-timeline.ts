@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { DOCUMENTS_ROUTES } from "@/lib/documents/routes";
 import { prisma } from "@/lib/prisma";
 
