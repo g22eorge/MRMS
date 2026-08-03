@@ -49,8 +49,10 @@ export default async function StockLocationsPage({
       _count: { partId: true },
     }).catch(() => []),
   ]);
+  const activeLocations = await prisma.stockLocation.count({ where: { orgId, isActive: true } }).catch(() => 0);
 
   const stats = new Map(stockRows.map((row) => [row.locationId, row]));
+  const totalOnHand = stockRows.reduce((sum, row) => sum + (row._sum.qtyOnHand ?? 0), 0);
   const branchName = new Map(branches.map((branch) => [branch.id, branch.name]));
   const pageView = paginationView(page, locationsTotal);
   const hrefForPage = pageHrefBuilder("/inventory/locations", {});
@@ -88,7 +90,11 @@ export default async function StockLocationsPage({
       header={{
         eyebrow: "Inventory",
         title: "Stock Locations",
-        description: `${locationsTotal} locations`,
+        kpis: [
+          { label: "Total", value: locationsTotal, sub: "locations" },
+          { label: "Active", value: activeLocations, sub: "in use", valueClass: "text-emerald-600" },
+          { label: "On Hand", value: totalOnHand.toLocaleString(), sub: "units stocked" },
+        ],
         actions: (
           <Link href="/inventory" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
             ← Inventory

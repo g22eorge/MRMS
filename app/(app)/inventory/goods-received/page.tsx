@@ -21,7 +21,8 @@ export default async function GoodsReceivedPage({
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
 
-  const [notes, notesTotal] = await Promise.all([
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const [notes, notesTotal, receivedThisMonth] = await Promise.all([
     prisma.goodsReceived.findMany({
       where: { orgId },
       include: {
@@ -35,6 +36,7 @@ export default async function GoodsReceivedPage({
       take: PAGE_SIZE,
     }).catch(() => []),
     prisma.goodsReceived.count({ where: { orgId } }).catch(() => 0),
+    prisma.goodsReceived.count({ where: { orgId, receivedAt: { gte: monthStart } } }).catch(() => 0),
   ]);
 
   const pageView = paginationView(page, notesTotal);
@@ -47,7 +49,10 @@ export default async function GoodsReceivedPage({
       header={{
         eyebrow: "Inventory",
         title: "Goods Received",
-        description: `${notesTotal} notes`,
+        kpis: [
+          { label: "Total GRNs", value: notesTotal, sub: "received notes" },
+          { label: "This Month", value: receivedThisMonth, sub: "received", valueClass: "text-emerald-600" },
+        ],
         actions: (
           <>
             <Link href="/api/procurement/export?type=goods-received" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">

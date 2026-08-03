@@ -268,6 +268,21 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const selectedReplied   = selected ? contacts.filter((c) => c.status === "RESPONDED").length : 0;
   const selectedPending   = selected ? contacts.filter((c) => c.status === "PENDING").length : 0;
 
+  // Named so the status editor is reachable in the desktop table AND mobile card.
+  const renderContactStatus = (cc: (typeof contacts)[number]) => (
+    <form action={updateContactStatus} className="flex items-center justify-end gap-1.5">
+      <input type="hidden" name="id" value={cc.id} />
+      <select name="status" defaultValue={cc.status} aria-label={`Status for ${(cc.lead ?? cc.client)?.fullName ?? "contact"}`}
+        className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] outline-none focus:border-[var(--accent)]/50">
+        {CONTACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
+      <button type="submit" title="Apply status"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+    </form>
+  );
+
   return (
     <ListPageLayout
       headerNode={
@@ -604,16 +619,20 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                     const person = cc.lead ?? cc.client;
                     if (!person) return null;
                     return (
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-bold text-[var(--ink)]">{person.fullName}</p>
-                          <p className="mt-0.5 truncate text-[var(--ink-muted)]">
-                            {person.phone} · {cc.lead ? "Lead" : "Client"}
-                            {cc.sentAt ? ` · sent ${formatEATDate(cc.sentAt)}` : ""}
-                            {cc.repliedAt ? ` · replied ${formatEATDate(cc.repliedAt)}` : ""}
-                          </p>
+                      <div className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="mt-0.5 truncate text-[var(--ink-muted)]">
+                              {person.phone} · {cc.lead ? "Lead" : "Client"}
+                              {cc.sentAt ? ` · sent ${formatEATDate(cc.sentAt)}` : ""}
+                              {cc.repliedAt ? ` · replied ${formatEATDate(cc.repliedAt)}` : ""}
+                            </p>
+                          </div>
+                          <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)}>{cc.status}</StatusBadge>
                         </div>
-                        <StatusBadge tone={toneFor(CONTACT_STATUS_TONES, cc.status)}>{cc.status}</StatusBadge>
+                        {/* Status editor reachable on mobile (was desktop-table-only). */}
+                        <div className="mt-2">{renderContactStatus(cc)}</div>
                       </div>
                     );
                   }}
@@ -653,19 +672,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         : <span className="text-[var(--ink-muted)]/30">—</span>,
                     },
                   ]}
-                  actions={(cc) => (
-                    <form action={updateContactStatus} className="flex items-center justify-end gap-1.5">
-                      <input type="hidden" name="id" value={cc.id} />
-                      <select name="status" defaultValue={cc.status} aria-label={`Status for ${(cc.lead ?? cc.client)?.fullName ?? "contact"}`}
-                        className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] outline-none focus:border-[var(--accent)]/50">
-                        {CONTACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <button type="submit" title="Apply status"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
-                    </form>
-                  )}
+                  actions={renderContactStatus}
                 />
               </section>
             </div>

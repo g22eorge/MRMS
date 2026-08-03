@@ -393,6 +393,14 @@ export default async function SalesPage({
 
   const leadsShownValue = leads.reduce((s, l) => s + (l.estimatedValue ?? 0), 0);
 
+  // Named so the quotation actions are reachable in the table AND the mobile card.
+  const renderQuotationActions = (q: (typeof quotations)[number]) => (
+    <RowActionsMenu label={`Quotation ${q.quoteNumber}`} size="compact">
+      <MenuActionLink href={`/sales/quotations/${q.id}`} icon="open">Open quotation</MenuActionLink>
+      <MenuActionLink href={`/api/quotations/${q.id}`} icon="download">Download PDF</MenuActionLink>
+    </RowActionsMenu>
+  );
+
   return (
     <ListPageLayout
       headerNode={
@@ -859,21 +867,21 @@ export default async function SalesPage({
               const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
               const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
               return (
-                <Link href={`/sales/quotations/${q.id}`} className="flex items-center gap-3 px-4 py-3 active:opacity-70">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Link href={`/sales/quotations/${q.id}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
                     q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600"
                     : q.status === "REJECTED" ? "bg-red-500/15 text-red-600"
                     : q.status === "SENT" ? "bg-sky-500/15 text-sky-600"
                     : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
                   }`}>
                     {(recipientName?.[0] ?? "Q").toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
+                  </Link>
+                  <Link href={`/sales/quotations/${q.id}`} className="min-w-0 flex-1 active:opacity-70">
                     <p className="truncate font-bold text-[var(--ink)]">{recipientName ?? "No recipient"}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{q.quoteNumber}</span> · {formatEATDate(q.createdAt)}
                     </p>
-                  </div>
+                  </Link>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <p className="font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(q.totalAmount, q.currency)}</p>
                     {isExpired ? (
@@ -882,7 +890,8 @@ export default async function SalesPage({
                       <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
                     )}
                   </div>
-                </Link>
+                  {renderQuotationActions(q)}
+                </div>
               );
             }}
             columns={[
@@ -930,12 +939,7 @@ export default async function SalesPage({
               },
               { key: "status", header: "Status", cell: (q) => <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge> },
             ]}
-            actions={(q) => (
-              <Link href={`/sales/quotations/${q.id}`} title="Open quotation"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </Link>
-            )}
+            actions={renderQuotationActions}
           />
         </div>
       )}

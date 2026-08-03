@@ -270,6 +270,32 @@ export default async function PosPage({
     { seg: "open" as Segment, short: "Open", long: `${segCountOpen} open`, count: segCountOpen },
   ];
 
+  // Named so the same actions render in the desktop table AND the mobile card.
+  const renderSaleActions = (s: (typeof sales)[number]) => (
+    <>
+      <Link href={`/pos/${s.id}`} title="Open sale"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </Link>
+      <a href={`/api/sales/${s.id}/receipt`} target="_blank" rel="noreferrer" title="Receipt PDF"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-sky-400/40 hover:text-sky-600">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </a>
+      {canDelete(s) ? (
+        <form action={deleteSaleAction} className="inline">
+          <input type="hidden" name="saleId" value={s.id} />
+          <ConfirmSubmitButton
+            message="Delete this open POS sale? Stock will be restored."
+            title="Delete sale"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          </ConfirmSubmitButton>
+        </form>
+      ) : null}
+    </>
+  );
+
   return (
     <ListPageLayout
       headerNode={
@@ -488,7 +514,8 @@ export default async function PosPage({
               const cur = normalizeCurrency(s.currency, "UGX");
               const balance = Math.max(0, s.totalAmount - s.paidAmount);
               return (
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-3">
                   <Link href={`/pos/${s.id}`} className="shrink-0">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
                       s.status === "PAID" ? "bg-emerald-500/15 text-emerald-600"
@@ -514,6 +541,9 @@ export default async function PosPage({
                       <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
                     )}
                   </div>
+                  </div>
+                  {/* Actions reachable on mobile (were desktop-table-only). */}
+                  <div className="mt-2 flex items-center gap-1.5">{renderSaleActions(s)}</div>
                 </div>
               );
             }}
@@ -566,30 +596,7 @@ export default async function PosPage({
               },
               { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },
             ]}
-            actions={(s) => (
-              <>
-                <Link href={`/pos/${s.id}`} title="Open sale"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                </Link>
-                <a href={`/api/sales/${s.id}/receipt`} target="_blank" rel="noreferrer" title="Receipt PDF"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-sky-400/40 hover:text-sky-600">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                </a>
-                {canDelete(s) ? (
-                  <form action={deleteSaleAction} className="inline">
-                    <input type="hidden" name="saleId" value={s.id} />
-                    <ConfirmSubmitButton
-                      message="Delete this open POS sale? Stock will be restored."
-                      title="Delete sale"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                    </ConfirmSubmitButton>
-                  </form>
-                ) : null}
-              </>
-            )}
+            actions={renderSaleActions}
           />
         </div>
       )}

@@ -57,6 +57,10 @@ export default async function StockTransfersPage({
     prisma.stockLocation.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" } }).catch(() => []),
     prisma.part.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, sku: true, name: true } }),
   ]);
+  const [pendingTransfers, inTransitTransfers] = await Promise.all([
+    prisma.stockTransfer.count({ where: { orgId, status: { in: ["REQUESTED", "APPROVED"] } } }).catch(() => 0),
+    prisma.stockTransfer.count({ where: { orgId, status: "DISPATCHED" } }).catch(() => 0),
+  ]);
   const locationName = new Map(locations.map((location) => [location.id, location.name]));
   const pageView = paginationView(page, transfersTotal);
   const hrefForPage = pageHrefBuilder("/inventory/transfers", {});
@@ -76,7 +80,11 @@ export default async function StockTransfersPage({
       header={{
         eyebrow: "Inventory",
         title: "Stock Transfers",
-        description: `${transfersTotal} transfers`,
+        kpis: [
+          { label: "Total", value: transfersTotal, sub: "transfers" },
+          { label: "Pending", value: pendingTransfers, sub: "to approve/dispatch", valueClass: pendingTransfers > 0 ? "text-amber-600" : undefined },
+          { label: "In Transit", value: inTransitTransfers, sub: "dispatched", valueClass: inTransitTransfers > 0 ? "text-sky-600" : undefined },
+        ],
         actions: (
           <>
             <Link href="/inventory/locations" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Locations</Link>
