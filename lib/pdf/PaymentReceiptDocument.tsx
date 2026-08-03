@@ -81,10 +81,11 @@ type ReceiptProps = {
   forLabel: string;
   receivedBy: string;
   clientName?: string | null;
+  clientOrganization?: string | null;
   clientPhone?: string | null;
 };
 
-export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, forLabel, receivedBy, clientName, clientPhone }: ReceiptProps) {
+export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone }: ReceiptProps) {
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
 
   return (
@@ -132,6 +133,7 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
               <>
                 <Text style={s.sectionLabel}>Received From</Text>
                 <Text style={s.clientName}>{clientName}</Text>
+                {clientOrganization ? <Text style={s.clientLine}>{clientOrganization}</Text> : null}
                 {clientPhone ? <Text style={s.clientLine}>{clientPhone}</Text> : null}
               </>
             ) : null}

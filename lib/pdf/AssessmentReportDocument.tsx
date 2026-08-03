@@ -68,6 +68,8 @@ export type AssessmentReportProps = {
 
   jobNumber: string;
   deviceIssue: string;
+  preparedForName?: string;
+  preparedForOrg?: string;
 
   findings: string[]; // section 1 paragraphs
   recommendedSolution: string; // section 2 lead
@@ -123,6 +125,13 @@ export function AssessmentReportDocument(p: AssessmentReportProps) {
 
         {/* Meta */}
         <Text style={s.metaRow}><Text style={s.metaLabel}>Repair Job No: </Text>{p.jobNumber}</Text>
+        {p.preparedForOrg || p.preparedForName ? (
+          <Text style={s.metaRow}>
+            <Text style={s.metaLabel}>Prepared for: </Text>
+            {p.preparedForOrg || p.preparedForName}
+            {p.preparedForOrg && p.preparedForName ? ` (Attn: ${p.preparedForName})` : ""}
+          </Text>
+        ) : null}
         <Text style={s.metaRow}><Text style={s.metaLabel}>Device Issue: </Text>{p.deviceIssue}</Text>
 
         {/* 1. Assessment findings */}

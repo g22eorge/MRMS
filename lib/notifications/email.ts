@@ -46,6 +46,7 @@ export async function sendEmail(input: {
   text: string;
   react?: ReactElement;
   from?: string;
+  attachments?: { filename: string; content: Buffer }[];
 }) {
   const resend = getResend();
   if (!resend) {
@@ -69,6 +70,9 @@ export async function sendEmail(input: {
       subject: input.subject,
       text: input.text,
       ...(input.react ? { react: input.react } : {}),
+      ...(input.attachments && input.attachments.length > 0
+        ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) }
+        : {}),
     });
 
     // resend returns { data, error }

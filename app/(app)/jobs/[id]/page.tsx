@@ -350,8 +350,8 @@ export default async function JobDetailPage({
             {assessments.length > 0 && canAssess ? (
               <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
             ) : null}
-            {assessments.some((r) => r.visibility !== "INTERNAL") && canAssess && job.client?.phone ? (
-              <SendAssessmentButton jobId={id} />
+            {assessments.some((r) => r.visibility !== "INTERNAL") && canAssess && (job.client?.phone || job.client?.email) ? (
+              <SendAssessmentButton jobId={id} hasPhone={Boolean(job.client?.phone)} hasEmail={Boolean(job.client?.email)} />
             ) : null}
             {canAssess ? (
               <form action={generateAssessmentAction}>

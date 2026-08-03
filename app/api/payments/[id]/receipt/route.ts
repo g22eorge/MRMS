@@ -35,8 +35,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       reference: true,
       receivedAt: true,
       createdBy: { select: { name: true } },
-      sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true } } } },
-      invoice: { select: { id: true, invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true } } } } } },
+      sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } },
+      invoice: { select: { id: true, invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } } } },
     },
   });
 
@@ -64,6 +64,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const clientName = payment.invoice?.job?.client?.fullName
     ?? payment.sale?.client?.fullName
     ?? null;
+  const clientOrganization = payment.invoice?.job?.client?.organization
+    ?? payment.sale?.client?.organization
+    ?? null;
   const clientPhone = payment.invoice?.job?.client?.phone
     ?? payment.sale?.client?.phone
     ?? null;
@@ -78,6 +81,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     forLabel,
     receivedBy: payment.createdBy?.name ?? user.name,
     clientName,
+    clientOrganization,
     clientPhone,
   });
 

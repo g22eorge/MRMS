@@ -11,7 +11,9 @@ import {
 } from "@/lib/notifications/whatsapp";
 import {
   deliverWhatsAppPdfDocument,
+  deliverEmailPdfDocument,
   isWhatsAppPdfDocumentRow,
+  isEmailPdfDocumentRow,
 } from "@/lib/notifications/whatsapp-document-outbox";
 import { RepairRequestAlertEmail } from "@/emails/RepairRequestAlertEmail";
 
@@ -275,17 +277,19 @@ export async function deliverOutboundMessage(id: string) {
   const result =
     row.channel === "WHATSAPP" && isWhatsAppPdfDocumentRow(row)
       ? await deliverWhatsAppPdfDocument(row)
-      : row.channel === "WHATSAPP"
-        ? row.metaTemplateName
-          ? await sendWhatsAppTemplateMessage(
-              row.to,
-              row.metaTemplateName,
-              row.metaTemplateLanguage ?? "en",
-              safeJsonArray(row.metaTemplateVars),
-              whatsappCfg ?? undefined,
-            )
-          : await sendCustomWhatsAppMessage(row.to, row.body, whatsappCfg ?? undefined)
-        : await deliverEmail(row);
+      : row.channel === "EMAIL" && isEmailPdfDocumentRow(row)
+        ? await deliverEmailPdfDocument(row)
+        : row.channel === "WHATSAPP"
+          ? row.metaTemplateName
+            ? await sendWhatsAppTemplateMessage(
+                row.to,
+                row.metaTemplateName,
+                row.metaTemplateLanguage ?? "en",
+                safeJsonArray(row.metaTemplateVars),
+                whatsappCfg ?? undefined,
+              )
+            : await sendCustomWhatsAppMessage(row.to, row.body, whatsappCfg ?? undefined)
+          : await deliverEmail(row);
 
   if (result.success) {
     await prisma.outboundMessage.update({

@@ -60,6 +60,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ paymentId:
     forLabel,
     receivedBy: payment.createdBy?.name ?? session.org.name,
     clientName: session.client.fullName,
+    clientOrganization: session.client.organization,
     clientPhone: null,
   });
 

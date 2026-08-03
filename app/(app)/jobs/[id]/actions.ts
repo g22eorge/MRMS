@@ -28,7 +28,7 @@ import {
   notifyPayoutGenerated,
 } from "@/lib/notifications";
 import { deliverOutboundMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
-import { enqueueWhatsAppDocument, type WhatsAppDocumentKind } from "@/lib/notifications/whatsapp-document-outbox";
+import { enqueueWhatsAppDocument, enqueueEmailDocument, type WhatsAppDocumentKind } from "@/lib/notifications/whatsapp-document-outbox";
 import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
@@ -1339,6 +1339,75 @@ async function sendPdfViaWhatsApp(opts: {
   };
 }
 
+/** Email sibling of {@link sendPdfViaWhatsApp}: the PDF is attached to the email. */
+async function sendPdfViaEmail(opts: {
+  jobId: string;
+  userId: string;
+  clientEmail: string;
+  filename: string;
+  subject: string;
+  emailBody: string;
+  documentKind: WhatsAppDocumentKind;
+  stampQuotedAt?: boolean;
+  staffName: string;
+  staffRole: string;
+  auditAction: string;
+  auditDetail: Record<string, string>;
+  orgId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const enqueued = await enqueueEmailDocument({
+    orgId: opts.orgId,
+    to: opts.clientEmail,
+    subject: opts.subject,
+    body: opts.emailBody,
+    jobId: opts.jobId,
+    document: {
+      documentKind: opts.documentKind,
+      filename: opts.filename,
+      caption: opts.subject,
+      staffName: opts.staffName,
+      staffRole: opts.staffRole,
+      staffUserId: opts.userId,
+      stampQuotedAt: opts.stampQuotedAt,
+      auditAction: opts.auditAction,
+      auditDetail: opts.auditDetail,
+    },
+  });
+
+  if (!enqueued.outboxId) {
+    if ("sent" in enqueued && enqueued.sent) {
+      revalidatePath(`/jobs/${opts.jobId}`);
+      return { success: true };
+    }
+    return { success: false, error: enqueued.error ?? "Failed to queue email document" };
+  }
+
+  const delivery = await deliverOutboundMessage(enqueued.outboxId);
+  if (delivery.ok && "sent" in delivery && delivery.sent) {
+    revalidatePath(`/jobs/${opts.jobId}`);
+    return { success: true };
+  }
+
+  const outboxRow = await prisma.outboundMessage.findUnique({
+    where: { id: enqueued.outboxId },
+    select: { lastError: true },
+  }).catch(() => null);
+
+  revalidatePath(`/jobs/${opts.jobId}`);
+  return {
+    success: false,
+    error: outboxRow?.lastError ?? ("error" in delivery ? delivery.error : undefined) ?? "Document send failed",
+  };
+}
+
+/** Fetch the job's client email for an email send; returns "" when absent. */
+async function jobClientEmail(jobId: string, orgId: string): Promise<string> {
+  const job = await prisma.job
+    .findFirst({ where: { id: jobId, orgId }, select: { client: { select: { email: true } } } })
+    .catch(() => null);
+  return job?.client?.email ?? "";
+}
+
 export async function sendQuotationViaWhatsAppAction(
   jobId: string,
 ): Promise<{ success: boolean; error?: string }> {
@@ -1458,6 +1527,113 @@ export async function sendAssessmentViaWhatsAppAction(
     staffName: user.name,
     staffRole: user.role,
     auditAction: "ASSESSMENT_SENT_WHATSAPP",
+    auditDetail: { jobNumber: job?.jobNumber ?? "" },
+  });
+}
+
+// ── Email counterparts: the PDF is attached to the email (Resend) ──
+
+export async function sendQuotationViaEmailAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS", "FRONT_DESK"].includes(user.role)) {
+    return { success: false, error: "Not authorised" };
+  }
+  const result = await generateQuotationBuffer(jobId, user.name, user.role, true, user.id, orgId);
+  if (!result.ok) return { success: false, error: result.error };
+  const clientEmail = await jobClientEmail(jobId, orgId);
+  if (!clientEmail) return { success: false, error: "This client has no email address on file." };
+  return sendPdfViaEmail({
+    jobId, userId: user.id, orgId,
+    filename: result.filename, clientEmail,
+    subject: `Quotation ${result.quotationNumber}`,
+    emailBody: `Please find your quotation (${result.quotationNumber}) attached.`,
+    documentKind: "quotation",
+    stampQuotedAt: true,
+    staffName: user.name,
+    staffRole: user.role,
+    auditAction: "QUOTATION_SENT_EMAIL",
+    auditDetail: { quotationNumber: result.quotationNumber },
+  });
+}
+
+export async function sendInvoiceViaEmailAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS"].includes(user.role) && !can.approveInvoices({ role: user.role, permissions: user.permissions })) {
+    return { success: false, error: "Not authorised" };
+  }
+  const result = await generateInvoiceBuffer(jobId, user.name, user.role, user.id, orgId);
+  if (!result.ok) return { success: false, error: result.error };
+  const clientEmail = await jobClientEmail(jobId, orgId);
+  if (!clientEmail) return { success: false, error: "This client has no email address on file." };
+  return sendPdfViaEmail({
+    jobId, userId: user.id, orgId,
+    filename: result.filename, clientEmail,
+    subject: `Invoice ${result.invoiceNumber}`,
+    emailBody: `Please find your invoice (${result.invoiceNumber}) attached.`,
+    documentKind: "invoice",
+    staffName: user.name,
+    staffRole: user.role,
+    auditAction: "INVOICE_SENT_EMAIL",
+    auditDetail: { invoiceNumber: result.invoiceNumber },
+  });
+}
+
+export async function sendJobCardViaEmailAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS"].includes(user.role) && !can.generateJobCards({ role: user.role, permissions: user.permissions })) {
+    return { success: false, error: "Not authorised" };
+  }
+  const result = await generateJobCardBuffer(jobId, user.name, user.role, user.id, orgId);
+  if (!result.ok) return { success: false, error: result.error };
+  const clientEmail = await jobClientEmail(jobId, orgId);
+  if (!clientEmail) return { success: false, error: "This client has no email address on file." };
+  return sendPdfViaEmail({
+    jobId, userId: user.id, orgId,
+    filename: result.filename, clientEmail,
+    subject: `Job card ${result.documentNumber}`,
+    emailBody: `Please find your job card (${result.documentNumber}) attached.`,
+    documentKind: "job_card",
+    staffName: user.name,
+    staffRole: user.role,
+    auditAction: "JOB_CARD_SENT_EMAIL",
+    auditDetail: { documentNumber: result.documentNumber },
+  });
+}
+
+export async function sendAssessmentViaEmailAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS", "FRONT_DESK"].includes(user.role)) {
+    return { success: false, error: "Not authorised" };
+  }
+  const result = await generateAssessmentBuffer({ orgId, jobId, requireClientVisible: true });
+  if (!result.ok) return { success: false, error: result.error };
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, orgId },
+    select: { jobNumber: true, client: { select: { email: true } } },
+  });
+  const clientEmail = job?.client?.email ?? "";
+  if (!clientEmail) return { success: false, error: "This client has no email address on file." };
+  return sendPdfViaEmail({
+    jobId, userId: user.id, orgId,
+    filename: result.filename, clientEmail,
+    subject: `Assessment report ${job?.jobNumber ?? ""}`,
+    emailBody: `Please find your assessment report (${job?.jobNumber ?? ""}) attached.`,
+    documentKind: "assessment",
+    staffName: user.name,
+    staffRole: user.role,
+    auditAction: "ASSESSMENT_SENT_EMAIL",
     auditDetail: { jobNumber: job?.jobNumber ?? "" },
   });
 }

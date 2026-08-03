@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
+import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, sendQuotationViaEmailAction, sendInvoiceViaEmailAction, sendJobCardViaEmailAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
 import { CheckboxField, LineItemTotals } from "@/components/forms";
 import { DataTable } from "@/components/ui/DataTable";
 import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
@@ -141,6 +141,7 @@ function DeliveryDot({ status }: { status: string | null }) {
 function MessagesTab({
   jobId,
   clientPhone,
+  clientEmail,
   canSendQuote,
   canSendInvoice,
   canSendJobCard,
@@ -149,6 +150,7 @@ function MessagesTab({
 }: {
   jobId: string;
   clientPhone: string | null | undefined;
+  clientEmail: string | null | undefined;
   canSendQuote: boolean;
   canSendInvoice: boolean;
   canSendJobCard: boolean;
@@ -161,11 +163,28 @@ function MessagesTab({
   const [isSendingQuote, startSendQuoteTransition] = useTransition();
   const [isSendingInvoice, startSendInvoiceTransition] = useTransition();
   const [isSendingJobCard, startSendJobCardTransition] = useTransition();
+  const [isEmailingQuote, startEmailQuoteTransition] = useTransition();
+  const [isEmailingInvoice, startEmailInvoiceTransition] = useTransition();
+  const [isEmailingJobCard, startEmailJobCardTransition] = useTransition();
   const [replyText, setReplyText] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [jobCardError, setJobCardError] = useState<string | null>(null);
+
+  function emailSend(
+    action: (id: string) => Promise<{ success: boolean; error?: string }>,
+    start: React.TransitionStartFunction,
+    setErr: (v: string | null) => void,
+    fallback: string,
+  ) {
+    setErr(null);
+    start(async () => {
+      const res = await action(jobId);
+      if (res.success) router.refresh();
+      else setErr(res.error ?? fallback);
+    });
+  }
 
   const thread: ThreadEntry[] = [
     ...inbound.map((msg) => ({ kind: "inbound" as const, msg, sortAt: new Date(msg.timestamp) })),
@@ -305,89 +324,93 @@ function MessagesTab({
         </div>
       )}
 
-      {clientPhone ? (
+      {clientPhone || clientEmail ? (
         <div className="border-t border-[var(--line)] p-3 space-y-2">
           {(canSendQuote || canSendInvoice || canSendJobCard) ? (
             <div className="flex flex-wrap items-center gap-2">
               {canSendQuote ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleSendQuote}
-                    disabled={isSendingQuote}
-                    className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50"
-                  >
-                    {isSendingQuote ? "Sending…" : "Send Quote PDF"}
-                  </button>
-                  {quoteError ? (
-                    <p className="text-xs text-red-600">{quoteError}</p>
+                  {clientPhone ? (
+                    <button type="button" onClick={handleSendQuote} disabled={isSendingQuote} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isSendingQuote ? "Sending…" : "WhatsApp quote"}
+                    </button>
                   ) : null}
+                  {clientEmail ? (
+                    <button type="button" onClick={() => emailSend(sendQuotationViaEmailAction, startEmailQuoteTransition, setQuoteError, "Failed to email quotation")} disabled={isEmailingQuote} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isEmailingQuote ? "Emailing…" : "Email quote"}
+                    </button>
+                  ) : null}
+                  {quoteError ? <p className="text-xs text-red-600">{quoteError}</p> : null}
                 </>
               ) : null}
               {canSendInvoice ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleSendInvoice}
-                    disabled={isSendingInvoice}
-                    className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50"
-                  >
-                    {isSendingInvoice ? "Sending…" : "Send Invoice PDF"}
-                  </button>
-                  {invoiceError ? (
-                    <p className="text-xs text-red-600">{invoiceError}</p>
+                  {clientPhone ? (
+                    <button type="button" onClick={handleSendInvoice} disabled={isSendingInvoice} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isSendingInvoice ? "Sending…" : "WhatsApp invoice"}
+                    </button>
                   ) : null}
+                  {clientEmail ? (
+                    <button type="button" onClick={() => emailSend(sendInvoiceViaEmailAction, startEmailInvoiceTransition, setInvoiceError, "Failed to email invoice")} disabled={isEmailingInvoice} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isEmailingInvoice ? "Emailing…" : "Email invoice"}
+                    </button>
+                  ) : null}
+                  {invoiceError ? <p className="text-xs text-red-600">{invoiceError}</p> : null}
                 </>
               ) : null}
               {canSendJobCard ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleSendJobCard}
-                    disabled={isSendingJobCard}
-                    className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50"
-                  >
-                    {isSendingJobCard ? "Sending…" : "Send Job Card PDF"}
-                  </button>
-                  {jobCardError ? (
-                    <p className="text-xs text-red-600">{jobCardError}</p>
+                  {clientPhone ? (
+                    <button type="button" onClick={handleSendJobCard} disabled={isSendingJobCard} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isSendingJobCard ? "Sending…" : "WhatsApp job card"}
+                    </button>
                   ) : null}
+                  {clientEmail ? (
+                    <button type="button" onClick={() => emailSend(sendJobCardViaEmailAction, startEmailJobCardTransition, setJobCardError, "Failed to email job card")} disabled={isEmailingJobCard} className="btn-premium-secondary rounded-xl px-3 py-1.5 text-sm disabled:opacity-50">
+                      {isEmailingJobCard ? "Emailing…" : "Email job card"}
+                    </button>
+                  ) : null}
+                  {jobCardError ? <p className="text-xs text-red-600">{jobCardError}</p> : null}
                 </>
               ) : null}
             </div>
           ) : null}
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Type a reply… (Enter to send, Shift+Enter for new line)"
-              rows={2}
-              disabled={isSending}
-              className="min-h-[60px] flex-1 resize-none rounded-xl bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={isSending || !replyText.trim()}
-              className="btn-premium shrink-0 rounded-xl px-4 py-2 text-sm disabled:opacity-50"
-            >
-              {isSending ? "Sending…" : "Send"}
-            </button>
-          </div>
-          {sendError ? (
-            <p className="text-xs text-red-600">{sendError}</p>
-          ) : null}
-          <p className="text-[12px] text-[var(--ink-muted)]">Sending to {clientPhone}</p>
+          {clientPhone ? (
+            <>
+              <div className="flex gap-2 items-end">
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Type a reply… (Enter to send, Shift+Enter for new line)"
+                  rows={2}
+                  disabled={isSending}
+                  className="min-h-[60px] flex-1 resize-none rounded-xl bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={isSending || !replyText.trim()}
+                  className="btn-premium shrink-0 rounded-xl px-4 py-2 text-sm disabled:opacity-50"
+                >
+                  {isSending ? "Sending…" : "Send"}
+                </button>
+              </div>
+              {sendError ? <p className="text-xs text-red-600">{sendError}</p> : null}
+              <p className="text-[12px] text-[var(--ink-muted)]">Sending to {clientPhone}</p>
+            </>
+          ) : (
+            <p className="text-[12px] text-[var(--ink-muted)]">No phone number on file — documents above can still be emailed; a WhatsApp reply needs a phone.</p>
+          )}
         </div>
       ) : (
         <div className="border-t border-[var(--line)] px-4 py-3 text-xs text-[var(--ink-muted)]">
-          No client phone number — cannot send reply.
+          No client phone or email — cannot send.
         </div>
       )}
     </div>
@@ -2268,6 +2291,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         <MessagesTab
           jobId={job.id}
           clientPhone={job.client?.phone ?? null}
+          clientEmail={job.client?.email ?? null}
           canSendQuote={canGenerateQuotation && !isIntake}
           canSendInvoice={canGenerateInvoice && invoiceEligibleByStatus && !isIntake}
           canSendJobCard={canGenerateJobCard && !isIntake}

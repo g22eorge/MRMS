@@ -58,6 +58,7 @@ export async function generateAssessmentBuffer(params: {
       jobNumber: true, issueDescription: true, brand: true, model: true, deviceType: true,
       diagnosisNotes: true, externalDiagnosis: true, partsNeeded: true, recommendedRepair: true, workDone: true, clientBill: true,
       warrantyMonths: true, warrantyExpiresAt: true,
+      client: { select: { fullName: true, organization: true } },
       quotations: {
         orderBy: { createdAt: "desc" }, take: 1,
         select: { totalAmount: true, currency: true, status: true, items: { select: { description: true, quantity: true, lineTotal: true } } },
@@ -159,6 +160,8 @@ export async function generateAssessmentBuffer(params: {
     companyAddress: address,
     companyLogoUrl: logoUrl,
     jobNumber: job.jobNumber,
+    preparedForName: job.client?.fullName ?? "",
+    preparedForOrg: compactText(job.client?.organization, 60),
     deviceIssue: compactText(job.issueDescription, 120) || `${prettyEnum(job.deviceType)} repair`,
     findings: findings.length > 0 ? findings : ["Assessment completed. Details available on request."],
     recommendedSolution,
