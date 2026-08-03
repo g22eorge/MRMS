@@ -168,8 +168,8 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repair Photos ({job.photos.length})</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {job.photos.map((ph) => (
-              <a key={ph.id} href={ph.url} target="_blank" rel="noopener" className="group relative block overflow-hidden rounded-lg border border-[var(--line)]">
-                <Image src={ph.url} alt={ph.label ?? "Repair photo"} width={300} height={200} className="h-28 w-full object-cover transition group-hover:opacity-90" />
+              <a key={ph.id} href={`/api/photos/${ph.id}`} target="_blank" rel="noopener" className="group relative block overflow-hidden rounded-lg border border-[var(--line)]">
+                <Image src={`/api/photos/${ph.id}`} alt={ph.label ?? "Repair photo"} width={300} height={200} unoptimized className="h-28 w-full object-cover transition group-hover:opacity-90" />
                 {ph.label ? <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold capitalize text-white">{ph.label}</span> : null}
               </a>
             ))}

@@ -1159,9 +1159,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         <div className="dc-card p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-xl">
-              {job.photos?.[0]?.url ? (
+              {job.photos?.[0]?.id ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={job.photos[0].url} alt="Device" className="h-full w-full object-cover" />
+                <img src={`/api/photos/${job.photos[0].id}`} alt="Device" className="h-full w-full object-cover" />
               ) : "📱"}
             </div>
             <div className="min-w-0">

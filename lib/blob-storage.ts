@@ -1,13 +1,14 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { put, del } from "@vercel/blob";
+import { put, del, get } from "@vercel/blob";
 
 /**
  * Repair-photo storage on Vercel Blob. Local disk is ephemeral on Vercel, so
- * photos that must survive (and be shown in the client portal) live in Blob and
- * are referenced by their public CDN URL. Guarded so the app degrades cleanly
- * when BLOB_READ_WRITE_TOKEN is not configured.
+ * photos live in Blob. They are stored **private** (access: "private") — the
+ * blob URL is not directly viewable — and streamed to authorised viewers only
+ * through /api/photos/[id]. Guarded so the app degrades cleanly when
+ * BLOB_READ_WRITE_TOKEN is not configured.
  */
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -47,7 +48,7 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
   const key = `jobs/${jobId}/${Date.now()}-${randomUUID()}.${ext}`;
   try {
     const res = await put(key, Buffer.from(bytes), {
-      access: "public",
+      access: "private",
       contentType: file.type,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
@@ -61,4 +62,22 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
 export async function deleteBlobObject(urlOrKey: string | null | undefined): Promise<void> {
   if (!urlOrKey || !blobConfigured()) return;
   await del(urlOrKey, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch(() => {});
+}
+
+/**
+ * Read a private blob server-side (authenticated with the RW token). Returns a
+ * stream + content type for the caller's own authorised route to relay, or null
+ * if unavailable. The blob is never exposed to the browser directly.
+ */
+export async function streamPrivateBlob(
+  urlOrKey: string,
+): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string } | null> {
+  if (!blobConfigured()) return null;
+  try {
+    const res = await get(urlOrKey, { access: "private", token: process.env.BLOB_READ_WRITE_TOKEN });
+    if (!res || res.statusCode !== 200 || !res.stream) return null;
+    return { stream: res.stream, contentType: res.blob.contentType || "application/octet-stream" };
+  } catch {
+    return null;
+  }
 }

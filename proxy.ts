@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
   "/api/billing/callback", // Pesapal payment redirect (arrives without session)
   "/api/cron",             // Scheduled jobs triggered by Vercel cron
   "/api/portal",           // Client-portal APIs — self-guarded by the portal session
+  "/api/photos",           // Private repair photos — self-guarded (staff OR portal session)
 
   // Public forms & pages
   "/repair-request",

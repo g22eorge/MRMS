@@ -39,13 +39,6 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   turbopack: { root: process.cwd() },
-  // Repair photos are served from Vercel Blob's CDN (cross-origin) — allow
-  // next/image to load them.
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
-    ],
-  },
   async redirects() {
     return [
       { source: "/outbox", destination: "/communications/outbox", permanent: false },
