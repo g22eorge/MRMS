@@ -7,8 +7,9 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
-import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { can } from "@/lib/permissions";
@@ -247,43 +248,14 @@ export default async function QuotationDetailPage({
   ];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 pb-24 lg:pb-8">
-      <div>
-        <Link href="/sales?tab=quotations" className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          All quotations
-        </Link>
-      </div>
-
-      {/* -- Identity + actions + money strip -- */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="mono truncate text-[13px] font-bold text-[var(--ink)]">{quotation.quoteNumber}</p>
-              <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, quotation.status)}>{quotation.status}</StatusBadge>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
-              <span className="truncate">{recipientName ?? "No recipient"}</span>
-              {quotation.lead ? (
-                <>
-                  <span className="opacity-40">&middot;</span>
-                  <Link href={`/sales/leads/${quotation.lead.id}`} className="transition hover:text-[var(--accent)]">Lead</Link>
-                </>
-              ) : null}
-              {quotation.job ? (
-                <>
-                  <span className="opacity-40">&middot;</span>
-                  <Link href={`/jobs/${quotation.job.id}`} className="mono transition hover:text-[var(--accent)]">{quotation.job.jobNumber}</Link>
-                </>
-              ) : null}
-            </div>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
-              Created {formatEATDate(quotation.createdAt)} by {quotation.createdBy?.name ?? "unknown"}
-              {quotation.convertedToInvoiceId ? " &middot; invoiced" : ""}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+    <div className="space-y-4 pb-24 lg:pb-8">
+      <RecordActionBar
+        backHref="/sales?tab=quotations"
+        eyebrow="Quotation"
+        title={quotation.quoteNumber}
+        status={{ label: quotation.status, tone: toneFor(QUOTATION_STATUS_TONES, quotation.status) }}
+        secondary={
+          <>
             <Button href={pdfHref} external target="_blank" rel="noreferrer" variant="secondary" size="sm">PDF</Button>
             {canEditDraft ? (
               <Button
@@ -294,7 +266,10 @@ export default async function QuotationDetailPage({
                 {showEdit ? "Close" : "Edit"}
               </Button>
             ) : null}
-            <RowActionsMenu label={`Quotation actions for ${quotation.quoteNumber}`}>
+          </>
+        }
+        overflow={
+          <RowActionsMenu label={`Quotation actions for ${quotation.quoteNumber}`}>
               <div className="py-1 text-left">
                 <MenuActionLink href={pdfHref} external icon="quote" tone="accent">
                   Download Quotation PDF
@@ -362,37 +337,15 @@ export default async function QuotationDetailPage({
                 </>
               ) : null}
             </RowActionsMenu>
-          </div>
-        </div>
-
-        <StatStrip
-          columns={4}
-          tiles={[
-            { label: "Total", value: formatMoney(quotation.totalAmount, currency) },
-            {
-              label: "Discount",
-              value: quotation.discountAmount > 0 ? `-${formatMoney(quotation.discountAmount, currency)}` : "None",
-              valueClass: quotation.discountAmount > 0 ? "text-red-600" : undefined,
-            },
-            {
-              label: taxDisplayLabel,
-              value: quotation.vatAmount > 0 ? formatMoney(quotation.vatAmount, currency) : "None",
-              sub: taxDisplayRate !== null ? `${taxDisplayRate}%` : undefined,
-            },
-            {
-              label: "Valid Until",
-              value: quotation.validUntil ? formatEATDate(quotation.validUntil) : "Open",
-              valueClass: isExpired ? "text-amber-600" : undefined,
-              sub: isExpired ? "expired" : undefined,
-            },
-          ]}
-        />
-      </section>
+        }
+      />
 
       {filters.editError ? (
         <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{filters.editError}</div>
       ) : null}
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
       {/* -- Edit draft -- */}
       {showEdit ? (
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -521,26 +474,32 @@ export default async function QuotationDetailPage({
         </div>
       </section>
 
-      {/* -- Timeline + notes -- */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="border-b border-[var(--line)] px-4 py-2.5">
-          <p className={cardLabel}>Record</p>
         </div>
-        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0">
-          {timeline.map(({ label, value, valueClass }) => (
-            <div key={label} className="px-4 py-2.5">
-              <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">{label}</dt>
-              <dd className={`mt-0.5 text-[13px] font-semibold [overflow-wrap:anywhere] ${valueClass ?? "text-[var(--ink)]"}`}>{value}</dd>
-            </div>
-          ))}
-        </dl>
-        {quotation.notes ? (
-          <div className="border-t border-[var(--line)] px-4 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
-            <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)]">{quotation.notes}</p>
-          </div>
-        ) : null}
-      </section>
+
+        <RecordSummaryRail
+          headline={{ label: "Total", value: formatMoney(quotation.totalAmount, currency) }}
+          rows={[
+            ...(quotation.discountAmount > 0 ? [{ label: "Discount", value: `-${formatMoney(quotation.discountAmount, currency)}` }] : []),
+            ...(quotation.vatAmount > 0 ? [{ label: `${taxDisplayLabel}${taxDisplayRate !== null ? ` (${taxDisplayRate}%)` : ""}`, value: formatMoney(quotation.vatAmount, currency) }] : []),
+            { label: "Valid Until", value: quotation.validUntil ? (isExpired ? `${formatEATDate(quotation.validUntil)} · expired` : formatEATDate(quotation.validUntil)) : "Open" },
+            { label: "Created by", value: quotation.createdBy?.name ?? "unknown" },
+          ]}
+          party={{ title: "Recipient", name: recipientName ?? "No recipient", lines: [recipientAddress] }}
+          related={[
+            ...(quotation.lead ? [{ label: "Lead", href: `/sales/leads/${quotation.lead.id}`, sub: quotation.lead.fullName }] : []),
+            ...(quotation.job ? [{ label: quotation.job.jobNumber, href: `/jobs/${quotation.job.id}`, sub: "Repair job" }] : []),
+            ...(quotation.convertedToInvoiceId ? [{ label: "Invoice created", href: "/documents/invoices", tone: "success" as const }] : []),
+          ]}
+          activity={timeline.map((t) => ({ label: t.label, at: t.value }))}
+        />
+      </div>
+
+      {quotation.notes ? (
+        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)]">{quotation.notes}</p>
+        </section>
+      ) : null}
     </div>
   );
 }

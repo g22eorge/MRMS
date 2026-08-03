@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -93,73 +94,37 @@ export default async function PartDetailPage({
       )}
 
       {/* ── Header ── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center gap-2 border-b border-[var(--line)] px-5 py-2">
-          <Link href="/inventory" className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)] hover:text-[var(--ink)] transition">
-            Inventory
-          </Link>
-          <span className="text-[var(--line)]">/</span>
-          <span className="text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">{part.sku}</span>
-        </div>
-
-        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4">
-          <div className="min-w-0">
-            {/* Status badges */}
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-[var(--ink-muted)]">
-                SKU: {part.sku}
-              </span>
-              {part.isActive && !isOut && !isLow && (
-                <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Active Stock
-                </span>
-              )}
-              {isOut && (
-                <span className="flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                  Out of Stock
-                </span>
-              )}
-              {isLow && !isOut && (
-                <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  Low Stock
-                </span>
-              )}
-              {!part.isActive && (
-                <span className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                  Inactive
-                </span>
-              )}
-            </div>
-            {/* Item name */}
-            <h1 className="text-[22px] font-black uppercase tracking-wide text-[var(--ink)]">{part.name}</h1>
-            {part.manufacturer && (
-              <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{part.manufacturer}</p>
-            )}
-          </div>
-
-          {canManage && (
-            <form action={togglePartActiveAction} className="shrink-0">
+      <RecordActionBar
+        backHref="/inventory"
+        eyebrow={`Inventory · ${part.sku}`}
+        title={part.name}
+        status={
+          !part.isActive ? { label: "Inactive", tone: "neutral" }
+            : isOut ? { label: "Out of Stock", tone: "danger" }
+              : isLow ? { label: "Low Stock", tone: "warning" }
+                : { label: "Active Stock", tone: "success" }
+        }
+        secondary={
+          canManage ? (
+            <form action={togglePartActiveAction}>
               <input type="hidden" name="partId" value={part.id} />
               <input type="hidden" name="next" value={part.isActive ? "0" : "1"} />
-              <button type="submit" className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition ${
+              <button type="submit" className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${
                 part.isActive
                   ? "border-red-400/40 text-red-600 hover:bg-red-500/8"
                   : "border-emerald-400/40 text-emerald-700 hover:bg-emerald-500/8"
               }`}>
-                <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM5.28 4.22a.75.75 0 1 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"/>
-                </svg>
                 {part.isActive ? "Deactivate" : "Reactivate"}
               </button>
             </form>
-          )}
-        </div>
+          ) : undefined
+        }
+      />
+      {part.manufacturer ? <p className="-mt-2 px-0.5 text-[13px] text-[var(--ink-muted)]">{part.manufacturer}</p> : null}
 
-        {/* ── KPI cards ── */}
-        <div className="grid grid-cols-2 gap-px border-t border-[var(--line)] bg-[var(--line)] sm:grid-cols-4">
+      {/* ── KPI cards ── */}
+      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="grid grid-cols-2 gap-px bg-[var(--line)] sm:grid-cols-4">
           {[
             { label: "On Hand",    value: part.qtyOnHand,        color: isOut ? "text-red-500" : isLow ? "text-amber-500" : "text-[var(--ink)]" },
             { label: "Reserved",   value: part.qtyReserved,      color: "text-[var(--ink)]" },
