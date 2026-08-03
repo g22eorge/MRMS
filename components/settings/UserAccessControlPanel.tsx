@@ -26,7 +26,7 @@ function SaveButton() {
   return (
     <button
       type="submit"
-      className="btn-premium rounded-lg px-4 py-2 text-sm text-white"
+      className="btn-premium rounded-lg px-4 py-2 text-sm"
       disabled={pending}
     >
       {pending ? "Saving..." : "Save Changes"}
@@ -157,29 +157,27 @@ export function UserAccessControlPanel({
       <input type="hidden" name="role" value={role} />
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 panel-shadow">
-        <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Role</p>
-        <div className="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
-          {uniqueRoleOptions.map((option) => {
-            const active = role === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  setRole(option.value);
-                  setSelectedPermissions(new Set(roleDefaultPermissions[option.value] ?? []));
-                }}
-                className={`rounded-lg border px-3 py-2 text-left transition ${
-                  active
-                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                    : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/50"
-                }`}
-              >
-                <p className="text-[13px] font-semibold text-[var(--ink)]">{option.label}</p>
-                <p className="mt-0.5 text-[13px] leading-snug text-[var(--ink-muted)]">{option.description}</p>
-              </button>
-            );
-          })}
+        <label htmlFor="role-select" className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Role</label>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <select
+              id="role-select"
+              value={role}
+              onChange={(event) => {
+                setRole(event.target.value);
+                setSelectedPermissions(new Set(roleDefaultPermissions[event.target.value] ?? []));
+              }}
+              className="appearance-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] py-2 pl-3 pr-9 text-[14px] font-semibold text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15"
+            >
+              {uniqueRoleOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true">▾</span>
+          </div>
+          <p className="min-w-0 flex-1 text-[13px] leading-snug text-[var(--ink-muted)]">
+            {uniqueRoleOptions.find((option) => option.value === role)?.description ?? "Sets this person's default permissions."}
+          </p>
         </div>
       </section>
 
@@ -216,7 +214,7 @@ export function UserAccessControlPanel({
                     const disabled = inherited || !item.mutable || !item.permission;
 
                     return (
-                      <label key={item.key} className={`flex items-start gap-2.5 rounded-lg border px-2.5 py-2 transition ${checked ? "border-[var(--accent)]/30 bg-[var(--accent)]/6" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}>
+                      <label key={item.key} className={`flex items-start gap-2.5 rounded-lg border px-2.5 py-2 transition ${checked ? "border-[var(--accent)]/30 bg-[var(--accent)]/10" : "border-[var(--line)] bg-[var(--panel-strong)]"}`}>
                         <input
                           type="checkbox"
                           checked={checked}
