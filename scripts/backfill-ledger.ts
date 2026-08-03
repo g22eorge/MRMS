@@ -17,7 +17,7 @@ const DRY = process.argv.includes("--dry-run");
 
 async function main() {
   const orgs = await prisma.organization.findMany({ select: { id: true, name: true } });
-  let grand = { sale: 0, repairRefund: 0, refund: 0, expense: 0, supplier: 0, skipped: 0 };
+  const grand = { sale: 0, repairRefund: 0, refund: 0, expense: 0, supplier: 0, skipped: 0 };
 
   for (const org of orgs) {
     const orgId = org.id;
