@@ -8,6 +8,7 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { formatEATDateTime } from "@/lib/date-eat";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
@@ -191,64 +192,32 @@ export default async function FieldPage({
   const visitsHref = pageHrefBuilder("/field", { status: statusParam ?? "", q });
 
   return (
-    <div className="space-y-4">
-
-      {/* ── Header ── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Service</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Field Visits</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">
-              {isManager ? "All scheduled field visits" : "Your assigned field visits"}
-            </p>
-          </div>
-          {isManager && (
-            <Link
-              href="/field/new"
-              className="btn-premium inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px]"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-              Schedule Visit
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* ── KPI tiles ── */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Today&apos;s Visits</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiToday}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">scheduled today</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Pending</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiPending}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">scheduled · en route · arrived</p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Completed This Month</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">{kpiCompletedMonth}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-            {completionRate !== null ? `${completionRate}% success rate` : "this month"}
-          </p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Failed This Month</p>
-          <p className={`mt-1 text-xl font-bold tabular-nums ${kpiFailedMonth > 0 ? "text-red-600" : "text-[var(--ink)]"}`}>{kpiFailedMonth}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
-            {terminalMonth > 0 ? `${100 - (completionRate ?? 100)}% failure rate` : "this month"}
-          </p>
-        </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Total Visits</p>
-          <p className="mt-1 text-xl font-bold tabular-nums text-[var(--ink)]">{kpiTotal}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">all time</p>
-        </div>
-      </div>
+    <ListPageLayout
+      header={{
+        eyebrow: "Service",
+        title: "Field Visits",
+        description: isManager ? "All scheduled field visits" : "Your assigned field visits",
+        kpis: [
+          { label: "Today's Visits", value: kpiToday, sub: "scheduled today" },
+          { label: "Pending", value: kpiPending, sub: "scheduled · en route · arrived" },
+          { label: "Completed This Month", value: kpiCompletedMonth, sub: completionRate !== null ? `${completionRate}% success rate` : "this month", tone: "good" },
+          { label: "Failed This Month", value: kpiFailedMonth, sub: terminalMonth > 0 ? `${100 - (completionRate ?? 100)}% failure rate` : "this month", tone: kpiFailedMonth > 0 ? "crit" : "neutral" },
+          { label: "Total Visits", value: kpiTotal, sub: "all time" },
+        ],
+        actions: isManager ? (
+          <Link
+            href="/field/new"
+            className="btn-premium inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px]"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
+            Schedule Visit
+          </Link>
+        ) : undefined,
+      }}
+    >
+      <div className="space-y-4">
 
       {/* ── Visit Type Breakdown + Staff Breakdown (manager only) ── */}
       {isManager && (
@@ -476,6 +445,7 @@ export default async function FieldPage({
         unit="visits"
         hrefForPage={visitsHref}
       />
-    </div>
+      </div>
+    </ListPageLayout>
   );
 }

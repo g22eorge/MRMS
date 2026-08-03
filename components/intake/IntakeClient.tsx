@@ -665,7 +665,7 @@ export function IntakeClient({
         }}
       />
       {/* brief */}
-      <details className="dc-card mb-4 p-3" open={pendingCount > 0}>
+      <details className="panel-shadow mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open={pendingCount > 0}>
         <summary className="list-none">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>
@@ -688,8 +688,8 @@ export function IntakeClient({
               onClick={() => setFilter(tab.key)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition
                 ${active
-                  ? "bg-[var(--accent)] text-[#1c1600]"
-                  : "bg-[var(--panel)] text-[var(--ink-muted)] shadow-[var(--dc-shadow)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--accent)] text-black"
+                  : "bg-[var(--panel)] text-[var(--ink-muted)] shadow-sm hover:text-[var(--ink)]"
                 }`}
             >
               {tab.label}

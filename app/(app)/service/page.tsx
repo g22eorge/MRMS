@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
 import { orgDb } from "@/lib/db";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Tile = { label: string; href: string; icon: string; color: string; description: string };
 
@@ -55,36 +56,34 @@ export default async function ServiceHubPage() {
   return (
     <div className="space-y-6 pb-24 lg:pb-6">
 
-      {/* Page header */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="px-4 py-4">
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Service</p>
-          <p className="text-[15px] font-bold text-[var(--ink)]">Service Hub</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Field visits, technicians, and complaints</p>
-        </div>
-      </div>
-
-      {/* Quick links to daily items with live counts */}
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/jobs"
-          className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
-        >
-          ← Jobs
-          {openJobs !== null && (
-            <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-black leading-none">{openJobs}</span>
-          )}
-        </Link>
-        <Link
-          href="/intake"
-          className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
-        >
-          Intake
-          {pendingIntake !== null && pendingIntake > 0 && (
-            <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{pendingIntake}</span>
-          )}
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Service"
+        title="Service Hub"
+        description="Field visits, technicians, and complaints"
+        kpis={[
+          { label: "Open Jobs", value: openJobs ?? "—", sub: "in progress", tone: "accent", href: "/jobs" },
+          { label: "Pending Intake", value: pendingIntake ?? "—", sub: "awaiting intake", tone: (pendingIntake ?? 0) > 0 ? "warn" : "neutral", href: "/intake" },
+        ]}
+        actions={
+          <>
+            <Link
+              href="/jobs"
+              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+            >
+              ← Jobs
+            </Link>
+            <Link
+              href="/intake"
+              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+            >
+              Intake
+              {pendingIntake !== null && pendingIntake > 0 && (
+                <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{pendingIntake}</span>
+              )}
+            </Link>
+          </>
+        }
+      />
 
       {/* Tiles */}
       <section>

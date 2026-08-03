@@ -6,7 +6,9 @@ import { formatEATDate } from "@/lib/date-eat";
 import { getJobPayoutsByIds, getTechnicianPayoutTotalsByJobIds, hasJobPayoutColumns } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
-import { StatCards } from "@/components/ui/StatCards";
+import { DataTable } from "@/components/ui/DataTable";
+import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type SearchParams = {
   q?: string;
@@ -106,137 +108,147 @@ export default async function TechnicianPayoutsPage({
   const total = jobs.reduce((sum, job) => sum + resolveJobFee(job), 0);
   const paid = jobs.reduce((sum, job) => sum + Math.min(resolveJobFee(job), paidForJob(job.id)), 0);
   const unpaid = jobs.reduce((sum, job) => sum + balanceForJob(job), 0);
-  const hasPayoutFilters = Boolean(filters.q || filters.paid || filters.month);
-  const payoutBrief = hasPayoutFilters
-    ? "Filtered payout view is active. Use the amount cards below for live totals and reset filters to return to the complete payout queue."
-    : "Use this payout board to reconcile external technician dues, confirm payment references, and clear outstanding balances.";
   const controlClass =
     "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20";
 
+  // Per-row payout status — computed once, reused in the table and mobile card.
+  type PayoutRow = (typeof jobs)[number];
+  function payoutStatus(job: PayoutRow) {
+    const payout = payouts.get(job.id);
+    const feeAmount = resolveJobFee(job);
+    const paidAmount = paidForJob(job.id);
+    const balance = Math.max(0, feeAmount - paidAmount);
+    const isPaid = (payout?.externalPaid ?? false) || (feeAmount > 0 && balance <= 0);
+    const isPartPaid = !isPaid && paidAmount > 0;
+    return {
+      payout, feeAmount, paidAmount, balance, isPaid, isPartPaid,
+      label: isPaid ? "Paid" : isPartPaid ? "Partially paid" : "Unpaid",
+      tone: (isPaid ? "success" : isPartPaid ? "info" : "warning") as "success" | "info" | "warning",
+      device: [job.brand, job.model].filter((v) => v && v !== "Unknown").join(" ") || "Device",
+    };
+  }
+
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="dc-card border-l-[3px] border-l-[var(--accent)] px-3 py-2.5 sm:px-4 sm:py-3">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[13px]">Payout Brief</p>
-        <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">{payoutBrief}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 lg:hidden">
-        <div className="dc-card p-3 text-center">
-          <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Total</p>
-          <p className="mt-1 text-lg font-semibold">{formatMoney(total, currency)}</p>
-        </div>
-        <div className="dc-card p-3 text-center">
-          <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">Outstanding</p>
-          <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{formatMoney(unpaid, currency)}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          {!payoutColumnsReady ? (
-            <p className="mt-1 text-xs text-[var(--accent)]">Payout columns are not migrated yet in this environment. Run latest Prisma migrations.</p>
-          ) : null}
-        </div>
-        <Link href="/dashboard" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
-          Back to dashboard
-        </Link>
-      </div>
-
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search job # / device"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20"
-        />
-      </form>
-
-      <form className="panel-shadow hidden gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid lg:grid-cols-4">
-        <input
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search job # / device"
-          className={controlClass}
-        />
-        <select
-          name="paid"
-          defaultValue={filters.paid}
-          className={controlClass}
-        >
-          <option value="">All statuses</option>
-          <option value="paid">Paid only</option>
-          <option value="unpaid">Unpaid only</option>
-        </select>
-        <input
-          type="month"
-          name="month"
-          defaultValue={filters.month}
-          className={controlClass}
-        />
-        <div className="flex gap-2">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
-          <Link href="/technicians/payouts" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">
-            Reset
+    <ListPageLayout
+      header={{
+        eyebrow: "Service",
+        title: "My Payouts",
+        kpis: [
+          { label: "Total in view", value: formatMoney(total, currency), sub: `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}` },
+          { label: "Paid", value: formatMoney(paid, currency), sub: "settled", valueClass: paid > 0 ? "text-emerald-600" : undefined },
+          { label: "Outstanding", value: formatMoney(unpaid, currency), sub: "still owed", valueClass: unpaid > 0 ? "text-amber-600" : undefined },
+        ],
+        actions: (
+          <Link href="/dashboard" className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+            ← Dashboard
           </Link>
-        </div>
-      </form>
-
-      <StatCards
-        columns={3}
-        cards={[
-          { key: "total", label: "Total in view", value: formatMoney(total, currency), sub: `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}`, muted: total === 0 },
-          { key: "paid", label: "Paid", value: formatMoney(paid, currency), sub: "settled", tone: "good", muted: paid === 0 },
-          { key: "outstanding", label: "Outstanding", value: formatMoney(unpaid, currency), sub: "still owed", tone: "warn", muted: unpaid === 0 },
+        ),
+      }}
+      filters={
+        <>
+          {!payoutColumnsReady ? (
+            <div className="rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--accent)]">
+              Payout columns are not migrated yet in this environment. Run latest Prisma migrations.
+            </div>
+          ) : null}
+          <form className="panel-shadow grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid-cols-4">
+            <input name="q" defaultValue={filters.q} placeholder="Search job # / device" className={controlClass} />
+            <select name="paid" defaultValue={filters.paid} className={controlClass}>
+              <option value="">All statuses</option>
+              <option value="paid">Paid only</option>
+              <option value="unpaid">Unpaid only</option>
+            </select>
+            <input type="month" name="month" defaultValue={filters.month} className={controlClass} />
+            <div className="flex gap-2">
+              <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
+              <Link href="/technicians/payouts" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Reset</Link>
+            </div>
+          </form>
+        </>
+      }
+    >
+      <DataTable
+        rows={jobs}
+        getRowKey={(job) => job.id}
+        empty="No payout records found for these filters."
+        rowClassName={(job) => {
+          const s = payoutStatus(job);
+          return s.isPaid ? undefined : s.isPartPaid ? "bg-blue-500/5" : "bg-amber-500/5";
+        }}
+        columns={[
+          {
+            key: "job",
+            header: "Job",
+            className: "mono font-semibold",
+            cell: (job) => (
+              <Link href={`/jobs/${job.id}?returnTo=/technicians/payouts&returnLabel=Payouts`} className="text-[var(--ink)] hover:text-[var(--accent)]">
+                {job.jobNumber}
+              </Link>
+            ),
+          },
+          {
+            key: "device",
+            header: "Device",
+            className: "text-[var(--ink)]",
+            cell: (job) => payoutStatus(job).device,
+          },
+          {
+            key: "stage",
+            header: "Stage",
+            headerClassName: "hidden md:table-cell",
+            className: "hidden text-[var(--ink-muted)] md:table-cell",
+            cell: (job) => (
+              <>
+                {(statusOptionLabel as Record<string, string>)[job.status] ?? job.status}
+                {job.completedAt ? ` · ${formatEATDate(job.completedAt)}` : ""}
+              </>
+            ),
+          },
+          {
+            key: "status",
+            header: "Payout",
+            cell: (job) => {
+              const s = payoutStatus(job);
+              return <StatusBadge tone={s.tone}>{s.label}</StatusBadge>;
+            },
+          },
+          {
+            key: "amount",
+            header: "Paid / Fee",
+            align: "right",
+            className: "tabular-nums whitespace-nowrap font-semibold text-[var(--ink)]",
+            cell: (job) => {
+              const s = payoutStatus(job);
+              return `${formatMoney(s.paidAmount, currency)} / ${formatMoney(s.feeAmount, currency)}`;
+            },
+          },
         ]}
-      />
-
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        {jobs.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-[var(--ink-muted)]">No payout records found for these filters.</p>
-        ) : (
-          jobs.map((job) => {
-            const payout = payouts.get(job.id);
-            const feeAmount = resolveJobFee(job);
-            const paidAmount = paidForJob(job.id);
-            const balance = Math.max(0, feeAmount - paidAmount);
-            const isPaid = (payout?.externalPaid ?? false) || (feeAmount > 0 && balance <= 0);
-            const isPartPaid = !isPaid && paidAmount > 0;
-            const statusLabel = isPaid ? "Paid" : isPartPaid ? "Partially paid" : "Unpaid";
-            const statusClass = isPaid ? "text-emerald-600" : isPartPaid ? "text-blue-600" : "text-amber-600";
-            const device = [job.brand, job.model].filter(v => v && v !== "Unknown").join(" ") || "Device";
-            return (
-              <div key={job.id} className="relative border-b border-[var(--line)] bg-[var(--panel)] last:border-b-0 transition-colors hover:bg-[var(--panel-strong)]/40">
-                <span className={`absolute inset-y-0 left-0 w-[5px] ${isPaid ? "bg-emerald-400" : isPartPaid ? "bg-blue-400" : "bg-amber-400"}`} aria-hidden="true" />
-                <Link href={`/jobs/${job.id}?returnTo=/technicians/payouts&returnLabel=Payouts`} className="absolute inset-0 z-0" aria-label={`Open ${job.jobNumber}`} />
-                <div className="pointer-events-none relative z-10 px-4 py-3 pl-6">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="mono text-[12px] font-medium tracking-wide text-[var(--ink-muted)]/50">{job.jobNumber}</span>
-                    <span className={`text-[13px] font-semibold ${statusClass}`}>
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <p className="text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">{device}</p>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-[13px] text-[var(--ink-muted)]">
-                      {(statusOptionLabel as Record<string, string>)[job.status] ?? job.status}
-                      {job.completedAt ? ` · ${formatEATDate(job.completedAt)}` : ""}
-                      {payout?.externalPaymentRef ? ` · Ref: ${payout.externalPaymentRef}` : ""}
-                    </span>
-                    <span className="text-[13px] font-bold text-[var(--ink)]">
-                      {formatMoney(paidAmount, currency)} / {formatMoney(feeAmount, currency)}
-                    </span>
-                  </div>
-                  {!isPaid && paidAmount > 0 ? (
-                    <p className="mt-1 text-right text-[12px] font-semibold text-[var(--ink-muted)]">
-                      Outstanding {formatMoney(balance, currency)}
-                    </p>
+        renderMobileCard={(job) => {
+          const s = payoutStatus(job);
+          return (
+            <div className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/jobs/${job.id}?returnTo=/technicians/payouts&returnLabel=Payouts`} className="mono text-[12px] font-medium tracking-wide text-[var(--ink-muted)]">{job.jobNumber}</Link>
+                  <p className="truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">{s.device}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                    {(statusOptionLabel as Record<string, string>)[job.status] ?? job.status}
+                    {job.completedAt ? ` · ${formatEATDate(job.completedAt)}` : ""}
+                    {s.payout?.externalPaymentRef ? ` · Ref: ${s.payout.externalPaymentRef}` : ""}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <StatusBadge tone={s.tone}>{s.label}</StatusBadge>
+                  <p className="mt-1 text-[13px] font-bold text-[var(--ink)]">{formatMoney(s.paidAmount, currency)} / {formatMoney(s.feeAmount, currency)}</p>
+                  {!s.isPaid && s.paidAmount > 0 ? (
+                    <p className="text-[12px] font-semibold text-[var(--ink-muted)]">Outstanding {formatMoney(s.balance, currency)}</p>
                   ) : null}
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
-    </div>
+            </div>
+          );
+        }}
+      />
+    </ListPageLayout>
   );
 }

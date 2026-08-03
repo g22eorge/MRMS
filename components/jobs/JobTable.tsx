@@ -438,7 +438,7 @@ export function JobTable({
     <div className="space-y-2">
       <DataTable
         frameless
-        className="dc-card overflow-hidden"
+        className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
         rows={jobs}
         getRowKey={(job) => job.id}
         columns={columns}

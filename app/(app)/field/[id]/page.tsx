@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDateTime } from "@/lib/date-eat";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
+import { RecordSummaryRail, type ActivityItem } from "@/components/record/RecordSummaryRail";
 import { VisitActions } from "./VisitActions";
 
 const STATUS_LABELS: Record<FieldVisitStatus, string> = {
@@ -81,15 +82,36 @@ export default async function FieldVisitDetailPage({
     isManager ||
     (isFieldTech && visit.assignedToId === user.id);
 
+  const device = [visit.job?.brand, visit.job?.model].filter(Boolean).join(" ").trim();
+  const activity: ActivityItem[] = [
+    { label: "Scheduled", at: formatEATDateTime(visit.scheduledAt) },
+    ...(visit.startedAt ? [{ label: "Started", at: formatEATDateTime(visit.startedAt) }] : []),
+    ...(visit.completedAt ? [{ label: STATUS_LABELS[visit.status], at: formatEATDateTime(visit.completedAt) }] : []),
+    ...(visit.signoffAt ? [{ label: `Signed off${visit.signoffName ? ` · ${visit.signoffName}` : ""}`, at: formatEATDateTime(visit.signoffAt) }] : []),
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <RecordActionBar
         backHref="/field"
         eyebrow="Field · Visit"
         title={`${TYPE_LABELS[visit.type] ?? visit.type} Visit`}
         status={{ label: STATUS_LABELS[visit.status], tone: visit.status === "COMPLETED" ? "success" : visit.status === "CANCELLED" || visit.status === "FAILED" ? "danger" : visit.status === "EN_ROUTE" || visit.status === "ARRIVED" ? "warning" : "sky" }}
       />
-      <p className="text-sm text-[var(--ink-muted)]">Scheduled {formatEATDateTime(visit.scheduledAt)}</p>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+      {canAct && !["COMPLETED", "FAILED", "CANCELLED"].includes(visit.status) && (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <p className="mb-4 text-xs font-bold uppercase tracking-wide text-[var(--ink-muted)]">Actions</p>
+          <VisitActions
+            visitId={visit.id}
+            status={visit.status}
+            isManager={isManager}
+            isFieldTech={isFieldTech}
+          />
+        </div>
+      )}
 
       {visit.job && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
@@ -162,18 +184,25 @@ export default async function FieldVisitDetailPage({
           </dl>
         </div>
       )}
-
-      {canAct && !["COMPLETED", "FAILED", "CANCELLED"].includes(visit.status) && (
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="mb-4 text-xs font-bold uppercase tracking-wide text-[var(--ink-muted)]">Actions</p>
-          <VisitActions
-            visitId={visit.id}
-            status={visit.status}
-            isManager={isManager}
-            isFieldTech={isFieldTech}
-          />
         </div>
-      )}
+
+        <RecordSummaryRail
+          headline={{ label: "Scheduled", value: formatEATDateTime(visit.scheduledAt) }}
+          rows={[
+            { label: "Type", value: TYPE_LABELS[visit.type] ?? visit.type },
+            { label: "Assigned To", value: visit.assignedTo.name },
+            { label: "Scheduled By", value: visit.scheduledBy.name },
+            { label: "Status", value: STATUS_LABELS[visit.status] },
+          ]}
+          party={
+            visit.contactName || visit.contactPhone || visit.address
+              ? { title: "Contact", name: visit.contactName ?? "On-site contact", lines: [visit.contactPhone, visit.address] }
+              : null
+          }
+          related={visit.job ? [{ label: visit.job.jobNumber, href: `/jobs/${visit.job.id}`, sub: device || undefined }] : []}
+          activity={activity}
+        />
+      </div>
     </div>
   );
 }
