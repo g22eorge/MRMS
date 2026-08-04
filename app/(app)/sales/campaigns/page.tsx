@@ -151,22 +151,23 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     const campaign = await db.campaign.findFirst({ where: { id: campaignId} });
     if (!campaign) return;
 
+    // Bulk insert in one query, skipping rows already on the campaign (via the
+    // campaignId_leadId / campaignId_clientId unique constraints) — instead of a
+    // per-row upsert loop that timed out on a large book.
     if (source === "all_leads") {
       const leads = await db.lead.findMany({ where: { status: { notIn: ["WON", "LOST"] } }, select: { id: true } });
-      for (const l of leads) {
-        await prisma.campaignContact.upsert({
-          where: { campaignId_leadId: { campaignId, leadId: l.id } },
-          create: { campaignId, leadId: l.id, orgId },
-          update: {},
+      if (leads.length > 0) {
+        await prisma.campaignContact.createMany({
+          data: leads.map((l) => ({ campaignId, leadId: l.id, orgId })),
+          skipDuplicates: true,
         });
       }
     } else {
-      const clients = await db.client.findMany({ where: { }, select: { id: true } });
-      for (const c of clients) {
-        await prisma.campaignContact.upsert({
-          where: { campaignId_clientId: { campaignId, clientId: c.id } },
-          create: { campaignId, clientId: c.id, orgId },
-          update: {},
+      const clients = await db.client.findMany({ where: {}, select: { id: true } });
+      if (clients.length > 0) {
+        await prisma.campaignContact.createMany({
+          data: clients.map((c) => ({ campaignId, clientId: c.id, orgId })),
+          skipDuplicates: true,
         });
       }
     }

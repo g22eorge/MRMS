@@ -73,12 +73,12 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
     jobsByStatus,
     cashCurrent,
     cashPrevious,
-    openInvoices,
+    [invoiceReceivableRows, overdueInvoicesCount],
     expensesThisMonth,
     expensesPrevMonth,
     parts,
     openPurchaseOrders,
-    supplierBills,
+    [billPayableRows, overdueSupplierBillsCount],
     leadsByStatus,
     salesTargets,
   ] = await Promise.all([
@@ -101,22 +101,24 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
     db.job.groupBy({ by: ["status"], _count: { status: true } }),
     loadCashCollectionsByChannel({ orgId, baseCurrency, range: current }),
     loadCashCollectionsByChannel({ orgId, baseCurrency, range: previous }),
-    db.invoice.findMany({
-      where: { status: { in: ["DRAFT", "ISSUED"] } },
-      select: { invoiceNumber: true, totalAmount: true, paidAmount: true, dueDate: true, issuedAt: true },
-      orderBy: { issuedAt: "asc" },
-      take: 500,
-    }),
+    // Receivables total (DB SUM) + overdue count — not a truncated take:500 slice.
+    Promise.all([
+      prisma.$queryRaw<{ balance: number | null }[]>`
+        SELECT COALESCE(SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END), 0) AS balance
+        FROM "Invoice" WHERE "orgId" = ${orgId} AND "status" IN ('DRAFT','ISSUED')`,
+      db.invoice.count({ where: { status: { in: ["DRAFT", "ISSUED"] }, dueDate: { lt: asOf } } }),
+    ]),
     db.expense.aggregate({ where: { paidAt: { gte: current.start, lte: current.end } }, _sum: { amount: true } }),
     db.expense.aggregate({ where: { paidAt: { gte: previous.start, lte: previous.end } }, _sum: { amount: true } }),
     db.part.findMany({ where: { isActive: true }, select: { sku: true, name: true, qtyOnHand: true, reorderLevel: true, unitCost: true } }),
     db.purchaseOrder.count({ where: { status: { in: ["DRAFT", "ORDERED", "PARTIAL"] } } }),
-    db.supplierBill.findMany({
-      where: { status: { in: ["POSTED", "PART_PAID"] } },
-      select: { billNumber: true, totalAmount: true, paidAmount: true, dueAt: true, supplier: { select: { name: true } } },
-      orderBy: { issuedAt: "asc" },
-      take: 500,
-    }),
+    // Payables total (DB SUM) + overdue count — not a truncated take:500 slice.
+    Promise.all([
+      prisma.$queryRaw<{ balance: number | null }[]>`
+        SELECT COALESCE(SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END), 0) AS balance
+        FROM "SupplierBill" WHERE "orgId" = ${orgId} AND "status" IN ('POSTED','PART_PAID')`,
+      db.supplierBill.count({ where: { status: { in: ["POSTED", "PART_PAID"] }, dueAt: { lt: asOf } } }),
+    ]),
     db.lead.groupBy({ by: ["status"], _count: { status: true }, _sum: { estimatedValue: true } }),
     db.salesTarget.aggregate({ where: { period: monthKey }, _sum: { targetRevenue: true, targetValue: true, actualValue: true } }),
   ]);
@@ -135,10 +137,8 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
   const staleJobs = openJobs.filter((job) => daysBetween(job.updatedAt, asOf) >= 3);
   const awaitingApproval = openJobs.filter((job) => job.status === "AWAITING_APPROVAL");
   const waitingForParts = openJobs.filter((job) => job.status === "WAITING_FOR_PARTS");
-  const overdueInvoices = openInvoices.filter((invoice) => invoice.dueDate && invoice.dueDate < asOf);
-  const receivables = sum(openInvoices.map((invoice) => Math.max(0, invoice.totalAmount - invoice.paidAmount)));
-  const overdueSupplierBills = supplierBills.filter((bill) => bill.dueAt && bill.dueAt < asOf);
-  const payables = sum(supplierBills.map((bill) => Math.max(0, bill.totalAmount - bill.paidAmount)));
+  const receivables = Number(invoiceReceivableRows[0]?.balance ?? 0);
+  const payables = Number(billPayableRows[0]?.balance ?? 0);
   const target = (salesTargets._sum.targetRevenue ?? 0) + (salesTargets._sum.targetValue ?? 0);
   const targetActual = salesTargets._sum.actualValue ?? cashReceived;
 
@@ -194,9 +194,9 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
       expenseChangePct: pctChange(expenses, expensesPrev),
       cashMarginSignal,
       receivables,
-      overdueInvoices: overdueInvoices.length,
+      overdueInvoices: overdueInvoicesCount,
       payables,
-      overdueSupplierBills: overdueSupplierBills.length,
+      overdueSupplierBills: overdueSupplierBillsCount,
     },
     inventory: {
       activeParts: parts.length,
@@ -215,8 +215,8 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
       negativeCashMargin: cashMarginSignal < 0,
       hasOverdueJobs: overdueJobs.length > 0,
       hasLowStock: lowStockParts.length > 0,
-      hasOverdueReceivables: overdueInvoices.length > 0,
-      hasOverduePayables: overdueSupplierBills.length > 0,
+      hasOverdueReceivables: overdueInvoicesCount > 0,
+      hasOverduePayables: overdueSupplierBillsCount > 0,
     },
   };
 }

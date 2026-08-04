@@ -176,30 +176,29 @@ export async function loadExpensesTotal(params: {
 }
 
 export async function loadReceivablesTotal(orgId: string) {
-  const [invoices, sales] = await Promise.all([
-    prisma.invoice.findMany({
-      where: { orgId, status: { not: "VOID" } },
-      select: { totalAmount: true, paidAmount: true },
-    }),
-    prisma.sale.findMany({
-      where: { orgId, status: { not: "VOID" } },
-      select: { totalAmount: true, paidAmount: true },
-    }),
+  // Aggregate outstanding balance + open count in the DB instead of loading every
+  // non-void invoice/sale into JS on every dashboard render (this is a hot path).
+  type Row = { balance: number | null; cnt: number | bigint | null };
+  const [invRows, saleRows] = await Promise.all([
+    prisma.$queryRaw<Row[]>`
+      SELECT COALESCE(SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END), 0) AS balance,
+             COUNT(CASE WHEN "totalAmount" > "paidAmount" THEN 1 END) AS cnt
+      FROM "Invoice" WHERE "orgId" = ${orgId} AND "status" != 'VOID'`,
+    prisma.$queryRaw<Row[]>`
+      SELECT COALESCE(SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END), 0) AS balance,
+             COUNT(CASE WHEN "totalAmount" > "paidAmount" THEN 1 END) AS cnt
+      FROM "Sale" WHERE "orgId" = ${orgId} AND "status" != 'VOID'`,
   ]);
 
-  const invoiceBalance = invoices.reduce((sum, invoice) => {
-    return sum + Math.max(0, invoice.totalAmount - invoice.paidAmount);
-  }, 0);
-  const saleBalance = sales.reduce((sum, sale) => {
-    return sum + Math.max(0, sale.totalAmount - sale.paidAmount);
-  }, 0);
+  const invoiceBalance = Number(invRows[0]?.balance ?? 0);
+  const saleBalance = Number(saleRows[0]?.balance ?? 0);
 
   return {
     invoiceBalance,
     saleBalance,
     total: invoiceBalance + saleBalance,
-    invoiceCount: invoices.filter((invoice) => invoice.totalAmount > invoice.paidAmount).length,
-    saleCount: sales.filter((sale) => sale.totalAmount > sale.paidAmount).length,
+    invoiceCount: Number(invRows[0]?.cnt ?? 0),
+    saleCount: Number(saleRows[0]?.cnt ?? 0),
   };
 }
 
