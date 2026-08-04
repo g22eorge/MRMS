@@ -632,12 +632,18 @@ export function IntakeClient({
     return acc;
   }, {});
 
-  const filtered = filter === "ALL" ? requests : requests.filter((r) => r.requestStatus === filter);
+  const filtered =
+    filter === "ALL"
+      ? requests
+      : filter === "PENDING_FRONT_DESK"
+        // "Pending" also covers the deprecated PENDING_INTAKE status, so legacy
+        // requests aren't orphaned now that the separate Legacy tab is gone.
+        ? requests.filter((r) => r.requestStatus === "PENDING_FRONT_DESK" || r.requestStatus === "PENDING_INTAKE")
+        : requests.filter((r) => r.requestStatus === filter);
 
   const tabs = [
     { key: "ALL",              label: "All" },
     { key: "PENDING_FRONT_DESK",   label: "Pending" },
-    { key: "PENDING_INTAKE",       label: "Pending (Legacy)" },
     { key: "APPROVED",         label: "Approved" },
     { key: "REJECTED",         label: "Rejected" },
     { key: "CONVERTED_TO_JOB", label: "Converted" },
