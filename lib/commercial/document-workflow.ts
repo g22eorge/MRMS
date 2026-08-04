@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { orgTagFor, composeOrgNumber, maxNumberSequence } from "@/lib/commercial/org-number";
-import { roundMoney } from "@/lib/currency";
+import { roundMoney, toBaseAmount } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote";
@@ -267,10 +267,20 @@ export async function createReceiptForPayment(tx: Tx, params: { orgId: string; p
   // payment id, so it fires exactly once even across the six payment paths
   // that funnel through here. issuedById is the required journal author.
   if (params.issuedById) {
+    // The ledger posts in org base currency, but params.amount is in the
+    // document's currency — convert so a foreign payment posts its true base
+    // value (a 100 USD payment must post ~380,000 UGX, not 100). No-op in base.
+    let baseAmount = params.amount;
+    const org = await tx.organization.findUnique({ where: { id: params.orgId }, select: { baseCurrency: true } });
+    const baseCurrency = org?.baseCurrency ?? params.currency;
+    if (params.currency !== baseCurrency) {
+      const pay = await tx.payment.findUnique({ where: { id: params.paymentId }, select: { exchangeRateToBase: true } });
+      baseAmount = toBaseAmount({ amount: params.amount, currency: params.currency, baseCurrency, exchangeRateToBase: pay?.exchangeRateToBase ?? null });
+    }
     await postSalePayment(tx, {
       orgId: params.orgId,
       userId: params.issuedById,
-      amount: params.amount,
+      amount: baseAmount,
       reference: `pay:${params.paymentId}`,
       description: `Payment received (receipt ${receipt.receiptNumber})`,
     });

@@ -45,18 +45,39 @@ export async function ensureCoreAccounts(tx: Tx, orgId: string): Promise<Record<
   return byCode;
 }
 
-/** Next JE-YYYY-#### number, shared across manual and auto entries for the org/year. */
+/**
+ * Next JE-YYYY-#### number, shared across manual and auto entries for the
+ * org/year. Uses the atomic per-(orgId,type,year) DocumentSequence counter so
+ * two money-events posting concurrently in the same org can't compute the same
+ * number (which previously collided on the @@unique and rolled back the whole
+ * payment). Seeds from the current max existing entry so numbering continues.
+ */
 async function nextEntryNumber(tx: Tx, orgId: string, year: number): Promise<string> {
+  const type = "JE";
   const prefix = `JE-${year}-`;
-  const rows = await tx.journalEntry.findMany({
-    where: { orgId, entryNumber: { startsWith: prefix } },
-    select: { entryNumber: true },
+  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
+  if (!existing) {
+    const rows = await tx.journalEntry.findMany({
+      where: { orgId, entryNumber: { startsWith: prefix } },
+      select: { entryNumber: true },
+    });
+    const seed = rows.reduce((m, r) => {
+      const n = Number(r.entryNumber.slice(prefix.length));
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+    try {
+      await tx.documentSequence.create({ data: { orgId, type, year, value: seed } });
+    } catch (err) {
+      // A concurrent post seeded it first — fine, we increment below.
+      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
+    }
+  }
+  const updated = await tx.documentSequence.update({
+    where: { orgId_type_year: { orgId, type, year } },
+    data: { value: { increment: 1 } },
+    select: { value: true },
   });
-  const max = rows.reduce((m, r) => {
-    const n = Number(r.entryNumber.slice(prefix.length));
-    return Number.isFinite(n) ? Math.max(m, n) : m;
-  }, 0);
-  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+  return `${prefix}${String(updated.value).padStart(4, "0")}`;
 }
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -224,6 +245,22 @@ export async function postExpensePayment(tx: Tx, p: MoneyEvent): Promise<void> {
     lines: [
       { code: "6000", debit: p.amount, memo: "Operating expense" },
       { code: "1000", credit: p.amount, memo: "Cash paid" },
+    ],
+  });
+}
+
+/** External technician payout (repair labour paid out, cash basis): Dr Operating Expenses, Cr Cash. */
+export async function postTechnicianPayout(tx: Tx, p: MoneyEvent): Promise<void> {
+  if (!(p.amount > 0)) return;
+  await postJournalEntry(tx, {
+    orgId: p.orgId,
+    userId: p.userId,
+    date: p.date,
+    description: p.description ?? "Technician payout",
+    reference: p.reference,
+    lines: [
+      { code: "6000", debit: p.amount, memo: "Technician labour" },
+      { code: "1000", credit: p.amount, memo: "Cash paid to technician" },
     ],
   });
 }

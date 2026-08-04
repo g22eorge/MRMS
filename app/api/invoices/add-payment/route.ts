@@ -57,7 +57,10 @@ export async function POST(request: Request) {
 
   const baseAmount = toBaseAmount({ amount, currency: invCurrency, baseCurrency, exchangeRateToBase });
   const baseTotal = toBaseAmount({ amount: invoice.totalAmount, currency: invCurrency, baseCurrency, exchangeRateToBase });
-  const basePaid = toBaseAmount({ amount: invoice.paidAmount ?? 0, currency: invCurrency, baseCurrency, exchangeRateToBase });
+  // invoice.paidAmount is already stored in base currency (syncInvoicePaymentState),
+  // so it must NOT be re-converted — doing so inflated it on foreign invoices and
+  // wrongly rejected the second payment as an overpayment.
+  const basePaid = invoice.paidAmount ?? 0;
   if (baseAmount > baseTotal - basePaid) {
     return new Response("Overpayment", { status: 400 });
   }

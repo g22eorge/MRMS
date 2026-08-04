@@ -17,6 +17,40 @@ export type SalePaymentSyncResult = {
   totalAmount: number;
 };
 
+/**
+ * Convert a document total (held in its own currency) to org base currency, so
+ * it can be compared like-for-like against the base-currency paid total. Uses
+ * the FX rate from a payment on the document (foreign payments are required to
+ * carry one). No-op when the document is already in base currency, or when no
+ * rate is available yet (in which case paid is 0 anyway).
+ */
+async function toDocumentBase(
+  tx: Tx,
+  params: {
+    orgId: string;
+    amount: number;
+    docCurrency: string | null | undefined;
+    baseCurrency: string;
+    rateFrom: { invoiceId?: string; saleId?: string };
+  },
+): Promise<number> {
+  const cur = params.docCurrency ?? params.baseCurrency;
+  if (cur === params.baseCurrency) return params.amount;
+  const fx = await tx.payment.findFirst({
+    where: {
+      orgId: params.orgId,
+      currency: cur,
+      exchangeRateToBase: { not: null },
+      ...(params.rateFrom.invoiceId ? { invoiceId: params.rateFrom.invoiceId } : {}),
+      ...(params.rateFrom.saleId ? { saleId: params.rateFrom.saleId } : {}),
+    },
+    select: { exchangeRateToBase: true },
+    orderBy: { receivedAt: "desc" },
+  });
+  const rate = fx?.exchangeRateToBase;
+  return rate && rate > 0 ? params.amount * rate : params.amount;
+}
+
 /** Sum invoice-linked payments in org base currency; REFUND rows net off when enabled. */
 export async function sumInvoicePaidAmount(
   tx: Tx,
@@ -82,7 +116,7 @@ export async function syncInvoicePaymentState(
 ): Promise<InvoicePaymentSyncResult> {
   const invoice = await tx.invoice.findFirst({
     where: { id: params.invoiceId, orgId: params.orgId },
-    select: { id: true, totalAmount: true, jobId: true, status: true },
+    select: { id: true, totalAmount: true, currency: true, jobId: true, status: true },
   });
 
   if (!invoice) {
@@ -94,7 +128,17 @@ export async function syncInvoicePaymentState(
   }
 
   const paidAmount = await sumInvoicePaidAmount(tx, params);
-  const isPaid = invoice.totalAmount > 0 && paidAmount >= invoice.totalAmount;
+  // paidAmount is in base currency, but totalAmount is in the invoice's currency —
+  // convert the total to base so the paid/total comparison is like-for-like (a
+  // foreign invoice must not flip to PAID after a tiny base-value payment).
+  const totalBase = await toDocumentBase(tx, {
+    orgId: params.orgId,
+    amount: invoice.totalAmount,
+    docCurrency: invoice.currency,
+    baseCurrency: params.baseCurrency,
+    rateFrom: { invoiceId: params.invoiceId },
+  });
+  const isPaid = totalBase > 0 && paidAmount >= totalBase;
   const paidAt = isPaid ? new Date() : null;
   const status = invoice.totalAmount <= 0 ? "PAID" : isPaid ? "PAID" : "ISSUED";
 
@@ -171,7 +215,7 @@ export async function syncSalePaymentState(
 ): Promise<SalePaymentSyncResult> {
   const sale = await tx.sale.findFirst({
     where: { id: params.saleId, orgId: params.orgId },
-    select: { totalAmount: true, status: true },
+    select: { totalAmount: true, currency: true, status: true },
   });
 
   if (!sale) {
@@ -186,7 +230,15 @@ export async function syncSalePaymentState(
   const org = await tx.organization.findUnique({ where: { id: params.orgId }, select: { baseCurrency: true } });
   const baseCurrency = org?.baseCurrency ?? "UGX";
   const paidAmount = await sumSalePaidAmount(tx, { orgId: params.orgId, saleId: params.saleId, baseCurrency });
-  const isPaid = sale.totalAmount > 0 && paidAmount >= sale.totalAmount;
+  // Compare paid (base) against the total converted to base — see toDocumentBase.
+  const totalBase = await toDocumentBase(tx, {
+    orgId: params.orgId,
+    amount: sale.totalAmount,
+    docCurrency: sale.currency,
+    baseCurrency,
+    rateFrom: { saleId: params.saleId },
+  });
+  const isPaid = totalBase > 0 && paidAmount >= totalBase;
 
   // M10: reflect returns on the sale. Fully-returned → RETURNED; partially
   // returned → PARTIALLY_RETURNED; otherwise the normal paid/open state.

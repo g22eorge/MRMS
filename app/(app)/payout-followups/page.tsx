@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Prisma, JobStatus, InvoiceStatus, SupplierBillStatus } from "@prisma/client";
 
+import { postTechnicianPayout } from "@/lib/accounting/post";
 import { resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -98,7 +99,7 @@ async function markExternalTechPaid(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     if (remaining > 0) {
-      await tx.technicianPayout.create({
+      const payout = await tx.technicianPayout.create({
         data: {
           orgId,
           jobId: job.id,
@@ -107,7 +108,19 @@ async function markExternalTechPaid(formData: FormData) {
           note: "Marked paid from finance payout follow-up",
           recordedById: user.id,
         },
+        select: { id: true },
       }).catch(() => null);
+
+      // Cash-basis ledger: debit the expense, credit Cash (idempotent on payout id).
+      if (payout) {
+        await postTechnicianPayout(tx, {
+          orgId,
+          userId: user.id,
+          amount: remaining,
+          reference: `techpay:${payout.id}`,
+          description: "Technician payout (finance follow-up)",
+        });
+      }
     }
 
     await tx.job.updateMany({

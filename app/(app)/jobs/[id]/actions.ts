@@ -36,7 +36,7 @@ import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
-import { postRefund } from "@/lib/accounting/post";
+import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
@@ -931,7 +931,8 @@ export async function recordClientPaymentAction(formData: FormData) {
         await postRefund(tx, {
           orgId,
           userId: session.user.id,
-          amount: payload.amount,
+          // Ledger posts in base currency — convert a foreign refund (no-op in base).
+          amount: toBaseAmount({ amount: payload.amount, currency, baseCurrency, exchangeRateToBase }),
           reference: `pay:${payment.id}`,
           description: `Refund on job invoice ${safeInvoiceNumber}`,
         });
@@ -1020,7 +1021,7 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
       : PaymentMethod.OTHER;
 
     await prisma.$transaction(async (tx) => {
-      await tx.technicianPayout.create({
+      const payout = await tx.technicianPayout.create({
         data: {
           orgId,
           jobId: job.id,
@@ -1030,6 +1031,17 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
           note: sanitizeOptionalText(payload.note) || null,
           recordedById: session.user.id,
         },
+        select: { id: true },
+      });
+
+      // Cash-basis ledger: cash physically leaves the till, so debit the expense
+      // and credit Cash (idempotent on the payout id).
+      await postTechnicianPayout(tx, {
+        orgId,
+        userId: session.user.id,
+        amount: payload.amount,
+        reference: `techpay:${payout.id}`,
+        description: `Technician payout · ${job.jobNumber}`,
       });
 
       const paidTotal = alreadyPaid + payload.amount;

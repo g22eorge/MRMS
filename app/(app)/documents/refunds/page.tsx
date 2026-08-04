@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { type PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
-import { formatMoney, formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -16,7 +16,7 @@ import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewBut
 import { shareRefundDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postRefund, reverseJournalEntry } from "@/lib/accounting/post";
-import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
+import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
@@ -135,16 +135,23 @@ export default async function RefundsPage({
         },
         select: { id: true },
       });
-      // Recompute invoice paid state so a refund actually reduces paidAmount /
-      // reopens the invoice (was previously left showing PAID in full).
+      // Recompute paid state on the source so a refund actually reduces
+      // paidAmount / reopens it — for a sale source too, not just invoices
+      // (previously a sale refund left sale.paidAmount stale).
       if (invoiceId) {
         await syncInvoicePaymentState(tx, { orgId, invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
+      } else if (saleId) {
+        await syncSalePaymentState(tx, { orgId, saleId });
       }
-      // C5: cash-basis ledger post — reverse revenue, pay out cash.
+      // C5: cash-basis ledger post — reverse revenue, pay out cash. Post the base
+      // value of a foreign refund (was posting the document-currency number).
+      const baseRefund = refundCurrency === org.baseCurrency
+        ? amountRaw
+        : toBaseAmount({ amount: amountRaw, currency: refundCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase });
       await postRefund(tx, {
         orgId,
         userId: user.id,
-        amount: amountRaw,
+        amount: baseRefund,
         reference: `refund:${created.id}`,
         description: `Refund against ${sourceType} ${sourceId}`,
       });
