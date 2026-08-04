@@ -75,7 +75,10 @@ export default async function RootLayout({
   const themeClass = stored === "dark" ? "theme-blackgold" : stored === "light" ? "light" : "";
 
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
+    // suppressHydrationWarning: the theme class is finalized on the client and
+    // browser extensions inject attributes on <html> (e.g. crxemulator="") before
+    // hydration. Scoped to this element only — it never masks child mismatches.
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         <ThemeProvider initialTheme={initialTheme}>
           {children}
