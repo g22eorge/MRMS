@@ -151,23 +151,29 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     const campaign = await db.campaign.findFirst({ where: { id: campaignId} });
     if (!campaign) return;
 
-    // Bulk insert in one query, skipping rows already on the campaign (via the
-    // campaignId_leadId / campaignId_clientId unique constraints) — instead of a
-    // per-row upsert loop that timed out on a large book.
+    // Bulk-insert only the contacts not already on the campaign, in one query —
+    // instead of a per-row upsert loop that timed out on a large book. (Prisma's
+    // createMany skipDuplicates isn't supported on SQLite, so we pre-filter.)
+    const existing = await db.campaignContact.findMany({
+      where: { campaignId },
+      select: { leadId: true, clientId: true },
+    });
     if (source === "all_leads") {
+      const taken = new Set(existing.map((e) => e.leadId).filter(Boolean));
       const leads = await db.lead.findMany({ where: { status: { notIn: ["WON", "LOST"] } }, select: { id: true } });
-      if (leads.length > 0) {
+      const fresh = leads.filter((l) => !taken.has(l.id));
+      if (fresh.length > 0) {
         await prisma.campaignContact.createMany({
-          data: leads.map((l) => ({ campaignId, leadId: l.id, orgId })),
-          skipDuplicates: true,
+          data: fresh.map((l) => ({ campaignId, leadId: l.id, orgId })),
         });
       }
     } else {
+      const taken = new Set(existing.map((e) => e.clientId).filter(Boolean));
       const clients = await db.client.findMany({ where: {}, select: { id: true } });
-      if (clients.length > 0) {
+      const fresh = clients.filter((c) => !taken.has(c.id));
+      if (fresh.length > 0) {
         await prisma.campaignContact.createMany({
-          data: clients.map((c) => ({ campaignId, clientId: c.id, orgId })),
-          skipDuplicates: true,
+          data: fresh.map((c) => ({ campaignId, clientId: c.id, orgId })),
         });
       }
     }
