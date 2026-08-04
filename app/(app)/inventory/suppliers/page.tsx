@@ -62,7 +62,7 @@ export default async function SuppliersPage({
         ),
         kpis: [
           { label: "Total Suppliers", value: suppliersTotal, sub: "registered" },
-          { label: "Active", value: totalActive, sub: "currently active", valueClass: "text-green-600" },
+          { label: "Active", value: totalActive, sub: "currently active", valueClass: "text-emerald-600" },
           { label: "Outstanding Bills", value: outstandingBills, sub: "posted or part-paid", valueClass: "text-amber-600" },
           { label: "Overdue Bills", value: overdueBills, sub: "past due date", valueClass: "text-red-500" },
         ],

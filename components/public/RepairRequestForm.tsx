@@ -137,8 +137,8 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
 
   if (step === "success") {
     return (
-      <div className="flex flex-col items-center gap-6 rounded-2xl border border-green-500/25 bg-green-500/5 px-8 py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-green-500/30 bg-green-500/15 text-green-400">
+      <div className="flex flex-col items-center gap-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 px-8 py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-400">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden>
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
           </svg>
@@ -146,7 +146,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         <div>
           <p className="text-lg font-bold text-white">Repair Request Received!</p>
           {requestNum && (
-            <p className="mt-1 mono text-sm font-semibold text-green-400">{requestNum}</p>
+            <p className="mt-1 mono text-sm font-semibold text-emerald-400">{requestNum}</p>
           )}
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/55">
             Hello {data.customer_name || "Customer"}

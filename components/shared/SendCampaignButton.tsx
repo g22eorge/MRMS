@@ -55,7 +55,7 @@ export function SendCampaignButton({ campaignId, pendingCount }: { campaignId: s
         )}
       </button>
       {state === "done" && result && (
-        <p className="text-xs text-green-700">
+        <p className="text-xs text-emerald-700">
           ✓ Queued {result.sent} · Skipped {result.skipped}{result.failed > 0 ? ` · Failed ${result.failed}` : ""}
         </p>
       )}

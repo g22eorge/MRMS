@@ -72,7 +72,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
         <label htmlFor="isActive" className="text-sm text-[var(--ink)]">Active</label>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
-      {saved && <p className="text-xs text-green-600">Saved successfully.</p>}
+      {saved && <p className="text-xs text-emerald-600">Saved successfully.</p>}
       <button
         type="submit"
         disabled={pending}

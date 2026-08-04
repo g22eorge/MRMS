@@ -59,7 +59,7 @@ export function BulkActionBar() {
         <button
           type="button"
           onClick={handleBulkWhatsApp}
-          className="rounded-lg border border-green-600/40 bg-green-600/10 px-2 py-1 text-sm font-semibold text-green-700 hover:bg-green-600/20"
+          className="rounded-lg border border-emerald-600/40 bg-emerald-600/10 px-2 py-1 text-sm font-semibold text-emerald-700 hover:bg-emerald-600/20"
         >
           WhatsApp
         </button>

@@ -96,9 +96,9 @@ const MODULES = [
   },
   {
     group: "Reports & Analytics",
-    color: "from-cyan-500/20 to-cyan-500/5",
-    border: "border-cyan-500/20",
-    accent: "text-cyan-400",
+    color: "from-sky-500/20 to-sky-500/5",
+    border: "border-sky-500/20",
+    accent: "text-sky-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M3 3v18h18" />
@@ -109,9 +109,9 @@ const MODULES = [
   },
   {
     group: "Communications",
-    color: "from-green-500/20 to-green-500/5",
-    border: "border-green-500/20",
-    accent: "text-green-400",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "border-emerald-500/20",
+    accent: "text-emerald-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
@@ -135,9 +135,9 @@ const MODULES = [
   },
   {
     group: "Security & Admin",
-    color: "from-rose-500/20 to-rose-500/5",
-    border: "border-rose-500/20",
-    accent: "text-rose-400",
+    color: "from-red-500/20 to-red-500/5",
+    border: "border-red-500/20",
+    accent: "text-red-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
@@ -414,9 +414,9 @@ export default async function Page() {
                       <p className="text-base font-bold text-white">Repair Request Form</p>
                       <p className="mt-0.5 text-xs text-white/35">All fields marked * are required</p>
                     </div>
-                    <div className="flex items-center gap-1.5 rounded-full border border-green-500/25 bg-green-500/8 px-3 py-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                      <span className="text-[12px] font-semibold text-green-400">Live</span>
+                    <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/8 px-3 py-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span className="text-[12px] font-semibold text-emerald-400">Live</span>
                     </div>
                   </div>
                   <RepairRequestForm />

@@ -112,6 +112,23 @@ now renders as the bordered surface, and the dc status colors (good / warn / cri
 consumed only via the `StatCards` / `StatStrip` `tone` prop — never hand-passed as a dc
 text colour.
 
+**Colour = meaning, not decoration.** The whole app draws from ONE locked palette.
+Colour is reserved for status/semantic meaning; everything structural is neutral.
+
+- Brand / active / primary → the gold accent (`--accent`). Primary buttons, the active
+  nav item, brand marks. Nothing else is gold.
+- Success (paid, ready, completed, positive) → emerald.
+- Warning (due, pending, needs attention) → amber.
+- Critical (overdue, unpaid, failed, danger) → red.
+- Info (in-progress, neutral highlight) → sky.
+- Everything else — surfaces, text, borders, and all decorative / module / nav icons —
+  is neutral (`--ink`, `--ink-muted`, `--panel`, `--panel-strong`, `--line`).
+
+Module and nav icons are monochrome (neutral, or gold only when active/primary) — they
+do NOT get their own decorative hue. Retired hues: green → emerald, orange → amber,
+rose → red; and violet / purple / teal / fuchsia / pink / indigo / cyan / yellow are not
+part of the palette — fold them into the five above or neutral.
+
 ---
 
 ## 7. Conformance checklist (per page)

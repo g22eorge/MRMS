@@ -13,7 +13,7 @@ const KIND_CHIP_CLASS: Record<JobDocumentTimelineEntry["kind"], string> = {
   invoice: "bg-amber-500/12 text-amber-700",
   receipt: "bg-emerald-500/12 text-emerald-700",
   delivery_note: "bg-blue-500/12 text-blue-700",
-  refund: "bg-orange-500/12 text-orange-700",
+  refund: "bg-amber-500/12 text-amber-700",
 };
 
 export function JobDocumentTimeline({

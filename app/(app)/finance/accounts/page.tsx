@@ -42,7 +42,7 @@ const TYPE_HEADER: Record<AccountType, string> = {
   ASSET:     "bg-blue-500/10 text-blue-600",
   LIABILITY: "bg-red-500/10 text-red-600",
   EQUITY:    "bg-purple-500/10 text-purple-600",
-  REVENUE:   "bg-green-500/10 text-green-600",
+  REVENUE:   "bg-emerald-500/10 text-emerald-600",
   EXPENSE:   "bg-amber-500/10 text-amber-600",
 };
 
@@ -254,7 +254,7 @@ export default async function ChartOfAccountsPage() {
             { type: "ASSET" as AccountType, label: "Total Assets", colorVal: "text-blue-600" },
             { type: "LIABILITY" as AccountType, label: "Total Liabilities", colorVal: "text-red-600" },
             { type: "EQUITY" as AccountType, label: "Total Equity", colorVal: "text-purple-600" },
-            { type: "REVENUE" as AccountType, label: "Total Revenue", colorVal: "text-green-600" },
+            { type: "REVENUE" as AccountType, label: "Total Revenue", colorVal: "text-emerald-600" },
             { type: "EXPENSE" as AccountType, label: "Total Expenses", colorVal: "text-amber-700" },
           ] as const
         ).map(({ type, label, colorVal }) => {

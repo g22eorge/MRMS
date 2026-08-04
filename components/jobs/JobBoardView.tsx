@@ -18,7 +18,7 @@ const COLUMNS: BoardCol[] = [
   { key: "RECEIVED",          label: "Received",          dot: "bg-blue-500",    strip: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400",    text: "text-blue-700 dark:text-blue-400" },
   { key: "DIAGNOSING",        label: "Diagnosing",        dot: "bg-amber-500",   strip: "bg-amber-500",   badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400",   text: "text-amber-700 dark:text-amber-400" },
   { key: "REFERRED",          label: "Referred",          dot: "bg-purple-500",  strip: "bg-purple-500",  badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400",  text: "text-purple-700 dark:text-purple-400" },
-  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", dot: "bg-orange-500",  strip: "bg-orange-500",  badge: "bg-orange-500/10 text-orange-700 dark:text-orange-400",  text: "text-orange-700 dark:text-orange-400" },
+  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", dot: "bg-amber-500",  strip: "bg-amber-500",  badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400",  text: "text-amber-700 dark:text-amber-400" },
   { key: "IN_REPAIR",         label: "In Repair",         dot: "bg-emerald-500", strip: "bg-emerald-500", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400", text: "text-emerald-700 dark:text-emerald-400" },
 ];
 

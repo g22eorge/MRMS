@@ -235,7 +235,7 @@ export default async function PLPage({
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">Expenses</p>
-                <p className="text-[17px] font-black tabular-nums text-rose-500">{formatMoneyCompact(totalExpense, currency)}</p>
+                <p className="text-[17px] font-black tabular-nums text-red-500">{formatMoneyCompact(totalExpense, currency)}</p>
               </div>
             </div>
           </div>
@@ -362,7 +362,7 @@ export default async function PLPage({
             rowClassName={(row) =>
               row.kind === "total"
                 ? row.section === "REVENUE"
-                  ? "bg-green-500/10"
+                  ? "bg-emerald-500/10"
                   : "bg-red-500/10"
                 : undefined
             }
@@ -467,7 +467,7 @@ export default async function PLPage({
               },
             ]}
             tableFooter={
-              <tr className={netIncome >= 0 ? "bg-green-500/15" : "bg-red-500/15"}>
+              <tr className={netIncome >= 0 ? "bg-emerald-500/15" : "bg-red-500/15"}>
                 <td className="px-3 py-4">
                   <span className="text-base font-bold text-[var(--ink)]">
                     Net {netIncome >= 0 ? "Income" : "Loss"}

@@ -112,7 +112,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
         />
 
         {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
-        {saved && <p className="text-xs font-semibold text-green-600">Stock received and inventory updated.</p>}
+        {saved && <p className="text-xs font-semibold text-emerald-600">Stock received and inventory updated.</p>}
 
         <button
           type="submit"

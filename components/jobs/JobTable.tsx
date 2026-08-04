@@ -41,7 +41,7 @@ function statusAvatarClass(status: string): string {
     RECEIVED:          "bg-sky-400/15 text-sky-600",
     DIAGNOSING:        "bg-blue-500/15 text-blue-600",
     REFERRED:          "bg-violet-500/15 text-violet-600",
-    AWAITING_APPROVAL: "bg-orange-400/15 text-orange-600",
+    AWAITING_APPROVAL: "bg-amber-400/15 text-amber-600",
     IN_REPAIR:         "bg-violet-500/15 text-violet-600",
     READY_FOR_PICKUP:  "bg-[var(--accent)]/15 text-[var(--accent)]",
     COMPLETED:         "bg-emerald-500/15 text-emerald-600",

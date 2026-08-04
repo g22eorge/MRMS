@@ -35,7 +35,7 @@ const TONES: Record<BadgeTone, { badge: string; dot: string }> = {
   purple:  { badge: "border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400", dot: "bg-purple-500" },
   pink:    { badge: "border-pink-400/30 bg-pink-500/10 text-pink-700 dark:text-pink-400",     dot: "bg-pink-500" },
   teal:    { badge: "border-teal-400/30 bg-teal-500/10 text-teal-700 dark:text-teal-400",     dot: "bg-teal-500" },
-  orange:  { badge: "border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400", dot: "bg-orange-500" },
+  orange:  { badge: "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
   slate:   { badge: "border-slate-400/30 bg-slate-500/10 text-slate-600 dark:text-slate-400", dot: "bg-slate-400" },
 };
 

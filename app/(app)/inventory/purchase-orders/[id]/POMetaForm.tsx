@@ -84,7 +84,7 @@ export function POMetaForm({ po }: { po: POData }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
         <div>
           {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
-          {saved && <p className="text-xs font-semibold text-green-600">Saved successfully.</p>}
+          {saved && <p className="text-xs font-semibold text-emerald-600">Saved successfully.</p>}
         </div>
         <button
           type="submit"

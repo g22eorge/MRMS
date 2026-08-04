@@ -473,7 +473,7 @@ export default async function CashierShiftsPage({
                     <form action={closeShiftAction}>
                       <input type="hidden" name="shiftId" value={shift.id} />
                       <input type="hidden" name="closingCash" value="0" />
-                      <ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-orange-400/30 px-2 py-0.5 text-[13px] font-semibold text-orange-600 hover:bg-orange-500/10 dark:text-orange-400">Force close</ConfirmSubmitButton>
+                      <ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-amber-400/30 px-2 py-0.5 text-[13px] font-semibold text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">Force close</ConfirmSubmitButton>
                     </form>
                   )}
                   {!isOpen && (
@@ -534,7 +534,7 @@ export default async function CashierShiftsPage({
           return (
             <>
               {isOpen && shift.cashierId !== user.id && (
-                <form action={closeShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><input type="hidden" name="closingCash" value="0" /><ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-orange-400/30 px-2 py-0.5 font-semibold text-orange-600 hover:bg-orange-500/10 dark:text-orange-400">Force close</ConfirmSubmitButton></form>
+                <form action={closeShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><input type="hidden" name="closingCash" value="0" /><ConfirmSubmitButton message="Force close this shift? Closing cash will be set to 0." confirmLabel="Force Close" className="rounded border border-amber-400/30 px-2 py-0.5 font-semibold text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">Force close</ConfirmSubmitButton></form>
               )}
               {!isOpen && (
                 <form action={reopenShiftAction}><input type="hidden" name="shiftId" value={shift.id} /><ConfirmSubmitButton message="Reopen this shift? The cashier will be able to process sales again. Use this to correct an accidental closure." confirmLabel="Reopen" className="rounded border border-sky-400/30 px-2 py-0.5 font-semibold text-sky-600 hover:bg-sky-500/10 dark:text-sky-400">Reopen</ConfirmSubmitButton></form>

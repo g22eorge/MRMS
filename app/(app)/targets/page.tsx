@@ -38,13 +38,13 @@ function currentPeriodLabel(period: TargetPeriod): string {
 }
 
 function progressColor(pct: number): string {
-  if (pct >= 100) return "bg-green-500";
+  if (pct >= 100) return "bg-emerald-500";
   if (pct >= 70) return "bg-amber-400";
   return "bg-red-500";
 }
 
 function progressTextColor(pct: number): string {
-  if (pct >= 100) return "text-green-600 dark:text-green-400";
+  if (pct >= 100) return "text-emerald-600 dark:text-emerald-400";
   if (pct >= 70) return "text-amber-600 dark:text-amber-400";
   return "text-red-600 dark:text-red-400";
 }

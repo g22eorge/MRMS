@@ -395,7 +395,7 @@ export default async function PayoutFollowupsPage({
   const sectionTabs = [
     { key: "invoices", label: "Invoice Collections", count: invoiceTotal, allowed: canSeeInvoices, dot: "bg-violet-400" },
     { key: "repairs", label: "Client Payments", count: clientTotal, allowed: canSeeRepairs, dot: "bg-amber-400" },
-    { key: "bills", label: "Supplier Bills", count: billTotal, allowed: canSeeBills, dot: "bg-rose-400" },
+    { key: "bills", label: "Supplier Bills", count: billTotal, allowed: canSeeBills, dot: "bg-red-400" },
     { key: "tech", label: "Tech Payouts", count: techTotal, allowed: canSeeRepairs, dot: "bg-sky-400" },
   ].filter((t) => t.allowed);
   const requestedSection = filters.section ?? "";
@@ -447,7 +447,7 @@ export default async function PayoutFollowupsPage({
             ...(canSeeBills ? [{
               label: "Supplier Bills Due",
               value: formatMoneyCompact(billPayable, currency),
-              valueClass: "text-rose-500",
+              valueClass: "text-red-500",
               sub: `${billSummary._count.id} bill${billSummary._count.id !== 1 ? "s" : ""} payable`,
             }] : []),
             ...(canSeeRepairs ? [{
@@ -706,9 +706,9 @@ export default async function PayoutFollowupsPage({
       {activeTab === "bills" && canSeeBills && (
         <section id="bills" className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-400" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-400" />
             <p className="text-sm font-semibold text-[var(--ink)]">Supplier Bills — Payable</p>
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-400">
               {billTotal}
             </span>
           </div>
@@ -728,7 +728,7 @@ export default async function PayoutFollowupsPage({
                   </div>
                   <p className="text-[13px] font-medium text-[var(--ink)]">{bill.supplier.name}</p>
                   <div className="mt-0.5 flex items-center gap-3 text-[12px]">
-                    <span className="font-semibold text-rose-700 dark:text-rose-400">{formatMoneyCompact(balance, currency)} due</span>
+                    <span className="font-semibold text-red-700 dark:text-red-400">{formatMoneyCompact(balance, currency)} due</span>
                     {bill.dueAt && <span className="text-[var(--ink-muted)]">{new Date(bill.dueAt).toLocaleDateString()}</span>}
                   </div>
                 </div>
@@ -764,7 +764,7 @@ export default async function PayoutFollowupsPage({
                   ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(bill.paidAmount, currency)}</span>
                   : <span className="text-[var(--ink-muted)]">—</span>,
               },
-              { key: "balance", header: "Balance", className: "font-semibold text-rose-700 dark:text-rose-400 whitespace-nowrap tabular-nums", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
+              { key: "balance", header: "Balance", className: "font-semibold text-red-700 dark:text-red-400 whitespace-nowrap tabular-nums", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
               { key: "due", header: "Due", className: "text-[12px] text-[var(--ink-muted)]", cell: (bill) => bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—" },
               {
                 key: "overdue",

@@ -54,7 +54,7 @@ const LEAD_TILE_TONES: Record<string, string> = {
   NEW:           "bg-sky-500/15 text-sky-600",
   CONTACTED:     "bg-violet-500/15 text-violet-600",
   QUALIFIED:     "bg-amber-500/15 text-amber-600",
-  PROPOSAL_SENT: "bg-orange-500/15 text-orange-600",
+  PROPOSAL_SENT: "bg-amber-500/15 text-amber-600",
   WON:           "bg-emerald-500/15 text-emerald-600",
   LOST:          "bg-red-500/15 text-red-600",
   STALE:         "bg-[var(--panel-strong)] text-[var(--ink-muted)]",

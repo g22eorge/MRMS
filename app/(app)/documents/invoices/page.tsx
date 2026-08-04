@@ -485,9 +485,9 @@ export default async function InvoicesPage({
       label: "31–60 days",
       key: "31-60",
       items: outstanding.filter((i) => i.daysOverdue >= 31 && i.daysOverdue <= 60),
-      color: "text-orange-700",
-      bg: "bg-orange-500/8",
-      border: "border-orange-400/30",
+      color: "text-amber-700",
+      bg: "bg-amber-500/8",
+      border: "border-amber-400/30",
     },
     {
       label: "61+ days",

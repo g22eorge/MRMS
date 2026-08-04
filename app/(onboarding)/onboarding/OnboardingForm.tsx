@@ -21,7 +21,7 @@ const PLAN_META = {
   STANDARD:   { label: "Standard",     price: 35_000,  color: "text-blue-700 dark:text-blue-300",    bg: "bg-blue-50 dark:bg-blue-950/30",    border: "border-blue-200 dark:border-blue-800" },
   GROWTH:     { label: "Professional", price: 75_000,  color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50 dark:bg-violet-950/30", border: "border-violet-200 dark:border-violet-800" },
   PREMIUM:    { label: "Premium",      price: 120_000, color: "text-amber-700 dark:text-amber-300",  bg: "bg-amber-50 dark:bg-amber-950/30",  border: "border-amber-200 dark:border-amber-800" },
-  ENTERPRISE: { label: "Enterprise",   price: 200_000, color: "text-rose-700 dark:text-rose-300",    bg: "bg-rose-50 dark:bg-rose-950/30",    border: "border-rose-200 dark:border-rose-800" },
+  ENTERPRISE: { label: "Enterprise",   price: 200_000, color: "text-red-700 dark:text-red-300",    bg: "bg-red-50 dark:bg-red-950/30",    border: "border-red-200 dark:border-red-800" },
 } as const;
 
 const ALL_MODULES = Object.keys(MODULE_LABELS) as OrgModule[];

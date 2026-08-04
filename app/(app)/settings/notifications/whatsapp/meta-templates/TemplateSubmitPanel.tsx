@@ -195,7 +195,7 @@ export function TemplateSubmitPanel({ templates }: { templates: TemplateDefiniti
                     </span>
                   )}
                   {st.state === "ok" && (
-                    <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-bold uppercase ${st.metaStatus === "APPROVED" ? "bg-green-500/10 text-green-700" : "bg-amber-500/10 text-amber-700"}`}>
+                    <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-bold uppercase ${st.metaStatus === "APPROVED" ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"}`}>
                       {st.action === "updated"
                         ? `↻ Updated · ${st.metaStatus}`
                         : st.metaStatus === "APPROVED"

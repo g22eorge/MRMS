@@ -42,7 +42,7 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
         label: "Procurement Desk",
         href: "/procurement",
         icon: "M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
-        color: "text-yellow-500",
+        color: "text-amber-500",
         description: "Review requests, POs, receiving, and supplier bills",
       },
       {
@@ -63,7 +63,7 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
         label: "Supplier Bills",
         href: "/inventory/supplier-bills",
         icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M16 13H8|M16 17H8",
-        color: "text-rose-500",
+        color: "text-red-500",
         description: "Track and reconcile supplier invoices",
       },
     ],

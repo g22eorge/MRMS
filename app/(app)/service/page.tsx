@@ -129,7 +129,7 @@ export default async function ServiceHubPage() {
             >
               Intake
               {pendingIntake !== null && pendingIntake > 0 && (
-                <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{pendingIntake}</span>
+                <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{pendingIntake}</span>
               )}
             </Link>
           </>

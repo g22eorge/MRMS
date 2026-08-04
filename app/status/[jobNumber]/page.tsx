@@ -49,8 +49,8 @@ const STATUS_COLORS: Record<string, string> = {
   IN_EXTERNAL_REPAIR: "border border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
   AWAITING_APPROVAL:  "border border-amber-400/30  bg-amber-500/10  text-amber-700  dark:text-amber-400",
   AWAITING_RESPONSE:  "border border-amber-400/30  bg-amber-500/10  text-amber-700  dark:text-amber-400",
-  IN_REPAIR:          "border border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  READY_FOR_PICKUP:   "border border-green-400/30  bg-green-500/10  text-green-700  dark:text-green-400",
+  IN_REPAIR:          "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  READY_FOR_PICKUP:   "border border-emerald-400/30  bg-emerald-500/10  text-emerald-700  dark:text-emerald-400",
   COMPLETED:          "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   CLOSED:             "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
 };

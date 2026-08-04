@@ -31,9 +31,9 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
     help: "Job has been referred for external handling.",
   },
   AWAITING_APPROVAL: {
-    dot: "bg-orange-400",
+    dot: "bg-amber-400",
     badge: "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    strip: "bg-orange-400",
+    strip: "bg-amber-400",
     label: "Awaiting",
     help: "Waiting for client approval to proceed.",
   },
