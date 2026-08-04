@@ -45,10 +45,17 @@ export type DataTableProps<T> = {
   empty?: ReactNode;
   /**
    * Optional mobile card renderer. When provided, cards show below `lg` and
-   * the table shows from `lg` up. When omitted, the table scrolls
-   * horizontally on small screens instead.
+   * the table shows from `lg` up. When omitted, an auto-generated card is built
+   * from the columns (label → value), so a table NEVER horizontal-scrolls on a
+   * phone. Pass a custom renderer for a nicer, purpose-built card.
    */
   renderMobileCard?: (row: T, index: number) => ReactNode;
+  /**
+   * Opt out of the auto-generated mobile card and keep the raw (scrolling)
+   * table on small screens. Only for tables where a stacked card genuinely
+   * doesn't fit (e.g. a wide numeric matrix meant to be scanned as a grid).
+   */
+  noAutoCard?: boolean;
   /** Extra classes on the outer frame. */
   className?: string;
   /** Drop the bordered frame — for embedding inside an existing card. */
@@ -110,6 +117,7 @@ export function DataTable<T>({
   actions,
   empty = "No records found.",
   renderMobileCard,
+  noAutoCard,
   className,
   frameless,
   pagination,
@@ -120,6 +128,10 @@ export function DataTable<T>({
   hideHeader,
   onRowClick,
 }: DataTableProps<T>) {
+  // A phone always gets a stacked representation unless a table explicitly opts
+  // out — no more horizontal-scrolling (or, worse, clipped) tables on mobile.
+  const autoCard = !renderMobileCard && !noAutoCard;
+  const hasMobileView = Boolean(renderMobileCard) || autoCard;
   const cell = dense ? "px-3 py-2" : "px-4 py-2.5";
   const footer = pagination ? (
     <TablePagination
@@ -150,7 +162,7 @@ export function DataTable<T>({
 
   const table = (
     <div className={frame}>
-      {/* Mobile cards */}
+      {/* Mobile cards — explicit renderer, else auto-generated from columns. */}
       {renderMobileCard ? (
         <div className="lg:hidden">
           {rows.map((row, i) => (
@@ -159,10 +171,44 @@ export function DataTable<T>({
             </div>
           ))}
         </div>
+      ) : autoCard ? (
+        <div className="lg:hidden">
+          {rows.map((row, i) => (
+            <div
+              key={getRowKey(row, i)}
+              onClick={onRowClick ? () => onRowClick(row, i) : undefined}
+              className={`${dense ? "px-3 py-2.5" : "px-4 py-3"} space-y-1.5 ${i > 0 ? "border-t border-[var(--line)]/40" : ""} ${rowClassName?.(row, i) ?? ""}`}
+            >
+              {columns.map((c, ci) => {
+                const value = c.cell(row, i);
+                if (value === null || value === undefined || value === false || value === "") return null;
+                // Lead with the first column as the card's title (unless header-less).
+                if (ci === 0 && !hideHeader) {
+                  return (
+                    <div key={c.key} className="text-[14px] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">
+                      {value}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={c.key} className="flex items-start justify-between gap-3 text-[13px]">
+                    {c.header ? (
+                      <span className="shrink-0 pt-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-muted)]/70">
+                        {c.header}
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 flex-1 text-right [overflow-wrap:anywhere]">{value}</span>
+                  </div>
+                );
+              })}
+              {actions ? <div className="flex flex-wrap items-center justify-end gap-1 pt-0.5">{actions(row, i)}</div> : null}
+            </div>
+          ))}
+        </div>
       ) : null}
 
       {/* Table */}
-      <div className={`overflow-x-auto ${renderMobileCard ? "hidden lg:block" : "block"}`}>
+      <div className={`overflow-x-auto ${hasMobileView ? "hidden lg:block" : "block"}`}>
         <table className="w-full text-left text-[13px]">
           {hideHeader ? null : (
             <thead>

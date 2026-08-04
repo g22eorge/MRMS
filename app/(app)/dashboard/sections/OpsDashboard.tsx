@@ -34,17 +34,19 @@ export async function OpsDashboard({
 
   const [completedThisMonth, pendingBilling, externalCompleted, revenueTrend] = await Promise.all([
     prisma.job.aggregate({
-      where: { status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+      where: { orgId, status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
       _sum: { clientBill: true },
       _count: true,
     }),
     prisma.job.count({
       where: {
+        orgId,
         status: { in: ["IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"] },
       },
     }),
     prisma.job.findMany({
       where: {
+        orgId,
         repairPath: "EXTERNAL",
         externalPaid: false,
         status: { in: ["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"] },
