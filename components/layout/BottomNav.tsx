@@ -144,6 +144,7 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
       // Complaints page guard: ADMIN, MANAGER, TECH_MANAGER, OPS
       case ITEMS.complaints.href:     return modOk("/complaints") && ["ADMIN","MANAGER","TECH_MANAGER","OPS"].includes(role);
       case ITEMS.targets.href:        return can.viewTeamTargets(perm);
+      case ITEMS.intake.href:         return can.viewIntake(perm);
       default: return true;
     }
   };
@@ -151,7 +152,7 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
   const groups: NavGroup[] = [
     { title: "Customers",  items: [ITEMS.clients, ITEMS.sales, ITEMS.complaints] },
     { title: "Documents",  items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.receipts, ITEMS.deliveryNotes, ITEMS.creditNotes, ITEMS.refunds] },
-    { title: "Operations", items: [ITEMS.inventory, ITEMS.field, ITEMS.payoutFollowups, ITEMS.board] },
+    { title: "Operations", items: [ITEMS.intake, ITEMS.inventory, ITEMS.field, ITEMS.payoutFollowups, ITEMS.board] },
     { title: "Sales",      items: [ITEMS.pos, ITEMS.cashierShifts, ITEMS.targets] },
     { title: "Finance",    items: [ITEMS.expenses, ITEMS.recurring, ITEMS.taxRates] },
     { title: "Analytics",  items: [ITEMS.reports, ITEMS.aiInsights] },

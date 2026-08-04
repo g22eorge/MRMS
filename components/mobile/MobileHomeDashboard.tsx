@@ -44,6 +44,7 @@ export type MobileHomeProps = {
 
   currency: string;
   quickActions?: MobileQuickAction[];
+  recentJobs?: { id: string; device: string; statusLabel: string; dot: string; ago: string }[];
 };
 
 function hero(v: number, currency: string) {
@@ -59,14 +60,6 @@ function compact(v: number, currency: string) {
 function pct(cur: number, prev: number) {
   if (prev === 0) return null;
   return Math.round(((cur - prev) / prev) * 100);
-}
-function Chevron() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 18l6-6-6-6"/>
-    </svg>
-  );
 }
 
 export function MobileHomeDashboard(p: MobileHomeProps) {
@@ -143,9 +136,8 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
 
       {/* ── Needs action — 3 hero numbers, colour-coded by urgency ──── */}
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+        <div className="border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-sm font-semibold text-[var(--ink)]">Needs action</p>
-          <Link href="/jobs" className="text-[12px] font-semibold text-[var(--accent)]">All jobs →</Link>
         </div>
         <div className="grid grid-cols-3 divide-x divide-[var(--line)]">
           {/* Awaiting approval */}
@@ -173,17 +165,15 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
             <p className="mt-1 text-[12px] leading-tight text-[var(--ink-muted)]">Overdue</p>
           </Link>
         </div>
-        {/* Secondary alerts if any */}
+        {/* Money alert — a tinted bar, no arrow (the whole row taps through) */}
         {(p.completedUnpaidCount > 0) && (
-          <div className="border-t border-[var(--line)]">
-            <Link href="/jobs?status=COMPLETED"
-              className="flex items-center justify-between px-4 py-2.5 active:bg-[var(--panel-strong)]">
-              <p className="text-[13px] text-[var(--ink-muted)]">
-                <span className="font-bold text-red-400">{p.completedUnpaidCount}</span> completed unpaid
-              </p>
-              <Chevron />
-            </Link>
-          </div>
+          <Link href="/jobs?status=COMPLETED"
+            className="flex items-center gap-2.5 border-t border-[var(--line)] bg-red-500/6 px-4 py-2.5 active:bg-red-500/12">
+            <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-red-500/15 px-1.5 text-[12px] font-black tabular-nums text-red-400">
+              {p.completedUnpaidCount}
+            </span>
+            <span className="text-[13px] font-medium text-[var(--ink)]">completed &amp; unpaid — collect payment</span>
+          </Link>
         )}
       </div>
 
@@ -198,6 +188,26 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
             <span className="text-[11px] font-semibold text-[var(--ink-muted)]">{a.label}</span>
           </Link>
           ))}
+        </div>
+      ) : null}
+
+      {/* ── Recent activity — last few jobs, each taps through ────────── */}
+      {(p.recentJobs?.length ?? 0) > 0 ? (
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5">
+            <p className="text-sm font-semibold text-[var(--ink)]">Recent</p>
+          </div>
+          <div className="divide-y divide-[var(--line)]">
+            {p.recentJobs!.map((j) => (
+              <Link key={j.id} href={`/jobs/${j.id}`}
+                className="flex items-center gap-3 px-4 py-3 active:bg-[var(--panel-strong)]">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${j.dot}`} aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--ink)]">{j.device}</span>
+                <span className="shrink-0 text-[12px] text-[var(--ink-muted)]">{j.statusLabel}</span>
+                <span className="shrink-0 text-[12px] tabular-nums text-[var(--ink-muted)]/60">{j.ago}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -10,6 +10,24 @@ import { getOrgModules } from "@/lib/module-access";
 import { loadTotalRevenueTrend, trendMonthsSinceStartOfYear } from "./data";
 import { statusLabel } from "./shared";
 
+/** Compact relative time for the mobile recent-activity feed: now / 5m / 3h / 2d. */
+function relTimeAgo(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+/** Status → dot colour, kept within the app's existing semantic palette. */
+const RECENT_DOT: Record<string, string> = {
+  READY_FOR_PICKUP: "bg-emerald-500",
+  COMPLETED: "bg-emerald-400",
+  IN_REPAIR: "bg-sky-400",
+  AWAITING_APPROVAL: "bg-[var(--accent)]",
+};
+
 /** All ADMIN dashboard queries + derivations, extracted from page.tsx unchanged. */
 export async function loadAdminDashboardData(orgId: string | null) {
   const currency = getAppCurrency();
@@ -250,11 +268,33 @@ export async function loadAdminDashboardData(orgId: string | null) {
   const leadCountMap = new Map<string, number>();
   for (const row of leadFunnel) leadCountMap.set(row.status, row._count.status);
 
+  // Recent activity — last 4 jobs by update, org-scoped. Minimal fields only
+  // (no client PII / pricing) so the feed is safe on any dashboard.
+  const recentJobsRaw = await prisma.job
+    .findMany({
+      where: orgFilter,
+      orderBy: { updatedAt: "desc" },
+      take: 4,
+      select: { id: true, brand: true, model: true, status: true, updatedAt: true },
+    })
+    .catch(() => [] as { id: string; brand: string; model: string; status: JobStatus; updatedAt: Date }[]);
+  const recentJobs = recentJobsRaw.map((j) => {
+    const key = normalizeJobStatus(j.status);
+    return {
+      id: j.id,
+      device: `${j.brand} ${j.model}`.trim(),
+      statusLabel: statusLabel[key],
+      dot: RECENT_DOT[key] ?? "bg-[var(--ink-muted)]/40",
+      ago: relTimeAgo(today.getTime() - new Date(j.updatedAt).getTime()),
+    };
+  });
+
   return {
     currency,
     today,
     orgName,
     enabledModules,
+    recentJobs,
     // Today / yesterday
     receivedToday,
     completedToday,

@@ -1188,28 +1188,6 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         </div>
 
-        {/* Journey — vertical stepper */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Repair journey</p>
-          <div className="flex flex-col">
-            {stageLabels.map((label, i) => {
-              const isDone = i < currentStageIndex;
-              const isCurrent = i === currentStageIndex;
-              const isLast = i === stageLabels.length - 1;
-              return (
-                <div key={label} className="relative flex gap-3 pb-3.5 last:pb-0">
-                  {!isLast ? <span className={`absolute bottom-0 left-[8px] top-[18px] w-0.5 ${isDone ? "bg-emerald-500" : "bg-[var(--line)]"}`} /> : null}
-                  <span className={`z-10 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold ${isDone ? "border-emerald-500 bg-emerald-500 text-white" : isCurrent ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{isDone ? "✓" : i + 1}</span>
-                  <div className="-mt-0.5">
-                    <p className={`text-[12.5px] font-semibold ${isCurrent ? "text-[var(--accent)]" : isDone ? "text-[var(--ink)]" : "text-[var(--ink-muted)]"}`}>{label}</p>
-                    <p className="text-[10.5px] text-[var(--ink-muted)]">{isDone ? "Completed" : isCurrent ? "In progress" : "Pending"}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Client & technician */}
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Client &amp; technician</p>

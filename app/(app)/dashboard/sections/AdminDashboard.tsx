@@ -50,7 +50,7 @@ export async function AdminDashboard({
 }) {
   const data = await loadAdminDashboardData(orgId);
   const {
-    currency, orgName, enabledModules, today,
+    currency, orgName, enabledModules, today, recentJobs,
     receivedToday, completedToday, receivedYesterday, completedYesterday,
     intakePendingCount, cashTodayValue, cashYesterdayValue, salesTodayValue,
     expensesTodayValue,
@@ -195,6 +195,7 @@ export async function AdminDashboard({
         revenueMtd={totalMtd}
         currency={currency}
         quickActions={quickActions}
+        recentJobs={recentJobs}
       />
 
       {/* ════════ Desktop dashboard — calm layout (hidden on mobile) ════════ */}
