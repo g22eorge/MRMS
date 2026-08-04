@@ -27,14 +27,14 @@ function ItemIcon({ d, color }: { d: string | string[]; color: string }) {
 
 function NavRow({
   href,
-  icon,
+  icon: _icon,
   label,
   badge,
-  iconBg = "bg-[var(--panel-strong)]",
+  iconBg: _iconBg,
   description: _desc,
 }: {
   href: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode; // no longer rendered — kept so call sites don't change
   /** Defaults to the canonical route registry label — avoid overriding. */
   label?: string;
   badge?: number;
@@ -45,15 +45,10 @@ function NavRow({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3.5 px-4 py-3.5 transition-colors active:bg-[var(--panel-strong)]"
+      className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-[var(--panel-strong)]"
     >
-      {/* Coloured icon circle */}
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-        {icon}
-      </span>
-
-      {/* Label */}
-      <p className="min-w-0 flex-1 text-[14px] font-semibold leading-snug text-[var(--ink)]">{text}</p>
+      {/* Text-forward executive row — no per-item icons. */}
+      <p className="min-w-0 flex-1 text-[14px] font-medium leading-snug text-[var(--ink)]">{text}</p>
 
       {/* Badge */}
       {badge && badge > 0 ? (

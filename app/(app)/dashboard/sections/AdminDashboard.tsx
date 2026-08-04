@@ -16,30 +16,23 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   return <div className={`dc-card ${className}`}>{children}</div>;
 }
 
-function CardHead({ title, href, hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
+// Executive look: card/section headers are plain titles — no "→ go here" link
+// clutter. The tiles and rows inside each card remain clickable for drill-down.
+// (href/hrefLabel kept in the signature so call sites don't change.)
+function CardHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-baseline gap-2">
       <h4 className="text-[12.5px] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">{title}</h4>
       {note}
-      {href && hrefLabel ? (
-        <Link href={href} className="ml-auto text-[11px] font-semibold text-[var(--dc-ink-3)] transition hover:text-[var(--dc-accent-2)]">
-          {hrefLabel}
-        </Link>
-      ) : null}
     </div>
   );
 }
 
-function SectionHead({ title, href, hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
+function SectionHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
   return (
     <div className="mb-2.5 flex items-baseline gap-2 px-1">
       <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">{title}</h3>
       {note}
-      {href && hrefLabel ? (
-        <Link href={href} className="ml-auto text-[11.5px] font-semibold text-[var(--dc-ink-3)] transition hover:text-[var(--dc-accent-2)]">
-          {hrefLabel}
-        </Link>
-      ) : null}
     </div>
   );
 }
