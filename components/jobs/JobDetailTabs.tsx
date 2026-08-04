@@ -896,7 +896,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   }
 
   return (
-    <div className="jobdetail-cal min-w-0 space-y-4">
+    // pb clears the fixed mobile action bar so no tab's last control (status
+    // buttons, or the workflow Save on a completed job) hides beneath it.
+    <div className="jobdetail-cal min-w-0 space-y-4 pb-44 lg:pb-0">
       {/* ── Canonical record action bar (desktop): Back · Repair Job # · status · actions ── */}
       <div className="hidden lg:block">
         <RecordActionBar
@@ -2369,7 +2371,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               );
             });
           }}
-          className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0 mb-24 lg:mb-0`}
+          className={`${panelShellClass} flex flex-wrap gap-2 [&_*]:min-w-0`}
         >
           {job.workflowReason && job.workflowReason !== "NONE" ? (
             <p className="w-full text-xs text-[var(--ink-muted)]">
