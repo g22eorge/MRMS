@@ -663,6 +663,19 @@ export async function updateJobAction(formData: FormData) {
     await consumeRepairPartsForJob({ orgId, jobId: payload.jobId, userId: session.user.id }).catch((error) => {
       console.error("[jobs] repair parts consumption failed", error);
     });
+
+    // Auto-issue the client invoice on completion, so a finished repair lands
+    // straight in Invoice Collections instead of the un-invoiced Client Payments
+    // list. Idempotent (generateInvoiceBuffer upserts the Invoice by jobId) and
+    // best-effort — an invoicing hiccup must never block the job from completing.
+    const effectiveClientBill = (updated as { clientBill?: number | null }).clientBill ?? 0;
+    if (effectiveClientBill > 0) {
+      await generateInvoiceBuffer(payload.jobId, user.name ?? "System", user.role, session.user.id, orgId, {
+        persistInvoiceRecord: true,
+      }).catch((error) => {
+        console.error("[jobs] auto-invoice on completion failed", error);
+      });
+    }
   }
 
   const job =
