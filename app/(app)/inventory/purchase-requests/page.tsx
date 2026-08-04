@@ -10,7 +10,8 @@ import { HubTabs } from "@/components/shared/HubTabs";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
-import { deletePurchaseRequestAction, reviewPurchaseRequestAction } from "./actions";
+import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { convertPurchaseRequestToPoAction, deletePurchaseRequestAction, reviewPurchaseRequestAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -57,27 +58,42 @@ export default async function PurchaseRequestsPage({
 
   // Named so the same actions render in the desktop table AND the mobile card.
   const renderRequestActions = (request: (typeof requests)[number]) => (
-    <>
+    <RowActionsMenu label={`Request ${request.requestNumber}`}>
+      <MenuActionLink href={`/inventory/purchase-requests/${request.id}`} icon="open">View</MenuActionLink>
+
       {request.status === "SUBMITTED" || request.status === "DRAFT" ? (
-        <>
-          <form action={reviewPurchaseRequestAction}>
-            <input type="hidden" name="id" value={request.id} />
-            <input type="hidden" name="action" value="APPROVED" />
-            <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 font-semibold text-emerald-700">Approve</button>
-          </form>
-          <form action={reviewPurchaseRequestAction}>
-            <input type="hidden" name="id" value={request.id} />
-            <input type="hidden" name="action" value="REJECTED" />
-            <button type="submit" className="rounded-lg border border-red-500/25 px-2.5 py-1.5 font-semibold text-red-600">Reject</button>
-          </form>
-        </>
+        <form action={reviewPurchaseRequestAction}>
+          <input type="hidden" name="id" value={request.id} />
+          <input type="hidden" name="action" value="APPROVED" />
+          <MenuActionButton icon="save" tone="success">Approve</MenuActionButton>
+        </form>
       ) : null}
-      <Link href={`/inventory/purchase-requests/${request.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">View</Link>
+
+      {request.status === "APPROVED" && !request.convertedPo ? (
+        request.supplierId ? (
+          <form action={convertPurchaseRequestToPoAction}>
+            <input type="hidden" name="id" value={request.id} />
+            <input type="hidden" name="supplierId" value={request.supplierId} />
+            <MenuActionButton icon="invoice" tone="accent">Convert to PO</MenuActionButton>
+          </form>
+        ) : (
+          <MenuActionLink href={`/inventory/purchase-requests/${request.id}`} icon="invoice" tone="accent">Convert to PO…</MenuActionLink>
+        )
+      ) : null}
+
+      <MenuSection label="Danger zone" />
+      {request.status === "SUBMITTED" || request.status === "DRAFT" ? (
+        <form action={reviewPurchaseRequestAction}>
+          <input type="hidden" name="id" value={request.id} />
+          <input type="hidden" name="action" value="REJECTED" />
+          <MenuActionButton icon="delete" tone="danger">Reject</MenuActionButton>
+        </form>
+      ) : null}
       <form action={deletePurchaseRequestAction}>
         <input type="hidden" name="id" value={request.id} />
-        <button type="submit" className="rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 font-semibold text-red-600">Delete</button>
+        <MenuActionButton icon="delete" tone="danger">Delete</MenuActionButton>
       </form>
-    </>
+    </RowActionsMenu>
   );
 
   return (

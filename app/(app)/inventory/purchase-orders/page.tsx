@@ -9,6 +9,7 @@ import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { deletePurchaseOrderAction, setPurchaseOrderStatusAction } from "./actions";
 
@@ -77,25 +78,31 @@ export default async function PurchaseOrdersPage({
   const poHref = pageHrefBuilder("/inventory/purchase-orders", {});
 
   // Named so the same actions render in the desktop table AND the mobile card.
-  const renderPoActions = (po: (typeof orders)[number]) => (
-    <>
-      {po.status === "DRAFT" ? (
-        <form action={setPurchaseOrderStatusAction}>
-          <input type="hidden" name="id" value={po.id} />
-          <input type="hidden" name="status" value="ORDERED" />
-          <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 font-semibold text-sky-700">Issue</button>
-        </form>
-      ) : ["ORDERED", "PARTIAL"].includes(po.status) ? (
-        <Link href={`/inventory/purchase-orders/${po.id}#receive`} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-700">Receive</Link>
-      ) : null}
-      <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--accent)]">PDF</Link>
-      <Link href={`/inventory/purchase-orders/${po.id}`} className="rounded-md border border-[var(--line)] px-2 py-1 font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open</Link>
-      <form action={deletePurchaseOrderAction}>
-        <input type="hidden" name="id" value={po.id} />
-        <button type="submit" className="rounded-md border border-red-500/25 bg-red-500/10 px-2 py-1 font-semibold text-red-600">Delete</button>
-      </form>
-    </>
-  );
+  const renderPoActions = (po: (typeof orders)[number]) => {
+    const receivable = ["ORDERED", "PARTIAL"].includes(po.status);
+    return (
+      <RowActionsMenu label={`PO ${poNumber(po)}`}>
+        <MenuActionLink href={`/inventory/purchase-orders/${po.id}`} icon="open">View</MenuActionLink>
+        <MenuActionLink href={`/api/procurement/documents/purchase-order/${po.id}`} external icon="download">Print / PDF</MenuActionLink>
+        {po.status === "DRAFT" ? (
+          <form action={setPurchaseOrderStatusAction}>
+            <input type="hidden" name="id" value={po.id} />
+            <input type="hidden" name="status" value="ORDERED" />
+            <MenuActionButton icon="delivery" tone="accent">Issue</MenuActionButton>
+          </form>
+        ) : receivable ? (
+          <MenuActionLink href={`/inventory/purchase-orders/${po.id}#receive`} icon="delivery" tone="accent">Receive stock</MenuActionLink>
+        ) : null}
+        <MenuSection label="Danger zone" />
+        <MenuDestructiveRow>
+          <form action={deletePurchaseOrderAction}>
+            <input type="hidden" name="id" value={po.id} />
+            <MenuActionButton icon="delete" tone="danger">Delete</MenuActionButton>
+          </form>
+        </MenuDestructiveRow>
+      </RowActionsMenu>
+    );
+  };
 
   return (
     <ListPageLayout

@@ -9,6 +9,7 @@ import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { RowActionsMenu, MenuSection, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import {
   approveStockTransferAction,
@@ -67,14 +68,42 @@ export default async function StockTransfersPage({
   const hrefForPage = pageHrefBuilder("/inventory/transfers", {});
 
   // Named so the same status actions render in the desktop table AND mobile card.
-  const renderTransferActions = (transfer: (typeof transfers)[number]) => (
-    <>
-      {transfer.status === "REQUESTED" ? <form action={approveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">Approve</button></form> : null}
-      {transfer.status === "APPROVED" ? <form action={dispatchStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-700">Dispatch</button></form> : null}
-      {transfer.status === "DISPATCHED" ? <form action={receiveStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-700">Receive</button></form> : null}
-      {transfer.status === "REQUESTED" || transfer.status === "APPROVED" ? <form action={cancelStockTransferAction}><input type="hidden" name="id" value={transfer.id} /><button type="submit" className="rounded-lg border border-red-500/20 px-2.5 py-1 font-semibold text-red-600">Cancel</button></form> : null}
-    </>
-  );
+  const renderTransferActions = (transfer: (typeof transfers)[number]) => {
+    const canCancel = transfer.status === "REQUESTED" || transfer.status === "APPROVED";
+    const hasAction = transfer.status === "REQUESTED" || transfer.status === "APPROVED" || transfer.status === "DISPATCHED";
+    if (!hasAction) return null;
+    return (
+      <RowActionsMenu label={`Transfer ${transfer.transferNumber}`}>
+        {transfer.status === "REQUESTED" ? (
+          <form action={approveStockTransferAction}>
+            <input type="hidden" name="id" value={transfer.id} />
+            <MenuActionButton icon="save" tone="accent">Approve</MenuActionButton>
+          </form>
+        ) : null}
+        {transfer.status === "APPROVED" ? (
+          <form action={dispatchStockTransferAction}>
+            <input type="hidden" name="id" value={transfer.id} />
+            <MenuActionButton icon="delivery">Dispatch</MenuActionButton>
+          </form>
+        ) : null}
+        {transfer.status === "DISPATCHED" ? (
+          <form action={receiveStockTransferAction}>
+            <input type="hidden" name="id" value={transfer.id} />
+            <MenuActionButton icon="receipt" tone="success">Receive</MenuActionButton>
+          </form>
+        ) : null}
+        {canCancel ? (
+          <>
+            <MenuSection label="Danger zone" />
+            <form action={cancelStockTransferAction}>
+              <input type="hidden" name="id" value={transfer.id} />
+              <MenuActionButton icon="close" tone="danger">Cancel</MenuActionButton>
+            </form>
+          </>
+        ) : null}
+      </RowActionsMenu>
+    );
+  };
 
   return (
     <ListPageLayout

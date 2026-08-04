@@ -10,6 +10,7 @@ import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RowActionsMenu, MenuActionLink, MenuSection } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
@@ -133,9 +134,16 @@ export default async function SuppliersPage({
           },
         ]}
         actions={(s) => (
-          <Link href={`/inventory/suppliers/${s.id}`} className="inline-flex items-center rounded-lg border border-[var(--line)] px-2.5 py-1.5 font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
-            View
-          </Link>
+          <RowActionsMenu label={`Supplier ${s.name}`}>
+            <MenuActionLink href={`/inventory/suppliers/${s.id}`} icon="open">View</MenuActionLink>
+            <MenuSection label="Create" />
+            <MenuActionLink href={`/inventory/purchase-orders/new?supplierId=${s.id}`} icon="invoice" tone="accent">
+              New purchase order
+            </MenuActionLink>
+            <MenuActionLink href={`/inventory/supplier-bills/new?supplierId=${s.id}`} icon="receipt">
+              New bill
+            </MenuActionLink>
+          </RowActionsMenu>
         )}
         renderMobileCard={(s) => (
           <Link href={`/inventory/suppliers/${s.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">

@@ -7,6 +7,7 @@ import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
+import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
@@ -122,6 +123,12 @@ export default async function GoodsReceivedPage({
             cell: (grn) => fmt(grn.receivedAt),
           },
         ]}
+        actions={(grn) => (
+          <RowActionsMenu label={`GRN ${grn.grnNumber}`}>
+            <MenuActionLink href={`/inventory/goods-received/${grn.id}`} icon="open">View</MenuActionLink>
+            <MenuActionLink href={`/api/procurement/documents/goods-received/${grn.id}`} external icon="download">Print / PDF</MenuActionLink>
+          </RowActionsMenu>
+        )}
         renderMobileCard={(grn) => (
           <Link href={`/inventory/goods-received/${grn.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:opacity-70">
             <div className="min-w-0">
