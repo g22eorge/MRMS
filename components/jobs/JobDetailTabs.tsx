@@ -490,6 +490,10 @@ type Props = {
       | null;
     statusNote?: string | null;
     updatedAt: Date;
+    completedAt?: Date | null;
+    deliveredAt?: Date | null;
+    deliveryMethod?: "PICKUP" | "DELIVERY" | "COURIER" | null;
+    deliveredTo?: string | null;
     repairPath: "IN_HOUSE" | "EXTERNAL" | null;
     diagnosisNotes: string | null;
     externalDiagnosis: string | null;
@@ -828,6 +832,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
     : job.oneTimeExternalAssignment?.technicianName
       ? `One-time external: ${job.oneTimeExternalAssignment.technicianName}`
       : "No technician assigned yet.";
+  // Delivery record (shown once captured at handover) — display only.
+  const deliveryMethodLabel =
+    job.deliveryMethod === "PICKUP" ? "Client pickup"
+    : job.deliveryMethod === "DELIVERY" ? "We delivered"
+    : job.deliveryMethod === "COURIER" ? "Courier"
+    : null;
+  const deliveryWhen = job.deliveredAt ?? job.completedAt ?? null;
+  const deliveryDate = deliveryWhen
+    ? new Date(deliveryWhen).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+  const hasDelivery = Boolean(job.deliveryMethod || job.deliveredTo);
   type AttentionItem = { label: string; action: string; tab: (typeof tabs)[number] };
   const attentionItems = [
     !job.repairTimeline ? { label: "ETA not set", action: "Add an ETA so the client knows when to expect progress.", tab: "timeline" as const } : null,
@@ -1233,6 +1248,33 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   <div><p className="text-[12px] font-semibold text-[var(--ink)]">{item.label}</p><p className="text-[11px] leading-snug text-[var(--ink-muted)]">{item.action}</p></div>
                 </button>
               ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Delivery — the handover record, shown once captured */}
+        {hasDelivery ? (
+          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Delivery</p>
+            <div className="space-y-2">
+              {deliveryMethodLabel ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11.5px] text-[var(--ink-muted)]">Method</span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink)]">{deliveryMethodLabel}</span>
+                </div>
+              ) : null}
+              {job.deliveredTo ? (
+                <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
+                  <span className="text-[11.5px] text-[var(--ink-muted)]">Received by</span>
+                  <span className="truncate text-[12.5px] font-semibold text-[var(--ink)]">{job.deliveredTo}</span>
+                </div>
+              ) : null}
+              {deliveryDate ? (
+                <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
+                  <span className="text-[11.5px] text-[var(--ink-muted)]">Date</span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink)]">{deliveryDate}</span>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
