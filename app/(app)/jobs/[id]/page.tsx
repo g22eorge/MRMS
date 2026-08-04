@@ -316,53 +316,38 @@ export default async function JobDetailPage({
       }).catch(() => [])
     : [];
 
-  return (
-    <>
-      <JobDetailTabs
-        role={user.role}
-        permissions={user.permissions}
-        orgBaseCurrency={org.baseCurrency}
-        supportedCurrencies={org.supportedCurrencies}
-        job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments, technicianPayouts }}
-        technicians={technicians}
-        deviceHistory={deviceHistory}
-        returnTo={safeReturnTo}
-        returnLabel={returnLabel}
-        initialTab={tab}
-        documentTimeline={documentTimeline}
-      />
+  const movePanel = canMoveJob && moveCandidates.length > 0 ? (
+    <div className="flex justify-end">
+      <MoveJobPanel jobId={job.id} currentClientName={job.client?.fullName ?? "this account"} candidates={moveCandidates} />
+    </div>
+  ) : null;
 
-      {canMoveJob && moveCandidates.length > 0 ? (
-        <div className="mx-auto mt-3 flex max-w-5xl justify-end">
-          <MoveJobPanel jobId={job.id} currentClientName={job.client?.fullName ?? "this account"} candidates={moveCandidates} />
-        </div>
-      ) : null}
+  // Client portal thread — visible to staff; two-way with the customer's portal.
+  const portalPanel = portalMessages.length > 0 ? (
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Client Portal Messages</p>
+      <ul className="mb-3 space-y-2">
+        {portalMessages.map((m) => {
+          const staff = m.authorType === "STAFF";
+          return (
+            <li key={m.id} className={`flex flex-col ${staff ? "items-end" : "items-start"}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${staff ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>{m.body}</div>
+              <span className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {m.createdAt.toISOString().slice(0, 10)}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <form action={staffReplyRepairMessageAction} className="flex gap-2">
+        <input type="hidden" name="jobId" value={id} />
+        <input name="body" required maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50" />
+        <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[13px] text-white">Reply</button>
+      </form>
+    </div>
+  ) : null;
 
-      {/* Client portal thread — visible to staff; two-way with the customer's portal. */}
-      {portalMessages.length > 0 ? (
-        <div className="mx-auto mt-4 max-w-5xl rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Client Portal Messages</p>
-          <ul className="mb-3 space-y-2">
-            {portalMessages.map((m) => {
-              const staff = m.authorType === "STAFF";
-              return (
-                <li key={m.id} className={`flex flex-col ${staff ? "items-end" : "items-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${staff ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>{m.body}</div>
-                  <span className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {m.createdAt.toISOString().slice(0, 10)}</span>
-                </li>
-              );
-            })}
-          </ul>
-          <form action={staffReplyRepairMessageAction} className="flex gap-2">
-            <input type="hidden" name="jobId" value={id} />
-            <input name="body" required maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50" />
-            <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[13px] text-white">Reply</button>
-          </form>
-        </div>
-      ) : null}
-
-      {/* Assessment report (AI-drafted, staff-reviewed) + warranty — surfaced to the client portal. */}
-      <div className="mx-auto mt-4 max-w-5xl space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+  // Assessment report (AI-drafted, staff-reviewed) + warranty — surfaced to the client portal.
+  const assessmentPanel = (
+    <div className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
           <div className="flex items-center gap-2">
@@ -436,6 +421,24 @@ export default async function JobDetailPage({
           </form>
         </div>
       </div>
-    </>
+  );
+
+  return (
+    <JobDetailTabs
+      role={user.role}
+      permissions={user.permissions}
+      orgBaseCurrency={org.baseCurrency}
+      supportedCurrencies={org.supportedCurrencies}
+      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments, technicianPayouts }}
+      technicians={technicians}
+      deviceHistory={deviceHistory}
+      returnTo={safeReturnTo}
+      returnLabel={returnLabel}
+      initialTab={tab}
+      documentTimeline={documentTimeline}
+      assessmentSlot={assessmentPanel}
+      moveSlot={movePanel}
+      portalSlot={portalPanel}
+    />
   );
 }

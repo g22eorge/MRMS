@@ -3,7 +3,7 @@
 import { Role } from "@prisma/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, sendQuotationViaEmailAction, sendInvoiceViaEmailAction, sendJobCardViaEmailAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
@@ -586,9 +586,13 @@ type Props = {
       finalOutcome: string | null;
     } | null;
   };
+  /** Server-rendered panels folded into the tab system instead of stacked below the page. */
+  assessmentSlot?: ReactNode;
+  moveSlot?: ReactNode;
+  portalSlot?: ReactNode;
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [] }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, moveSlot, portalSlot }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -599,7 +603,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       : t === "photos" || t === "messages"
         ? "history"
         : "work";
-  const [segment, setSegment] = useState<"work" | "money" | "history">(() =>
+  const [segment, setSegment] = useState<"work" | "money" | "history" | "assessment">(() =>
     initialTab ? tabToSegment(initialTab) : "work",
   );
   // Back-compat shim: existing setActive("financials")-style calls route to the right segment.
@@ -1259,6 +1263,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         {([
           { key: "work", label: "Work" },
           { key: "money", label: "Money" },
+          ...(assessmentSlot ? [{ key: "assessment", label: "Assessment" } as const] : []),
           { key: "history", label: "History" },
         ] as const).map((s) => (
           <button
@@ -1280,6 +1285,29 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </button>
         ))}
       </div>
+
+      {/* Assessment report — folded in as its own tab instead of stacked below the page. */}
+      {segment === "assessment" ? (
+        <div className="space-y-3">{assessmentSlot}</div>
+      ) : null}
+
+      {/* Client portal thread + move/transfer job — grouped under History rather than
+          floating at the bottom of the page. */}
+      {segment === "history" && (portalSlot || moveSlot) ? (
+        <div className="space-y-3">
+          {portalSlot}
+          {moveSlot}
+        </div>
+      ) : null}
+
+      {segment === "assessment" ? <div className="space-y-3">{assessmentSlot}</div> : null}
+
+      {segment === "history" && (moveSlot || portalSlot) ? (
+        <div className="space-y-3">
+          {moveSlot}
+          {portalSlot}
+        </div>
+      ) : null}
 
       {segment === "history" && role !== "TECHNICIAN_EXTERNAL" ? (
         <div className={`${panelShellClass} space-y-4`}>
