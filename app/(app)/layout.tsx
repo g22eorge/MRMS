@@ -17,6 +17,7 @@ import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getOrgModules } from "@/lib/module-access";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
+import { IdleLogout } from "@/components/shared/IdleLogout";
 import Link from "next/link";
 
 export default async function AppLayout({
@@ -152,6 +153,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh overflow-x-clip md:flex md:h-screen md:overflow-hidden">
+      <IdleLogout />
       <ClientOnlySidebar
         role={user.role}
         permissions={user.permissions}
