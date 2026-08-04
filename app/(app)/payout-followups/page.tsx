@@ -368,18 +368,32 @@ export default async function PayoutFollowupsPage({
     return Math.max(0, resolveTechCost(job.externalTechFee, job.externalTechBill) - paidToTechnician(job.id));
   }
 
-  // Pagination (per section, shared page param for simplicity)
+  // Pagination preserves the active section + filters.
   const preserved = Object.fromEntries(
     Object.entries(filters).filter(([k, v]) => k !== "page" && typeof v === "string" && v.length > 0),
   ) as Record<string, string>;
 
-  const allPages = [
-    Math.ceil(clientTotal / PAGE_SIZE),
-    Math.ceil(techTotal / PAGE_SIZE),
-    Math.ceil(invoiceTotal / PAGE_SIZE),
-    Math.ceil(billTotal / PAGE_SIZE),
-  ].filter(Boolean);
-  const totalPages = Math.max(...allPages, 1);
+  // Shell view: only the active section's list renders, so the four lists no
+  // longer stack into one endless page that pushes everything off-screen.
+  const sectionTabs = [
+    { key: "invoices", label: "Invoice Collections", count: invoiceTotal, allowed: canSeeInvoices, dot: "bg-violet-400" },
+    { key: "repairs", label: "Client Payments", count: clientTotal, allowed: canSeeRepairs, dot: "bg-amber-400" },
+    { key: "bills", label: "Supplier Bills", count: billTotal, allowed: canSeeBills, dot: "bg-rose-400" },
+    { key: "tech", label: "Tech Payouts", count: techTotal, allowed: canSeeRepairs, dot: "bg-sky-400" },
+  ].filter((t) => t.allowed);
+  const requestedSection = filters.section ?? "";
+  const activeTab = sectionTabs.some((t) => t.key === requestedSection) ? requestedSection : (sectionTabs[0]?.key ?? "invoices");
+  function tabHref(key: string) {
+    const p = new URLSearchParams();
+    if (filters.q) p.set("q", filters.q);
+    if (filters.tech) p.set("tech", filters.tech);
+    p.set("section", key);
+    return `?${p.toString()}`;
+  }
+
+  // Paginate only the active section (each list has its own row count).
+  const activeSectionCount = activeTab === "invoices" ? invoiceTotal : activeTab === "repairs" ? clientTotal : activeTab === "bills" ? billTotal : techTotal;
+  const totalPages = Math.max(Math.ceil(activeSectionCount / PAGE_SIZE), 1);
   const prevPage = Math.max(1, page - 1);
   const nextPage = Math.min(totalPages, page + 1);
 
@@ -452,33 +466,34 @@ export default async function PayoutFollowupsPage({
         </Link>
       </div>
 
-      {/* Section nav chips */}
-      <div className="flex flex-wrap gap-2">
-        {canSeeInvoices && (
-          <a href="#invoices" className="rounded-full border border-violet-400/40 bg-violet-500/8 px-3 py-1.5 text-[12px] font-semibold text-violet-700 dark:text-violet-400 hover:bg-violet-500/15 transition">
-            Invoice Collections · {invoiceTotal}
-          </a>
-        )}
-        {canSeeRepairs && (
-          <a href="#repairs" className="rounded-full border border-amber-400/40 bg-amber-500/8 px-3 py-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/15 transition">
-            Repair Collections · {clientTotal}
-          </a>
-        )}
-        {canSeeRepairs && (
-          <a href="#tech" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)] transition">
-            Tech Payouts · {techTotal}
-          </a>
-        )}
-        {canSeeBills && (
-          <a href="#bills" className="rounded-full border border-rose-400/40 bg-rose-500/8 px-3 py-1.5 text-[12px] font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-500/15 transition">
-            Supplier Bills · {billTotal}
-          </a>
-        )}
+      {/* Section tabs — shell view: pick one list at a time instead of stacking. */}
+      <div className="flex flex-wrap gap-2 overflow-x-auto [scrollbar-width:none]">
+        {sectionTabs.map((t) => {
+          const active = t.key === activeTab;
+          return (
+            <Link
+              key={t.key}
+              href={tabHref(t.key)}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition ${
+                active
+                  ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--ink)]"
+                  : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              }`}
+            >
+              <span className={`inline-block h-2 w-2 rounded-full ${t.dot}`} />
+              {t.label}
+              <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]">{t.count}</span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Filters */}
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
         <form className="flex flex-wrap items-center gap-2">
+          {/* Stay on the active list when filtering. */}
+          <input type="hidden" name="section" value={activeTab} />
           <input
             name="q"
             defaultValue={filters.q}
@@ -494,12 +509,12 @@ export default async function PayoutFollowupsPage({
             </select>
           )}
           <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
-          <Link href="/payout-followups" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
+          <Link href={`/payout-followups?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
         </form>
       </section>
 
       {/* ── Section 1: Invoice Collections ─────────────────────────────────── */}
-      {canSeeInvoices && (
+      {activeTab === "invoices" && canSeeInvoices && (
         <section id="invoices" className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-400" />
@@ -596,7 +611,7 @@ export default async function PayoutFollowupsPage({
       )}
 
       {/* ── Section 2: Repair Client Collections ───────────────────────────── */}
-      {canSeeRepairs && (
+      {activeTab === "repairs" && canSeeRepairs && (
         <section id="repairs" className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
@@ -671,7 +686,7 @@ export default async function PayoutFollowupsPage({
       )}
 
       {/* ── Section 3: Supplier Bills Payable ──────────────────────────────── */}
-      {canSeeBills && (
+      {activeTab === "bills" && canSeeBills && (
         <section id="bills" className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-400" />
@@ -755,7 +770,7 @@ export default async function PayoutFollowupsPage({
       )}
 
       {/* ── Section 4: External Tech Payouts ───────────────────────────────── */}
-      {canSeeRepairs && (
+      {activeTab === "tech" && canSeeRepairs && (
         <section id="tech" className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-400" />
