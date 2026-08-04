@@ -546,7 +546,7 @@ export default async function JobsPage({
               name="q"
               defaultValue={filters.q}
               placeholder={isExternalTech ? "Search job #…" : lookupByPhone ? "Name, phone or job #…" : "Search job #…"}
-              className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             {filters.q ? (
               <a href={`/jobs?${new URLSearchParams(Object.fromEntries(Object.entries(filters).filter(([k]) => k !== "q") as [string,string][])).toString()}`} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50 hover:text-[var(--ink-muted)]" aria-label="Clear search">
@@ -559,7 +559,7 @@ export default async function JobsPage({
             <Link
               href={advToggleHref}
               aria-label="Filters"
-              className={`relative hidden lg:flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition ${
+              className={`relative hidden lg:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
                 hasAdvancedFilters
                   ? "border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent)]"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -609,7 +609,7 @@ export default async function JobsPage({
 
         {/* Advanced filters — desktop only (chips handle mobile) */}
         {showAdv ? (
-          <form method="GET" className="mb-3 hidden lg:block overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)] divide-y divide-[var(--line)]">
+          <form method="GET" className="mb-3 hidden lg:block overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] divide-y divide-[var(--line)]">
             {filters.q ? <input type="hidden" name="q" value={filters.q} /> : null}
             {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
             <input type="hidden" name="adv" value="1" />

@@ -119,7 +119,7 @@ export default async function FinancePage() {
   const compactAmount = (value: number) => formatMoneyCompact(value, currency).replace(`${currency} `, "");
 
   return (
-    <div className="space-y-5 pb-24 lg:pb-8">
+    <div className="space-y-4 pb-24 lg:pb-8">
 
       {/* ══ MOBILE HEADER ══ */}
       <div className="space-y-3 lg:hidden">
@@ -129,7 +129,7 @@ export default async function FinancePage() {
             {now.toLocaleDateString("en-UG", { month: "long", year: "numeric" })} · amounts in {currency}
           </p>
         </div>
-        <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+        <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
           {([
             { label: "In", value: compactAmount(revTotal) },
             { label: "Out", value: compactAmount(expTotal) },

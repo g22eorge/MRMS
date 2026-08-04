@@ -1,13 +1,10 @@
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
-import { AiGuideBubble } from "@/components/ai-guide/AiGuideBubble";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
 import { PageThemeHeader } from "@/components/layout/PageThemeHeader";
 import { QuickActionFAB } from "@/components/layout/QuickActionFAB";
 import type { FabAction } from "@/components/layout/QuickActionFAB";
-import { SpeedDialFAB } from "@/components/layout/SpeedDialFAB";
-import type { SpeedDialAction } from "@/components/layout/SpeedDialFAB";
 import { JobStatus, Prisma, PurchaseOrderStatus, PurchaseRequestStatus } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { routeLabel } from "@/lib/nav/registry";
@@ -218,15 +215,8 @@ export default async function AppLayout({
           complaints: openComplaintsCount,
         }}
       />
-      {/* Mobile: single speed-dial FAB (replaces separate FAB + AI bubble) */}
-      <SpeedDialFAB
-        actions={isSuspended ? [] : buildSpeedDialActions(user, enabledModules)}
-      />
-      {/* Desktop: keep the draggable AI bubble; mobile: hidden (AI is in speed-dial) */}
-      <div className="hidden lg:block">
-        <AiGuideBubble />
-      </div>
-      {/* Desktop-only legacy FAB (hidden on mobile) */}
+      {/* Desktop-only FAB (hidden on mobile). Mobile: New Job lives in the home
+          Quick Actions tiles + the Jobs list header — no floating FAB, no AI blob. */}
       <div className="hidden lg:block">
         <QuickActionFAB actions={isSuspended ? [] : buildFabActions(user)} />
       </div>
@@ -255,42 +245,4 @@ function buildFabActions(user: { role: string; permissions?: string[] }): FabAct
       </svg>
     ),
   }];
-}
-
-// Mobile speed-dial: New Job + AI Guide
-function buildSpeedDialActions(
-  user: { role: string; permissions?: string[] },
-  enabledModules?: { has(value: "REPORTS"): boolean },
-): SpeedDialAction[] {
-  const u = user as Parameters<typeof can.createJob>[0];
-  const actions: SpeedDialAction[] = [];
-  if (can.viewAccountsSummary(u) && (!enabledModules || enabledModules.has("REPORTS"))) {
-    actions.push({
-      label: routeLabel("/ai-insights"),
-      href: "/ai-insights",
-      color: "bg-[var(--panel)] border border-[var(--line)] text-[var(--accent)]",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
-          <path d="M8 12h.01M16 12h.01" />
-        </svg>
-      ),
-    });
-  }
-  if (can.createJob(u)) {
-    actions.push({
-      label: routeLabel("/jobs/new"),
-      href: "/jobs/new",
-      color: "bg-[var(--accent)]",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black"
-          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5"  y1="12" x2="19" y2="12"/>
-        </svg>
-      ),
-    });
-  }
-  return actions;
 }

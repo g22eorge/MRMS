@@ -63,6 +63,8 @@ export async function AdminDashboard({
     leadCountMap, lowStockItems, outOfStockCount, techLeaderboard,
   } = data;
 
+  // Mobile has no floating FAB — New Job is the primary tile here (and in the
+  // Jobs list header). The rest are the secondary money shortcuts.
   const quickActions = [
     can.createJob(permissionUser) && enabledModules.has("JOBS") && {
       href: "/jobs/new",

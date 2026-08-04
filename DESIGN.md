@@ -103,6 +103,15 @@ Never `bg-white`, `--surface`, `--border`, `--surface-raised`, or hardcoded
 `border-emerald-200`-style light-mode colors — they break dark mode. Use the `mono`
 class, not `font-mono`.
 
+**One surface language ("bordered & tight").** Every panel/card/KPI tile is a hairline
+border on `--panel` at the canonical 12px radius (rounded-xl) — add `panel-shadow` for
+elevation. Radius is rounded-xl everywhere, never rounded-2xl. The dc token family
+(names beginning `--dc-`) is NOT a page-body surface language: don't hand-use the
+`dc-card` class, dc backgrounds, or dc box-shadows in a page. The `dc-card` class itself
+now renders as the bordered surface, and the dc status colors (good / warn / crit) are
+consumed only via the `StatCards` / `StatStrip` `tone` prop — never hand-passed as a dc
+text colour.
+
 ---
 
 ## 7. Conformance checklist (per page)

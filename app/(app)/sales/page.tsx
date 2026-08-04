@@ -425,7 +425,7 @@ export default async function SalesPage({
             </div>
 
             {/* Compact 4-number stat row */}
-            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
               {([
                 { label: "Pipeline", value: compactAmount(pipelineValue) },
                 { label: "Won", value: String(wonThisMonth) },
@@ -490,7 +490,7 @@ export default async function SalesPage({
                   name="q"
                   defaultValue={searchQ}
                   placeholder={activeTab === "leads" ? "Name, phone or organization..." : "Quote number or name..."}
-                  className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {searchQ ? (
                   <Link href={href({ q: "" })} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -697,7 +697,7 @@ export default async function SalesPage({
                 return (
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Link href={`/sales/leads/${lead.id}`} className="shrink-0">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl font-black ${LEAD_TILE_TONES[lead.status] ?? LEAD_TILE_TONES.STALE}`}>
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl font-black ${LEAD_TILE_TONES[lead.status] ?? LEAD_TILE_TONES.STALE}`}>
                         {lead.fullName[0]?.toUpperCase() ?? "?"}
                       </div>
                     </Link>
@@ -885,7 +885,7 @@ export default async function SalesPage({
               const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
               return (
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <Link href={`/sales/quotations/${q.id}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
+                  <Link href={`/sales/quotations/${q.id}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black ${
                     q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600"
                     : q.status === "REJECTED" ? "bg-red-500/15 text-red-600"
                     : q.status === "SENT" ? "bg-sky-500/15 text-sky-600"

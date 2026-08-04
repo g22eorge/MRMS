@@ -728,7 +728,7 @@ export default async function ReportsPage({
             { label: "Repair value", value: formatMoneyCompact(revenueSelected, currency), tone: "text-[var(--accent)]", bg: "bg-[var(--accent)]/10" },
             { label: "Expenses",  value: formatMoneyCompact(expensesTotal, currency),        tone: expensesTotal > 0 ? "text-amber-600" : "text-[var(--ink-muted)]", bg: "bg-amber-500/10" },
           ] as { label: string; value: string; tone: string; bg: string }[]).map(({ label, value, tone, bg }) => (
-            <div key={label} className={`rounded-2xl border border-[var(--line)] ${bg} px-4 py-3`}>
+            <div key={label} className={`rounded-xl border border-[var(--line)] ${bg} px-4 py-3`}>
               <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">{label}</p>
               <p className={`mt-1 text-xl font-black tabular-nums ${tone}`}>{value}</p>
             </div>
@@ -736,7 +736,7 @@ export default async function ReportsPage({
         </div>
         {/* Top device types */}
         {deviceRows.length > 0 && (
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] divide-y divide-[var(--line)] overflow-hidden">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] divide-y divide-[var(--line)] overflow-hidden">
             <p className="px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Top device types</p>
             {deviceRows.slice(0, 4).map((d) => (
               <div key={d.device} className="flex items-center justify-between px-4 py-2.5">

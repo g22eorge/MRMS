@@ -331,7 +331,7 @@ export default async function PosPage({
             </div>
 
             {/* Compact 4-number stat row */}
-            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
               {([
                 { label: "Today", value: compactAmount(kpiTodayTotal) },
                 { label: "Month", value: compactAmount(kpiMonthTotal) },
@@ -373,7 +373,7 @@ export default async function PosPage({
                   name="q"
                   defaultValue={q}
                   placeholder="Sale number, client or note..."
-                  className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
                   <Link href={filterHref(segment, "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -518,7 +518,7 @@ export default async function PosPage({
                 <div className="px-4 py-3">
                   <div className="flex items-center gap-3">
                   <Link href={`/pos/${s.id}`} className="shrink-0">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-black ${
                       s.status === "PAID" ? "bg-emerald-500/15 text-emerald-600"
                       : s.status === "VOID" ? "bg-red-500/15 text-red-600"
                       : "bg-[var(--accent)]/15 text-[var(--accent)]"

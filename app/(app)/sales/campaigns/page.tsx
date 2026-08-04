@@ -310,7 +310,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               />
             </div>
 
-            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)]">
+            <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
               {([
                 { label: "Total", value: campaigns.length },
                 { label: "Active", value: totalActive },
@@ -351,7 +351,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                   name="q"
                   defaultValue={q}
                   placeholder="Campaign name..."
-                  className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
                   <Link href={href({ q: "" })} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -490,7 +490,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       className={`relative flex items-center gap-3 px-4 py-3 transition ${isActive ? "bg-[var(--panel-strong)]/60" : "hover:bg-[var(--panel-strong)]/40"}`}
                     >
                       {isActive ? <span className="absolute inset-y-0 left-0 w-[3px] bg-[var(--accent)]" aria-hidden="true" /> : null}
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${STATUS_TILE_TONES[c.status] ?? STATUS_TILE_TONES.DRAFT}`}>
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${STATUS_TILE_TONES[c.status] ?? STATUS_TILE_TONES.DRAFT}`}>
                         <CampaignTypeIcon type={c.type} />
                       </div>
                       <div className="min-w-0 flex-1">

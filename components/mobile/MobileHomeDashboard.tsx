@@ -92,7 +92,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
       </div>
 
       {/* ── Hero: total revenue today (repairs + POS) ─────────────── */}
-      <div className="rounded-2xl bg-[var(--panel)] px-5 py-4 text-center">
+      <div className="rounded-xl bg-[var(--panel)] px-5 py-4 text-center">
         <p className="text-[12px] font-medium text-[var(--ink-muted)]">
           Revenue Today
         </p>
@@ -120,29 +120,29 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
       </div>
 
       {/* ── Secondary strip: Active | Due | Ready ─────────────────── */}
-      <div className="grid grid-cols-3 divide-x divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="grid grid-cols-3 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <Link href="/jobs" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
           <span className={`text-[22px] font-black leading-none ${activeJobs > 0 ? "text-sky-400" : "text-[var(--ink-muted)]/25"}`}>
             {activeJobs}
           </span>
-          <span className="text-[13px] font-bold font-medium text-[var(--ink-muted)]">Active</span>
+          <span className="text-[13px] font-semibold text-[var(--ink-muted)]">Active</span>
         </Link>
         <Link href="/documents/invoices?status=ISSUED" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
           <span className={`text-[18px] font-black leading-none ${p.outstandingValue > 0 ? "text-amber-400" : "text-[var(--ink-muted)]/25"}`}>
             {compact(p.outstandingValue, p.currency)}
           </span>
-          <span className="text-[13px] font-bold font-medium text-[var(--ink-muted)]">Due</span>
+          <span className="text-[13px] font-semibold text-[var(--ink-muted)]">Due</span>
         </Link>
         <Link href="/jobs?status=READY_FOR_PICKUP" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
           <span className={`text-[22px] font-black leading-none ${p.readyForPickupCount > 0 ? "text-[var(--accent)]" : "text-[var(--ink-muted)]/25"}`}>
             {p.readyForPickupCount}
           </span>
-          <span className="text-[13px] font-bold font-medium text-[var(--ink-muted)]">Ready</span>
+          <span className="text-[13px] font-semibold text-[var(--ink-muted)]">Ready</span>
         </Link>
       </div>
 
       {/* ── Needs action — 3 hero numbers, colour-coded by urgency ──── */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-sm font-semibold text-[var(--ink)]">Needs action</p>
           <Link href="/jobs" className="text-[12px] font-semibold text-[var(--accent)]">All jobs →</Link>
@@ -192,10 +192,10 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
         <div className="grid grid-cols-4 gap-3">
           {quickActions.map((a) => (
           <Link key={a.href} href={a.href} className="flex flex-col items-center gap-2">
-            <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${a.bg}`}>
+            <span className={`flex h-14 w-14 items-center justify-center rounded-xl ${a.bg}`}>
               {a.icon}
             </span>
-            <span className="text-[12px] font-semibold text-[var(--ink-muted)]">{a.label}</span>
+            <span className="text-[11px] font-semibold text-[var(--ink-muted)]">{a.label}</span>
           </Link>
           ))}
         </div>

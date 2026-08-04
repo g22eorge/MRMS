@@ -234,7 +234,7 @@ export default async function ClientsPage({
         </div>
 
         {/* Compact 4-number stat row */}
-        <div className="grid grid-cols-4 overflow-hidden rounded-2xl border border-[var(--line)] divide-x divide-[var(--line)]">
+        <div className="grid grid-cols-4 overflow-hidden rounded-xl border border-[var(--line)] divide-x divide-[var(--line)]">
           {([
             { label: "Total",   value: kpiTotal },
             { label: "New",     value: kpiNewThisMonth },
@@ -278,7 +278,7 @@ export default async function ClientsPage({
               name="q"
               defaultValue={filters.q}
               placeholder="Name, phone, email or address..."
-              className="h-10 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             {filters.q && (
               <Link href="/clients" className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -410,7 +410,7 @@ export default async function ClientsPage({
             renderMobileCard={(client) => (
               <div className="flex items-center gap-3 px-4 py-3">
                 <Link href={`/clients/${client.id}`} className="shrink-0">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-black ${
                     client._count.jobs >= 3 ? "bg-[var(--accent)]/15 text-[var(--accent)]"
                     : client._count.jobs > 0 ? "bg-sky-500/15 text-sky-600"
                     : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"

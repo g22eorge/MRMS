@@ -184,7 +184,7 @@ export default async function DocumentTemplatesPage() {
                       ].join(" ")}
                     >
                       {/* Colour swatch / current rail */}
-                      <div className={`h-1.5 w-full ${isCurrent ? "bg-[var(--dc-accent)]" : t.previewColor}`} />
+                      <div className={`h-1.5 w-full ${isCurrent ? "bg-[var(--accent)]" : t.previewColor}`} />
 
                       {/* Card body */}
                       <div className="flex flex-1 flex-col gap-1.5 p-3">

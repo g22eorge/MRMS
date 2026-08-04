@@ -165,7 +165,7 @@ export default async function JobCardsPage({
     <section className="space-y-4">
 
       {/* ── Mobile: tap any job → Job Card button at the bottom ── */}
-      <div className="sm:hidden rounded-2xl border border-sky-500/20 bg-sky-500/6 px-4 py-3">
+      <div className="sm:hidden rounded-xl border border-sky-500/20 bg-sky-500/6 px-4 py-3">
         <p className="text-[12px] font-semibold text-sky-500 mb-1">Print a job card</p>
         <p className="text-[13px] text-[var(--ink-muted)] leading-relaxed">
           Tap any job below → the <strong className="text-[var(--ink)]">Generate Job Card</strong> button appears at the bottom of the screen — prints or downloads instantly.
@@ -189,8 +189,8 @@ export default async function JobCardsPage({
         kpis={[
           { label: "Showing", value: total, sub: "job cards" },
           { label: "In repair", value: byStatus.IN_REPAIR ?? 0, sub: "active repairs" },
-          { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", valueClass: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "text-[var(--dc-good)]" : undefined },
-          { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", valueClass: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "text-[var(--dc-warn)]" : undefined },
+          { label: "Ready pickup", value: byStatus.READY_FOR_PICKUP ?? 0, sub: "awaiting collection", tone: (byStatus.READY_FOR_PICKUP ?? 0) > 0 ? "good" as const : "neutral" as const },
+          { label: "Awaiting approval", value: byStatus.AWAITING_APPROVAL ?? 0, sub: "need decision", tone: (byStatus.AWAITING_APPROVAL ?? 0) > 0 ? "warn" as const : "neutral" as const },
         ]}
       />
 
