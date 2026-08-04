@@ -17,9 +17,10 @@ export type NavGroup =
   | "documents"
   | "communications"
   | "finance"
+  | "analytics"
   | "personal";
 
-export type SuperGroup = "service" | "sales" | "finance" | "inventory" | "workspace";
+export type SuperGroup = "service" | "sales" | "documents" | "finance" | "analytics" | "inventory" | "workspace";
 
 export type NavItem = {
   href: string;
@@ -59,6 +60,11 @@ export const NAV: readonly NavItem[] = [
   { href: "/finance", label: routeLabel("/finance"), group: "finance", roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"] },
   { href: "/technicians/payouts", label: routeLabel("/technicians/payouts"), group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
 
+  // Insights — analytics/targets, previously reachable only from dashboards or (mobile) /more.
+  { href: "/reports", label: routeLabel("/reports"), group: "analytics", roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER"] },
+  { href: "/ai-insights", label: routeLabel("/ai-insights"), group: "analytics", roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER"] },
+  { href: "/targets", label: routeLabel("/targets"), group: "analytics", roles: ["ADMIN", "MANAGER", "SALES_MANAGER", "TECH_MANAGER", "FINANCE"] },
+
   // Account
   { href: "/settings", label: routeLabel("/settings"), group: "personal", roles: "all" },
 ] as const;
@@ -69,8 +75,9 @@ const SUPER_GROUP: Record<NavGroup, SuperGroup> = {
   overview: "service", // dashboard is pinned, so this mapping only matters if it ever leaves the pinned set
   service: "service",
   customers: "sales",
-  documents: "finance", // quotations/invoices/receipts are billing output
+  documents: "documents", // its own section — job cards/quotations are service/sales work, not just billing
   finance: "finance",
+  analytics: "analytics",
   stock: "inventory",
   communications: "workspace",
   personal: "workspace",
@@ -79,12 +86,14 @@ const SUPER_GROUP: Record<NavGroup, SuperGroup> = {
 export const SUPER_GROUP_LABEL: Record<SuperGroup, string> = {
   service: "Service",
   sales: "Sales",
+  documents: "Documents",
   finance: "Finance",
+  analytics: "Insights",
   inventory: "Inventory",
   workspace: "Workspace",
 };
 
-export const SUPER_GROUP_ORDER: readonly SuperGroup[] = ["service", "sales", "finance", "inventory", "workspace"] as const;
+export const SUPER_GROUP_ORDER: readonly SuperGroup[] = ["service", "sales", "documents", "finance", "analytics", "inventory", "workspace"] as const;
 
 /** Daily-driver destinations, pinned above the groups in this priority order. */
 export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/clients", "/pos"] as const;
@@ -211,7 +220,11 @@ export function orderedNavForRole(role: Role, permissions: string[], enabledModu
     ensureItem("/intake");
     ensureItem("/clients");
   }
-  if (can.viewAccountsSummary(permissionUser)) ensureItem("/reports");
+  if (can.viewAccountsSummary(permissionUser)) {
+    ensureItem("/reports");
+    ensureItem("/ai-insights");
+  }
+  if (can.setTargets(permissionUser) || can.viewTeamTargets(permissionUser)) ensureItem("/targets");
   if (can.viewFinancials(permissionUser)) ensureItem("/documents");
   if (can.reviewExternalBills(permissionUser) || can.approveInvoices(permissionUser)) ensureItem("/payout-followups");
   if (can.generateJobCards(permissionUser)) ensureItem("/documents");

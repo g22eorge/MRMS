@@ -45,6 +45,8 @@ const nextConfig: NextConfig = {
     // page-level redirect stubs into Settings, so no config redirects for them.
     return [
       { source: "/outbox", destination: "/settings/notifications/outbox", permanent: false },
+      // Sales targets consolidated into the single /targets editor.
+      { source: "/settings/targets", destination: "/targets", permanent: false },
     ];
   },
   async headers() {

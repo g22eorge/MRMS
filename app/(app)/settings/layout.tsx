@@ -10,7 +10,6 @@ export default async function SettingsLayout({ children }: { children: ReactNode
   const permUser = { role: user.role, permissions: user.permissions };
   const isAdmin = user.role === "ADMIN";
   const isOps = user.role === "ADMIN" || user.role === "OPS";
-  const canTargets = user.role === "ADMIN" || user.role === "SALES";
 
   const items = {
     profile: {
@@ -97,18 +96,6 @@ export default async function SettingsLayout({ children }: { children: ReactNode
         </svg>
       ),
     } satisfies SettingsNavItem,
-    targets: {
-      href: "/settings/targets",
-      label: "Sales Targets",
-      description: "Monthly revenue targets",
-      icon: (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-          <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          <circle cx="10" cy="10" r="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          <circle cx="10" cy="10" r="1" fill="currentColor" />
-        </svg>
-      ),
-    } satisfies SettingsNavItem,
     billing: {
       href: "/settings/billing",
       label: "Billing",
@@ -183,7 +170,8 @@ export default async function SettingsLayout({ children }: { children: ReactNode
     {
       title: "Business",
       items: [
-        canTargets ? items.targets : null,
+        // Sales targets consolidated into the operational /targets editor
+        // (richer user/department/branch scope) — reached from the Insights nav.
         isAdmin ? items.billing : null,
         isAdmin ? items.branding : null,
       ].filter(Boolean) as SettingsNavItem[],
