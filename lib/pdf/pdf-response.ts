@@ -1,10 +1,10 @@
-/** Standard attachment response for generated PDF buffers. */
-export function pdfAttachmentResponse(buffer: Buffer | Uint8Array, filename: string) {
+/** Standard response for generated PDF buffers. Pass `inline` for in-app preview iframes; default downloads. */
+export function pdfAttachmentResponse(buffer: Buffer | Uint8Array, filename: string, inline = false) {
   const bytes = buffer instanceof Buffer ? new Uint8Array(buffer) : buffer;
   return new Response(new Blob([bytes as BlobPart], { type: "application/pdf" }), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="${filename}"`,
+      "content-disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
     },
   });
 }

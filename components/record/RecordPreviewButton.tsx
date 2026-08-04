@@ -23,6 +23,11 @@ export function RecordPreviewButton({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // The PDF routes default to `Content-Disposition: attachment` (download). For
+  // the embedded preview we ask for an inline disposition so it renders in the
+  // iframe instead of triggering a download (which shows a blank/white frame).
+  const inlineUrl = pdfUrl + (pdfUrl.includes("?") ? "&" : "?") + "inline=1";
+
   // Close on Escape while open.
   useEffect(() => {
     if (!open) return;
@@ -68,7 +73,7 @@ export function RecordPreviewButton({
               <span className="truncate text-sm font-semibold text-gray-700">{title}</span>
               <div className="flex shrink-0 items-center gap-2">
                 <a
-                  href={pdfUrl}
+                  href={inlineUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
@@ -91,7 +96,7 @@ export function RecordPreviewButton({
               {loading && (
                 <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">Loading document…</div>
               )}
-              <iframe src={pdfUrl} onLoad={() => setLoading(false)} className="h-full w-full border-none" title={title} />
+              <iframe src={inlineUrl} onLoad={() => setLoading(false)} className="h-full w-full border-none" title={title} />
             </div>
           </div>
         </div>

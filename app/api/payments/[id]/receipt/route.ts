@@ -17,7 +17,8 @@ function prettyEnum(value: string) {
   return value.replaceAll("_", " ");
 }
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { user, orgId, org } = await requireOrgSession();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -89,7 +90,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   return new Response(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="receipt-${payment.id.slice(0, 8)}.pdf"`,
+      "content-disposition": `${inline ? "inline" : "attachment"}; filename="receipt-${payment.id.slice(0, 8)}.pdf"`,
     },
   });
 }

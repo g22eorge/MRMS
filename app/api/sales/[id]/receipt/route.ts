@@ -12,9 +12,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await context.params;
   const { user, orgId } = await requireOrgSession();
 
@@ -62,7 +63,7 @@ export async function GET(
     return new Response(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), {
       headers: {
         "content-type": "application/pdf",
-        "content-disposition": `attachment; filename="receipt-${sale.saleNumber}.pdf"`,
+        "content-disposition": `${inline ? "inline" : "attachment"}; filename="receipt-${sale.saleNumber}.pdf"`,
       },
     });
   } catch (error) {

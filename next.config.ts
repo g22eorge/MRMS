@@ -30,7 +30,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com https://*.turso.io https://va.vercel-analytics.com",
-  "frame-src 'none'",
+  "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -48,9 +48,11 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    const securityHeaders = [
+    // Common headers for every route. X-Frame-Options is applied separately
+    // below so that same-origin document previews (an <iframe> embedding our own
+    // /api/**/pdf routes) are allowed, while app pages stay clickjacking-proof.
+    const commonHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
@@ -58,10 +60,11 @@ const nextConfig: NextConfig = {
     ];
 
     return [
-      {
-        source: "/(.*)",
-        headers: securityHeaders,
-      },
+      { source: "/(.*)", headers: commonHeaders },
+      // App pages must never be framed (clickjacking protection).
+      { source: "/((?!api/).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+      // API routes (PDF/document responses) may be framed by our own pages only.
+      { source: "/api/:path*", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }] },
     ];
   },
 };

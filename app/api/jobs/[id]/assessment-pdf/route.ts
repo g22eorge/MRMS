@@ -7,7 +7,8 @@ import { pdfAttachmentResponse, pdfGenerationErrorResponse } from "@/lib/pdf/pdf
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await ctx.params;
   const { user, orgId } = await requireOrgSession();
 
@@ -21,5 +22,5 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
   const result = await generateAssessmentBuffer({ orgId, jobId: id });
   if (!result.ok) return pdfGenerationErrorResponse(result.error, 404);
-  return pdfAttachmentResponse(result.buffer, result.filename);
+  return pdfAttachmentResponse(result.buffer, result.filename, inline);
 }

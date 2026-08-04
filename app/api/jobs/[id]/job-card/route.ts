@@ -9,9 +9,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await context.params;
   const { session, user, orgId, org: orgCtx } = await requireOrgSession();
   const permissionUser = { role: user.role, permissions: user.permissions };
@@ -34,5 +35,5 @@ export async function GET(
     return pdfGenerationErrorResponse(result.error, jobPdfErrorStatus(result.error));
   }
 
-  return pdfAttachmentResponse(result.buffer, result.filename);
+  return pdfAttachmentResponse(result.buffer, result.filename, inline);
 }

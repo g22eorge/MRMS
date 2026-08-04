@@ -14,7 +14,8 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { user, orgId } = await requireOrgSession();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -123,7 +124,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     return new Response(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), {
       headers: {
         "content-type": "application/pdf",
-        "content-disposition": `attachment; filename="refund-${refundNumber}.pdf"`,
+        "content-disposition": `${inline ? "inline" : "attachment"}; filename="refund-${refundNumber}.pdf"`,
       },
     });
   } catch (error) {
