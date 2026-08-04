@@ -213,6 +213,9 @@ export default async function PayoutFollowupsPage({
     clientBill: { gt: 0 },
     clientPaid: false,
     status: { in: TERMINAL },
+    // Dedup: once a job has a formal invoice it's collected under Invoice
+    // Collections, so it doesn't also appear (or double-count) here.
+    invoice: { is: null },
     ...jobSearch,
     ...techFilter,
   };
@@ -324,7 +327,8 @@ export default async function PayoutFollowupsPage({
 
     // Summary aggregates (unfiltered)
     canSeeRepairs ? prisma.job.aggregate({
-      where: { orgId, clientBill: { gt: 0 }, clientPaid: false, status: { in: TERMINAL } },
+      // Mirror clientWhere's dedup so the header total doesn't double-count invoiced jobs.
+      where: { orgId, clientBill: { gt: 0 }, clientPaid: false, status: { in: TERMINAL }, invoice: { is: null } },
       _sum: { clientBill: true },
       _count: { id: true },
     }) : Promise.resolve({ _sum: { clientBill: null }, _count: { id: 0 } }),
