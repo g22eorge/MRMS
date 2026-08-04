@@ -70,14 +70,14 @@ export const DOCUMENTS_NAV: Array<{
     key: "credit_notes",
     href: DOCUMENTS_ROUTES.creditNotes,
     label: "Credit Notes",
-    description: "Issue credit against sales",
+    description: "Credit a returned POS sale — restocks the items",
     roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"],
   },
   {
     key: "refunds",
     href: DOCUMENTS_ROUTES.refunds,
     label: "Refunds",
-    description: "Process and track customer refunds",
+    description: "Refund money on an invoice, sale or credit note",
     roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"],
   },
   {

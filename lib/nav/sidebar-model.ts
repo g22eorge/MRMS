@@ -58,6 +58,9 @@ export const NAV: readonly NavItem[] = [
 
   // Finance
   { href: "/finance", label: routeLabel("/finance"), group: "finance", roles: ["ADMIN", "MANAGER", "OPS", "FINANCE"] },
+  // AR/AP worklist (collect client payments, pay techs, track supplier bills).
+  // Guarded by reviewExternalBills|ADMIN on the page — ADMIN static here, the rest via ensureItem below.
+  { href: "/payout-followups", label: routeLabel("/payout-followups"), group: "finance", roles: ["ADMIN"] },
   { href: "/technicians/payouts", label: routeLabel("/technicians/payouts"), group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
 
   // Insights — analytics/targets, previously reachable only from dashboards or (mobile) /more.
@@ -226,7 +229,8 @@ export function orderedNavForRole(role: Role, permissions: string[], enabledModu
   }
   if (can.setTargets(permissionUser) || can.viewTeamTargets(permissionUser)) ensureItem("/targets");
   if (can.viewFinancials(permissionUser)) ensureItem("/documents");
-  if (can.reviewExternalBills(permissionUser) || can.approveInvoices(permissionUser)) ensureItem("/payout-followups");
+  // Matches the /payout-followups page guard (reviewExternalBills || ADMIN); ADMIN is a static NAV role.
+  if (can.reviewExternalBills(permissionUser)) ensureItem("/payout-followups");
   if (can.generateJobCards(permissionUser)) ensureItem("/documents");
 
   const ordered = roleOrder[role] ?? visible.map((item) => item.href);

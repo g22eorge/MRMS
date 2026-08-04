@@ -494,7 +494,7 @@ export default async function CreditNotesPage({
       <PageHeader
         eyebrow="Documents"
         title="Credit Notes"
-        description="Sales returns and adjustments"
+        description="For POS sale returns — credits the customer and restocks the items. To pay money back, use Refunds."
         actions={
           <>
             {pendingReturn > 0 && (

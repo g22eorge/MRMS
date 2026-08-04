@@ -72,7 +72,7 @@ const defs = [
   { href: "/finance/reports", label: "Financial Reports" },
   { href: "/finance/reports/pl", label: "P&L" },
   { href: "/finance/reports/balance-sheet", label: "Balance Sheet" },
-  { href: "/payout-followups", label: "Payout Follow-ups", shortLabel: "Payments" },
+  { href: "/payout-followups", label: "Collections & Payouts", shortLabel: "Collect & Pay" },
 
   // Analytics
   { href: "/reports", label: "Reports" },

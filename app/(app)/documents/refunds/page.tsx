@@ -455,7 +455,7 @@ export default async function RefundsPage({
       <PageHeader
         eyebrow="Documents"
         title="Refunds"
-        description="All cash refunds issued against invoices and sales"
+        description="Money paid back on an invoice, sale or credit note. For a POS return that restocks items, use Credit Notes."
         actions={
           ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) ? (
             <DisclosureButton
