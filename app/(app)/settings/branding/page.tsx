@@ -12,6 +12,9 @@ import { can } from "@/lib/permissions";
 import { planLabel, resolveTemplateKey, splitTemplatesByPlan } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
 
+const brandingFieldClass =
+  "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
+
 type SearchParams = {
   saved?: string;
   error?: string;
@@ -286,33 +289,40 @@ export default async function BrandingPage({
       ) : null}
 
       <form action={saveBrandingAction} className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] [&_*]:min-w-0">
-        {/* Company & Numbering */}
+        {/* Company details — the essentials a starter fills in; everything else
+            is tucked into optional drawers below. */}
         <div className="border-b border-[var(--line)] p-4">
-          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Company &amp; Numbering</p>
+          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Company details</p>
           <div className="grid gap-2 lg:grid-cols-2">
-            <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyAddressLine1" defaultValue={settings.companyAddressLine1} placeholder="Address line 1" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyAddressLine2" defaultValue={settings.companyAddressLine2} placeholder="Address line 2" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyContacts" defaultValue={settings.companyContacts} placeholder="Contacts" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyEmail" defaultValue={settings.companyEmail ?? ""} placeholder="Company email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="companyWebsite" defaultValue={settings.companyWebsite ?? ""} placeholder="Company website" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <p className="text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
-              Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
-            </p>
-            <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className={brandingFieldClass} />
+            <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className={brandingFieldClass} />
+            <input name="companyAddressLine1" defaultValue={settings.companyAddressLine1} placeholder="Address line 1" className={brandingFieldClass} />
+            <input name="companyAddressLine2" defaultValue={settings.companyAddressLine2} placeholder="Address line 2" className={brandingFieldClass} />
+            <input name="companyContacts" defaultValue={settings.companyContacts} placeholder="Phone / contacts" className={brandingFieldClass} />
+            <input name="companyEmail" defaultValue={settings.companyEmail ?? ""} placeholder="Company email" className={brandingFieldClass} />
+            <input name="companyWebsite" defaultValue={settings.companyWebsite ?? ""} placeholder="Company website" className={brandingFieldClass} />
           </div>
         </div>
 
+        {/* Document numbering */}
+        <details className="border-b border-[var(--line)]">
+          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document numbering <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional, the default is fine</span></summary>
+          <div className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
+            <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className={brandingFieldClass} />
+            <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className={brandingFieldClass} />
+            <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className={brandingFieldClass} />
+            <p className="text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
+              Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
+            </p>
+            <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className={brandingFieldClass} />
+            <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className={brandingFieldClass} />
+          </div>
+        </details>
+
         {/* Document Templates */}
-        <div className="border-b border-[var(--line)] p-4">
-          <p className="mb-1 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document Templates</p>
-          <p className="mb-3 text-[13px] text-[var(--ink-muted)]">Available templates depend on your plan ({planLabel(plan)}).</p>
-          <div className="grid gap-3 lg:grid-cols-2">
+        <details className="border-b border-[var(--line)]">
+          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document templates <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— {planLabel(plan)} plan</span></summary>
+          <div className="grid gap-3 px-4 pb-4 lg:grid-cols-2">
             {[
               { label: "Invoice", name: "invoiceTemplateKey", value: selectedInvoiceKey, allowed: invoiceTemplates.allowed, locked: invoiceTemplates.locked },
               { label: "Quotation", name: "quotationTemplateKey", value: selectedQuoteKey, allowed: quotationTemplates.allowed, locked: quotationTemplates.locked },
@@ -328,31 +338,31 @@ export default async function BrandingPage({
               </div>
             ))}
           </div>
-        </div>
+        </details>
 
         {/* VAT & Sign-off */}
-        <div className="border-b border-[var(--line)] p-4">
-          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">VAT &amp; Sign-off</p>
-          <div className="grid gap-2 lg:grid-cols-2">
-            <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+        <details className="border-b border-[var(--line)]">
+          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">VAT &amp; signatures <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <div className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
+            <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className={brandingFieldClass}>
               <option value="false">Charge VAT on sales: off (default)</option>
               <option value="true">Charge VAT on sales: on</option>
             </select>
-            <select name="vatInclusive" defaultValue={settings.vatInclusive ? "true" : "false"} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+            <select name="vatInclusive" defaultValue={settings.vatInclusive ? "true" : "false"} className={brandingFieldClass}>
               <option value="false">Prices exclude VAT (add on top)</option>
               <option value="true">Prices include VAT (extract from price)</option>
             </select>
-            <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate %" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input type="number" step="0.01" name="vatRatePercent" defaultValue={settings.vatRatePercent} placeholder="VAT rate %" className={brandingFieldClass} />
+            <input name="vatLabel" defaultValue={settings.vatLabel} placeholder="VAT label" className={brandingFieldClass} />
+            <input name="signatureCompanyLabel" defaultValue={settings.signatureCompanyLabel} placeholder="Company signature label" className={brandingFieldClass} />
+            <input name="signatureClientLabel" defaultValue={settings.signatureClientLabel} placeholder="Client signature label" className={brandingFieldClass} />
           </div>
-        </div>
+        </details>
 
         {/* Colors */}
-        <div className="border-b border-[var(--line)] p-4">
-          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Colors</p>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <details className="border-b border-[var(--line)]">
+          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Colours <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { name: "primaryColor", label: "Primary", value: settings.primaryColor },
               { name: "secondaryColor", label: "Secondary", value: settings.secondaryColor },
@@ -367,19 +377,19 @@ export default async function BrandingPage({
               </div>
             ))}
           </div>
-        </div>
+        </details>
 
         {/* Terms & Footer */}
-        <div className="p-4">
-          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Terms &amp; Footer</p>
-          <div className="grid gap-2">
-            <textarea name="termsText" defaultValue={settings.termsText} className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+        <details>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Terms &amp; footer <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <div className="grid gap-2 px-4 pb-4">
+            <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
           </div>
-        </div>
+        </details>
 
         <div className="border-t border-[var(--line)] px-4 py-3">
-          <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px]">Save Document Settings</button>
+          <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px]">Save branding</button>
         </div>
       </form>
 

@@ -6,6 +6,7 @@ import type { JournalEntryStatus } from "@prisma/client";
 import { getCurrentUserRole } from "@/lib/session";
 
 import { orgDb } from "@/lib/db";
+import { canAccessAccountantFinance } from "@/lib/finance/routes";
 import { maxNumberSequence } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
@@ -43,6 +44,8 @@ export default async function JournalPage({
   const { user } = await getCurrentUserRole();
   if (!can.viewFinancials(user)) redirect("/dashboard");
   if (!user.orgId) redirect("/dashboard");
+  // Accountant-only surface — matches the hidden nav tab.
+  if (!canAccessAccountantFinance(user.role)) redirect("/finance");
   const db = orgDb(user.orgId);
 
   const sp = await searchParams;

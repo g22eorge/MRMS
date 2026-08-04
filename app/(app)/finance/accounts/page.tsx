@@ -7,6 +7,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
+import { canAccessAccountantFinance } from "@/lib/finance/routes";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
@@ -53,6 +54,9 @@ export default async function ChartOfAccountsPage() {
   const orgId = user.orgId;
   const db = orgDb(orgId);
   if (!can.viewFinancials(user)) redirect("/dashboard");
+  // Accountant-only surface — keep non-accountant finance roles (e.g. OPS) out,
+  // matching the hidden nav tab.
+  if (!canAccessAccountantFinance(user.role)) redirect("/finance");
 
   async function createAccount(fd: FormData) {
     "use server";

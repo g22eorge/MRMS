@@ -22,24 +22,34 @@ export type FinanceNavKey =
   | "accounts"
   | "journal";
 
-export const FINANCE_NAV: Array<{ key: FinanceNavKey; href: string; label: string }> = [
-  { key: "overview", href: FINANCE_ROUTES.home, label: "Overview" },
-  { key: "reports", href: FINANCE_ROUTES.reports, label: "Reports" },
-  { key: "expenses", href: FINANCE_ROUTES.expenses, label: "Expenses" },
-  { key: "bank", href: FINANCE_ROUTES.bank, label: "Bank" },
-  { key: "recurring", href: FINANCE_ROUTES.recurring, label: "Recurring" },
-  { key: "tax_rates", href: FINANCE_ROUTES.taxRates, label: "Tax Rates" },
-  { key: "accounts", href: FINANCE_ROUTES.accounts, label: "Accounts" },
-  { key: "journal", href: FINANCE_ROUTES.journal, label: "Journal" },
-];
+// Per-tab role gating, mirroring lib/documents/routes.ts. The everyday finance
+// tabs are open to all finance-capable roles; the accountant-only surfaces
+// (Accounts / Journal — the chart of accounts and the raw double-entry ledger)
+// are hidden from OPS so a non-accountant operator never sees them.
+const EVERYDAY_FINANCE_ROLES = ["ADMIN", "MANAGER", "OPS", "FINANCE"] as const;
+const ACCOUNTANT_ROLES = ["ADMIN", "MANAGER", "FINANCE"] as const;
 
-const FINANCE_ROLES = new Set(["ADMIN", "MANAGER", "OPS", "FINANCE"]);
+export const FINANCE_NAV: Array<{ key: FinanceNavKey; href: string; label: string; roles: readonly string[] }> = [
+  { key: "overview", href: FINANCE_ROUTES.home, label: "Overview", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "reports", href: FINANCE_ROUTES.reports, label: "Reports", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "expenses", href: FINANCE_ROUTES.expenses, label: "Expenses", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "bank", href: FINANCE_ROUTES.bank, label: "Bank", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "recurring", href: FINANCE_ROUTES.recurring, label: "Recurring", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "tax_rates", href: FINANCE_ROUTES.taxRates, label: "Tax Rates", roles: EVERYDAY_FINANCE_ROLES },
+  { key: "accounts", href: FINANCE_ROUTES.accounts, label: "Accounts", roles: ACCOUNTANT_ROLES },
+  { key: "journal", href: FINANCE_ROUTES.journal, label: "Journal", roles: ACCOUNTANT_ROLES },
+];
 
 /** Tabs visible in the finance hub for a role (each page still enforces its own perms). */
 export function financeNavForRole(role: string) {
-  return FINANCE_ROLES.has(role) ? FINANCE_NAV : [];
+  return FINANCE_NAV.filter((item) => item.roles.includes(role));
 }
 
 export function canAccessFinanceHub(role: string) {
   return financeNavForRole(role).length > 0;
+}
+
+/** Accountant-only finance surfaces (chart of accounts, raw journal). */
+export function canAccessAccountantFinance(role: string) {
+  return (ACCOUNTANT_ROLES as readonly string[]).includes(role);
 }

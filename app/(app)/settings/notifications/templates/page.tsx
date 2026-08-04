@@ -516,18 +516,21 @@ export default async function NotificationTemplatesPage({
           as placeholders.
         </p>
         {user.role === "ADMIN" ? (
-          <div className="flex flex-wrap gap-2">
-            <form action={deduplicateTemplates}>
-              <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
-                Remove duplicates
-              </button>
-            </form>
-            <form action={applyMetaMigration}>
-              <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
-                Apply migration
-              </button>
-            </form>
-          </div>
+          <details className="relative">
+            <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Maintenance</summary>
+            <div className="absolute right-0 z-10 mt-1 flex flex-wrap gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 shadow-lg">
+              <form action={deduplicateTemplates}>
+                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
+                  Remove duplicates
+                </button>
+              </form>
+              <form action={applyMetaMigration}>
+                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
+                  Apply migration
+                </button>
+              </form>
+            </div>
+          </details>
         ) : null}
       </div>
 
@@ -728,9 +731,9 @@ export default async function NotificationTemplatesPage({
       </section>
 
       <section id="policies">
-        <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Status policy</p>
+        <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">When to message customers</p>
         <p className="mb-2 px-1 text-[12px] text-[var(--ink-muted)]">
-          Which channels fire per job status, the template key used, and nudge delays (in hours).
+          For each job status, choose where the update shows (dashboard, WhatsApp, email), which message to use, and when to send follow-up reminders.
         </p>
 
         <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -773,14 +776,16 @@ export default async function NotificationTemplatesPage({
                 <input
                   name="nudge1Hours"
                   defaultValue={p.nudge1Hours ?? ""}
-                  placeholder="Nudge 1"
+                  placeholder="Reminder after (hrs)"
+                  title="Send a reminder this many hours later"
                   inputMode="numeric"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
                 />
                 <input
                   name="nudge2Hours"
                   defaultValue={p.nudge2Hours ?? ""}
-                  placeholder="Nudge 2"
+                  placeholder="2nd reminder (hrs)"
+                  title="Send a second reminder this many hours later"
                   inputMode="numeric"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
                 />
