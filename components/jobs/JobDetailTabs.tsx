@@ -455,6 +455,7 @@ type Props = {
   }>;
   job: {
     id: string;
+    clientId?: string | null;
     jobNumber: string;
     status: JobStatus;
     deviceType: string;
@@ -1291,12 +1292,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         <div className="space-y-3">{assessmentSlot}</div>
       ) : null}
 
-      {/* Client portal thread + move/transfer job — grouped under History rather than
-          floating at the bottom of the page. */}
-      {segment === "history" && (portalSlot || moveSlot) ? (
+      {/* Reassign the job to another client account — an admin action, surfaced as
+          a top-of-page action (rendered once, all breakpoints) rather than buried
+          in the History tab. */}
+      {moveSlot ? <div className="flex justify-end">{moveSlot}</div> : null}
+
+      {/* Client portal thread — grouped under History rather than floating at the
+          bottom of the page. */}
+      {segment === "history" && portalSlot ? (
         <div className="space-y-3">
           {portalSlot}
-          {moveSlot}
         </div>
       ) : null}
 
@@ -1358,7 +1363,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             {job.client ? (
               <div className="flex items-center justify-between px-4 py-3">
                 <p className="text-xs text-[var(--ink-muted)]">Profile</p>
-                <a href={`/clients`} className="text-sm font-medium text-[var(--accent)]">View all clients →</a>
+                <a href={job.clientId ? `/clients/${job.clientId}` : `/clients`} className="text-sm font-medium text-[var(--accent)]">View client →</a>
               </div>
             ) : null}
           </div>

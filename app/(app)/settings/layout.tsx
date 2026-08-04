@@ -149,6 +149,16 @@ export default async function SettingsLayout({ children }: { children: ReactNode
         </svg>
       ),
     } satisfies SettingsNavItem,
+    ai: {
+      href: "/settings/ai",
+      label: "AI Knowledge",
+      description: "Business knowledge for the AI assistant",
+      icon: (
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+          <path d="M10 2.5a.75.75 0 0 1 .7.48l1.02 2.65 2.65 1.02a.75.75 0 0 1 0 1.4l-2.65 1.02-1.02 2.65a.75.75 0 0 1-1.4 0L8.28 9.07 5.63 8.05a.75.75 0 0 1 0-1.4l2.65-1.02L9.3 2.98A.75.75 0 0 1 10 2.5ZM4.5 12.5a.6.6 0 0 1 .56.38l.5 1.3 1.3.5a.6.6 0 0 1 0 1.12l-1.3.5-.5 1.3a.6.6 0 0 1-1.12 0l-.5-1.3-1.3-.5a.6.6 0 0 1 0-1.12l1.3-.5.5-1.3a.6.6 0 0 1 .56-.38Z" />
+        </svg>
+      ),
+    } satisfies SettingsNavItem,
   };
 
   const groups: SettingsNavGroup[] = [
@@ -181,6 +191,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
     {
       title: "System",
       items: [
+        isAdmin ? items.ai : null,
         isAdmin ? items.dataHeal : null,
         isAdmin ? items.audit : null,
       ].filter(Boolean) as SettingsNavItem[],

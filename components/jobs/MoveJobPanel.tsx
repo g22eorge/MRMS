@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { Modal } from "@/components/ui/Modal";
 import { moveJobToClientAction } from "@/app/(app)/jobs/[id]/move-actions";
 
 type Candidate = { id: string; fullName: string; phone: string; organization: string | null };
@@ -52,63 +53,56 @@ export function MoveJobPanel({
     });
   }
 
-  if (!open) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+        className="btn-premium-secondary rounded-lg px-3.5 py-2 text-[13px] font-semibold"
       >
-        Move to another account
+        Move account
       </button>
-    );
-  }
 
-  return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Move job to another account</p>
-        <button type="button" onClick={() => setOpen(false)} className="text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">Cancel</button>
-      </div>
-      <p className="mb-2 text-[12px] text-[var(--ink-muted)]">
-        Currently on <span className="font-semibold text-[var(--ink)]">{currentClientName}</span>. The job&rsquo;s quotations, invoice and receipts move with it.
-      </p>
-      <div className="relative">
-        <input
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setTargetId(null); }}
-          placeholder="Search the account to move to (name, company or phone)…"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
-        />
-        {query && !targetId ? (
-          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-lg">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-[12px] text-[var(--ink-muted)]">No matching account.</p>
-            ) : (
-              filtered.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => { setTargetId(c.id); setQuery(c.fullName); }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-[var(--panel-strong)]"
-                >
-                  <span className="font-semibold text-[var(--ink)]">{c.fullName}</span>
-                  <span className="text-[12px] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
-                </button>
-              ))
-            )}
-          </div>
-        ) : null}
-      </div>
-      {target ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-[13px]">Move to <span className="font-semibold text-[var(--ink)]">{target.fullName}</span>{target.organization ? <span className="text-[var(--ink-muted)]"> · {target.organization}</span> : null}</span>
-          <button type="button" onClick={doMove} disabled={moving} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-40">
-            {moving ? "Moving…" : "Move job"}
+      <Modal open={open} onClose={() => setOpen(false)} size="md" ariaLabel="Move job to another account" panelClassName="p-5">
+        <p className="text-[13px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Move job to another account</p>
+        <p className="mb-3 mt-1 text-[13px] text-[var(--ink-muted)]">
+          Currently on <span className="font-semibold text-[var(--ink)]">{currentClientName}</span>. The job&rsquo;s quotations, invoice and receipts move with it.
+        </p>
+        <div className="relative">
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setTargetId(null); }}
+            placeholder="Search the account to move to (name, company or phone)…"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
+          />
+          {query && !targetId ? (
+            <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-lg">
+              {filtered.length === 0 ? (
+                <p className="px-3 py-2 text-[12px] text-[var(--ink-muted)]">No matching account.</p>
+              ) : (
+                filtered.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setTargetId(c.id); setQuery(c.fullName); }}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-[var(--panel-strong)]"
+                  >
+                    <span className="font-semibold text-[var(--ink)]">{c.fullName}</span>
+                    <span className="text-[12px] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          {error ? <p className="mr-auto text-[12px] text-red-600">{error}</p> : null}
+          <button type="button" onClick={() => setOpen(false)} className="btn-premium-secondary rounded-lg px-4 py-2 text-[13px] font-medium">Cancel</button>
+          <button type="button" onClick={doMove} disabled={moving || !target} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-40">
+            {moving ? "Moving…" : target ? `Move to ${target.fullName}` : "Move job"}
           </button>
         </div>
-      ) : null}
-      {error ? <p className="mt-2 text-[12px] text-red-600">{error}</p> : null}
-    </div>
+      </Modal>
+    </>
   );
 }
