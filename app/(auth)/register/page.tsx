@@ -3,10 +3,16 @@ import { redirect } from "next/navigation";
 
 import { RegisterForm } from "./register-form";
 import { AppLogoDark } from "@/components/ui/AppLogo";
+import { getDeploymentContext } from "@/lib/deployment-context";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export default async function RegisterPage() {
+  // Care is single-tenant — self-serve signup would only create an orphan org
+  // that requireOrgSession force-logs-out. Bounce to login. Commercial allows it.
+  const { mode } = await getDeploymentContext();
+  if (mode === "CARE_SINGLE_TENANT") redirect("/login");
+
   const session = await getSession();
   const validUser = session?.user
     ? await prisma.user.findUnique({

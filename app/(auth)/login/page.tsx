@@ -2,11 +2,15 @@ import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/app/(auth)/login/login-form";
 import { AppLogoDark } from "@/components/ui/AppLogo";
+import { getDeploymentContext } from "@/lib/deployment-context";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 export default async function LoginPage() {
   const session = await getSession();
+  // Care is single-tenant — no self-serve signup. Commercial keeps it.
+  const { mode } = await getDeploymentContext();
+  const allowSignup = mode !== "CARE_SINGLE_TENANT";
   const validUser = session?.user
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
@@ -140,7 +144,7 @@ export default async function LoginPage() {
             <p className="mt-1.5 text-sm text-white/40">Enter your credentials to continue</p>
 
             <div className="mt-8">
-              <LoginForm />
+              <LoginForm allowSignup={allowSignup} />
             </div>
           </div>
         </section>

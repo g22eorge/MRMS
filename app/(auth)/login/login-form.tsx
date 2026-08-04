@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export function LoginForm() {
+export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -119,12 +119,14 @@ export function LoginForm() {
         {isPending ? "Signing in…" : "Sign in"}
       </button>
 
-      <p className="text-center text-xs text-white/30">
-        New here?{" "}
-        <Link href="/register" className="text-[#D4AF37]/70 transition hover:text-[#D4AF37]">
-          Create a free account
-        </Link>
-      </p>
+      {allowSignup ? (
+        <p className="text-center text-xs text-white/30">
+          New here?{" "}
+          <Link href="/register" className="text-[#D4AF37]/70 transition hover:text-[#D4AF37]">
+            Create a free account
+          </Link>
+        </p>
+      ) : null}
     </form>
   );
 }
