@@ -92,11 +92,11 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
       </div>
 
       {/* ── Hero: total revenue today (repairs + POS) ─────────────── */}
-      <div className="rounded-3xl bg-[var(--panel)] px-6 py-7 text-center">
-        <p className="text-[13px] font-medium text-[var(--ink-muted)]">
+      <div className="rounded-2xl bg-[var(--panel)] px-5 py-4 text-center">
+        <p className="text-[12px] font-medium text-[var(--ink-muted)]">
           Revenue Today
         </p>
-        <p className="mt-2 text-[36px] font-black leading-none tracking-tight text-[var(--ink)]">
+        <p className="mt-1 text-[28px] font-black leading-none tracking-tight text-[var(--ink)]">
           {hero(p.revenueTodayValue, p.currency)}
         </p>
         {/* Gradient underline */}
@@ -151,7 +151,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
           {/* Awaiting approval */}
           <Link href="/jobs?status=AWAITING_APPROVAL"
             className={`flex flex-col items-center gap-1 px-2 py-4 text-center transition active:bg-[var(--panel-strong)] ${p.awaitingApprovalCount > 0 ? "bg-[var(--accent)]/6" : ""}`}>
-            <p className={`text-[32px] font-black leading-none tabular-nums ${p.awaitingApprovalCount > 0 ? "text-[var(--accent)]" : "text-[var(--ink-muted)]/30"}`}>
+            <p className={`text-[26px] font-black leading-none tabular-nums ${p.awaitingApprovalCount > 0 ? "text-[var(--accent)]" : "text-[var(--ink-muted)]/30"}`}>
               {p.awaitingApprovalCount}
             </p>
             <p className="mt-1 whitespace-pre-line text-[12px] leading-tight text-[var(--ink-muted)]">{"Awaiting\napproval"}</p>
@@ -159,7 +159,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
           {/* Ready for pickup */}
           <Link href="/jobs?status=READY_FOR_PICKUP"
             className={`flex flex-col items-center gap-1 px-2 py-4 text-center transition active:bg-[var(--panel-strong)] ${p.readyForPickupCount > 0 ? "bg-emerald-500/6" : ""}`}>
-            <p className={`text-[32px] font-black leading-none tabular-nums ${p.readyForPickupCount > 0 ? "text-emerald-500" : "text-[var(--ink-muted)]/30"}`}>
+            <p className={`text-[26px] font-black leading-none tabular-nums ${p.readyForPickupCount > 0 ? "text-emerald-500" : "text-[var(--ink-muted)]/30"}`}>
               {p.readyForPickupCount}
             </p>
             <p className="mt-1 whitespace-pre-line text-[12px] leading-tight text-[var(--ink-muted)]">{"Ready for\npickup"}</p>
@@ -167,7 +167,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
           {/* Overdue */}
           <Link href="/jobs?overdue=1"
             className={`flex flex-col items-center gap-1 px-2 py-4 text-center transition active:bg-[var(--panel-strong)] ${p.overdueCount > 0 ? "bg-red-500/6" : ""}`}>
-            <p className={`text-[32px] font-black leading-none tabular-nums ${p.overdueCount > 0 ? "text-red-500" : "text-[var(--ink-muted)]/30"}`}>
+            <p className={`text-[26px] font-black leading-none tabular-nums ${p.overdueCount > 0 ? "text-red-500" : "text-[var(--ink-muted)]/30"}`}>
               {p.overdueCount}
             </p>
             <p className="mt-1 text-[12px] leading-tight text-[var(--ink-muted)]">Overdue</p>

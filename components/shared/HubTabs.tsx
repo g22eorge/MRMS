@@ -25,7 +25,7 @@ export function HubTabs({ items }: { items: HubTab[] }) {
       .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <nav className="flex flex-wrap gap-1.5 border-b border-[var(--line)] pb-3">
+    <nav className="flex gap-1.5 overflow-x-auto border-b border-[var(--line)] pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {items.map((item) => {
         const selected = item.href === activeHref;
         return (
@@ -33,7 +33,7 @@ export function HubTabs({ items }: { items: HubTab[] }) {
             key={item.href}
             href={item.href}
             aria-current={selected ? "page" : undefined}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
               selected
                 ? "bg-[var(--accent)] text-black"
                 : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
