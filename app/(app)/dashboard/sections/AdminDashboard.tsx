@@ -60,6 +60,7 @@ export async function AdminDashboard({
     currency, orgName, enabledModules, today,
     receivedToday, completedToday, receivedYesterday, completedYesterday,
     intakePendingCount, cashTodayValue, cashYesterdayValue, salesTodayValue,
+    expensesTodayValue,
     revenueTodayValue,
     outstandingValue, outstandingCount, completedUnpaidCount, awaitingApprovalCount,
     overdueJobsCount, inRepairCount, readyForPickupCount, jobsNoClientUpdateCount,
@@ -121,7 +122,7 @@ export async function AdminDashboard({
 
   // Needs-action items, severity-ordered (critical → warning → info)
   const needs = [
-    { label: "Overdue jobs", sub: "Past promised date", count: overdueJobsCount, sev: "crit", href: "/jobs?status=RECEIVED,DIAGNOSING,REFERRED,IN_EXTERNAL_REPAIR,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" },
+    { label: "Overdue jobs", sub: "Long in the queue", count: overdueJobsCount, sev: "crit", href: "/jobs?overdue=1" },
     { label: "Failed messages", sub: "WhatsApp / email", count: failedOutboxCount, sev: "crit", href: COMMUNICATIONS_ROUTES.outbox },
     { label: "Completed & unpaid", sub: "Awaiting payment", count: completedUnpaidCount, sev: "warn", href: "/jobs?status=COMPLETED" },
     { label: "Awaiting approval", sub: "Quotes pending", count: awaitingApprovalCount, sev: "warn", href: "/jobs?status=AWAITING_APPROVAL" },
@@ -224,7 +225,7 @@ export async function AdminDashboard({
             {([
               { k: "Jobs in", v: String(receivedToday), href: "/jobs?status=RECEIVED", tone: "text-[var(--dc-ink)]", foot: vsYesterday(jobsInDelta, Math.abs(jobsInDelta)) },
               { k: "Completed", v: String(completedToday), href: "/jobs?status=COMPLETED", tone: "text-[var(--dc-ink)]", foot: vsYesterday(completedDelta, Math.abs(completedDelta)) },
-              { k: "Cash received", v: formatMoneyCompact(cashTodayValue, currency), href: "/documents/receipts", tone: "text-[var(--dc-accent-2)]", foot: cashDeltaPct === null ? `${formatMoneyCompact(cashYesterdayValue, currency)} yesterday` : vsYesterday(cashDeltaPct, `${Math.abs(cashDeltaPct)}%`) },
+              { k: "Cash received", v: formatMoneyCompact(cashTodayValue, currency), href: "/documents/receipts", tone: "text-[var(--dc-accent-2)]", foot: <><span className="text-[var(--dc-crit)]">{formatMoneyCompact(expensesTodayValue, currency)} out</span> · net {formatMoneyCompact(cashTodayValue - expensesTodayValue, currency)}</> },
               { k: "Balances due", v: formatMoneyCompact(outstandingValue, currency), href: "/documents/invoices?status=ISSUED", tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", foot: `${completedUnpaidCount} completed & unpaid` },
             ] as const).map((kpi) => (
               <Link key={kpi.k} href={kpi.href} className="dc-card dc-lift block px-5 py-[18px]">

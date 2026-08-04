@@ -100,7 +100,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     prisma.job.count({ where: { ...orgFilter, receivedAt: { gte: mtdStart, lte: today } } }),
 
     prisma.expense.aggregate({ where: { orgId: orgFilter.orgId ?? undefined, paidAt: { gte: todayStart } }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: null } })),
-    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, receivedAt: { lt: new Date(today.getTime() - 3 * 86_400_000) } } }).catch(() => 0),
+    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) } } }).catch(() => 0),
     prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, lastClientContactAt: null } }).catch(() => 0),
     prisma.job.count({ where: { ...orgFilter, status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false } }).catch(() => 0),
     prisma.job.findMany({ where: { ...orgFilter, repairPath: "EXTERNAL", status: { in: ["COMPLETED", "DELIVERED"] }, externalPaid: false }, select: { id: true, externalTechFee: true, externalTechBill: true } }).catch(() => [] as { id: string; externalTechFee: number | null; externalTechBill: number | null }[]),
