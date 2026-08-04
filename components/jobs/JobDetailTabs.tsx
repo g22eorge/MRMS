@@ -1300,15 +1300,6 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       ) : null}
 
-      {segment === "assessment" ? <div className="space-y-3">{assessmentSlot}</div> : null}
-
-      {segment === "history" && (moveSlot || portalSlot) ? (
-        <div className="space-y-3">
-          {moveSlot}
-          {portalSlot}
-        </div>
-      ) : null}
-
       {segment === "history" && role !== "TECHNICIAN_EXTERNAL" ? (
         <div className={`${panelShellClass} space-y-4`}>
           {/* Contact card */}
