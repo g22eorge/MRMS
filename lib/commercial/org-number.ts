@@ -1,4 +1,3 @@
-import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -72,12 +71,29 @@ export async function getOrgNumberConfig(orgId?: string): Promise<OrgNumberConfi
 
   let value: OrgNumberConfig = { prefix: "EIS", pad: 4 };
   try {
-    const branding = await getDocumentBrandingSettings(orgId);
-    const prefix = (branding.quotePrefix || "EIS").trim().toUpperCase();
-    const pad = Number.isFinite(branding.sequencePadLength) && branding.sequencePadLength > 0
-      ? branding.sequencePadLength
-      : 4;
-    value = { prefix: prefix || "EIS", pad };
+    // Deliberately a minimal read of only the two columns we need — NOT
+    // getDocumentBrandingSettings(), which runs ensureRawTable() (CREATE/ALTER
+    // TABLE DDL). This function runs inside interactive write-transactions during
+    // document-number allocation, and on Turso/libSQL a DDL statement issued
+    // while such a transaction is open can deadlock it until it times out. Both
+    // columns are original, so this SELECT never needs a migration.
+    const rows = orgId
+      ? await prisma.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
+          SELECT "quotePrefix", "sequencePadLength"
+          FROM "DocumentBrandingSettings"
+          WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
+          ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
+          LIMIT 1`
+      : await prisma.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
+          SELECT "quotePrefix", "sequencePadLength"
+          FROM "DocumentBrandingSettings" WHERE id = 'singleton' LIMIT 1`;
+    const row = rows?.[0];
+    if (row) {
+      const prefix = String(row.quotePrefix ?? "EIS").trim().toUpperCase() || "EIS";
+      const padNum = Number(row.sequencePadLength);
+      const pad = Number.isFinite(padNum) && padNum > 0 ? padNum : 4;
+      value = { prefix, pad };
+    }
   } catch {
     // Branding table missing/unreadable — fall back to the EIS default.
   }
