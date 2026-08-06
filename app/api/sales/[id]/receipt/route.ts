@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ReceiptTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
+import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,13 @@ export async function GET(
 
   if (!sale) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const branding = await getDocumentBrandingSettings(orgId).catch(() => null);
+  const [brandingRaw, logoUrl] = await Promise.all([
+    getDocumentBrandingSettings(orgId).catch(() => null),
+    resolveInvoiceLogo().catch(() => undefined),
+  ]);
+  // The document logo isn't part of the stored branding row — resolve it and
+  // merge it in so the receipt shows the same logo as invoices/quotes.
+  const branding = brandingRaw ? { ...brandingRaw, companyLogoUrl: logoUrl } : brandingRaw;
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { plan: true } }).catch(() => null);
   const templateKey = resolveTemplateKey({
     kind: "RECEIPT",

@@ -18,6 +18,7 @@ type Branding = {
   vatRatePercent?: number | null;
   termsText?: string;
   footerText?: string;
+  paymentInstructions?: string | null;
   bankName?: string | null;
   bankBranch?: string | null;
   bankAccountName?: string | null;
@@ -57,18 +58,28 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
   const balance = Math.max(0, sale.totalAmount - sale.paidAmount);
   const dateStr = sale.createdAt.toLocaleDateString("en-GB", { timeZone: "Africa/Nairobi", day: "2-digit", month: "short", year: "numeric" });
 
-  // Build payment-to bank details
-  const bankLines = [
-    branding?.bankName,
-    branding?.bankBranch ? `Branch: ${branding.bankBranch}` : null,
-    branding?.bankAccountName ? `A/c Name: ${branding.bankAccountName}` : null,
-    branding?.bankAccountNumber ? `A/c No.: ${branding.bankAccountNumber}` : null,
-  ].filter(Boolean).join("\n");
+  // Payment-to bank details: prefer the single Branding "paymentInstructions"
+  // block; fall back to the older split bank fields if present.
+  const bankLines = (branding?.paymentInstructions?.trim())
+    || [
+      branding?.bankName,
+      branding?.bankBranch ? `Branch: ${branding.bankBranch}` : null,
+      branding?.bankAccountName ? `A/c Name: ${branding.bankAccountName}` : null,
+      branding?.bankAccountNumber ? `A/c No.: ${branding.bankAccountNumber}` : null,
+    ].filter(Boolean).join("\n");
 
   // Method summary for notes
   const methodNote = sale.payments.length > 0
     ? sale.payments.map(p => `${p.method.replaceAll("_", " ")}: ${formatMoney(p.amount, currency)}`).join(" · ")
     : null;
+
+  // Receipt meta (matches the official layout): Receipt Date / Payment Method / Reference.
+  const primaryPayment = sale.payments[0] ?? null;
+  const metaRows = [
+    { label: "Receipt Date", value: dateStr },
+    { label: "Payment Method", value: primaryPayment ? primaryPayment.method.replaceAll("_", " ") : "-" },
+    { label: "Reference", value: primaryPayment?.reference || `REF-${sale.saleNumber}` },
+  ];
 
   return (
     <EagleInfoDocument
@@ -76,12 +87,13 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       companyAddress={address}
       companyPhone={branding?.companyContacts ?? null}
       companyEmail={branding?.companyEmail ?? null}
+      companyWebsite={branding?.companyWebsite ?? null}
       companyLogoUrl={branding?.companyLogoUrl ?? null}
       docTitle="Receipt"
       docNumber={sale.saleNumber}
       docDate={dateStr}
-      terms={sale.branch?.name ? `Branch: ${sale.branch.name}` : null}
-      dueDate={null}
+      metaRows={metaRows}
+      topRuleColor="#f97316"
       clientName={sale.client?.fullName ?? "Walk-in Customer"}
       clientPhone={sale.client?.phone ?? null}
       clientEmail={null}

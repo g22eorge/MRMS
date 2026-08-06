@@ -74,7 +74,8 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       sku:      props.repairId,
       quantity: 1,
       rate:     props.repairCost,
-      amount:   props.totalAmountPayable,
+      // Line amount is the pre-VAT charge (= rate × 1); VAT is added in the totals.
+      amount:   props.repairCost,
     }];
     if (workDesc && workDesc !== "N/A") {
       items[0] = { ...items[0], name: `${items[0].name}\n${workDesc}${parts}` };

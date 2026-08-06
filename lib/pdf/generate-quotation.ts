@@ -86,6 +86,7 @@ export async function generateQuotationBuffer(
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
     companyLogoUrl: logoUrl,
+    paymentInstructions: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? "",
     quotationNumber,
     dateIssued: formatEATDocDate(issuedAtDate),
     validUntil: formatEATDocDate(dueDate),

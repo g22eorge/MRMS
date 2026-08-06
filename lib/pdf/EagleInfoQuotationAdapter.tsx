@@ -13,6 +13,7 @@ type Props = {
   companyEmail?: string;
   companyWebsite?: string;
   companyLogoUrl?: string;
+  paymentInstructions?: string;
   quotationNumber: string;
   dateIssued: string;
   validUntil: string;
@@ -52,6 +53,8 @@ export function EagleInfoQuotationAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
     .filter(Boolean).join(", ");
 
+  const showVat = props.vatApplicable && !!props.vatAmount && props.vatAmount !== "UGX 0";
+
   // Build description for the repair line item
   const descParts: string[] = [];
   if (props.diagnosisSummary && props.diagnosisSummary !== "N/A") {
@@ -66,7 +69,8 @@ export function EagleInfoQuotationAdapter(props: Props) {
     sku:      props.repairId,
     quantity: 1,
     rate:     props.repairCost,
-    amount:   props.totalAmountPayable,
+    // Line amount is the pre-VAT charge (= rate × 1); VAT is added in the totals.
+    amount:   props.repairCost,
   }];
 
   // Notes: merge customer issue + internal notes
@@ -82,10 +86,12 @@ export function EagleInfoQuotationAdapter(props: Props) {
       companyAddress={address}
       companyPhone={props.companyContacts || null}
       companyEmail={props.companyEmail || null}
+      companyWebsite={props.companyWebsite || null}
       companyLogoUrl={props.companyLogoUrl || null}
       docTitle="Estimate"
       docNumber={props.quotationNumber}
       docDate={props.dateIssued}
+      primaryDateLabel="Quote Date:"
       terms={`Valid until ${props.validUntil}`}
       dueDate={props.estimatedDuration ? `ETA: ${props.estimatedDuration}` : null}
       clientName={props.clientName}
@@ -93,13 +99,15 @@ export function EagleInfoQuotationAdapter(props: Props) {
       clientPhone={props.clientPhone || null}
       clientLocation={props.clientOrganization || null}
       lineItems={items}
-      subTotal={null}
+      subTotal={showVat ? props.repairCost : null}
+      vatLabel={showVat ? props.vatLabel : null}
+      vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
       paymentMade="UGX 0"
       balanceDue={props.totalAmountPayable}
       notes={notesArr.join("\n\n") || "Looking forward to your business."}
-      paymentTo={null}
+      paymentTo={props.paymentInstructions || null}
       termsText={props.termsText || "Payment is due by the agreed date."}
     />
   );

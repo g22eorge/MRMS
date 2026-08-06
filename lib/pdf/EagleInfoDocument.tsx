@@ -48,6 +48,9 @@ const s = StyleSheet.create({
     backgroundColor: WHITE,
   },
 
+  // Full-bleed accent bar (pulled to the page edges past the 40/36 padding).
+  topRule: { height: 5, marginHorizontal: -40, marginTop: -36, marginBottom: 24 },
+
   // ── Header ──
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
   headerLeft: { flex: 1, paddingRight: 24 },
@@ -138,6 +141,8 @@ export type EagleInfoDocumentProps = {
   primaryDateLabel?: string; // overrides the "<docTitle> Date:" row label, e.g. "Inv Date:"
   terms?: string | null;     // "30 Days"
   dueDate?: string | null;
+  metaRows?: Array<{ label: string; value: string }> | null; // overrides the date/terms/due rows
+  topRuleColor?: string | null;  // full-width accent bar at the very top (e.g. receipts)
 
   // Client
   clientLabel?: string;      // "To" (default) | "Bill To"
@@ -169,18 +174,20 @@ export type EagleInfoDocumentProps = {
 export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   const {
     companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyLogoUrl,
-    docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate,
+    docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate, metaRows, topRuleColor,
     clientLabel = "To", clientName, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
     notes, paymentTo, termsText,
   } = props;
 
-  const dateRows = [
-    { label: primaryDateLabel || `${docTitle} Date:`, value: docDate },
-    { label: "Terms:",            value: terms || "-" },
-    { label: "Due Date:",         value: dueDate || "-" },
-  ];
+  const dateRows = metaRows && metaRows.length > 0
+    ? metaRows
+    : [
+        { label: primaryDateLabel || `${docTitle} Date:`, value: docDate },
+        { label: "Terms:",            value: terms || "-" },
+        { label: "Due Date:",         value: dueDate || "-" },
+      ];
 
   // Bank details: split on newlines
   const bankLines = (paymentTo ?? "").split("\n").map(l => l.trim()).filter(Boolean);
@@ -190,6 +197,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   return (
     <Document title={`${docTitle} ${docNumber}`}>
       <Page size="A4" style={s.page}>
+
+        {topRuleColor ? <View style={[s.topRule, { backgroundColor: topRuleColor }]} /> : null}
 
         {/* ── Header ── */}
         <View style={s.header}>
