@@ -60,9 +60,9 @@ const STATUS_COLORS: Record<string, string> = {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ jobNumber: string }>;
+  params: Promise<{ jobNumber: string[] }>;
 }): Promise<Metadata> {
-  const { jobNumber } = await params;
+  const jobNumber = (await params).jobNumber.join("/");
   return {
     title: `Repair Status — ${jobNumber}`,
     description: `Track the repair status of job ${jobNumber}.`,
@@ -72,9 +72,11 @@ export async function generateMetadata({
 export default async function PublicStatusPage({
   params,
 }: {
-  params: Promise<{ jobNumber: string }>;
+  params: Promise<{ jobNumber: string[] }>;
 }) {
-  const { jobNumber } = await params;
+  // Catch-all segment: slash-form numbers (EIS/2026/0041) arrive as clean path
+  // segments and rejoin here, so no %2F encoding is needed in status links.
+  const jobNumber = (await params).jobNumber.join("/");
 
   const job = await prisma.job.findUnique({
     where: { jobNumber },
@@ -238,7 +240,7 @@ export default async function PublicStatusPage({
           <p className="text-xs text-gray-500">
             Not satisfied with your repair?{" "}
             <a
-              href={`/feedback?ref=${jobNumber}`}
+              href={`/feedback?ref=${encodeURIComponent(jobNumber)}`}
               className="font-medium text-amber-500 underline-offset-2 hover:underline"
             >
               Submit a complaint →

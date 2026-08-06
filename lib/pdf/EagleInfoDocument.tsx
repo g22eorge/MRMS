@@ -33,6 +33,8 @@ const INK      = "#0f172a";   // near-black body text
 const MUTED    = "#6B7280";   // grey labels
 const DIVIDER  = "#E5E7EB";   // thin rule
 const WHITE    = "#FFFFFF";
+const NAVY     = "#1e293b";   // filled line-item header bar (matches official)
+const SHADE    = "#F3F4F6";   // shaded balance-due row
 const LABEL_SZ = 7;           // caps section-label font size
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
@@ -49,7 +51,7 @@ const s = StyleSheet.create({
   // ── Header ──
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
   headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 72, height: 36, marginBottom: 6, objectFit: "contain" },
+  logo: { width: 150, height: 60, marginBottom: 8, objectFit: "contain" },
   companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3 },
   companyLine: { fontSize: 8, color: MUTED, marginBottom: 1.5 },
   phoneEmailRow: { flexDirection: "row", gap: 4, marginBottom: 1.5 },
@@ -78,9 +80,9 @@ const s = StyleSheet.create({
 
   // ── Line-items table ──
   table: { marginBottom: 6 },
-  tableHead: { flexDirection: "row", borderBottomWidth: 1.5, borderBottomColor: INK, paddingBottom: 4, marginBottom: 0 },
-  th: { fontSize: 8, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.4 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 7 },
+  tableHead: { flexDirection: "row", backgroundColor: NAVY, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 2 },
+  th: { fontSize: 8, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.4, color: WHITE },
+  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 7, paddingHorizontal: 8 },
   colNum:   { width: 24 },
   colDesc:  { flex: 1, paddingRight: 6 },
   colQty:   { width: 44, textAlign: "center" },
@@ -97,7 +99,7 @@ const s = StyleSheet.create({
   totalRowBold: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
   totalLabelBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold" },
   totalValueBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold", textAlign: "right" },
-  balanceDueRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderTopWidth: 1.5, borderTopColor: INK, marginTop: 2 },
+  balanceDueRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, backgroundColor: SHADE, marginTop: 2 },
 
   // ── Footer ──
   footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: 28, marginBottom: 14 },
@@ -126,16 +128,19 @@ export type EagleInfoDocumentProps = {
   companyAddress: string;
   companyPhone?: string | null;
   companyEmail?: string | null;
+  companyWebsite?: string | null;
   companyLogoUrl?: string | null;
 
   // Document meta
   docTitle: string;          // "Estimate" | "Invoice" | "Receipt" | "Credit Note"
   docNumber: string;
   docDate: string;
+  primaryDateLabel?: string; // overrides the "<docTitle> Date:" row label, e.g. "Inv Date:"
   terms?: string | null;     // "30 Days"
   dueDate?: string | null;
 
   // Client
+  clientLabel?: string;      // "To" (default) | "Bill To"
   clientName: string;
   clientEmail?: string | null;
   clientPhone?: string | null;
@@ -163,16 +168,16 @@ export type EagleInfoDocumentProps = {
 
 export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   const {
-    companyName, companyAddress, companyPhone, companyEmail, companyLogoUrl,
-    docTitle, docNumber, docDate, terms, dueDate,
-    clientName, clientEmail, clientPhone, clientLocation,
+    companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyLogoUrl,
+    docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate,
+    clientLabel = "To", clientName, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
     notes, paymentTo, termsText,
   } = props;
 
   const dateRows = [
-    { label: `${docTitle} Date:`, value: docDate },
+    { label: primaryDateLabel || `${docTitle} Date:`, value: docDate },
     { label: "Terms:",            value: terms || "-" },
     { label: "Due Date:",         value: dueDate || "-" },
   ];
@@ -208,6 +213,12 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
                 <Text style={s.companyLine}>{companyEmail}</Text>
               </View>
             ) : null}
+            {companyWebsite ? (
+              <View style={s.phoneEmailRow}>
+                <Text style={s.companyLineLabel}>WEB:</Text>
+                <Text style={s.companyLine}>{companyWebsite}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Right: doc type + balance */}
@@ -227,7 +238,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
         {/* ── Client / Dates ── */}
         <View style={s.toDateRow}>
           <View style={s.toBlock}>
-            <Text style={s.toLabel}>To</Text>
+            <Text style={s.toLabel}>{clientLabel}</Text>
             <Text style={s.toName}>{clientName}</Text>
             {clientEmail   ? <Text style={s.toLine}>{clientEmail}</Text>   : null}
             {clientPhone   ? <Text style={s.toLine}>{clientPhone}</Text>   : null}

@@ -26,6 +26,21 @@ export function formatQuotationNumber(
     .replaceAll("{SEQ}", serial);
 }
 
+/**
+ * Derive a document number from a repair number by inserting the document type,
+ * keeping everything uniform and traceable: job "EIS/2026/0041" →
+ * "EIS/INV/2026/0041" (invoice) or "EIS/QT/2026/0041" (quotation). Falls back to
+ * a "TYPE-{jobNumber}" form for legacy hyphen/tagged job numbers.
+ */
+export function deriveDocNumberFromJob(jobNumber: string, type: string) {
+  const slash = jobNumber.match(/^(.+?)\/(\d{4})\/(\d+)$/);
+  if (slash) {
+    const [, prefix, year, seq] = slash;
+    return `${prefix}/${type}/${year}/${seq}`;
+  }
+  return `${type}-${jobNumber}`;
+}
+
 export function canGenerateInvoiceForStatus(status: JobStatus) {
   return status === "READY_FOR_PICKUP" || status === "COMPLETED" || status === "CLOSED";
 }

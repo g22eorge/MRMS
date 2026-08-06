@@ -10,6 +10,7 @@ import { StyleSheet, Text, View } from "@react-pdf/renderer";
 
 export type PdfLineItem = {
   description: string;
+  sku?:        string | null;  // optional stock code, shown under the description
   quantity:    number;
   unitPrice:   string;   // pre-formatted, e.g. "UGX 48,000"
   discount?:   string;   // optional pre-formatted discount per line

@@ -6,7 +6,7 @@ import { formatEATDocDate } from "@/lib/date-eat";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
-import { canGenerateInvoiceForStatus, formatQuotationNumber } from "@/lib/documents";
+import { canGenerateInvoiceForStatus, deriveDocNumberFromJob } from "@/lib/documents";
 import { compactText, compactListText, prettyEnum, resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 import type { PdfLineItem } from "@/lib/pdf/pdf-line-items";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
@@ -110,12 +110,8 @@ export async function generateInvoiceBuffer(
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
   const logoUrl = await resolveInvoiceLogo();
   const normalizedFooterText = (branding.footerText ?? "").trim();
-  const issuedAtForNumber = job.invoiceIssuedAt ?? issuedAtDate;
-  const quotationNumber = formatQuotationNumber(
-    job.jobNumber, issuedAtForNumber, branding.quotePrefix,
-    branding.quoteFormat, branding.sequencePadLength,
-  );
-  const preferredInvoiceNumber = job.invoiceNumber?.trim() || `INV-${quotationNumber.replace(/\s+/g, "-")}`;
+  const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
+  const preferredInvoiceNumber = job.invoiceNumber?.trim() || deriveDocNumberFromJob(job.jobNumber, "INV");
   let invoiceNumber = preferredInvoiceNumber;
   const invoiceTotal = clientBill;
 
@@ -185,7 +181,7 @@ export async function generateInvoiceBuffer(
       }).catch(() => null);
     }
   } else if (staffUserId) {
-    invoiceNumber = `INV-${quotationNumber.replace(/\s+/g, "-")}`;
+    invoiceNumber = preferredInvoiceNumber;
     await prisma.$transaction([
       prisma.job.update({
         where: { id: job.id },
@@ -212,6 +208,7 @@ export async function generateInvoiceBuffer(
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
     companyLogoUrl: logoUrl,
+    paymentInstructions: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? "",
     documentTitle: "INVOICE",
     quotationNumber,
     invoiceNumber,

@@ -5,7 +5,7 @@ import { getClientBill } from "@/lib/billing";
 import { formatEATDocDate } from "@/lib/date-eat";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { canGenerateQuotationForStatus, formatQuotationNumber } from "@/lib/documents";
+import { canGenerateQuotationForStatus, deriveDocNumberFromJob } from "@/lib/documents";
 import { compactText, compactListText, prettyEnum, resolvePdfLogo } from "@/lib/pdf/pdf-utils";
 import { QuotationTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
@@ -61,10 +61,7 @@ export async function generateQuotationBuffer(
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
   const logoUrl = await resolvePdfLogo();
-  const quotationNumber = formatQuotationNumber(
-    job.jobNumber, issuedAtDate, branding.quotePrefix,
-    branding.quoteFormat, branding.sequencePadLength,
-  );
+  const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
 
   if (stampQuotedAt && !job.quotedAt) {
     await prisma.job.update({ where: { id: job.id }, data: { quotedAt: issuedAtDate } });

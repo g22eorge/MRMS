@@ -33,8 +33,6 @@ import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
-import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { formatQuotationNumber } from "@/lib/documents";
 import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
@@ -823,16 +821,11 @@ export async function recordClientPaymentAction(formData: FormData) {
   const reference = (payload.reference ?? "").trim();
   const note = sanitizeOptionalText(payload.note) || null;
 
-  // Ensure invoice exists (upsert by jobId). If no invoiceNumber stamped on job yet,
-  // generate one using org branding settings.
+  // Ensure invoice exists (upsert by jobId). Reuse the job's already-stamped
+  // invoice number when present; otherwise nextAvailableInvoiceNumber mints a
+  // clean org-scoped number (EIS/INV/YYYY/SEQ) below.
   const issuedAt = job.invoiceIssuedAt ?? new Date();
-  const branding = await getDocumentBrandingSettings(orgId).catch(() => null);
-  const quotePrefix = branding?.quotePrefix ?? "EIS";
-  const quoteFormat = branding?.quoteFormat ?? "{PREFIX} {M}/{YYYY}/{SEQ}";
-  const padLength = branding?.sequencePadLength ?? 4;
-  const derivedQuotation = formatQuotationNumber(job.jobNumber, issuedAt, quotePrefix, quoteFormat, padLength);
-  const derivedInvoiceNumber = `INV-${derivedQuotation.replace(/\s+/g, "-")}`;
-  const invoiceNumber = job.invoiceNumber?.trim() || derivedInvoiceNumber;
+  const invoiceNumber = job.invoiceNumber?.trim() || undefined;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -966,7 +959,7 @@ export async function recordClientPaymentAction(formData: FormData) {
         },
       });
 
-      return { paidAmount, isPaid, invoiceNumber };
+      return { paidAmount, isPaid, invoiceNumber: safeInvoiceNumber };
     });
 
     revalidatePath(`/jobs/${job.id}`);

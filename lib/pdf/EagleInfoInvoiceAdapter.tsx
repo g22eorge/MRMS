@@ -14,6 +14,7 @@ type Props = {
   companyEmail?: string;
   companyWebsite?: string;
   companyLogoUrl?: string;
+  paymentInstructions?: string;
   invoiceNumber: string;
   dateIssued: string;
   repairId: string;
@@ -50,11 +51,16 @@ export function EagleInfoInvoiceAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
     .filter(Boolean).join(", ");
 
+  // Only show a VAT line when tax actually applies and is non-zero (the official
+  // invoice omits the VAT row entirely when there's none).
+  const showVat = props.vatApplicable && !!props.vatAmount && props.vatAmount !== "UGX 0";
+
   // Build line items — use provided lines, or synthesise from repair data
   let items: EagleInfoLineItem[];
   if (props.lineItems && props.lineItems.length > 0) {
     items = props.lineItems.map((li) => ({
       name:     li.description,
+      sku:      li.sku ?? null,
       quantity: li.quantity,
       rate:     li.unitPrice,
       amount:   li.lineTotal,
@@ -81,24 +87,29 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       companyAddress={address}
       companyPhone={props.companyContacts || null}
       companyEmail={props.companyEmail || null}
+      companyWebsite={props.companyWebsite || null}
       companyLogoUrl={props.companyLogoUrl || null}
       docTitle="Invoice"
       docNumber={props.invoiceNumber}
       docDate={props.dateIssued}
+      primaryDateLabel="Inv Date:"
       terms={props.termsText ? "As agreed" : null}
       dueDate={props.isPaid ? "Paid" : null}
+      clientLabel="Bill To"
       clientName={props.clientName}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
       clientLocation={props.clientOrganization || null}
       lineItems={items}
-      subTotal={props.subtotalValue || null}
+      subTotal={props.subtotalValue || props.repairCost || null}
+      vatLabel={showVat ? props.vatLabel : null}
+      vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
       paymentMade={props.isPaid ? props.totalAmountPayable : "UGX 0"}
       balanceDue={props.isPaid ? "UGX 0" : props.totalAmountPayable}
       notes={props.footerText || null}
-      paymentTo={null}
+      paymentTo={props.paymentInstructions || null}
       termsText={props.termsText || null}
     />
   );

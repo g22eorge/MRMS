@@ -25,6 +25,16 @@ function toSqliteAbsoluteUrl(url: string) {
   return url;
 }
 
+// Interactive transactions here bundle several queries (document-number
+// allocation scans, cash-basis ledger posts, receipt/invoice creation). Over
+// Turso/libSQL every round-trip carries network latency, so Prisma's default
+// 5000 ms transaction ceiling is too tight and trips "Transaction already
+// closed" errors. Give the whole class more headroom centrally.
+const TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
 function createPrismaClient() {
   // Use TURSO_DATABASE_URL to detect production mode
   const isProduction = !!process.env.TURSO_DATABASE_URL;
@@ -56,6 +66,7 @@ function createPrismaClient() {
 
     return new PrismaClient({
       log: ["error", "warn"],
+      transactionOptions: TRANSACTION_OPTIONS,
     });
   }
 
@@ -72,6 +83,7 @@ function createPrismaClient() {
   return new PrismaClient({
     adapter,
     log: ["error", "warn"],
+    transactionOptions: TRANSACTION_OPTIONS,
   });
 }
 

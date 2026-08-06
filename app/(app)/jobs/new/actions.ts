@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { getOrgNumberConfig, maxSequenceForYear, composeJobNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -89,25 +89,37 @@ function parseDevices(devicesJson: string) {
 }
 
 export async function generateJobNumber(orgId?: string) {
-  const inner = `EI-${new Date().getFullYear()}-`;
-  // Without an org we can't tag; keep the legacy global sequence (build/seed paths).
-  if (!orgId) {
-    const rows = await prisma.job.findMany({
-      where: { jobNumber: { contains: inner } },
-      select: { jobNumber: true },
-    });
-    const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
-    return `${inner}${String(next).padStart(4, "0")}`;
-  }
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
+  const year = new Date().getFullYear();
+  const { prefix, pad } = await getOrgNumberConfig(orgId);
+
+  // Two scans, run together:
+  //  - global scan of this prefix/year keeps the globally-@unique jobNumber
+  //    collision-free across tenants sharing a prefix;
+  //  - per-org scan of any this-year number (new slash form or legacy hyphen
+  //    form) continues the org's sequence instead of restarting at 0001.
+  const [globalRows, orgRows] = await Promise.all([
     prisma.job.findMany({
-      where: { orgId, jobNumber: { contains: inner } },
+      where: { jobNumber: { startsWith: `${prefix}/${year}/` } },
       select: { jobNumber: true },
     }),
+    orgId
+      ? prisma.job.findMany({
+          where: {
+            orgId,
+            OR: [
+              { jobNumber: { contains: `/${year}/` } },
+              { jobNumber: { contains: `-${year}-` } },
+            ],
+          },
+          select: { jobNumber: true },
+        })
+      : Promise.resolve([] as { jobNumber: string }[]),
   ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.jobNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+
+  const globalMax = maxSequenceForYear(globalRows.map((r) => r.jobNumber), year);
+  const orgMax = maxSequenceForYear(orgRows.map((r) => r.jobNumber), year);
+  const next = Math.max(globalMax, orgMax) + 1;
+  return composeJobNumber(prefix, year, next, pad);
 }
 
 export async function createJobAction(

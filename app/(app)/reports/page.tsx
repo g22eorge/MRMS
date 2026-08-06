@@ -158,7 +158,7 @@ export default async function ReportsPage({
           ]) as JobStatus[],
         },
       },
-      select: { jobNumber: true, status: true, receivedAt: true, updatedAt: true },
+      select: { id: true, jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
     prisma.job.count({
       where: {
@@ -1281,13 +1281,13 @@ export default async function ReportsPage({
                   frameless
                   dense
                   rows={delayedJobs}
-                  getRowKey={(job) => job.jobNumber}
+                  getRowKey={(job) => job.id}
                   columns={[
                     {
                       key: "job",
                       header: "Job",
                       cell: (job) => (
-                        <Link href={`/jobs/${job.jobNumber}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
+                        <Link href={`/jobs/${job.id}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
                       ),
                     },
                     {
@@ -1595,7 +1595,7 @@ export default async function ReportsPage({
                       key: "job",
                       header: "Job",
                       cell: (job) => (
-                        <Link href={`/jobs/${job.jobNumber}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
+                        <Link href={`/jobs/${job.id}`} className="font-medium text-[var(--ink)] hover:underline">{job.jobNumber}</Link>
                       ),
                     },
                     {

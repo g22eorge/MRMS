@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
-import { orgTagFor, composeOrgNumber, maxNumberSequence } from "@/lib/commercial/org-number";
+import { getOrgNumberConfig, composeDocumentNumber, maxNumberSequence } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
@@ -33,16 +33,19 @@ async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner:
  * The counter seeds from the org's current max (tagged or legacy) so sequences
  * continue rather than restarting.
  */
-export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: CountModel, orgId: string) {
+export async function nextDocumentNumber(tx: Tx, type: string, countModel: CountModel, orgId: string) {
   const year = new Date().getFullYear();
-  const inner = `${prefix}-${year}-`;
-  const tag = await orgTagFor(orgId);
+  const inner = `${type}-${year}-`;
+  const { prefix, pad } = await getOrgNumberConfig(orgId);
 
-  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type: prefix, year } } });
+  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
   if (!existing) {
+    // Seed the counter from the org's current max for this type/year — the scan
+    // matches legacy tagged/untagged numbers ("…-INV-2026-0044"), so switching to
+    // the slash form continues the sequence rather than restarting at 0001.
     const seed = await currentMaxDocumentSequence(tx, countModel, inner, orgId);
     try {
-      await tx.documentSequence.create({ data: { orgId, type: prefix, year, value: seed } });
+      await tx.documentSequence.create({ data: { orgId, type, year, value: seed } });
     } catch (err) {
       // A concurrent call seeded it first — fine, we'll increment below.
       if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
@@ -50,11 +53,11 @@ export async function nextDocumentNumber(tx: Tx, prefix: string, countModel: Cou
   }
 
   const updated = await tx.documentSequence.update({
-    where: { orgId_type_year: { orgId, type: prefix, year } },
+    where: { orgId_type_year: { orgId, type, year } },
     data: { value: { increment: 1 } },
     select: { value: true },
   });
-  return composeOrgNumber(tag, inner, updated.value);
+  return composeDocumentNumber(prefix, type, year, updated.value, pad);
 }
 
 export async function nextAvailableInvoiceNumber(tx: Tx, orgId: string, preferred?: string | null, excludeInvoiceId?: string | null) {

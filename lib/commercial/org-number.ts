@@ -1,3 +1,4 @@
+import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -51,4 +52,69 @@ export function maxNumberSequence(inner: string, numbers: string[]) {
 /** Compose a globally-unique, org-tagged document number. */
 export function composeOrgNumber(tag: string, inner: string, seq: number, pad = 4) {
   return `${tag}-${inner}${String(seq).padStart(pad, "0")}`;
+}
+
+/**
+ * Org numbering config sourced from Branding settings (quotePrefix, e.g. "EIS",
+ * and sequencePadLength). Cached briefly per org so the numbering path — which
+ * runs inside interactive transactions — doesn't pay a branding round-trip on
+ * every allocation. Branding rarely changes; a short TTL is plenty.
+ */
+type OrgNumberConfig = { prefix: string; pad: number };
+const numberConfigCache = new Map<string, { value: OrgNumberConfig; expires: number }>();
+const NUMBER_CONFIG_TTL_MS = 60_000;
+
+export async function getOrgNumberConfig(orgId?: string): Promise<OrgNumberConfig> {
+  const key = orgId ?? "__default__";
+  const now = Date.now();
+  const cached = numberConfigCache.get(key);
+  if (cached && cached.expires > now) return cached.value;
+
+  let value: OrgNumberConfig = { prefix: "EIS", pad: 4 };
+  try {
+    const branding = await getDocumentBrandingSettings(orgId);
+    const prefix = (branding.quotePrefix || "EIS").trim().toUpperCase();
+    const pad = Number.isFinite(branding.sequencePadLength) && branding.sequencePadLength > 0
+      ? branding.sequencePadLength
+      : 4;
+    value = { prefix: prefix || "EIS", pad };
+  } catch {
+    // Branding table missing/unreadable — fall back to the EIS default.
+  }
+  numberConfigCache.set(key, { value, expires: now + NUMBER_CONFIG_TTL_MS });
+  return value;
+}
+
+/** Drop a cached numbering config so a Branding change takes effect immediately. */
+export function invalidateOrgNumberConfig(orgId?: string) {
+  numberConfigCache.delete(orgId ?? "__default__");
+}
+
+/**
+ * Highest trailing sequence for a given year across mixed number formats —
+ * tolerates the new slash form ("EIS/2026/0041", "EIS/INV/2026/0044") and every
+ * legacy form ("EAGLE-INFO-SOLUTIONS-EI-2026-0040", "EI-2026-0040"). Used so a
+ * format switch continues the sequence instead of restarting at 0001.
+ */
+export function maxSequenceForYear(numbers: string[], year: number) {
+  const re = new RegExp(`${year}[-/](\\d+)(?!.*\\d)`);
+  let max = 0;
+  for (const value of numbers) {
+    if (!value) continue;
+    const match = value.match(re);
+    if (!match) continue;
+    const n = Number(match[1]);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return max;
+}
+
+/** Compose a slash-style repair number, e.g. "EIS/2026/0041". */
+export function composeJobNumber(prefix: string, year: number, seq: number, pad = 4) {
+  return `${prefix}/${year}/${String(seq).padStart(pad, "0")}`;
+}
+
+/** Compose a slash-style document number, e.g. "EIS/INV/2026/0044". */
+export function composeDocumentNumber(prefix: string, type: string, year: number, seq: number, pad = 4) {
+  return `${prefix}/${type}/${year}/${String(seq).padStart(pad, "0")}`;
 }
