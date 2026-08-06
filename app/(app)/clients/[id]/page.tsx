@@ -13,6 +13,7 @@ import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { createPortalUserAction, togglePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
+import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
@@ -22,11 +23,14 @@ import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSu
 
 const updateClientSchema = z.object({
   fullName: z.string().min(2),
+  phone: z.string().min(4, "Enter a valid phone number"),
   email: z.string().optional(),
   organization: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
 });
+
+export type UpdateClientState = { ok: boolean; error: string | null };
 
 const addNoteSchema = z.object({
   body: z.string().min(2),
@@ -157,34 +161,47 @@ export default async function ClientDetailPage({
       }).catch(() => [])
     : [];
 
-  async function updateClient(formData: FormData) {
+  async function updateClient(_prev: UpdateClientState, formData: FormData): Promise<UpdateClientState> {
     "use server";
     const { user: currentUser, orgId: updateOrgId } = await requireOrgSession();
     if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) {
-      return;
+      return { ok: false, error: "You do not have permission to edit clients." };
     }
 
     const parsed = updateClientSchema.safeParse({
       fullName: String(formData.get("fullName") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
       email: String(formData.get("email") ?? ""),
       organization: String(formData.get("organization") ?? ""),
       address: String(formData.get("address") ?? ""),
       notes: String(formData.get("notes") ?? ""),
     });
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details and try again." };
+    }
 
-    await prisma.client.update({
-      where: { id, orgId: updateOrgId },
-      data: {
-        fullName: sanitizeText(parsed.data.fullName),
-        email: sanitizeOptionalText(parsed.data.email),
-        organization: sanitizeOptionalText(parsed.data.organization),
-        address: sanitizeOptionalText(parsed.data.address),
-        notes: sanitizeOptionalText(parsed.data.notes),
-      },
-    });
+    try {
+      await prisma.client.update({
+        where: { id, orgId: updateOrgId },
+        data: {
+          fullName: sanitizeText(parsed.data.fullName),
+          phone: sanitizeText(parsed.data.phone),
+          email: sanitizeOptionalText(parsed.data.email),
+          organization: sanitizeOptionalText(parsed.data.organization),
+          address: sanitizeOptionalText(parsed.data.address),
+          notes: sanitizeOptionalText(parsed.data.notes),
+        },
+      });
+    } catch (err) {
+      // phone is unique per org (phone_orgId) — surface a friendly conflict.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        return { ok: false, error: "Another client in your organisation already uses that phone number." };
+      }
+      throw err;
+    }
 
     revalidatePath(`/clients/${id}`);
+    return { ok: true, error: null };
   }
 
   async function addClientNote(formData: FormData) {
@@ -223,8 +240,6 @@ export default async function ClientDetailPage({
   const clientBrief = hasHistoryFilters
     ? "Showing filtered jobs. Clear the filters to see all of this client's repairs."
     : null;
-  const controlClass =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
   return (
     <div className="space-y-4">
@@ -247,66 +262,18 @@ export default async function ClientDetailPage({
             </div>
           ) : null}
 
-      <form action={updateClient} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Client Profile</p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">Update contact details, address, and internal notes.</p>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-[var(--ink-muted)]">Full name</span>
-            <input
-              disabled={!canEdit}
-              name="fullName"
-              defaultValue={client.fullName}
-              className={controlClass}
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-[var(--ink-muted)]">Email</span>
-            <input
-              disabled={!canEdit}
-              name="email"
-              defaultValue={client.email ?? ""}
-              className={controlClass}
-            />
-          </label>
-
-          <label className="space-y-1 md:col-span-2">
-            <span className="text-xs font-medium text-[var(--ink-muted)]">Organization</span>
-            <input
-              disabled={!canEdit}
-              name="organization"
-              defaultValue={client.organization ?? ""}
-              className={controlClass}
-            />
-          </label>
-
-          <label className="space-y-1 md:col-span-2">
-            <span className="text-xs font-medium text-[var(--ink-muted)]">Address / location</span>
-            <input
-              disabled={!canEdit}
-              name="address"
-              defaultValue={client.address ?? ""}
-              className={controlClass}
-            />
-          </label>
-
-          <label className="space-y-1 md:col-span-2">
-            <span className="text-xs font-medium text-[var(--ink-muted)]">Internal notes</span>
-            <textarea
-              disabled={!canEdit}
-              name="notes"
-              defaultValue={client.notes ?? ""}
-              className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
-            />
-          </label>
-        </div>
-
-        {canEdit ? <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-white">Save Client</button> : null}
-      </form>
+      <ClientProfileCard
+        client={{
+          fullName: client.fullName,
+          phone: client.phone,
+          email: client.email,
+          organization: client.organization,
+          address: client.address,
+          notes: client.notes,
+        }}
+        canEdit={canEdit}
+        action={updateClient}
+      />
 
       {statement ? (
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">

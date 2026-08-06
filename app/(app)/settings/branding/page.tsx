@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import { defaultBranding, getDocumentBrandingSettings, saveDocumentBrandingSettings } from "@/lib/document-branding";
 import { invalidateOrgNumberConfig } from "@/lib/commercial/org-number";
+import { BankAccountsEditor } from "@/components/settings/BankAccountsEditor";
+import { parsePaymentAccounts, formatPaymentAccounts } from "@/lib/branding-accounts";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -48,7 +50,7 @@ const brandingSchema = z.object({
   vatLabel: z.string().min(2).max(30),
   termsText: z.string().min(10).max(2000),
   footerText: z.string().min(6).max(180),
-  paymentInstructions: z.string().max(400).optional().default(""),
+  paymentAccounts: z.string().max(4000).optional().default(""),
   signatureCompanyLabel: z.string().min(2).max(120),
   signatureClientLabel: z.string().min(2).max(120),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#000000"),
@@ -221,7 +223,7 @@ export default async function BrandingPage({
       vatLabel: String(formData.get("vatLabel") ?? ""),
       termsText: String(formData.get("termsText") ?? ""),
       footerText: String(formData.get("footerText") ?? ""),
-      paymentInstructions: String(formData.get("paymentInstructions") ?? ""),
+      paymentAccounts: String(formData.get("paymentAccounts") ?? ""),
       signatureCompanyLabel: String(formData.get("signatureCompanyLabel") ?? ""),
       signatureClientLabel: String(formData.get("signatureClientLabel") ?? ""),
       primaryColor: String(formData.get("primaryColor") ?? "#000000"),
@@ -240,6 +242,8 @@ export default async function BrandingPage({
     if (!parsed.success) {
       redirect("/settings/branding?error=Invalid+branding+input");
     }
+
+    const bankAccounts = parsePaymentAccounts(parsed.data.paymentAccounts);
 
     await saveDocumentBrandingSettings(saveOrgId, {
       ...defaultBranding,
@@ -262,10 +266,10 @@ export default async function BrandingPage({
       vatLabel: sanitizeText(parsed.data.vatLabel),
       termsText: sanitizeText(parsed.data.termsText),
       footerText: sanitizeText(parsed.data.footerText),
-      // Preserve line breaks (bank name / branch / account) — sanitizeText would
-      // collapse them into one line.
-      paymentInstructions: parsed.data.paymentInstructions
-        .split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n").slice(0, 400),
+      // Structured accounts are the source of truth; the rendered "Payment To"
+      // block (paymentInstructions) is derived from them so the PDFs need no change.
+      paymentAccounts: JSON.stringify(bankAccounts),
+      paymentInstructions: formatPaymentAccounts(bankAccounts),
       signatureCompanyLabel: sanitizeText(parsed.data.signatureCompanyLabel),
       signatureClientLabel: sanitizeText(parsed.data.signatureClientLabel),
       primaryColor: parsed.data.primaryColor,
@@ -396,8 +400,8 @@ export default async function BrandingPage({
           <div className="grid gap-2 px-4 pb-4">
             <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Payment to (bank details on invoices &amp; receipts)</label>
-            <textarea name="paymentInstructions" defaultValue={settings.paymentInstructions} placeholder={"DFCU Bank\nBranch: Bugolobi\nA/c Name: Eagle InfoSolutions SMC Limited\nA/c No.: 01413656284446"} className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Payment to (bank accounts shown on invoices &amp; receipts)</label>
+            <BankAccountsEditor initial={parsePaymentAccounts(settings.paymentAccounts)} />
           </div>
         </details>
 

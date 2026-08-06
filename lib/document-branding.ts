@@ -23,7 +23,11 @@ export const defaultBranding = {
   footerText: "",
   // Multi-line "PAYMENT TO" block shown on invoices/receipts. First line is the
   // bank name; remaining lines are branch / account name / account number.
+  // Multiple accounts are separated by a blank line. This is the rendered form.
   paymentInstructions: "",
+  // Structured source of the above: JSON array of
+  // { bankName, branch, accountName, accountNumber } managed in Settings.
+  paymentAccounts: "",
   signatureCompanyLabel: "Signed by: Company",
   signatureClientLabel: "Signed by: Client",
   // Color scheme - Black, Gold & White
@@ -71,6 +75,7 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     termsText: String(row.termsText ?? defaultBranding.termsText),
     footerText: String(row.footerText ?? defaultBranding.footerText),
     paymentInstructions: String(row.paymentInstructions ?? defaultBranding.paymentInstructions),
+    paymentAccounts: String(row.paymentAccounts ?? defaultBranding.paymentAccounts),
     signatureCompanyLabel: String(row.signatureCompanyLabel ?? defaultBranding.signatureCompanyLabel),
     signatureClientLabel: String(row.signatureClientLabel ?? defaultBranding.signatureClientLabel),
     primaryColor: String(row.primaryColor ?? defaultBranding.primaryColor),
@@ -132,7 +137,7 @@ async function ensureRawTable() {
   const ADDABLE_COLUMNS: ReadonlySet<string> = new Set([
     "invoiceTemplateKey", "quotationTemplateKey", "jobCardTemplateKey", "receiptTemplateKey",
     "primaryColor", "secondaryColor", "accentColor", "backgroundColor", "surfaceColor", "borderColor",
-    "orgId", "vatInclusive", "paymentInstructions",
+    "orgId", "vatInclusive", "paymentInstructions", "paymentAccounts",
   ]);
   const addColumn = async (name: string, dflt: string, type = "TEXT") => {
     if (!ADDABLE_COLUMNS.has(name)) return;
@@ -155,6 +160,7 @@ async function ensureRawTable() {
   await addColumn("orgId",          "NULL");
   await addColumn("vatInclusive",   "0", "BOOLEAN");
   await addColumn("paymentInstructions", "''");
+  await addColumn("paymentAccounts", "''");
 
   rawTableEnsured = true;
 }
@@ -224,7 +230,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       companyContacts, companyEmail, companyWebsite, documentTitle,
       quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
       vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
-      footerText, paymentInstructions, signatureCompanyLabel, signatureClientLabel,
+      footerText, paymentInstructions, paymentAccounts, signatureCompanyLabel, signatureClientLabel,
       primaryColor, secondaryColor, accentColor, backgroundColor, surfaceColor, borderColor,
       invoiceTemplateKey, quotationTemplateKey, jobCardTemplateKey, receiptTemplateKey,
       updatedAt
@@ -236,7 +242,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       ${data.documentTitle}, ${data.quotePrefix}, ${data.quoteFormat},
       ${data.quoteValidityDays}, ${data.sequencePadLength},
       ${data.vatDefaultApplicable}, ${data.vatRatePercent}, ${data.vatInclusive}, ${data.vatLabel},
-      ${data.termsText}, ${data.footerText}, ${data.paymentInstructions}, ${data.signatureCompanyLabel},
+      ${data.termsText}, ${data.footerText}, ${data.paymentInstructions}, ${data.paymentAccounts}, ${data.signatureCompanyLabel},
       ${data.signatureClientLabel},
       ${data.primaryColor}, ${data.secondaryColor}, ${data.accentColor},
       ${data.backgroundColor}, ${data.surfaceColor}, ${data.borderColor},
@@ -265,6 +271,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       termsText = excluded.termsText,
       footerText = excluded.footerText,
       paymentInstructions = excluded.paymentInstructions,
+      paymentAccounts = excluded.paymentAccounts,
       signatureCompanyLabel = excluded.signatureCompanyLabel,
       signatureClientLabel = excluded.signatureClientLabel,
       primaryColor = excluded.primaryColor,

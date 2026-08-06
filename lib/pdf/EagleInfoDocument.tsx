@@ -111,6 +111,7 @@ const s = StyleSheet.create({
   footerRight: { flex: 1 },
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
+  bankBlock: { marginBottom: 8 },
   bankName: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2 },
   bankLine: { fontSize: 8.5, color: INK, marginBottom: 1.5 },
 });
@@ -189,10 +190,12 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
         { label: "Due Date:",         value: dueDate || "-" },
       ];
 
-  // Bank details: split on newlines
-  const bankLines = (paymentTo ?? "").split("\n").map(l => l.trim()).filter(Boolean);
-  const bankName  = bankLines[0] ?? "";
-  const bankRest  = bankLines.slice(1);
+  // Bank details: one or more accounts, each a block of lines. Blank lines
+  // separate accounts (so "Payment To" can list multiple bank accounts).
+  const bankBlocks = (paymentTo ?? "")
+    .split(/\n\s*\n/)
+    .map((block) => block.split("\n").map((l) => l.trim()).filter(Boolean))
+    .filter((lines) => lines.length > 0);
 
   return (
     <Document title={`${docTitle} ${docNumber}`}>
@@ -330,12 +333,16 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
                 <Text style={s.footerText}>{notes}</Text>
               </>
             ) : null}
-            {bankLines.length > 0 ? (
+            {bankBlocks.length > 0 ? (
               <>
                 <Text style={s.footerLabel}>Payment To</Text>
-                {bankName ? <Text style={s.bankName}>{bankName}</Text> : null}
-                {bankRest.map((line, i) => (
-                  <Text key={i} style={s.bankLine}>{line}</Text>
+                {bankBlocks.map((lines, bi) => (
+                  <View key={bi} style={s.bankBlock}>
+                    <Text style={s.bankName}>{lines[0]}</Text>
+                    {lines.slice(1).map((line, i) => (
+                      <Text key={i} style={s.bankLine}>{line}</Text>
+                    ))}
+                  </View>
                 ))}
               </>
             ) : null}
