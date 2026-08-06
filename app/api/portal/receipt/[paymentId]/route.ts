@@ -24,8 +24,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ paymentId: 
     select: {
       id: true, amount: true, currency: true, method: true, reference: true, receivedAt: true,
       createdBy: { select: { name: true } },
-      sale: { select: { saleNumber: true, clientId: true } },
-      invoice: { select: { invoiceNumber: true, clientId: true, job: { select: { jobNumber: true, clientId: true } } } },
+      sale: { select: { saleNumber: true, clientId: true, totalAmount: true, paidAmount: true } },
+      invoice: { select: { invoiceNumber: true, clientId: true, totalAmount: true, paidAmount: true, job: { select: { jobNumber: true, clientId: true } } } },
     },
   });
   if (!payment) return new Response("Not found", { status: 404 });
@@ -51,6 +51,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ paymentId: 
         ? `Sale ${payment.sale.saleNumber}`
         : "Payment";
 
+  const docTotal = payment.invoice?.totalAmount ?? payment.sale?.totalAmount ?? null;
+  const docPaid = payment.invoice?.paidAmount ?? payment.sale?.paidAmount ?? null;
+  const docBalance = docTotal != null && docPaid != null ? Math.max(0, docTotal - docPaid) : null;
+
   const element = createElement(PaymentReceiptDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     receiptNumber: receipt?.receiptNumber ?? `RCPT-${payment.id.slice(0, 8).toUpperCase()}`,
@@ -58,6 +62,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ paymentId: 
     method: payment.method.replaceAll("_", " "),
     reference: payment.reference,
     amountLabel: formatMoney(payment.amount, currency),
+    paidLabel: docPaid != null ? formatMoney(docPaid, currency) : null,
+    balanceLabel: docBalance != null ? formatMoney(docBalance, currency) : null,
     forLabel,
     receivedBy: payment.createdBy?.name ?? session.org.name,
     clientName: session.client.fullName,

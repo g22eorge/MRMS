@@ -47,22 +47,29 @@ export function DisclosureProvider({
   );
 }
 
-/** The trigger button. `className` may be a fixed string or `(open) => string`. */
+/**
+ * The trigger button. Pass `className` for the closed state and `openClassName`
+ * for the open state. Both must be plain strings — this is a Client Component, so
+ * a function prop can't cross the Server→Client boundary (React throws
+ * "Functions cannot be passed directly to Client Components").
+ */
 export function DisclosureTrigger({
   label,
   openLabel,
   className,
+  openClassName,
   title,
   "aria-label": ariaLabel,
 }: {
   label: ReactNode;
   openLabel?: ReactNode;
-  className?: string | ((open: boolean) => string);
+  className?: string;
+  openClassName?: string;
   title?: string;
   "aria-label"?: string;
 }) {
   const { open, toggle } = useDisclosure();
-  const cls = typeof className === "function" ? className(open) : className;
+  const cls = open ? openClassName ?? className : className;
   return (
     <button type="button" onClick={toggle} className={cls} aria-expanded={open} title={title} aria-label={ariaLabel}>
       {open ? openLabel ?? label : label}

@@ -170,7 +170,8 @@ export default async function LeadDetailPage({
             ) : null}
             {canEdit ? (
               <DisclosureTrigger
-                className={(open) => buttonClasses(open ? "ghost" : "secondary", "sm")}
+                className={buttonClasses("secondary", "sm")}
+                openClassName={buttonClasses("ghost", "sm")}
                 label="Edit"
                 openLabel="Close"
               />

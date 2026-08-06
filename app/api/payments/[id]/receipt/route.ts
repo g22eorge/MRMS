@@ -36,8 +36,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       reference: true,
       receivedAt: true,
       createdBy: { select: { name: true } },
-      sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } },
-      invoice: { select: { id: true, invoiceNumber: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } } } },
+      sale: { select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, client: { select: { fullName: true, organization: true, phone: true } } } },
+      invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } } } },
     },
   });
 
@@ -72,6 +72,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     ?? payment.sale?.client?.phone
     ?? null;
 
+  // Cumulative paid + outstanding balance on the linked invoice/sale, so the
+  // receipt shows real "Payment Made" and "Balance Due" (not a hardcoded zero).
+  const docTotal = payment.invoice?.totalAmount ?? payment.sale?.totalAmount ?? null;
+  const docPaid = payment.invoice?.paidAmount ?? payment.sale?.paidAmount ?? null;
+  const docBalance = docTotal != null && docPaid != null ? Math.max(0, docTotal - docPaid) : null;
+
   const element = createElement(PaymentReceiptDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     receiptNumber: receipt?.receiptNumber ?? `RCPT-${payment.id.slice(0, 8).toUpperCase()}`,
@@ -79,6 +85,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     method: prettyEnum(payment.method),
     reference: payment.reference,
     amountLabel: formatMoney(payment.amount, currency),
+    paidLabel: docPaid != null ? formatMoney(docPaid, currency) : null,
+    balanceLabel: docBalance != null ? formatMoney(docBalance, currency) : null,
     forLabel,
     receivedBy: payment.createdBy?.name ?? user.name,
     clientName,

@@ -60,6 +60,7 @@ export async function generateInvoiceBuffer(
     where: { jobId: job.id },
     select: {
       invoiceType: true,
+      paidAmount: true,
       lines: {
         select: {
           description: true, quantity: true, unitPrice: true,
@@ -81,6 +82,8 @@ export async function generateInvoiceBuffer(
   });
   const InvoiceDoc = InvoiceTemplateComponent(templateKey);
   const clientBill = getClientBill(job) ?? 0;
+  const paidAmount = Math.max(0, invoiceRecord?.paidAmount ?? 0);
+  const balanceDue = Math.max(0, clientBill - paidAmount);
   const vatApplicable = job.vatApplicable ?? true;
   const vatRate = Math.max(0, branding.vatRatePercent) / 100;
   const repairCost = vatApplicable && clientBill > 0 ? clientBill / (1 + vatRate) : clientBill;
@@ -236,11 +239,15 @@ export async function generateInvoiceBuffer(
     vatLabel: `${branding.vatLabel ?? "VAT"} (${branding.vatRatePercent ?? 0}%)`,
     vatAmount: formatMoney(vatAmount, currency),
     totalAmountPayable: formatMoney(clientBill, currency),
+    // Actual money received on the linked invoice, and the resulting balance —
+    // not the old clientApproved-based guess, so the PDF matches the job's money panel.
+    paymentMade: formatMoney(paidAmount, currency),
+    balanceDue: formatMoney(balanceDue, currency),
     estimatedDuration: compactText(job.repairTimeline ?? job.timelineNote, 60),
     approvalStatus: job.clientApproved === true ? "Approved" : "Not recorded",
     recommendation: compactText(job.recommendationOption ?? job.recommendedRepair, 80),
     notes: compactListText(job.technicianNotes ?? job.statusNote, 160),
-    isPaid: job.clientApproved === true,
+    isPaid: balanceDue <= 0 && clientBill > 0,
     status: prettyEnum(job.status),
     currency,
     termsText: branding.termsText ?? "",

@@ -25,6 +25,10 @@ type ReceiptProps = {
   method: string;
   reference?: string | null;
   amountLabel: string;
+  /** Cumulative amount paid on the linked invoice/sale (defaults to this payment). */
+  paidLabel?: string | null;
+  /** Outstanding balance after this payment (defaults to zero). */
+  balanceLabel?: string | null;
   forLabel: string;
   receivedBy: string;
   clientName?: string | null;
@@ -32,11 +36,11 @@ type ReceiptProps = {
   clientPhone?: string | null;
 };
 
-export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone }: ReceiptProps) {
+export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone }: ReceiptProps) {
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
 
-  // A paid receipt has no outstanding balance — mirror the amount's currency by
-  // zeroing its numeric part (e.g. "UGX 600,000" -> "UGX 0").
+  // Zero in the amount's currency (e.g. "UGX 600,000" -> "UGX 0") for the
+  // fallback when no real balance was supplied.
   const zeroLabel = amountLabel.replace(/[\d.,]+/, "0");
 
   const items: EagleInfoLineItem[] = [{
@@ -71,8 +75,8 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       subTotal={amountLabel}
       totalLabel="Total"
       totalAmount={amountLabel}
-      paymentMade={amountLabel}
-      balanceDue={zeroLabel}
+      paymentMade={paidLabel || amountLabel}
+      balanceDue={balanceLabel || zeroLabel}
       notes={`Received by: ${receivedBy}\n${branding.footerText || "Thank you for your business."}`}
       paymentTo={branding.paymentInstructions || null}
       termsText={branding.termsText || "This is a computer-generated receipt and is valid without signature."}
