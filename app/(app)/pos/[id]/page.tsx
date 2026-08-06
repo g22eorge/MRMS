@@ -27,6 +27,15 @@ import { computeVat } from "@/lib/commercial/vat";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
+/**
+ * Send the cashier back to the sale with an error banner instead of silently
+ * no-op'ing a rejected POS action (short stock, over-refund, closed sale, …).
+ * `redirect` throws, so this returns `never` and short-circuits the action.
+ */
+function posReject(saleId: string, message: string): never {
+  redirect(`/pos/${saleId}?error=${encodeURIComponent(message)}`);
+}
+
 async function recalcSaleTotals(
   tx: Prisma.TransactionClient,
   saleId: string,
@@ -87,13 +96,14 @@ async function recalcSaleTotals(
   await syncSalePaymentState(tx, { orgId, saleId });
 }
 
-export default async function SalePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SalePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { user, orgId, org } = await requireOrgSession();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
 
   const { id } = await params;
+  const errorMessage = (await searchParams)?.error?.trim() || null;
 
   let dbNeedsFix = false;
   let sale: {
@@ -338,7 +348,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (!part) return;
         const nextQty = part.qtyOnHand - delta;
-        if (nextQty < 0) return;
+        if (nextQty < 0) posReject(saleId, "Not enough stock for that quantity.");
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: nextQty } });
         await tx.partStockTransaction.create({
           data: {
@@ -415,12 +425,12 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const unitPrice = Number(String(formData.get("unitPrice") ?? "0").trim());
 
     if (!saleId) return;
-    if (!partId && !description) return;
-    if (!Number.isFinite(qty) || qty <= 0) return;
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) return;
+    if (!partId && !description) posReject(saleId, "Choose a product or enter an item description.");
+    if (!Number.isFinite(qty) || qty <= 0) posReject(saleId, "Enter a valid quantity.");
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) posReject(saleId, "Enter a valid unit price.");
 
     const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
-    if (!existingSale || existingSale.status !== "OPEN") return;
+    if (!existingSale || existingSale.status !== "OPEN") posReject(saleId, "This sale is no longer open, so items can't be added.");
 
     const lineTotal = unitPrice * qty;
 
@@ -430,8 +440,8 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
 
       if (partId) {
         const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true } });
-        if (!part) return;
-        if (part.qtyOnHand - Math.abs(qty) < 0) return;
+        if (!part) posReject(saleId, "That product was not found or is inactive.");
+        if (part.qtyOnHand - Math.abs(qty) < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
         resolvedDescription = `${part.sku} ${part.name}`;
@@ -492,16 +502,17 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     if (!saleId) return;
 
     const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (!Number.isFinite(amount) || amount <= 0) posReject(saleId, "Enter a valid payment amount.");
 
     const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, totalAmount: true, status: true, currency: true, clientId: true } });
-    if (!existingSale || existingSale.status === "VOID") return;
+    if (!existingSale || existingSale.status === "VOID") posReject(saleId, "This sale is void — no payment can be recorded.");
 
     const saleCurrency = normalizeCurrency(existingSale.currency, org.baseCurrency);
     if (saleCurrency !== org.baseCurrency) {
       // POS currently assumes sale totals and payments are in org base currency.
-      // When enabling non-base POS currencies, collect FX rate at payment time.
-      return;
+      // Surface this instead of silently dropping the payment (money received but
+      // never recorded). When enabling non-base POS currencies, collect the FX rate.
+      posReject(saleId, `This sale is in ${saleCurrency}. Payments are only supported in the base currency (${org.baseCurrency}) for now.`);
     }
 
     const safeMethod: PaymentMethod = METHODS.includes(method as PaymentMethod)
@@ -586,11 +597,11 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         partId: it.partId,
       });
     }
-    if (picked.length === 0) return;
+    if (picked.length === 0) posReject(saleId, "Select at least one item to return.");
 
     const currency = normalizeCurrency(existingSale.currency, org.baseCurrency);
     const totalAmount = picked.reduce((sum, p) => sum + p.lineTotal, 0);
-    if (!Number.isFinite(totalAmount) || totalAmount <= 0) return;
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) posReject(saleId, "The selected items have no returnable value.");
 
     // Cumulative-return cap: total value across all credit notes for this sale
     // must never exceed what was sold (prevents unlimited over-refund).
@@ -598,7 +609,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
       where: { orgId, saleId },
       _sum: { totalAmount: true },
     });
-    if ((priorCredited._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) return;
+    if ((priorCredited._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) posReject(saleId, "This return exceeds the value of the sale.");
 
     const result = await prisma.$transaction(async (tx) => {
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
@@ -721,23 +732,23 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     if (!saleId || !creditNoteId) return;
 
     const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (!Number.isFinite(amount) || amount <= 0) posReject(saleId, "Enter a valid refund amount.");
 
     const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
     // A credit note can be refunded whether the sale is PAID or already flipped
     // to a returned state by an earlier credit note (M10).
-    if (!existingSale || !["PAID", "PARTIALLY_RETURNED", "RETURNED"].includes(existingSale.status)) return;
+    if (!existingSale || !["PAID", "PARTIALLY_RETURNED", "RETURNED"].includes(existingSale.status)) posReject(saleId, "This sale isn't in a state that can be refunded.");
 
     const creditNote = await prisma.creditNote.findFirst({
       where: { id: creditNoteId, orgId, saleId },
       select: { id: true, currency: true, totalAmount: true },
     });
-    if (!creditNote) return;
+    if (!creditNote) posReject(saleId, "The related credit note was not found.");
 
     const refundedAgg = await prisma.refund.aggregate({ where: { orgId, creditNoteId: creditNote.id }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: 0 } }));
     const refundedSoFar = refundedAgg._sum.amount ?? 0;
     const refundable = Math.max(0, creditNote.totalAmount - refundedSoFar);
-    if (amount > refundable) return;
+    if (amount > refundable) posReject(saleId, `Refund exceeds the refundable amount (${formatMoney(refundable, normalizeCurrency(creditNote.currency, org.baseCurrency))}).`);
 
     const safeMethod: PaymentMethod = METHODS.includes(method as PaymentMethod)
       ? (method as PaymentMethod)
@@ -746,7 +757,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     const currency = normalizeCurrency(creditNote.currency, org.baseCurrency);
     const exchangeRateToBase = currency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (currency !== org.baseCurrency) {
-      if (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0) return;
+      if (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0) posReject(saleId, "Enter a valid exchange rate for this foreign-currency refund.");
     }
 
     const refund = await prisma.refund.create({
@@ -820,6 +831,11 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-4 pb-24 lg:pb-8">
+      {errorMessage ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+          {errorMessage}
+        </div>
+      ) : null}
       <RecordActionBar
         backHref="/pos"
         eyebrow="Point of Sale · Sale"
@@ -989,10 +1005,10 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
                 const raw = String(formData.get("discountAmount") ?? "").trim();
                 if (!saleId) return;
                 const discountAmount = Math.max(0, Number(raw || "0"));
-                if (!Number.isFinite(discountAmount)) return;
+                if (!Number.isFinite(discountAmount)) posReject(saleId, "Enter a valid discount amount.");
 
                 const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
-                if (!existingSale || existingSale.status !== "OPEN") return;
+                if (!existingSale || existingSale.status !== "OPEN") posReject(saleId, "This sale is no longer open.");
 
                 await prisma.$transaction(async (tx) => {
                   const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
