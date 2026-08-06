@@ -61,6 +61,7 @@ async function buildOrgSession(
     .findUnique({
       where: { id: orgId },
       select: {
+        name: true,
         baseCurrency: true,
         supportedCurrencies: true,
         plan: true,
@@ -86,6 +87,7 @@ async function buildOrgSession(
     user,
     orgId,
     org: {
+      name: orgRow?.name ?? null,
       baseCurrency,
       supportedCurrencies,
       plan: orgRow?.plan ?? "STARTER",

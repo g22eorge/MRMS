@@ -22,20 +22,13 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session, user, orgId } = await requireOrgSession();
+  // requireOrgSession already fetched the org (name + billing fields) — reuse it
+  // instead of a second organization.findUnique on every page load.
+  const { session, user, orgId, org } = await requireOrgSession();
 
   const isPlatformAdmin = checkIsPlatformAdmin(user.email);
 
   // ── Billing enforcement ───────────────────────────────────────────────────
-  const org = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: { billingStatus: true, trialEndsAt: true, plan: true, name: true, planRenewsAt: true },
-  }).catch(() =>
-    prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } })
-      .then((r) => r ? { ...r, billingStatus: "TRIALING" as const, trialEndsAt: null, plan: "STARTER" as const, planRenewsAt: null } : null)
-      .catch(() => null)
-  );
-
   const now = new Date();
 
   // If a paid plan was cancelled and the billing period ended, revert to free Starter limits.
@@ -62,8 +55,6 @@ export default async function AppLayout({
     org.trialEndsAt < now;
   const isPastDue = org?.billingStatus === "PAST_DUE";
   const isSuspended = trialExpired || isPastDue;
-
-  const announcements = await getActiveAnnouncements(now);
 
   // Read-only mode: allow navigation + downloads. Mutations are blocked server-side.
   // Trial-expiry reminders (14/7/3/1 days) are sent reliably by the
@@ -97,7 +88,7 @@ export default async function AppLayout({
   };
 
   const [
-    partsForReorder,
+    lowStockCount,
     paymentFollowupCount,
     receivedJobsCount,
     pendingRequestsCount,
@@ -106,13 +97,14 @@ export default async function AppLayout({
     purchaseOrderAttentionCount,
     enabledModules,
     orgUsers,
+    announcements,
   ] = await Promise.all([
-    prisma.part.findMany({
-      // Include parts with a reorder level set, OR any part at/below zero on hand
-      // (a part left at the default reorderLevel 0 was never flagged even at 0 stock).
-      where: { orgId, isActive: true, OR: [{ reorderLevel: { gt: 0 } }, { qtyOnHand: { lte: 0 } }] },
-      select: { qtyOnHand: true, reorderLevel: true },
-    }).catch(() => []),
+    // Low-stock badge count: qtyOnHand <= reorderLevel (a column-to-column compare
+    // Prisma count() can't express) — done in SQL so we return one number, not rows.
+    prisma.$queryRaw<Array<{ c: number | bigint }>>`
+      SELECT COUNT(*) AS c FROM "Part"
+      WHERE "orgId" = ${orgId} AND "isActive" = 1 AND "qtyOnHand" <= "reorderLevel"
+    `.then((rows) => Number(rows?.[0]?.c ?? 0)).catch(() => 0),
     (can.reviewExternalBills(user) || can.approveInvoices(user)) ? prisma.job.count({ where: paymentWhere }) : Promise.resolve(0),
     prisma.job.count({ where: receivedWhere }),
     can.viewIntake(user)
@@ -143,9 +135,9 @@ export default async function AppLayout({
           take: 300,
         })
       : Promise.resolve([]),
+    getActiveAnnouncements(now),
   ]);
 
-  const lowStockCount = partsForReorder.filter((part) => part.qtyOnHand <= part.reorderLevel).length;
   const procurementAttentionCount = purchaseRequestAttentionCount + purchaseOrderAttentionCount;
 
   return (

@@ -632,11 +632,13 @@ export async function updateJobAction(formData: FormData) {
       delete fallbackData.clientPaymentRef;
 
       updated = await (prisma.job as unknown as {
-        update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{
+        update: (args: { where: { id: string; orgId: string }; data: Record<string, unknown> }) => Promise<{
           id: string;
         }>;
       }).update({
-        where: { id: payload.jobId },
+        // Keep org scoping on the fallback path too — dropping it would allow a
+        // cross-tenant write on a drifted DB.
+        where: { id: payload.jobId, orgId },
         data: fallbackData,
       });
     } else {

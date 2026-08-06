@@ -23,7 +23,6 @@ import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
-import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { computeVat } from "@/lib/commercial/vat";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -38,19 +37,38 @@ async function recalcSaleTotals(
   const subtotal = itemsAgg._sum.lineTotal ?? 0;
   const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
-  // VAT is org-configurable. Intent is persisted on the sale; only an explicit
-  // toggle/add-time choice overrides it. When a sale has no persisted intent yet
-  // it falls back to the org's vatDefaultApplicable (default OFF), so VAT never
-  // silently applies. Read branding via the self-healing raw helper so a missing
-  // vatInclusive column on an older prod DB can't break checkout.
-  const branding = await getDocumentBrandingSettings(orgId);
-  const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? branding.vatDefaultApplicable;
+  // VAT config: read the three fields we need on the SAME transaction connection
+  // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
+  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this libSQL write
+  // transaction is open, can deadlock checkout on cold start. Falls back to safe
+  // defaults (VAT off, exclusive, 18%) if the row/columns aren't present.
+  let vatDefaultApplicable = false;
+  let vatRatePercent = 18;
+  let vatInclusive = false;
+  try {
+    const rows = await tx.$queryRaw<Array<{ vatDefaultApplicable: unknown; vatRatePercent: unknown; vatInclusive: unknown }>>`
+      SELECT "vatDefaultApplicable", "vatRatePercent", "vatInclusive"
+      FROM "DocumentBrandingSettings"
+      WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
+      ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
+      LIMIT 1`;
+    const row = rows?.[0];
+    if (row) {
+      vatDefaultApplicable = Boolean(row.vatDefaultApplicable);
+      const rate = Number(row.vatRatePercent);
+      if (Number.isFinite(rate)) vatRatePercent = rate;
+      vatInclusive = Boolean(row.vatInclusive);
+    }
+  } catch {
+    // Drifted DB (missing table/column) — safe defaults keep checkout working.
+  }
+  const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? vatDefaultApplicable;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
   const taxable = Math.max(0, subtotal - discountAmount);
   const raw = computeVat(taxable, {
     applicable: taxApplicable,
-    ratePercent: branding.vatRatePercent,
-    inclusive: branding.vatInclusive,
+    ratePercent: vatRatePercent,
+    inclusive: vatInclusive,
   });
   // Round to the currency's minor unit so zero-decimal (UGX) totals stay payable.
   const vatAmount = roundMoney(raw.vatAmount, currency);
