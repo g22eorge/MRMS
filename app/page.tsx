@@ -326,6 +326,36 @@ export default async function Page() {
 
             {/* ── Left: Company + service intro ── */}
             <div className="lg:max-w-sm lg:pt-2 lg:sticky lg:top-24">
+              {/* Hero illustration — device brought back to life */}
+              <svg viewBox="0 0 320 170" className="mb-6 w-full max-w-[320px]" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Device repair illustration">
+                <defs>
+                  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#E8C84A" />
+                    <stop offset="1" stopColor="#C9A020" />
+                  </linearGradient>
+                </defs>
+                <circle cx="196" cy="86" r="78" fill="#D4AF37" opacity="0.10" />
+                {/* Laptop */}
+                <rect x="18" y="52" width="150" height="92" rx="8" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
+                <rect x="30" y="64" width="126" height="68" rx="4" fill="#111" />
+                <path d="M40 108 h18 l7 -26 l11 44 l8 -22 h22" stroke="#E8C84A" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <rect x="6" y="144" width="174" height="9" rx="4.5" fill="#1a1a1a" stroke="url(#gold)" strokeWidth="1.5" />
+                {/* Phone */}
+                <rect x="196" y="34" width="74" height="112" rx="14" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
+                <rect x="205" y="46" width="56" height="76" rx="4" fill="#111" />
+                <path d="M233 96 m-13 0 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0" fill="none" stroke="#E8C84A" strokeWidth="2.5" opacity="0.35" />
+                <path d="M226 96 l5 5 l9 -11" stroke="#E8C84A" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="233" cy="134" r="3" fill="url(#gold)" />
+                {/* Repair badge — crossed wrench + screwdriver */}
+                <circle cx="150" cy="40" r="24" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
+                <path d="M141 49 l10 -10 M148 32 a6 6 0 0 1 8 8 l-2 2" stroke="#E8C84A" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M159 49 l-9 -9" stroke="#E8C84A" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+                <circle cx="143" cy="47" r="2" fill="#E8C84A" />
+                {/* Sparkles */}
+                <path d="M286 30 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 z" fill="url(#gold)" opacity="0.8" />
+                <circle cx="60" cy="30" r="2.5" fill="#D4AF37" opacity="0.6" />
+              </svg>
+
               {/* Company badge */}
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-1.5">
                 <Image src="/eagle-info-logo.png" alt="" width={16} height={16} className="h-4 w-4 object-contain" />

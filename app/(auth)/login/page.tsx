@@ -130,14 +130,9 @@ export default async function LoginPage() {
         <section className="flex min-h-dvh items-center justify-center px-5 py-10 lg:min-h-0 lg:bg-[#0d0d0d] lg:px-12">
           <div className="w-full max-w-sm">
 
-            {/* Mobile-only logo */}
+            {/* Logo — only on mobile; desktop shows it in the left brand panel. */}
             <div className="mb-8 flex justify-center lg:hidden">
               <AppLogoDark height={64} priority />
-            </div>
-
-            {/* Desktop logo row */}
-            <div className="mb-8 hidden lg:flex">
-              <AppLogoDark height={48} priority />
             </div>
 
             <h2 className="text-2xl font-semibold text-white">Sign in</h2>
