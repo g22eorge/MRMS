@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: "Duuka ProMax — AI-Powered Business Management SaaS",
       description:
-        "Duuka ProMax is an AI-powered business management SaaS for repairs, sales, inventory, finance, documents, CRM, communications, and daily operations.",
+        "Duuka ProMax is an AI-powered business management platform for any business — sales, POS, inventory, finance, documents, CRM, service jobs, and communications in one place.",
       alternates: { canonical: "/" },
     };
   }
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const MODULES = [
   {
     group: "Service & Repairs",
-    blurb: "Every device tracked from intake to handover.",
+    blurb: "Every job tracked from intake to handover.",
     color: "from-blue-500/20 to-blue-500/5",
     border: "border-blue-500/20",
     accent: "text-blue-400",
@@ -218,6 +218,9 @@ function DuukaSaasLanding() {
               Talk to Sales
             </a>
           </div>
+          <p className="mt-5 text-[13px] text-white/40">
+            Built for retail shops, service centres, wholesalers, clinics, workshops — any team that sells, stocks, or serves.
+          </p>
         </div>
 
         {/* Product mock — a live-looking ops dashboard so visitors see the system,
@@ -241,7 +244,7 @@ function DuukaSaasLanding() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               {[
                 { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-emerald-400" },
-                { v: "18", l: "Open jobs", d: "3 due today", tone: "text-amber-400" },
+                { v: "18", l: "Open orders", d: "3 due today", tone: "text-amber-400" },
                 { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/40" },
               ].map((k) => (
                 <div key={k.l} className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
@@ -276,8 +279,8 @@ function DuukaSaasLanding() {
               <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Needs attention</p>
               <div className="space-y-1.5">
                 {[
-                  { dot: "bg-red-400", t: "Job EIS/2026/0041 overdue", s: "2 days" },
-                  { dot: "bg-amber-400", t: "Phone Screen — low stock", s: "3 left" },
+                  { dot: "bg-red-400", t: "Invoice #INV-000482 overdue", s: "2 days" },
+                  { dot: "bg-amber-400", t: "5 items below reorder level", s: "restock" },
                   { dot: "bg-fuchsia-300", t: "AI: 7 invoices ready to chase", s: "UGX 1.1M" },
                 ].map((r) => (
                   <div key={r.t} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2.5 py-1.5">
