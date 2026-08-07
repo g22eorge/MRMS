@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { useTheme } from "@/components/layout/ThemeProvider";
+import { useTheme, type Theme } from "@/components/layout/ThemeProvider";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { can } from "@/lib/permissions";
@@ -46,11 +46,11 @@ function roleAccent(role: string): string {
     case "MANAGER":             return "bg-[var(--accent)]/20 text-[#9A7A00]";
     case "OPS":                 return "bg-[var(--accent)]/15 text-[#9A7A00]";
     case "TECHNICIAN_INTERNAL": return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
-    case "TECHNICIAN_EXTERNAL": return "bg-purple-500/10 text-purple-700 dark:text-purple-400";
+    case "TECHNICIAN_EXTERNAL": return "bg-slate-500/10 text-slate-600 dark:text-slate-400";
     case "FRONT_DESK":          return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
     case "FINANCE":             return "bg-sky-500/10 text-sky-700 dark:text-sky-400";
     case "SALES":
-    case "SALES_MANAGER":       return "bg-violet-500/10 text-violet-700 dark:text-violet-400";
+    case "SALES_MANAGER":       return "bg-teal-500/10 text-teal-700 dark:text-teal-400";
     default:                    return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
   }
 }
@@ -161,8 +161,8 @@ export function Header({
               <NotificationBell />
             ) : null}
 
-            {/* Theme toggle */}
-            <ThemeToggle />
+            {/* Theme picker */}
+            <ThemePicker />
 
             {/* Settings gear — desktop only */}
             <button
@@ -336,39 +336,84 @@ function MenuItem({
   );
 }
 
-/* ── Theme toggle ─────────────────────────────────────────────────────────── */
-function ThemeToggle() {
-  const { theme, toggle } = useTheme();
+/* ── Theme picker ─────────────────────────────────────────────────────────── */
+const THEME_OPTIONS: { key: Theme; label: string; swatch: string }[] = [
+  { key: "system", label: "System", swatch: "linear-gradient(135deg,#F5F3EF 0 50%,#0B1220 50% 100%)" },
+  { key: "light", label: "Light", swatch: "#F5F3EF" },
+  { key: "blackgold", label: "Black + Gold", swatch: "linear-gradient(135deg,#0A0A0A 0 58%,#D4AF37 58% 100%)" },
+  { key: "navy", label: "Navy + Gold", swatch: "linear-gradient(135deg,#0B1220 0 58%,#D4AF37 58% 100%)" },
+];
 
-  const isDark = (() => {
-    if (theme === "dark") return true;
-    if (theme === "light") return false;
-    if (typeof document === "undefined") return false;
-    return document.documentElement.classList.contains("theme-blackgold");
-  })();
+function ThemePicker() {
+  const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const active = THEME_OPTIONS.find((o) => o.key === theme) ?? THEME_OPTIONS[0];
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      title={isDark ? "Switch to light" : "Switch to dark"}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      aria-pressed={isDark}
-      className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
-    >
-      {isDark ? (
-        /* Moon — currently dark, click to go light */
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        title="Theme"
+        aria-label="Choose theme"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+          <path d="M12 2C6.5 2 2 6 2 11a6 6 0 0 0 6 6h1.8a2 2 0 0 1 2 2 2.2 2.2 0 0 0 2.2 2.2C19.6 21.2 22 16.5 22 12 22 6.5 17.5 2 12 2Z" />
         </svg>
-      ) : (
-        /* Sun — currently light, click to go dark */
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"/>
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-        </svg>
+        <span className="sr-only">Current theme: {active.label}</span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-[var(--dc-line)] bg-[var(--dc-panel)] p-1.5 shadow-xl"
+        >
+          <p className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--dc-ink-3)]">Theme</p>
+          {THEME_OPTIONS.map((o) => {
+            const isActive = o.key === theme;
+            return (
+              <button
+                key={o.key}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isActive}
+                onClick={() => { setTheme(o.key); setOpen(false); }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
+              >
+                <span className="h-4 w-4 shrink-0 rounded-full ring-1 ring-black/15 dark:ring-white/15" style={{ background: o.swatch }} aria-hidden="true" />
+                <span className="flex-1 text-left">{o.label}</span>
+                {isActive && (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dc-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
       )}
-      <span className="sr-only">{isDark ? "Dark mode active" : "Light mode active"}</span>
-    </button>
+    </div>
   );
 }

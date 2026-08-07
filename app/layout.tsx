@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { Inter } from "next/font/google";
 
-import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { ThemeProvider, type Theme } from "@/components/layout/ThemeProvider";
 import "./globals.css";
 
 // Inter — industry standard for business SaaS dashboards (Stripe, Linear, Figma).
@@ -68,11 +68,17 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const stored = cookieStore.get("theme")?.value as string | undefined;
-  let initialTheme: "system" | "dark" | "light" = "system";
-  if (stored === "dark") initialTheme = "dark";
-  else if (stored === "light") initialTheme = "light";
+  // Normalise legacy "dark" → "blackgold"; anything unknown → "system".
+  const initialTheme: Theme =
+    stored === "dark" ? "blackgold" :
+    stored === "light" || stored === "blackgold" || stored === "navy" ? stored :
+    "system";
 
-  const themeClass = stored === "dark" ? "theme-blackgold" : stored === "light" ? "light" : "";
+  const themeClass =
+    initialTheme === "light" ? "light" :
+    initialTheme === "blackgold" ? "theme-blackgold" :
+    initialTheme === "navy" ? "theme-blackgold theme-navy" :
+    "";
 
   return (
     // suppressHydrationWarning: the theme class is finalized on the client and

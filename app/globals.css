@@ -75,6 +75,26 @@
   --sidebar-bg: #FFFFFF;
 }
 
+/* Navy + Gold — a calmer dark theme. The <html> element carries BOTH
+   .theme-blackgold and .theme-navy, so it inherits every dark component rule
+   (inputs, buttons, scrollbars) and only overrides the colour tokens here.
+   Defined after .theme-blackgold so these token values win the cascade. */
+.theme-navy {
+  --page-bg: #0B1220;
+  --ink: rgba(255, 255, 255, 0.92);
+  --ink-muted: rgba(255, 255, 255, 0.55);
+  --panel: #131D33;
+  --panel-strong: #1B2842;
+  --line: rgba(255, 255, 255, 0.10);
+  --brand: #E8C84A;
+  --brand-deep: #B8960C;
+  --accent: #D4AF37;
+  --accent-fg: #E8C84A;
+  --accent-muted: rgba(212, 175, 55, 0.16);
+  --accent-border: rgba(212, 175, 55, 0.38);
+  --sidebar-bg: #0A1120;
+}
+
 
 /* Inputs inside the dark theme must have dark backgrounds and light text. */
 .theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
@@ -366,6 +386,54 @@ pre,
   --dc-violet: #a78bfa;
   --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.85);
   --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 42px -22px rgba(0, 0, 0, 0.95);
+}
+
+/* Explicit Light — restores the light chrome tokens even when the OS is in dark
+   mode (otherwise the @media(dark) block above leaves the app frame dark). */
+.light {
+  --dc-side: #fbfaf6;
+  --dc-panel: #fbfaf6;
+  --dc-panel-2: #f1eee6;
+  --dc-ink: #1a1815;
+  --dc-ink-2: #57534b;
+  --dc-ink-3: #726b5e;
+  --dc-line: #e7e2d8;
+  --dc-line-soft: #efebe3;
+  --dc-accent: #a87f16;
+  --dc-accent-2: #7a5f00;
+  --dc-accent-soft: rgba(184, 144, 28, 0.12);
+  --dc-good: #2c8f61;
+  --dc-warn: #bd8410;
+  --dc-crit: #c9463a;
+  --dc-crit-soft: rgba(201, 70, 58, 0.12);
+  --dc-blue: #3d6fb4;
+  --dc-violet: #7c5ccf;
+  --dc-shadow: 0 1px 2px rgba(40, 33, 15, 0.03), 0 10px 30px -20px rgba(40, 33, 15, 0.16);
+  --dc-shadow-hover: 0 1px 2px rgba(40, 33, 15, 0.05), 0 16px 38px -20px rgba(40, 33, 15, 0.26);
+}
+
+/* Navy + Gold chrome. Placed after .theme-blackgold so it wins on elements that
+   carry both classes. Drives the whole app frame (sidebar, top bar, cards). */
+.theme-navy {
+  --dc-side: #0C1526;
+  --dc-panel: #131D33;
+  --dc-panel-2: #1B2842;
+  --dc-ink: rgba(255, 255, 255, 0.92);
+  --dc-ink-2: rgba(255, 255, 255, 0.56);
+  --dc-ink-3: rgba(255, 255, 255, 0.38);
+  --dc-line: rgba(255, 255, 255, 0.09);
+  --dc-line-soft: rgba(255, 255, 255, 0.05);
+  --dc-accent: #E8C84A;
+  --dc-accent-2: #E8C84A;
+  --dc-accent-soft: rgba(212, 175, 55, 0.16);
+  --dc-good: #43bf85;
+  --dc-warn: #dda52c;
+  --dc-crit: #e5695c;
+  --dc-crit-soft: rgba(229, 105, 92, 0.15);
+  --dc-blue: #7db1ff;
+  --dc-violet: #a78bfa;
+  --dc-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 34px -22px rgba(0, 0, 0, 0.9);
+  --dc-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.55), 0 18px 42px -22px rgba(0, 0, 0, 1);
 }
 /* Bordered & tight — the one system surface language (DESIGN.md §6).
    KPI bands, dashboard cards, and stat strips all render as a hairline

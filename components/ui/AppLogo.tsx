@@ -25,13 +25,14 @@ export function AppLogo({ height = 40, className = "", priority = false }: Props
   const w = height * 2;
 
   // Initialise from the cookie-derived theme so SSR and first paint match
-  // (no flash for users who have explicitly picked dark or light).
-  const [isDark, setIsDark] = useState(theme === "dark");
+  // (no flash for users who have explicitly picked a theme). Both black+gold
+  // and navy are dark themes and use the dark logo.
+  const [isDark, setIsDark] = useState(theme === "blackgold" || theme === "navy");
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const calc = () =>
-      setIsDark(theme === "dark" || (theme === "system" && mq.matches));
+      setIsDark(theme === "blackgold" || theme === "navy" || (theme === "system" && mq.matches));
     calc();
     mq.addEventListener("change", calc);
     return () => mq.removeEventListener("change", calc);
