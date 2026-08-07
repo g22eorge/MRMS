@@ -90,7 +90,6 @@ Internal and external technicians.
 - Leads: Track prospects and convert them to clients/jobs/quotations
 - Visits: Track sales visits and follow-ups
 - Targets: Team or individual sales targets
-- Cashier Shifts: Open/close shifts and reconcile cash/card/mobile totals
 
 ### Documents
 - Invoices: Generate from completed jobs or manually
@@ -143,7 +142,6 @@ Internal and external technicians.
 
 ### Sales, POS, And Customer Revenue Pages
 - POS: Counter sales terminal for walk-in product/service sales.
-- POS -> Shifts: Cashier shift opening/closing and reconciliation.
 - Sales: Sales CRM overview.
 - Leads: Prospects, follow-ups, conversion pipeline.
 - Campaigns: Marketing campaigns to leads/clients.
@@ -409,23 +407,10 @@ const GUIDE_INTENTS: GuideIntent[] = [
     answer: [
       "To make a POS sale:",
       "1. Open POS.",
-      "2. Start or select an open cashier shift if required.",
-      "3. Add products/services to the sale.",
-      "4. Confirm quantities, discounts, tax/VAT, and total.",
-      "5. Record payment method: cash, card, mobile money, or other configured method.",
-      "6. Complete the sale and issue a receipt if needed.",
-    ],
-  },
-  {
-    any: ["cashier shift", "close shift", "open shift"],
-    answer: [
-      "To manage a cashier shift:",
-      "1. Open POS -> Shifts.",
-      "2. Open a shift with the starting float before sales begin.",
-      "3. Process POS sales during the shift.",
-      "4. At closing, enter counted cash/card/mobile totals.",
-      "5. Review variances and close the shift.",
-      "6. Managers/admins can review shift history and reconciliation issues.",
+      "2. Add products/services to the sale.",
+      "3. Confirm quantities, discounts, tax/VAT, and total.",
+      "4. Record payment method: cash, card, mobile money, or other configured method.",
+      "5. Complete the sale and issue a receipt if needed.",
     ],
   },
   {
@@ -648,11 +633,11 @@ function _fallbackAnswer(message: string) {
     return [
       "Sales and POS workflow:",
       "1. POS handles walk-in counter sales and payments.",
-      "2. Cashier Shifts lets cashiers open/close shifts and reconcile cash/card/mobile totals.",
-      "3. Sales CRM tracks leads, quotations, campaigns, and sales visits.",
-      "4. Documents can issue invoices, receipts, delivery notes, credit notes, and refunds.",
-      "5. Sales managers can review targets and team performance where permissions allow.",
-      "If a sale cannot be completed, check shift status, payment method, stock availability, and user role.",
+      "2. Sales CRM tracks leads, quotations, campaigns, and sales visits.",
+      "3. Documents can issue invoices, receipts, delivery notes, credit notes, and refunds.",
+      "4. Sales managers can review targets and team performance where permissions allow.",
+      "Cash is reconciled day-by-day in Finance (cash received vs expenses), not per shift.",
+      "If a sale cannot be completed, check payment method, stock availability, and user role.",
     ].join("\n");
   }
 
@@ -689,7 +674,7 @@ function _fallbackAnswer(message: string) {
       "5. Technicians: technician assignments, external technician views, and payouts.",
       "6. Field Visits: onsite visit scheduling, assignment, and sign-off.",
       "7. Inventory: items, stock alerts, suppliers, purchase requests/orders, goods received, stock counts, and transfers.",
-      "8. POS and Sales: counter sales, cashier shifts, leads, campaigns, visits, quotations, and targets.",
+      "8. POS and Sales: counter sales, leads, campaigns, visits, quotations, and targets.",
       "9. Documents: job cards, invoices, quotations, receipts, delivery notes, credit notes, and refunds.",
       "10. Finance: expenses, bank, recurring billing, accounts, and financial reports.",
       "11. Reports: operational and technician performance reporting.",
@@ -707,7 +692,7 @@ function _fallbackAnswer(message: string) {
     "3. Moving jobs through diagnosis, approval, repair, and completion.",
     "4. Managing clients without duplicates.",
     "5. Inventory, suppliers, purchase requests, purchase orders, goods received, and stock counts.",
-    "6. POS, sales, cashier shifts, leads, campaigns, quotations, and targets.",
+    "6. POS, sales, leads, campaigns, quotations, and targets.",
     "7. Finance, expenses, bank, invoices, receipts, refunds, and reports.",
     "8. WhatsApp/email templates, outbox, notifications, and customer communication.",
     "9. Platform admin, organisations, plans, users, branding, and settings.",

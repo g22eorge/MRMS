@@ -114,13 +114,6 @@ export default async function PosPage({
     const db = orgDb(_orgId2);
     if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK"].includes(_u2.role))) redirect("/dashboard");
 
-    // Enforce open shift for everyone — no sale without an active shift
-    const _shift = await prisma.cashierShift.findFirst({
-      where: { orgId: _orgId2, cashierId: _u2.id, status: "OPEN" },
-      select: { id: true },
-    });
-    if (!_shift) redirect("/pos/shifts?reason=no-shift");
-
     const saleNumber = await nextSaleNumber(db, _orgId2);
     // Seed VAT intent from the org default so a sale only charges VAT when the
     // org has opted in (Settings -> Branding -> VAT). Cashiers can still flip it
@@ -187,13 +180,6 @@ export default async function PosPage({
 
     revalidatePath("/pos");
   }
-
-  // Open shift check — use prisma directly (CashierShift not in ORG_SCOPED_MODELS)
-  const openShift = await prisma.cashierShift.findFirst({
-    where: { orgId, cashierId: user.id, status: "OPEN" },
-    select: { id: true },
-  }).catch(() => null);
-  const hasOpenShift = !!openShift;
 
   let sales: Array<{
     id: string;
@@ -321,13 +307,9 @@ export default async function PosPage({
                 <h1 className="text-[22px] font-black text-[var(--ink)]">Sales</h1>
                 <p className="text-[13px] text-[var(--ink-muted)]">{segCountAll} total · amounts in {currency}</p>
               </div>
-              {hasOpenShift ? (
-                <form action={createSaleAction}>
-                  <Button type="submit" size="md" className="rounded-xl font-bold">+ New Sale</Button>
-                </form>
-              ) : (
-                <Button href="/pos/shifts" variant="secondary" size="md" className="rounded-xl">Open shift</Button>
-              )}
+              <form action={createSaleAction}>
+                <Button type="submit" size="md" className="rounded-xl font-bold">+ New Sale</Button>
+              </form>
             </div>
 
             {/* Compact 4-number stat row */}
@@ -390,24 +372,11 @@ export default async function PosPage({
               eyebrow="Point of Sale"
               title="Sales"
               description="Walk-in and retail transactions"
-              actions={<Button href="/pos/shifts" variant="secondary" size="sm">Shifts →</Button>}
             />
           </div>
         </>
       }
     >
-      {/* ── No-shift warning ── */}
-      {!hasOpenShift && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-amber-500" aria-hidden><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <div className="flex-1">
-            <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">No open shift</p>
-            <p className="text-[12px] text-amber-600 dark:text-amber-500">You don&apos;t have an active shift. Open one before processing sales.</p>
-          </div>
-          <Button href="/pos/shifts" variant="secondary" size="sm">Open Shift →</Button>
-        </div>
-      )}
-
       {/* ══ DESKTOP: KPI cards ══ */}
       <StatCards
         columns={4}
@@ -466,13 +435,9 @@ export default async function PosPage({
             </Link>
           ))}
         </div>
-        {hasOpenShift ? (
-          <form action={createSaleAction} className="shrink-0">
-            <Button type="submit" size="sm" className="px-4 font-bold">+ New Sale</Button>
-          </form>
-        ) : (
-          <Button href="/pos/shifts" variant="secondary" size="sm">Open a shift first →</Button>
-        )}
+        <form action={createSaleAction} className="shrink-0">
+          <Button type="submit" size="sm" className="px-4 font-bold">+ New Sale</Button>
+        </form>
       </div>
 
       {/* ══ DESKTOP: Filter panel ══ */}

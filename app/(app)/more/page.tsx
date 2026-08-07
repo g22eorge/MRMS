@@ -196,12 +196,6 @@ export default async function MorePage() {
               description="Walk-in sales and product checkout"
               icon={<ItemIcon d={["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"]} color="text-[var(--ink-muted)]" />}
             />
-            {["ADMIN","OPS","FRONT_DESK","MANAGER"].includes(user.role) && (
-              <NavRow href="/pos/shifts" iconBg="bg-[var(--panel-strong)]"
-                description="Daily shift summaries"
-                icon={<ItemIcon d={["M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z","M12 6v6l4 2"]} color="text-[var(--ink-muted)]" />}
-              />
-            )}
           </div>
         </>
       )}

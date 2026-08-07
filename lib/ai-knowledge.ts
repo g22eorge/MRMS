@@ -27,7 +27,7 @@ export const DEFAULT_AI_KNOWLEDGE = [
   {
     title: "Sales, POS, and CRM workflow",
     module: "SALES",
-    content: "Sales CRM tracks leads, campaigns, quotations, visits, and targets. POS handles walk-in sales and cashier shifts. Managers should review open leads, target progress, paid sales, receipts, and campaign follow-up activity.",
+    content: "Sales CRM tracks leads, campaigns, quotations, visits, and targets. POS handles walk-in sales. Managers should review open leads, target progress, paid sales, receipts, and campaign follow-up activity.",
   },
   {
     title: "AI Guide and AI Insights",

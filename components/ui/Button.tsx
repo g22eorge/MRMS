@@ -12,7 +12,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
  *
  *   <Button>Save</Button>                          // primary, md
  *   <Button variant="secondary" size="sm">Edit</Button>
- *   <Button href="/pos/shifts" variant="secondary" size="sm">Shifts →</Button>
+ *   <Button href="/reports" variant="secondary" size="sm">Reports →</Button>
  *   <Button type="submit" variant="danger">Delete</Button>
  */
 

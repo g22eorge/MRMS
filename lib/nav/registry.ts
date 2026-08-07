@@ -47,7 +47,6 @@ const defs = [
   { href: "/sales/campaigns", label: "Campaigns" },
   { href: "/sales/leads", label: "Leads" },
   { href: "/pos", label: "Point of Sale", shortLabel: "POS" },
-  { href: "/pos/shifts", label: "Cashier Shifts", shortLabel: "Shifts" },
   { href: "/targets", label: "Targets" },
 
   // Documents

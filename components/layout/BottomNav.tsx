@@ -54,7 +54,6 @@ const aiIcon          = <Icon d={["M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a
 const targetsIcon     = <Icon d="" size={22}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></Icon>;
 const recurringIcon   = <Icon d={["M17 1l4 4-4 4","M3 11V9a4 4 0 0 1 4-4h14","M7 23l-4-4 4-4","M21 13v2a4 4 0 0 1-4 4H3"]} />;
 const taxIcon         = <Icon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M9 13l6 0","M9 9h1","M9 17h1","M14 9h1","M14 17h1"]} />;
-const shiftsIcon      = <Icon d={["M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z","M12 6v6l4 2"]} />;
 
 /* ─────────────────────────── named items ──────────────────────────────── */
 // Labels come from the canonical route registry (lib/nav/registry.ts) —
@@ -78,7 +77,6 @@ const ITEMS = {
   deliveryNotes:  { href: "/documents/delivery-notes",  label: sl("/documents/delivery-notes"), icon: deliveryIcon  },
   creditNotes:    { href: "/documents/credit-notes",    label: sl("/documents/credit-notes"),   icon: creditNoteIcon},
   refunds:        { href: "/documents/refunds",         label: sl("/documents/refunds"),        icon: refundIcon    },
-  cashierShifts:  { href: "/pos/shifts",                label: sl("/pos/shifts"),               icon: shiftsIcon    },
   expenses:       { href: "/finance/expenses",          label: sl("/finance/expenses"),         icon: expensesIcon  },
   taxRates:       { href: "/finance/tax-rates",         label: sl("/finance/tax-rates"),        icon: taxIcon       },
   recurring:      { href: "/finance/recurring",         label: sl("/finance/recurring"),        icon: recurringIcon },
@@ -122,9 +120,7 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
       case ITEMS.clients.href:        return can.viewClientInfo(perm);
       case ITEMS.reports.href:        return can.viewAccountsSummary(perm);
       case ITEMS.aiInsights.href:     return can.viewAccountsSummary(perm);
-      // Shifts page guard: ADMIN, OPS, FRONT_DESK only
       case ITEMS.pos.href:            return ["ADMIN","OPS","FRONT_DESK","MANAGER"].includes(role);
-      case ITEMS.cashierShifts.href:  return ["ADMIN","OPS","FRONT_DESK"].includes(role);
       case ITEMS.invoiceDocs.href:
       case ITEMS.receipts.href:
       case ITEMS.creditNotes.href:
@@ -153,7 +149,7 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
     { title: "Customers",  items: [ITEMS.clients, ITEMS.sales, ITEMS.complaints] },
     { title: "Documents",  items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.receipts, ITEMS.deliveryNotes, ITEMS.creditNotes, ITEMS.refunds] },
     { title: "Operations", items: [ITEMS.intake, ITEMS.inventory, ITEMS.field, ITEMS.payoutFollowups, ITEMS.board] },
-    { title: "Sales",      items: [ITEMS.pos, ITEMS.cashierShifts, ITEMS.targets] },
+    { title: "Sales",      items: [ITEMS.pos, ITEMS.targets] },
     { title: "Finance",    items: [ITEMS.expenses, ITEMS.recurring, ITEMS.taxRates] },
     { title: "Analytics",  items: [ITEMS.reports, ITEMS.aiInsights] },
   ];

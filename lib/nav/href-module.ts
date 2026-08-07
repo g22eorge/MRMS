@@ -32,7 +32,6 @@ export const HREF_MODULE: Record<string, string> = {
   "/documents/credit-notes": "INVOICING",
   "/documents/refunds": "INVOICING",
   "/pos": "POS",
-  "/pos/shifts": "POS",
   "/reports": "REPORTS",
   "/ai-insights": "REPORTS",
   "/sales": "SALES",
