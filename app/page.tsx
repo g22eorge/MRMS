@@ -312,6 +312,36 @@ function DuukaSaasLanding() {
           ))}
         </div>
       </section>
+
+      {/* ── Closing CTA — catches visitors who scrolled the whole page ── */}
+      <section className="mx-auto max-w-6xl px-4 pb-20">
+        <div
+          className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/25 p-8 text-center md:p-12"
+          style={{
+            background: "linear-gradient(135deg,#1f1b0e 0%,#141006 45%,#0c0c0c 100%)",
+            boxShadow: "0 0 0 1px rgba(212,175,55,0.12), 0 24px 60px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-96 -translate-x-1/2 rounded-full bg-[#D4AF37]/12 blur-[90px]" />
+          <div className="relative">
+            <h2 className="text-2xl font-black tracking-tight text-white md:text-4xl">
+              Ready to run your business this way?
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/55">
+              Start free in minutes — or talk to us about setup, migration, and training.
+            </p>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                Create Workspace
+              </Link>
+              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20SaaS.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition hover:border-[#D4AF37]/30 hover:text-white">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
+                Talk to Sales
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
