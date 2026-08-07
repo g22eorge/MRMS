@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
-import { ALL_MODULES } from "@/lib/module-access";
+import { ALL_MODULES, orgModulesTag } from "@/lib/module-access";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import type { OrgModule } from "@prisma/client";
@@ -23,5 +23,6 @@ export async function setOrgModulesAction(formData: FormData) {
     }),
   ]);
 
+  revalidateTag(orgModulesTag(orgId), "max");
   revalidatePath("/admin/orgs");
 }

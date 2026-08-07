@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { ANNOUNCEMENTS_TAG } from "@/lib/announcements";
 
 const LEVELS = ["INFO", "WARNING", "CRITICAL"];
 
@@ -39,6 +40,7 @@ export async function createAnnouncementAction(formData: FormData) {
     summary: `${level}: ${title}`,
   });
 
+  revalidateTag(ANNOUNCEMENTS_TAG, "max");
   revalidatePath("/platform/announcements");
 }
 
@@ -48,6 +50,7 @@ export async function toggleAnnouncementAction(formData: FormData) {
   const isActive = String(formData.get("isActive") ?? "") === "true";
   if (!id) return;
   await prisma.systemAnnouncement.update({ where: { id }, data: { isActive: !isActive } });
+  revalidateTag(ANNOUNCEMENTS_TAG, "max");
   revalidatePath("/platform/announcements");
 }
 
@@ -63,5 +66,6 @@ export async function deleteAnnouncementAction(formData: FormData) {
     action: "ANNOUNCEMENT_DELETED",
     summary: `Announcement ${id} deleted`,
   });
+  revalidateTag(ANNOUNCEMENTS_TAG, "max");
   revalidatePath("/platform/announcements");
 }

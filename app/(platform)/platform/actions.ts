@@ -1,7 +1,10 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
+
 import { prisma } from "@/lib/prisma";
 import { OrgPlan, OrgModule } from "@prisma/client";
+import { orgModulesTag } from "@/lib/module-access";
 import { hashPassword } from "better-auth/crypto";
 import { setOrgAtSenderId } from "@/lib/org-whatsapp-config";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
@@ -151,6 +154,7 @@ export async function toggleOrgModuleAction(formData: FormData) {
       });
     }
   } catch { /* table may not exist yet */ }
+  revalidateTag(orgModulesTag(orgId), "max");
   revalidatePlatformOrg(orgId);
 }
 
