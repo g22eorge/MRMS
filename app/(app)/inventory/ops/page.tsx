@@ -23,7 +23,7 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
         label: "Transfers",
         href: "/inventory/transfers",
         icon: "M5 12h14|M12 5l7 7-7 7",
-        color: "text-violet-500",
+        color: "text-[var(--accent)]",
         description: "Move stock between locations",
       },
       {

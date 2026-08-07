@@ -40,9 +40,9 @@ function statusAvatarClass(status: string): string {
   const map: Record<string, string> = {
     RECEIVED:          "bg-sky-400/15 text-sky-600",
     DIAGNOSING:        "bg-blue-500/15 text-blue-600",
-    REFERRED:          "bg-violet-500/15 text-violet-600",
+    REFERRED:          "bg-slate-500/15 text-slate-600",
     AWAITING_APPROVAL: "bg-amber-400/15 text-amber-600",
-    IN_REPAIR:         "bg-violet-500/15 text-violet-600",
+    IN_REPAIR:         "bg-emerald-500/15 text-emerald-600",
     READY_FOR_PICKUP:  "bg-[var(--accent)]/15 text-[var(--accent)]",
     COMPLETED:         "bg-emerald-500/15 text-emerald-600",
     CLOSED:            "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
@@ -88,7 +88,7 @@ type HighlightReason = Exclude<WorkflowReason, "NONE">;
 
 const workflowReasonConfig: Record<HighlightReason, { badge: string; label: string }> = {
   PARTS_PENDING:        { badge: "bg-amber-500/10 text-amber-700 border border-amber-400/30 dark:text-amber-400",   label: "Parts pending" },
-  SPECIALIST_ESCALATION:{ badge: "bg-violet-500/10 text-violet-700 border border-violet-400/30 dark:text-violet-400", label: "Escalated" },
+  SPECIALIST_ESCALATION:{ badge: "bg-slate-500/10 text-slate-600 border border-slate-400/30 dark:text-slate-400", label: "Escalated" },
   CLIENT_DECLINED:      { badge: "bg-red-500/10 text-red-700 border border-red-400/30 dark:text-red-400",           label: "Declined" },
   UNREPAIRABLE:         { badge: "bg-red-500/10 text-red-700 border border-red-400/30 dark:text-red-400",           label: "Unrepairable" },
   CUSTOMER_CANCELLED:   { badge: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",    label: "Cancelled" },

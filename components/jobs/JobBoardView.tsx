@@ -15,9 +15,9 @@ type BoardCol = {
 };
 
 const COLUMNS: BoardCol[] = [
-  { key: "RECEIVED",          label: "Received",          dot: "bg-blue-500",    strip: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400",    text: "text-blue-700 dark:text-blue-400" },
-  { key: "DIAGNOSING",        label: "Diagnosing",        dot: "bg-amber-500",   strip: "bg-amber-500",   badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400",   text: "text-amber-700 dark:text-amber-400" },
-  { key: "REFERRED",          label: "Referred",          dot: "bg-purple-500",  strip: "bg-purple-500",  badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400",  text: "text-purple-700 dark:text-purple-400" },
+  { key: "RECEIVED",          label: "Received",          dot: "bg-sky-500",     strip: "bg-sky-500",     badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400",       text: "text-sky-700 dark:text-sky-400" },
+  { key: "DIAGNOSING",        label: "Diagnosing",        dot: "bg-blue-500",    strip: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400",    text: "text-blue-700 dark:text-blue-400" },
+  { key: "REFERRED",          label: "Referred",          dot: "bg-slate-500",  strip: "bg-slate-500",  badge: "bg-slate-500/10 text-slate-700 dark:text-slate-400",  text: "text-slate-700 dark:text-slate-400" },
   { key: "AWAITING_APPROVAL", label: "Awaiting Approval", dot: "bg-amber-500",  strip: "bg-amber-500",  badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400",  text: "text-amber-700 dark:text-amber-400" },
   { key: "IN_REPAIR",         label: "In Repair",         dot: "bg-emerald-500", strip: "bg-emerald-500", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400", text: "text-emerald-700 dark:text-emerald-400" },
 ];
@@ -69,7 +69,7 @@ export function JobBoardView({
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4 [scrollbar-width:thin]">
-      {COLUMNS.map((col) => {
+      {COLUMNS.filter((col) => (columnMap.get(col.key)?.length ?? 0) > 0).map((col) => {
         const colJobs = columnMap.get(col.key) ?? [];
         return (
           <div key={col.key} className="flex w-64 shrink-0 flex-col xl:w-[17rem]">

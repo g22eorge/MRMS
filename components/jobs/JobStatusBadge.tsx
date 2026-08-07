@@ -11,7 +11,7 @@ type StatusConfig = {
 const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> = {
   RECEIVED: {
     dot: "bg-sky-400",
-    badge: "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+    badge: "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
     strip: "bg-sky-400",
     label: "Received",
     help: "Job received, waiting to be worked on.",
@@ -24,9 +24,9 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
     help: "Technician is currently diagnosing the issue.",
   },
   REFERRED: {
-    dot: "bg-violet-500",
-    badge: "border-violet-400/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
-    strip: "bg-violet-500",
+    dot: "bg-slate-400",
+    badge: "border-slate-400/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    strip: "bg-slate-400",
     label: "Referred",
     help: "Job has been referred for external handling.",
   },
@@ -38,9 +38,9 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
     help: "Waiting for client approval to proceed.",
   },
   IN_REPAIR: {
-    dot: "bg-violet-500",
+    dot: "bg-emerald-500",
     badge: "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    strip: "bg-violet-500",
+    strip: "bg-emerald-500",
     label: "In Repair",
     help: "Repair is actively in progress.",
   },

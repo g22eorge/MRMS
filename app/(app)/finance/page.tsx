@@ -109,7 +109,7 @@ export default async function FinancePage() {
   /* ── channel bars ─────────────────────────────────────────────────────── */
   const channels = [
     { label: "Repairs",     value: collectionsMtd.repairs,     color: "bg-sky-500"    },
-    { label: "Products",    value: collectionsMtd.products,    color: "bg-violet-500" },
+    { label: "Products",    value: collectionsMtd.products,    color: "bg-[var(--accent)]" },
     { label: "Corporate",   value: collectionsMtd.corporate,   color: "bg-amber-500"  },
     { label: "Unallocated", value: collectionsMtd.unallocated, color: "bg-slate-400"  },
   ].filter(c => c.value > 0);

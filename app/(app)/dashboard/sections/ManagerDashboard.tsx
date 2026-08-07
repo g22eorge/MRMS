@@ -151,7 +151,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
                     <p className="truncate text-xs font-semibold group-hover:text-[var(--accent)] transition-colors">{t.name}</p>
                     <p className="text-[12px] text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : t.role === "TECHNICIAN_INTERNAL" ? "Internal" : t.role}</p>
                   </div>
-                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-violet-500/15 text-violet-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
+                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-slate-500/15 text-slate-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
                 </Link>
               ))}
               {overdueWithDays.length > 0 && (

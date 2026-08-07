@@ -393,7 +393,7 @@ export default async function PayoutFollowupsPage({
   // Shell view: only the active section's list renders, so the four lists no
   // longer stack into one endless page that pushes everything off-screen.
   const sectionTabs = [
-    { key: "invoices", label: "Invoice Collections", count: invoiceTotal, allowed: canSeeInvoices, dot: "bg-violet-400" },
+    { key: "invoices", label: "Invoice Collections", count: invoiceTotal, allowed: canSeeInvoices, dot: "bg-[var(--accent)]" },
     { key: "repairs", label: "Client Payments", count: clientTotal, allowed: canSeeRepairs, dot: "bg-amber-400" },
     { key: "bills", label: "Supplier Bills", count: billTotal, allowed: canSeeBills, dot: "bg-red-400" },
     { key: "tech", label: "Tech Payouts", count: techTotal, allowed: canSeeRepairs, dot: "bg-sky-400" },
@@ -441,7 +441,7 @@ export default async function PayoutFollowupsPage({
             ...(canSeeInvoices ? [{
               label: "Invoice Receivables",
               value: formatMoneyCompact(invoiceReceivable, currency),
-              valueClass: "text-violet-500",
+              valueClass: "text-[var(--accent)]",
               sub: `${invoiceSummary._count.id} invoice${invoiceSummary._count.id !== 1 ? "s" : ""} outstanding`,
             }] : []),
             ...(canSeeBills ? [{
@@ -534,9 +534,9 @@ export default async function PayoutFollowupsPage({
       {activeTab === "invoices" && canSeeInvoices && (
         <section id="invoices" className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-400" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
             <p className="text-sm font-semibold text-[var(--ink)]">Invoice Collections — Outstanding</p>
-            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[12px] font-semibold text-violet-700 dark:bg-violet-950/40 dark:text-violet-400">
+            <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)] dark:bg-[var(--accent)]/15 dark:text-[var(--accent)]">
               {invoiceTotal}
             </span>
           </div>
@@ -556,7 +556,7 @@ export default async function PayoutFollowupsPage({
                   </div>
                   <p className="text-[13px] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
                   <div className="mt-1 flex items-center gap-3 text-[12px]">
-                    <span className="font-semibold text-violet-700 dark:text-violet-400">{formatMoneyCompact(balance, currency)} due</span>
+                    <span className="font-semibold text-[var(--accent)] dark:text-[var(--accent)]">{formatMoneyCompact(balance, currency)} due</span>
                     <span className="text-[var(--ink-muted)]">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "No due date"}</span>
                   </div>
                   {/* Inline payment form */}
@@ -596,7 +596,7 @@ export default async function PayoutFollowupsPage({
                 className: "whitespace-nowrap tabular-nums",
                 cell: (inv) => inv.paidAmount > 0 ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(inv.paidAmount, currency)}</span> : <span className="text-[var(--ink-muted)]">—</span>,
               },
-              { key: "balance", header: "Balance", className: "font-semibold text-violet-700 dark:text-violet-400 whitespace-nowrap tabular-nums", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
+              { key: "balance", header: "Balance", className: "font-semibold text-[var(--accent)] dark:text-[var(--accent)] whitespace-nowrap tabular-nums", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
               { key: "due", header: "Due Date", className: "text-[12px] text-[var(--ink-muted)]", cell: (inv) => inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—" },
               {
                 key: "overdue",

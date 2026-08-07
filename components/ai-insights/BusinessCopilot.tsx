@@ -149,8 +149,8 @@ export function BusinessCopilot() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/15">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-500" aria-hidden>
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-500/15">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden>
               <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
               <path d="M7.5 13.5c.83 0 1.5-.67 1.5-1.5S8.33 10.5 7.5 10.5 6 11.17 6 12s.67 1.5 1.5 1.5z"/>
               <path d="M16.5 13.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S15 11.17 15 12s.67 1.5 1.5 1.5z"/>
@@ -161,7 +161,7 @@ export function BusinessCopilot() {
             <p className="text-[12px] text-[var(--ink-muted)]">Live data · no client PII</p>
           </div>
         </div>
-        <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-0.5 text-[12px] font-semibold text-violet-600 dark:text-violet-400">
+        <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 dark:text-slate-400">
           Aggregate only
         </span>
       </div>

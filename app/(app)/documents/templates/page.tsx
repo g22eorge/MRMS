@@ -28,7 +28,7 @@ function planBadgeClass(plan: OrgPlan): string {
   if (plan === "STANDARD")   return "bg-blue-500/15 text-blue-400 border border-blue-500/20";
   if (plan === "GROWTH")     return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20";
   if (plan === "PREMIUM")    return "bg-amber-500/15 text-amber-400 border border-amber-500/20";
-  if (plan === "ENTERPRISE") return "bg-violet-500/15 text-violet-400 border border-violet-500/20";
+  if (plan === "ENTERPRISE") return "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/20";
   return "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
 }
 

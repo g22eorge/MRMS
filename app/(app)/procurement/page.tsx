@@ -195,7 +195,7 @@ export default async function ProcurementPage() {
                       <form action={convertPurchaseRequestToPoAction} className="inline-flex justify-end">
                         <input type="hidden" name="id" value={request.id} />
                         <input type="hidden" name="supplierId" value={request.supplierId} />
-                        <button type="submit" className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-violet-700">Convert</button>
+                        <button type="submit" className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-slate-700">Convert</button>
                       </form>
                     ) : (
                       <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">Convert</Button>

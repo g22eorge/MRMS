@@ -39,7 +39,7 @@ function typeIcon(type: string) {
       );
     case "ESTIMATE_SUBMITTED":
       return (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500/15 text-purple-400">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500/15 text-slate-400">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
           </svg>
@@ -64,7 +64,7 @@ function typeIcon(type: string) {
       );
     case "PAYOUT_GENERATED":
       return (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500/15 text-purple-400">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500/15 text-slate-400">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
           </svg>
@@ -123,7 +123,7 @@ function typeIcon(type: string) {
       );
     case "FIELD_VISIT_COMPLETED":
       return (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-400">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-400">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
           </svg>

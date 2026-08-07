@@ -100,7 +100,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
             Repairs {compact(p.cashTodayValue, p.currency)}
           </span>
           {p.salesTodayValue > 0 && (
-            <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[12px] font-bold text-violet-400">
+            <span className="rounded-full bg-[var(--accent)]/10 px-2.5 py-0.5 text-[12px] font-bold text-[var(--accent)]">
               Sales {compact(p.salesTodayValue, p.currency)}
             </span>
           )}

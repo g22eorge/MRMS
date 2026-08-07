@@ -74,7 +74,7 @@ export function SalesPerformanceGrid({
                   </div>
                   <div className="mt-1.5 flex items-center gap-3 text-[12px] text-[var(--ink-muted)]">
                     <span className="text-sky-600">{formatMoneyCompact(s.repairRev, currency)} repair</span>
-                    <span className="text-violet-600">{formatMoneyCompact(s.posRev, currency)} POS</span>
+                    <span className="text-[var(--accent)]">{formatMoneyCompact(s.posRev, currency)} POS</span>
                     {s.target > 0 && (
                       <>
                         <span>·</span>
@@ -108,7 +108,7 @@ export function SalesPerformanceGrid({
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue by Channel MTD</p>
           {[
             { label: "Repair Jobs",       amount: repairRevenueMtd,                    color: "bg-sky-500",    textColor: "text-sky-600",    count: `${wonMtd} completed` },
-            { label: "POS Sales",         amount: posRevenueMtd,                       color: "bg-violet-500", textColor: "text-violet-600", count: `${salesCount} sales` },
+            { label: "POS Sales",         amount: posRevenueMtd,                       color: "bg-[var(--accent)]", textColor: "text-[var(--accent)]", count: `${salesCount} sales` },
             { label: "Invoice Payments",  amount: invoiceRevenueMtd,                   color: "bg-emerald-500",textColor: "text-emerald-600",count: `${invoicesCount} invoices` },
           ].map(ch => {
             const pct = totalRevenueMtd > 0 ? Math.round((ch.amount / totalRevenueMtd) * 100) : 0;

@@ -45,8 +45,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   RECEIVED:           "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",
   DIAGNOSING:         "border border-blue-400/30   bg-blue-500/10   text-blue-700   dark:text-blue-400",
-  REFERRED:           "border border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
-  IN_EXTERNAL_REPAIR: "border border-purple-400/30 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  REFERRED:           "border border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-400",
+  IN_EXTERNAL_REPAIR: "border border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-400",
   AWAITING_APPROVAL:  "border border-amber-400/30  bg-amber-500/10  text-amber-700  dark:text-amber-400",
   AWAITING_RESPONSE:  "border border-amber-400/30  bg-amber-500/10  text-amber-700  dark:text-amber-400",
   IN_REPAIR:          "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",

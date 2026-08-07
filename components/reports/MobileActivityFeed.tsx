@@ -16,8 +16,8 @@ const ACTION_COLORS: Record<string, { bg: string; icon: string }> = {
   REPAIR:    { bg: "bg-blue-500/15",    icon: "text-blue-500"    },
   STATUS:    { bg: "bg-blue-500/15",    icon: "text-blue-500"    },
   CREATED:   { bg: "bg-blue-500/15",    icon: "text-blue-500"    },
-  USER:      { bg: "bg-purple-500/15",  icon: "text-purple-500"  },
-  SYSTEM:    { bg: "bg-purple-500/15",  icon: "text-purple-500"  },
+  USER:      { bg: "bg-slate-500/15",  icon: "text-slate-500"  },
+  SYSTEM:    { bg: "bg-slate-500/15",  icon: "text-slate-500"  },
 };
 
 function getColors(action: string) {

@@ -44,7 +44,7 @@ export function BulkActionBar() {
         <button
           type="button"
           onClick={handleBulkConvert}
-          className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-500/20"
+          className="rounded-lg border border-slate-500/40 bg-slate-500/10 px-2 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-500/20"
         >
           Convert to Invoice
         </button>

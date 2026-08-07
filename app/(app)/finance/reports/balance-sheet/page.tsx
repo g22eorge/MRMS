@@ -273,12 +273,12 @@ export default async function BalanceSheetPage({
 
               {/* Equity (including retained earnings) */}
               <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-                <div className="bg-purple-500/5 px-4 py-2.5">
+                <div className="bg-[var(--accent)]/5 px-4 py-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--accent)] dark:text-[var(--accent)]">
                       Equity
                     </p>
-                    <span className="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-[13px] font-bold tabular-nums text-purple-700 dark:text-purple-300">
+                    <span className="rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[13px] font-bold tabular-nums text-[var(--accent)] dark:text-[var(--accent)]">
                       {formatMoneyCompact(totalEquityAndRetained, currency)}
                     </span>
                   </div>
@@ -303,7 +303,7 @@ export default async function BalanceSheetPage({
                     {formatMoney(retainedEarnings, currency)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between border-t border-[var(--line)] bg-purple-500/10 px-4 py-2.5 font-bold text-purple-700 dark:text-purple-300">
+                <div className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--accent)]/10 px-4 py-2.5 font-bold text-[var(--accent)] dark:text-[var(--accent)]">
                   <span className="text-sm">Total Equity</span>
                   <span className="text-sm tabular-nums">{formatMoney(totalEquityAndRetained, currency)}</span>
                 </div>
