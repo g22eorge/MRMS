@@ -251,11 +251,8 @@ function DuukaSaasLanding() {
             <div key={mod.group} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b p-5 ${mod.border} ${mod.color}`}>
               <div className={`mb-3 ${mod.accent}`}>{mod.icon}</div>
               <p className="text-sm font-bold text-white">{mod.group}</p>
-              <ul className="mt-2 space-y-1">
-                {mod.items.map((item) => (
-                  <li key={item} className="text-[13px] leading-snug text-white/45">{item}</li>
-                ))}
-              </ul>
+              <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
+              <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${mod.accent} opacity-70`}>{mod.items.length} tools</p>
             </div>
           ))}
         </div>
