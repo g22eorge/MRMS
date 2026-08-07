@@ -13,6 +13,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import Link from "next/link";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { sanitizeText } from "@/lib/sanitize";
 import { addQuotationItem, updateQuotationItem, removeQuotationItem } from "@/app/(app)/sales/actions";
 import { QuotationStages } from "@/components/documents/QuotationStages";
@@ -147,7 +148,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
   const primary = canConvert ? (
     <form action={convertToInvoiceAction} className="inline">
-      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">Convert to invoice</button>
+      <SubmitButton size="sm" pendingLabel="Converting…" className="font-bold">Convert to invoice</SubmitButton>
     </form>
   ) : null;
 

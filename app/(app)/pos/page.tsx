@@ -15,6 +15,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -308,7 +309,7 @@ export default async function PosPage({
                 <p className="text-[13px] text-[var(--ink-muted)]">{segCountAll} total · amounts in {currency}</p>
               </div>
               <form action={createSaleAction}>
-                <Button type="submit" size="md" className="rounded-xl font-bold">+ New Sale</Button>
+                <SubmitButton size="md" pendingLabel="Creating…" className="rounded-xl font-bold">+ New Sale</SubmitButton>
               </form>
             </div>
 
@@ -436,7 +437,7 @@ export default async function PosPage({
           ))}
         </div>
         <form action={createSaleAction} className="shrink-0">
-          <Button type="submit" size="sm" className="px-4 font-bold">+ New Sale</Button>
+          <SubmitButton size="sm" pendingLabel="Creating…" className="px-4 font-bold">+ New Sale</SubmitButton>
         </form>
       </div>
 

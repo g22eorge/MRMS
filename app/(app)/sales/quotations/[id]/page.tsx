@@ -6,6 +6,7 @@ import { Prisma, QuotationStatus } from "@prisma/client";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { QuotationStages } from "@/components/documents/QuotationStages";
@@ -353,14 +354,14 @@ export default async function QuotationDetailPage({
           <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
           {/* Contextual next step — the one action that moves this quote forward. */}
           {canSend ? (
-            <form action={sendAction}><Button type="submit" size="sm" className="font-bold">Send to client →</Button></form>
+            <form action={sendAction}><SubmitButton size="sm" pendingLabel="Sending…" className="font-bold">Send to client →</SubmitButton></form>
           ) : canAccept ? (
             <div className="flex items-center gap-2">
-              <form action={acceptAction}><Button type="submit" size="sm" className="font-bold">Mark accepted →</Button></form>
-              {canReject ? <form action={rejectAction}><Button type="submit" variant="ghost" size="sm">Reject</Button></form> : null}
+              <form action={acceptAction}><SubmitButton size="sm" pendingLabel="Saving…" className="font-bold">Mark accepted →</SubmitButton></form>
+              {canReject ? <form action={rejectAction}><SubmitButton variant="ghost" size="sm" pendingLabel="…">Reject</SubmitButton></form> : null}
             </div>
           ) : canConvert ? (
-            <form action={convertToInvoiceAction}><Button type="submit" size="sm" className="font-bold">Convert to invoice →</Button></form>
+            <form action={convertToInvoiceAction}><SubmitButton size="sm" pendingLabel="Converting…" className="font-bold">Convert to invoice →</SubmitButton></form>
           ) : quotation.convertedToInvoiceId ? (
             <Button href="/documents/invoices" variant="secondary" size="sm">View invoice →</Button>
           ) : null}

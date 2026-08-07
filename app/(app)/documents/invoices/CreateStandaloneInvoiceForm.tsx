@@ -10,6 +10,7 @@ import {
   useCustomerPicker,
 } from "@/components/forms";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
 
 type PartOption = {
@@ -306,7 +307,7 @@ export function CreateStandaloneInvoiceForm({
                 total={totalAmount}
               />
               <div className="space-y-2">
-                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2.5 text-sm font-bold">{submitLabel}</button>
+                <SubmitButton fullWidth pendingLabel="Saving…" className="font-bold">{submitLabel}</SubmitButton>
               </div>
             </div>
           </div>

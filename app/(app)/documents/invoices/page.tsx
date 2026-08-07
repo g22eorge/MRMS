@@ -200,6 +200,15 @@ export default async function InvoicesPage({
         }
       }
       if (!resolvedClientId) throw new Error("client-not-found");
+      // Duplicate-submit guard: if an identical invoice for this client + total was
+      // created seconds ago (a double-click on a slow server), reuse it instead of
+      // creating another. Writes are serialised, so the 2nd submit sees the 1st.
+      const recentDup = await tx.invoice.findFirst({
+        where: { orgId, clientId: resolvedClientId, totalAmount, createdAt: { gte: new Date(Date.now() - 10_000) } },
+        select: { id: true, invoiceNumber: true },
+        orderBy: { createdAt: "desc" },
+      });
+      if (recentDup) return { id: recentDup.id, invoiceNumber: recentDup.invoiceNumber, deduped: true };
       const invoiceNumber = await nextAvailableInvoiceNumber(tx, orgId);
       const created = await tx.invoice.create({
         data: {
@@ -250,16 +259,18 @@ export default async function InvoicesPage({
         });
       }
 
-      return created;
+      return { id: created.id, invoiceNumber: created.invoiceNumber, deduped: false };
     });
-    await writeSystemAuditEvent({
-      orgId,
-      actorUserId: user.id,
-      entityType: "Invoice",
-      entityId: invoice.id,
-      action: "INVOICE_CREATED",
-      summary: `${invoice.invoiceNumber} created: ${invoiceSubject}${taxAmount > 0 ? ` with ${taxLabel} ${taxRate}%` : ""}`,
-    });
+    if (!invoice.deduped) {
+      await writeSystemAuditEvent({
+        orgId,
+        actorUserId: user.id,
+        entityType: "Invoice",
+        entityId: invoice.id,
+        action: "INVOICE_CREATED",
+        summary: `${invoice.invoiceNumber} created: ${invoiceSubject}${taxAmount > 0 ? ` with ${taxLabel} ${taxRate}%` : ""}`,
+      });
+    }
     revalidatePath("/documents/invoices");
     redirect(`/documents/invoices/${invoice.id}?pay=1`);
   }
