@@ -306,7 +306,9 @@ pre,
   --dc-panel-2: #f1eee6;
   --dc-ink: #1a1815;
   --dc-ink-2: #57534b;
-  --dc-ink-3: #938d81;
+  /* Darkened from #938d81 (3.15:1) to meet WCAG AA 4.5:1 on the #fbfaf6 panel —
+     fixes the axe color-contrast violation on the light-mode sidebar labels. */
+  --dc-ink-3: #726b5e;
   --dc-line: #e7e2d8;
   --dc-line-soft: #efebe3;
   --dc-accent: #a87f16;

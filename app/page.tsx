@@ -374,6 +374,21 @@ export default async function Page() {
                 We&apos;ll review it and get back to you within a few hours with a quote and timeline.
               </p>
 
+              {/* Proof strip — punchy, from the shop's real guarantees.
+                  Swap in a real Google rating / repair count when available. */}
+              <div className="mt-6 grid grid-cols-3 gap-2">
+                {[
+                  { stat: "Free", sub: "written quote first" },
+                  { stat: "~ hrs", sub: "first response" },
+                  { stat: "30-day", sub: "repair warranty" },
+                ].map((s) => (
+                  <div key={s.sub} className="rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2.5 text-center">
+                    <p className="text-base font-extrabold text-[#E8C84A]">{s.stat}</p>
+                    <p className="mt-0.5 text-[11px] leading-tight text-white/45">{s.sub}</p>
+                  </div>
+                ))}
+              </div>
+
               {/* Trust badges */}
               <div className="mt-6 space-y-2.5">
                 {[
