@@ -12,9 +12,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get("host")?.toLowerCase() ?? "";
   if (host.startsWith("app.eagleinfosolutions.com")) {
     return {
-      title: "Duuka ProMax — AI-Powered Business Management SaaS",
+      title: "Duuka ProMax — Business Management Software",
       description:
-        "Duuka ProMax is an AI-powered business management platform for any business — sales, POS, inventory, finance, documents, CRM, service jobs, and communications in one place.",
+        "Duuka ProMax is a complete business management platform for any business — sales, POS, inventory, finance, documents, CRM, service jobs, and communications in one place.",
       alternates: { canonical: "/" },
     };
   }
@@ -28,14 +28,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // ── Module definitions ─────────────────────────────────────────────────────────
+// One neutral card style across the board — the palette is intentionally
+// black/white with a single gold accent, so nothing reads as a rainbow demo.
 
 const MODULES = [
   {
     group: "Service & Repairs",
     blurb: "Every job tracked from intake to handover.",
-    color: "from-blue-500/20 to-blue-500/5",
-    border: "border-blue-500/20",
-    accent: "text-blue-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -46,9 +45,6 @@ const MODULES = [
   {
     group: "Stock & Supply",
     blurb: "Know what you hold and what to reorder.",
-    color: "from-amber-500/20 to-amber-500/5",
-    border: "border-amber-500/20",
-    accent: "text-amber-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
@@ -60,9 +56,6 @@ const MODULES = [
   {
     group: "Customers & Sales",
     blurb: "Sell, chase leads, and keep clients close.",
-    color: "from-emerald-500/20 to-emerald-500/5",
-    border: "border-emerald-500/20",
-    accent: "text-emerald-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -75,9 +68,6 @@ const MODULES = [
   {
     group: "Documents",
     blurb: "Branded quotes, invoices, and receipts.",
-    color: "from-purple-500/20 to-purple-500/5",
-    border: "border-purple-500/20",
-    accent: "text-purple-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
@@ -89,9 +79,6 @@ const MODULES = [
   {
     group: "Finance",
     blurb: "See profit, cash, and who owes you.",
-    color: "from-[#D4AF37]/25 to-[#D4AF37]/5",
-    border: "border-[#D4AF37]/25",
-    accent: "text-[#D4AF37]",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -102,9 +89,6 @@ const MODULES = [
   {
     group: "Reports & Analytics",
     blurb: "Turn daily activity into decisions.",
-    color: "from-sky-500/20 to-sky-500/5",
-    border: "border-sky-500/20",
-    accent: "text-sky-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M3 3v18h18" />
@@ -116,9 +100,6 @@ const MODULES = [
   {
     group: "Communications",
     blurb: "Reach clients on WhatsApp automatically.",
-    color: "from-emerald-500/20 to-emerald-500/5",
-    border: "border-emerald-500/20",
-    accent: "text-emerald-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
@@ -127,26 +108,8 @@ const MODULES = [
     items: ["WhatsApp Notifications", "Message Templates", "Meta Business Integration", "Delivery Outbox", "Status Alerts"],
   },
   {
-    group: "AI Assistance",
-    blurb: "Ask the system anything; get flagged on risks.",
-    color: "from-fuchsia-500/20 to-fuchsia-500/5",
-    border: "border-fuchsia-500/20",
-    accent: "text-fuchsia-300",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
-        <path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z" />
-        <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z" />
-        <path d="M5 15l.6 1.6L7 17l-1.4.4L5 19l-.6-1.6L3 17l1.4-.4L5 15Z" />
-      </svg>
-    ),
-    items: ["Gemini Flash AI Guide", "Business Insights", "Management Copilot", "Risk & Action Suggestions", "System Help Assistant"],
-  },
-  {
     group: "Security & Admin",
     blurb: "Right access per role, fully audited.",
-    color: "from-red-500/20 to-red-500/5",
-    border: "border-red-500/20",
-    accent: "text-red-400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
@@ -157,21 +120,193 @@ const MODULES = [
 ];
 
 const STATS = [
-  { value: "9+", label: "Modules" },
+  { value: "8", label: "Modules" },
   { value: "9", label: "User Roles" },
   { value: "50+", label: "Features" },
-  { value: "AI", label: "Powered" },
+  { value: "Cloud", label: "Hosted" },
+];
+
+// ── Pricing — mirrors the in-app billing plans (lib/pesapal, lib/plan-limits) ──
+// Display names use the branded Duuka ladder; internal billing keys stay
+// STARTER/STANDARD/GROWTH/PREMIUM/ENTERPRISE. Keep amounts in sync with
+// PLAN_PRICES / PLAN_LIMITS if billing changes.
+const PRICING: Array<{
+  name: string;
+  price: string | null;
+  tagline: string;
+  inherits?: string;
+  features: string[];
+  popular?: boolean;
+  cta: string;
+  href: string;
+  external?: boolean;
+}> = [
+  {
+    name: "Duuka",
+    price: null,
+    tagline: "Everything to get started",
+    cta: "Start free",
+    href: "/register",
+    features: ["2 team members", "20 jobs / month", "20 inventory items", "1 branch"],
+  },
+  {
+    name: "Duuka Plus",
+    price: "35,000",
+    tagline: "For a growing shop",
+    inherits: "Duuka",
+    cta: "Get started",
+    href: "/register",
+    features: ["5 team members", "100 jobs / month", "100 inventory items", "Team invite links"],
+  },
+  {
+    name: "Duuka Pro",
+    price: "75,000",
+    tagline: "Best for most teams",
+    inherits: "Duuka Plus",
+    popular: true,
+    cta: "Get started",
+    href: "/register",
+    features: ["15 team members", "500 jobs / month", "3 branches", "Custom branding"],
+  },
+  {
+    name: "Duuka Max",
+    price: "120,000",
+    tagline: "For busy operations",
+    inherits: "Duuka Pro",
+    cta: "Get started",
+    href: "/register",
+    features: ["30 team members", "2,000 jobs / month", "1,000 inventory items", "8 branches"],
+  },
+  {
+    name: "Duuka ProMax",
+    price: "200,000",
+    tagline: "Unlimited scale",
+    inherits: "Duuka Max",
+    cta: "Talk to sales",
+    href: "https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20the%20Duuka%20ProMax%20plan.",
+    external: true,
+    features: ["Unlimited team & jobs", "Unlimited inventory", "Unlimited branches", "Priority support"],
+  },
 ];
 
 // WhatsApp SVG path shared across multiple links
 const WA_PATH = "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z";
 
+// Small check glyph for pricing feature lists
+function Check() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D4AF37]/70" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// ── Shared pricing block — used on both the SaaS landing and the Eagle page ──
+function PricingPlans() {
+  return (
+    <div>
+      <div className="mb-9 max-w-2xl">
+        <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Pricing</p>
+        <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">One system. A plan for every size.</h2>
+        <p className="mt-3 text-sm leading-6 text-white/48">
+          Start on <span className="font-semibold text-white/75">Duuka</span> free — no card needed. Move up only when you
+          outgrow it. Amounts in UGX per month.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:items-stretch">
+        {PRICING.map((p) => (
+          <div
+            key={p.name}
+            className={`group relative flex flex-col rounded-2xl border p-5 transition duration-200 ${
+              p.popular
+                ? "border-[#D4AF37]/45 bg-gradient-to-b from-[#D4AF37]/[0.11] to-[#D4AF37]/[0.02] shadow-[0_24px_60px_-24px_rgba(212,175,55,0.55)] lg:z-10 lg:scale-[1.04]"
+                : "border-white/10 bg-white/[0.02] hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.04]"
+            }`}
+          >
+            {p.popular && (
+              <span
+                className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black"
+                style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
+              >
+                Most popular
+              </span>
+            )}
+
+            <p className={`text-[13px] font-bold uppercase tracking-wide ${p.popular ? "text-[#E8C84A]" : "text-white/75"}`}>
+              {p.name}
+            </p>
+            <p className="mt-1 text-[12px] leading-snug text-white/40">{p.tagline}</p>
+
+            <div className="mt-4 flex items-baseline gap-1">
+              {p.price === null ? (
+                <span className="text-[28px] font-black tracking-tight text-white">Free</span>
+              ) : (
+                <>
+                  <span className="text-[13px] font-medium text-white/45">UGX</span>
+                  <span className="text-[28px] font-black tabular-nums tracking-tight text-white">{p.price}</span>
+                  <span className="text-[12px] text-white/40">/mo</span>
+                </>
+              )}
+            </div>
+
+            <div className="my-4 h-px bg-white/8" />
+
+            {p.inherits && (
+              <p className="mb-2 text-[12px] leading-snug text-white/45">
+                Everything in <span className="font-semibold text-white/70">{p.inherits}</span>, plus:
+              </p>
+            )}
+            <ul className="space-y-2">
+              {p.features.map((f) => (
+                <li key={f} className="flex gap-2 text-[12px] leading-snug text-white/65">
+                  <Check />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-auto pt-6">
+              {p.external ? (
+                <a
+                  href={p.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-[13px] font-semibold text-white/75 transition hover:border-[#D4AF37]/40 hover:text-white"
+                >
+                  {p.cta}
+                </a>
+              ) : (
+                <Link
+                  href={p.href}
+                  className={`block rounded-xl px-4 py-2.5 text-center text-[13px] font-bold transition ${
+                    p.popular
+                      ? "text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] hover:opacity-90"
+                      : "border border-white/15 bg-white/5 text-white/75 hover:border-[#D4AF37]/40 hover:text-white"
+                  }`}
+                  style={p.popular ? { background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" } : undefined}
+                >
+                  {p.cta}
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-6 text-[12px] text-white/35">
+        Every plan includes the core system. Higher plans raise your limits and unlock extras like more branches and custom
+        branding. Cancel anytime.
+      </p>
+    </div>
+  );
+}
+
 function DuukaSaasLanding() {
   return (
     <main className="theme-blackgold relative min-h-screen overflow-x-hidden bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-[#D4AF37]/10 blur-[150px]" />
-        <div className="absolute right-0 top-1/3 h-[460px] w-[460px] rounded-full bg-fuchsia-500/8 blur-[120px]" />
+        <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-[#D4AF37]/8 blur-[150px]" />
       </div>
 
       <nav className="sticky top-0 z-40 border-b border-white/6 bg-[#050505]/90 px-4 py-3 backdrop-blur-md">
@@ -194,18 +329,18 @@ function DuukaSaasLanding() {
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Business management, now with AI</span>
+            <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">One system for your whole business</span>
           </div>
           <h1 className="max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
-            Run everything from one
-            <span className="block bg-gradient-to-r from-[#E8C84A] via-[#D4AF37] to-fuchsia-300 bg-clip-text text-transparent">AI-powered workspace.</span>
+            Run everything from
+            <span className="block bg-gradient-to-r from-[#E8C84A] to-[#C9A020] bg-clip-text text-transparent">one workspace.</span>
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-7 text-white/60">
-            Built-in AI watches your numbers and flags what needs you.
+            Sell, stock, invoice, and get paid — everything your business does, in one place.
           </p>
           {/* Scannable chips instead of a wall of text — skim in 2 seconds. */}
           <div className="mt-5 flex flex-wrap gap-2">
-            {["POS", "Inventory", "Repairs", "CRM", "Invoicing", "Finance", "Comms", "AI insights"].map((c) => (
+            {["POS", "Inventory", "Repairs", "CRM", "Invoicing", "Finance", "Comms"].map((c) => (
               <span key={c} className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[13px] font-medium text-white/65">{c}</span>
             ))}
           </div>
@@ -213,7 +348,7 @@ function DuukaSaasLanding() {
             <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
               Create Workspace
             </Link>
-            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20SaaS.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-[#D4AF37]/30 hover:text-white">
+            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-[#D4AF37]/30 hover:text-white">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
               Talk to Sales
             </a>
@@ -226,7 +361,7 @@ function DuukaSaasLanding() {
         {/* Product mock — a live-looking ops dashboard so visitors see the system,
             not another paragraph. */}
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-2xl sm:p-4">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#D4AF37]/15 blur-[70px]" />
+          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#D4AF37]/12 blur-[70px]" />
           <div className="relative rounded-2xl border border-white/8 bg-[#0b0b0b] p-4">
 
             {/* Window chrome */}
@@ -243,9 +378,9 @@ function DuukaSaasLanding() {
             {/* KPI tiles */}
             <div className="mt-3 grid grid-cols-3 gap-2">
               {[
-                { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-emerald-400" },
-                { v: "18", l: "Open orders", d: "3 due today", tone: "text-amber-400" },
-                { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/40" },
+                { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-[#E8C84A]" },
+                { v: "18", l: "Open orders", d: "3 due today", tone: "text-white/45" },
+                { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/45" },
               ].map((k) => (
                 <div key={k.l} className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
                   <p className="text-[15px] font-extrabold text-white">{k.v}</p>
@@ -279,9 +414,9 @@ function DuukaSaasLanding() {
               <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Needs attention</p>
               <div className="space-y-1.5">
                 {[
-                  { dot: "bg-red-400", t: "Invoice #INV-000482 overdue", s: "2 days" },
-                  { dot: "bg-amber-400", t: "5 items below reorder level", s: "restock" },
-                  { dot: "bg-fuchsia-300", t: "AI: 7 invoices ready to chase", s: "UGX 1.1M" },
+                  { dot: "bg-red-400/70", t: "Invoice #INV-000482 overdue", s: "2 days" },
+                  { dot: "bg-white/30", t: "5 items below reorder level", s: "restock" },
+                  { dot: "bg-[#E8C84A]", t: "7 invoices ready to chase", s: "UGX 1.1M" },
                 ].map((r) => (
                   <div key={r.t} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2.5 py-1.5">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
@@ -295,22 +430,131 @@ function DuukaSaasLanding() {
         </div>
       </section>
 
+      {/* ── Trust / reliability band — honest signals, no invented metrics ── */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-4">
+            {[
+              { v: "99.9%", l: "Uptime target", d: "Always-on cloud hosting" },
+              { v: "Encrypted", l: "Data & connections", d: "Private by default" },
+              { v: "Backups", l: "Automatic", d: "Your work stays safe" },
+              { v: "Audit trail", l: "Every action logged", d: "9 role-based access levels" },
+            ].map((t) => (
+              <div key={t.l} className="text-center sm:text-left">
+                <p className="text-xl font-black tracking-tight text-[#E8C84A] sm:text-2xl">{t.v}</p>
+                <p className="mt-1 text-[13px] font-semibold text-white/80">{t.l}</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-white/40">{t.d}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-[11px] leading-snug text-white/30">
+            Runs on managed cloud infrastructure with automatic backups and encrypted connections. Uptime shown is our
+            target service availability.
+          </p>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="mb-8 max-w-2xl">
           <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Product Suite</p>
           <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Everything your business needs to operate daily</h2>
-          <p className="mt-3 text-sm leading-6 text-white/48">Start with the modules you need, then expand into full operations, finance, reporting, communications, and AI decision support.</p>
+          <p className="mt-3 text-sm leading-6 text-white/48">Start with the modules you need, then expand into full operations, finance, reporting, and communications.</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((mod) => (
-            <div key={mod.group} className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b p-5 ${mod.border} ${mod.color}`}>
-              <div className={`mb-3 ${mod.accent}`}>{mod.icon}</div>
+            <div key={mod.group} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-white/[0.04]">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
               <p className="text-sm font-bold text-white">{mod.group}</p>
               <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
-              <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${mod.accent} opacity-70`}>{mod.items.length} tools</p>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-white/35">{mod.items.length} tools</p>
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Mobile app ── */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+          {/* Phone mock */}
+          <div className="order-2 flex justify-center lg:order-1">
+            <div className="relative w-[236px]">
+              <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[#D4AF37]/10 blur-[60px]" />
+              <div className="relative rounded-[2.3rem] border border-white/12 bg-[#0b0b0b] p-2.5 shadow-2xl">
+                <div className="overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0d0d0d]">
+                  {/* status row */}
+                  <div className="flex items-center justify-between px-4 pb-2 pt-3">
+                    <span className="text-[10px] font-medium text-white/45">9:41</span>
+                    <span className="h-1.5 w-14 rounded-full bg-white/8" />
+                    <span className="text-[10px] font-medium text-white/45">Duuka</span>
+                  </div>
+                  <div className="px-3 pb-4">
+                    <div className="flex items-center justify-between border-b border-white/8 pb-2">
+                      <p className="text-[12px] font-bold text-white">Dashboard</p>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-300">
+                        <span className="h-1 w-1 rounded-full bg-emerald-400" /> Live
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2">
+                        <p className="text-[13px] font-extrabold text-white">UGX 4.2M</p>
+                        <p className="mt-0.5 text-[8px] text-white/40">Revenue · mo</p>
+                      </div>
+                      <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2">
+                        <p className="text-[13px] font-extrabold text-[#E8C84A]">▲ 12%</p>
+                        <p className="mt-0.5 text-[8px] text-white/40">vs last month</p>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 rounded-lg border border-white/8 bg-white/[0.02] p-2">
+                      <p className="mb-1 text-[8px] font-semibold text-white/45">Last 7 days</p>
+                      <svg viewBox="0 0 200 40" className="w-full" role="img" aria-label="Sales trend">
+                        {[14, 20, 12, 26, 22, 30, 36].map((h, i) => (
+                          <rect key={i} x={4 + i * 28} y={40 - h} width="16" height={h} rx="2" fill="#E8C84A" opacity={i === 6 ? 1 : 0.8} />
+                        ))}
+                      </svg>
+                    </div>
+                    <div className="mt-2 rounded-lg py-1.5 text-center text-[10px] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                      + New sale
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Copy */}
+          <div className="order-1 lg:order-2">
+            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Mobile</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Run your business from your pocket</h2>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
+              Works on any Android or iOS device — sell, invoice, and check your numbers on the go. Everything syncs in
+              real time, so the shop and the field always see the same figures.
+            </p>
+            <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+              {[
+                "Works on any Android or iOS device",
+                "Record a sale in seconds",
+                "Create invoices & receipts on the go",
+                "Real-time sync — no exports",
+              ].map((f) => (
+                <li key={f} className="flex gap-2 text-[13px] leading-snug text-white/65">
+                  <Check />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                Start free
+              </Link>
+              <span className="text-[12px] text-white/40">Install straight from your phone&apos;s browser — no download needed.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <PricingPlans />
       </section>
 
       {/* ── Closing CTA — catches visitors who scrolled the whole page ── */}
@@ -334,7 +578,7 @@ function DuukaSaasLanding() {
               <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
                 Create Workspace
               </Link>
-              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20SaaS.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition hover:border-[#D4AF37]/30 hover:text-white">
+              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition hover:border-[#D4AF37]/30 hover:text-white">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
                 Talk to Sales
               </a>
@@ -360,7 +604,6 @@ export default async function Page() {
       {/* ── Ambient background ── */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute left-1/4 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-[#D4AF37]/8 blur-[140px]" />
-        <div className="absolute right-0 top-1/3 h-[400px] w-[400px] rounded-full bg-blue-500/6 blur-[120px]" />
       </div>
 
       {/* ── Nav ── */}
@@ -631,7 +874,7 @@ export default async function Page() {
             Manage your entire business like a pro
           </h2>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-white/55">
-            The complete system that runs Eagle Info Solutions — with built-in AI guidance. Everything below, in one place:
+            The complete system that runs Eagle Info Solutions. Everything below, in one place:
           </p>
 
           {/* Module grid */}
@@ -639,14 +882,19 @@ export default async function Page() {
             {MODULES.map((mod) => (
               <div
                 key={mod.group}
-                className={`relative overflow-hidden rounded-2xl border bg-gradient-to-b p-5 ${mod.border} ${mod.color}`}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-white/[0.04]"
               >
-                <div className={`mb-3 ${mod.accent}`}>{mod.icon}</div>
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
                 <p className="text-sm font-bold text-white">{mod.group}</p>
                 <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
-                <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${mod.accent} opacity-70`}>{mod.items.length} tools</p>
+                <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-white/35">{mod.items.length} tools</p>
               </div>
             ))}
+          </div>
+
+          {/* ── Pricing ── */}
+          <div className="mt-14">
+            <PricingPlans />
           </div>
 
           {/* ── Commercial CTA ── */}

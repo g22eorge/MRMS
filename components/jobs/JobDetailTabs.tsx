@@ -1038,11 +1038,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--ink-muted)]">{job.issueDescription}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-[var(--ink-muted)]">
               {role !== "TECHNICIAN_EXTERNAL" && job.client?.fullName ? (
-                <span>👤 <strong className="text-[var(--ink)]">{job.client.fullName}</strong></span>
+                <span className="inline-flex items-center gap-1">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <strong className="text-[var(--ink)]">{job.client.fullName}</strong>
+                </span>
               ) : null}
-              <span>⚡ <strong className="text-[var(--ink)]">{
-                assignedLabel === "No technician assigned yet." ? "Unassigned" : assignedLabel
-              }</strong></span>
+              <span className="inline-flex items-center gap-1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <strong className="text-[var(--ink)]">{
+                  assignedLabel === "No technician assigned yet." ? "Unassigned" : assignedLabel
+                }</strong>
+              </span>
             </div>
           </div>
           {role !== "TECHNICIAN_EXTERNAL" ? (
@@ -1192,11 +1198,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         {/* Device */}
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-xl">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-[var(--ink-muted)]">
               {job.photos?.[0]?.id ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={`/api/photos/${job.photos[0].id}`} alt="Device" className="h-full w-full object-cover" />
-              ) : "📱"}
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              )}
             </div>
             <div className="min-w-0">
               <p className="text-[14px] font-bold text-[var(--ink)]">{[job.brand, job.model].filter((v) => v && v !== "Unknown").join(" ") || job.deviceType}</p>

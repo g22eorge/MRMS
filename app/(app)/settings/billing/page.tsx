@@ -8,7 +8,8 @@ import { PLAN_LIMITS, PLAN_LABELS, getLimitsForOrg } from "@/lib/plan-limits";
 import { PlanBanner } from "@/components/shared/PlanBanner";
 import { TRIAL_DAYS } from "@/lib/billing-access";
 import { submitOrder, getOrCreateIpnId, buildMerchantRef, PLAN_PRICES, CURRENCY } from "@/lib/pesapal";
-import { getOrgModules, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
+import { getOrgModules, MODULE_LABELS } from "@/lib/module-access";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { formatMoney } from "@/lib/currency";
 import { getPesapalConsumerKey, getPesapalConsumerSecret } from "@/lib/platform-settings";
 
@@ -515,7 +516,7 @@ export default async function BillingPage({
         <div className="flex flex-wrap gap-2">
           {enabledModuleList.map((m) => (
             <span key={m} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-xs font-medium text-[var(--ink)]">
-              <span>{MODULE_ICONS[m]}</span>
+              <ModuleIcon module={m} className="h-4 w-4 text-[var(--accent)]" />
               <span>{MODULE_LABELS[m]}</span>
             </span>
           ))}

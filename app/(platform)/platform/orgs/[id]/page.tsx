@@ -19,7 +19,8 @@ import {
 import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { getSmsUsage, SMS_PLAN_QUOTAS } from "@/lib/notifications/sms-quota";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
-import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
+import { ALL_MODULES, MODULE_LABELS } from "@/lib/module-access";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -411,7 +412,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-base">{MODULE_ICONS[mod]}</span>
+                    <ModuleIcon module={mod} className="h-4 w-4 text-[var(--accent)]" />
                     <span className={`h-2 w-2 rounded-full ${isGranted ? "bg-emerald-500" : enabledModuleSet.size === 0 ? "bg-[var(--ink-muted)]/30" : "bg-red-400"}`} />
                   </div>
                   <p className="mt-1.5 text-[13px] font-bold leading-tight">{MODULE_LABELS[mod]}</p>

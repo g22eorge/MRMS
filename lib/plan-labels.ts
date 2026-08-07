@@ -1,13 +1,15 @@
 /**
  * plan-labels.ts — Display names for subscription tiers.
- * Internal DB keys (STARTER, PROFESSIONAL, ENTERPRISE) never change.
+ * Keys are the OrgPlan enum values (STARTER, STANDARD, GROWTH, PREMIUM,
+ * ENTERPRISE) and never change; only the branded Duuka labels are display copy.
  */
 
 export const PLAN_LABEL: Record<string, string> = {
-  FREE:         "Duuka",
-  STARTER:      "Duuka Plus",
-  PROFESSIONAL: "Duuka Pro",
-  ENTERPRISE:   "Duuka ProMax",
+  STARTER:    "Duuka",
+  STANDARD:   "Duuka Plus",
+  GROWTH:     "Duuka Pro",
+  PREMIUM:    "Duuka Max",
+  ENTERPRISE: "Duuka ProMax",
 };
 
 /** Returns the display label, falling back to the raw key if not mapped. */

@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
-import { ALL_MODULES, MODULE_LABELS, MODULE_ICONS } from "@/lib/module-access";
+import { ALL_MODULES, MODULE_LABELS } from "@/lib/module-access";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import type { OrgModule } from "@prisma/client";
 
@@ -91,7 +92,7 @@ export default async function AdminOrgsPage() {
                           defaultChecked={on}
                           className="h-3.5 w-3.5 accent-[var(--accent)]"
                         />
-                        <span>{MODULE_ICONS[mod as OrgModule]}</span>
+                        <ModuleIcon module={mod as OrgModule} className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
                         <span className="truncate">{MODULE_LABELS[mod as OrgModule]}</span>
                       </label>
                     );

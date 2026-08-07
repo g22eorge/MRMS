@@ -70,10 +70,11 @@ describe("PLAN_LIMITS — ENTERPRISE", () => {
 // ── PLAN_LABELS ───────────────────────────────────────────────────────────────
 
 describe("PLAN_LABELS", () => {
-  it("FREE → 'Free'", () => expect(PLAN_LABELS.FREE).toBe("Free"));
-  it("STARTER → 'Starter'", () => expect(PLAN_LABELS.STARTER).toBe("Starter"));
-  it("PROFESSIONAL → 'Professional'", () => expect(PLAN_LABELS.PROFESSIONAL).toBe("Professional"));
-  it("ENTERPRISE → 'Enterprise'", () => expect(PLAN_LABELS.ENTERPRISE).toBe("Enterprise"));
+  it("STARTER → 'Duuka'", () => expect(PLAN_LABELS.STARTER).toBe("Duuka"));
+  it("STANDARD → 'Duuka Plus'", () => expect(PLAN_LABELS.STANDARD).toBe("Duuka Plus"));
+  it("GROWTH → 'Duuka Pro'", () => expect(PLAN_LABELS.GROWTH).toBe("Duuka Pro"));
+  it("PREMIUM → 'Duuka Max'", () => expect(PLAN_LABELS.PREMIUM).toBe("Duuka Max"));
+  it("ENTERPRISE → 'Duuka ProMax'", () => expect(PLAN_LABELS.ENTERPRISE).toBe("Duuka ProMax"));
 });
 
 // ── UPGRADE_PLAN ──────────────────────────────────────────────────────────────

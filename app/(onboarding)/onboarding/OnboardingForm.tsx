@@ -6,22 +6,23 @@ import { OrgModule } from "@prisma/client";
 
 import {
   MODULE_LABELS,
-  MODULE_ICONS,
   MODULE_DESCRIPTIONS,
   MODULE_MIN_PLAN,
   recommendPlanForModules,
 } from "@/lib/module-catalog";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { createOrganization, type CreateOrgState } from "./actions";
 import { TRIAL_DAYS } from "@/lib/billing-access";
 
 // ── Plan display metadata ─────────────────────────────────────────────────────
 
+// Branded Duuka ladder, harmonised to the accent (gold) — no per-tier rainbow.
 const PLAN_META = {
-  STARTER:    { label: "Free",         price: null,    color: "text-[var(--ink-muted)]",    bg: "bg-[var(--panel-strong)]",      border: "border-[var(--line)]" },
-  STANDARD:   { label: "Standard",     price: 35_000,  color: "text-blue-700 dark:text-blue-300",    bg: "bg-blue-50 dark:bg-blue-950/30",    border: "border-blue-200 dark:border-blue-800" },
-  GROWTH:     { label: "Professional", price: 75_000,  color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50 dark:bg-violet-950/30", border: "border-violet-200 dark:border-violet-800" },
-  PREMIUM:    { label: "Premium",      price: 120_000, color: "text-amber-700 dark:text-amber-300",  bg: "bg-amber-50 dark:bg-amber-950/30",  border: "border-amber-200 dark:border-amber-800" },
-  ENTERPRISE: { label: "Enterprise",   price: 200_000, color: "text-red-700 dark:text-red-300",    bg: "bg-red-50 dark:bg-red-950/30",    border: "border-red-200 dark:border-red-800" },
+  STARTER:    { label: "Duuka",        price: null,    color: "text-[var(--ink)]",     bg: "bg-[var(--panel-strong)]", border: "border-[var(--line)]" },
+  STANDARD:   { label: "Duuka Plus",   price: 35_000,  color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  GROWTH:     { label: "Duuka Pro",    price: 75_000,  color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  PREMIUM:    { label: "Duuka Max",    price: 120_000, color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  ENTERPRISE: { label: "Duuka ProMax", price: 200_000, color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
 } as const;
 
 const ALL_MODULES = Object.keys(MODULE_LABELS) as OrgModule[];
@@ -183,7 +184,7 @@ export function OnboardingForm() {
                       : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/40"
                   }`}
                 >
-                  <span className="mt-0.5 text-xl leading-none">{MODULE_ICONS[m]}</span>
+                  <ModuleIcon module={m} className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent)]" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-[var(--ink)]">{MODULE_LABELS[m]}</span>
@@ -274,7 +275,7 @@ export function OnboardingForm() {
             <div className="flex flex-wrap gap-1.5">
               {[...selected].map((m) => (
                 <span key={m} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-xs font-medium text-[var(--ink)]">
-                  <span>{MODULE_ICONS[m]}</span>
+                  <ModuleIcon module={m} className="h-3.5 w-3.5 text-[var(--accent)]" />
                   <span>{MODULE_LABELS[m]}</span>
                 </span>
               ))}

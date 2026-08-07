@@ -360,10 +360,10 @@ export default async function JobDetailPage({
             {canAssess ? (
               <form action={generateAssessmentAction}>
                 <input type="hidden" name="jobId" value={id} />
-                <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]">✨ Generate AI draft</button>
+                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
               </form>
             ) : (
-              <button type="button" disabled title="Add the diagnosis and repair details first" className="cursor-not-allowed rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] opacity-60">✨ Generate AI draft</button>
+              <button type="button" disabled title="Add the diagnosis and repair details first" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] opacity-60"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
             )}
           </div>
         </div>

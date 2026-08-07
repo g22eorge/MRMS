@@ -86,12 +86,14 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
   },
 };
 
+// Branded Duuka plan ladder — display names shown across billing, onboarding,
+// and documents. Internal OrgPlan enum keys never change.
 export const PLAN_LABELS: Record<OrgPlan, string> = {
-  STARTER:    "Free",
-  STANDARD:   "Standard",
-  GROWTH:     "Professional",
-  PREMIUM:    "Premium",
-  ENTERPRISE: "Enterprise",
+  STARTER:    "Duuka",
+  STANDARD:   "Duuka Plus",
+  GROWTH:     "Duuka Pro",
+  PREMIUM:    "Duuka Max",
+  ENTERPRISE: "Duuka ProMax",
 };
 
 export const UPGRADE_PLAN: Partial<Record<OrgPlan, OrgPlan>> = {

@@ -115,11 +115,11 @@ export function splitTemplatesByPlan(kind: DocKind, plan: OrgPlan) {
 
 export function planLabel(plan: OrgPlan) {
   const labels: Record<OrgPlan, string> = {
-    STARTER:    "Starter",
-    STANDARD:   "Standard",
-    GROWTH:     "Growth",
-    PREMIUM:    "Premium",
-    ENTERPRISE: "Enterprise",
+    STARTER:    "Duuka",
+    STANDARD:   "Duuka Plus",
+    GROWTH:     "Duuka Pro",
+    PREMIUM:    "Duuka Max",
+    ENTERPRISE: "Duuka ProMax",
   };
   return labels[plan] ?? plan;
 }
