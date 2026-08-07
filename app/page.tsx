@@ -196,12 +196,12 @@ function DuukaSaasLanding() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
             <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Business management, now with AI</span>
           </div>
-          <h1 className="max-w-3xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
-            Run sales, stock, service, finance, and teams from one
+          <h1 className="max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
+            Run everything from one
             <span className="block bg-gradient-to-r from-[#E8C84A] via-[#D4AF37] to-fuchsia-300 bg-clip-text text-transparent">AI-powered workspace.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-7 text-white/60">
-            One workspace for your whole operation — with AI that answers how-to questions and flags the risks worth your attention.
+          <p className="mt-5 max-w-lg text-lg leading-7 text-white/60">
+            Built-in AI watches your numbers and flags what needs you.
           </p>
           {/* Scannable chips instead of a wall of text — skim in 2 seconds. */}
           <div className="mt-5 flex flex-wrap gap-2">
@@ -220,21 +220,73 @@ function DuukaSaasLanding() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl">
+        {/* Product mock — a live-looking ops dashboard so visitors see the system,
+            not another paragraph. */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-2xl sm:p-4">
           <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#D4AF37]/15 blur-[70px]" />
-          <div className="relative rounded-2xl border border-white/8 bg-[#0b0b0b] p-5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">Live Operations Command</p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {STATS.map((s) => (
-                <div key={s.label} className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
-                  <p className="text-2xl font-extrabold text-white">{s.value}</p>
-                  <p className="mt-1 text-[13px] text-white/40">{s.label}</p>
+          <div className="relative rounded-2xl border border-white/8 bg-[#0b0b0b] p-4">
+
+            {/* Window chrome */}
+            <div className="flex items-center justify-between border-b border-white/8 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#E8C84A]" />
+                <p className="text-[12px] font-bold text-white">Operations Dashboard</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
+              </span>
+            </div>
+
+            {/* KPI tiles */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {[
+                { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-emerald-400" },
+                { v: "18", l: "Open jobs", d: "3 due today", tone: "text-amber-400" },
+                { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/40" },
+              ].map((k) => (
+                <div key={k.l} className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+                  <p className="text-[15px] font-extrabold text-white">{k.v}</p>
+                  <p className="mt-0.5 text-[10px] text-white/40">{k.l}</p>
+                  <p className={`mt-1 text-[10px] font-semibold ${k.tone}`}>{k.d}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-4 rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/[0.06] p-4">
-              <p className="text-sm font-bold text-fuchsia-100">Duuka AI Guide + Business Insights</p>
-              <p className="mt-2 text-xs leading-5 text-white/50">Users can ask how to use the system, while managers get AI-assisted summaries of revenue, stock risks, overdue jobs, receivables, payables, and next actions.</p>
+
+            {/* Revenue chart */}
+            <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-white/50">Revenue · last 7 days</p>
+                <p className="text-[11px] font-bold text-[#E8C84A]">▲ 12%</p>
+              </div>
+              <svg viewBox="0 0 240 64" className="mt-2 w-full" role="img" aria-label="Revenue trend chart">
+                <defs>
+                  <linearGradient id="barGold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#E8C84A" />
+                    <stop offset="1" stopColor="#C9A020" stopOpacity="0.5" />
+                  </linearGradient>
+                </defs>
+                {[26, 34, 22, 44, 38, 52, 60].map((h, i) => (
+                  <rect key={i} x={6 + i * 34} y={64 - h} width="20" height={h} rx="3" fill="url(#barGold)" opacity={i === 6 ? 1 : 0.85} />
+                ))}
+              </svg>
+            </div>
+
+            {/* Needs attention feed */}
+            <div className="mt-3">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Needs attention</p>
+              <div className="space-y-1.5">
+                {[
+                  { dot: "bg-red-400", t: "Job EIS/2026/0041 overdue", s: "2 days" },
+                  { dot: "bg-amber-400", t: "Phone Screen — low stock", s: "3 left" },
+                  { dot: "bg-fuchsia-300", t: "AI: 7 invoices ready to chase", s: "UGX 1.1M" },
+                ].map((r) => (
+                  <div key={r.t} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2.5 py-1.5">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
+                    <p className="flex-1 truncate text-[11px] text-white/70">{r.t}</p>
+                    <p className="text-[11px] font-semibold text-white/40">{r.s}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
