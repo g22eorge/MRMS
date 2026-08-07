@@ -112,6 +112,8 @@ const s = StyleSheet.create({
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
   bankBlock: { marginBottom: 8 },
+  bankBlockDivided: { marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: "#E5E7EB" },
+  bankLabel: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
   bankName: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2 },
   bankLine: { fontSize: 8.5, color: INK, marginBottom: 1.5 },
 });
@@ -337,7 +339,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
               <>
                 <Text style={s.footerLabel}>Payment To</Text>
                 {bankBlocks.map((lines, bi) => (
-                  <View key={bi} style={s.bankBlock}>
+                  <View key={bi} style={bi > 0 ? [s.bankBlock, s.bankBlockDivided] : s.bankBlock}>
+                    {bankBlocks.length > 1 ? <Text style={s.bankLabel}>Bank {bi + 1}</Text> : null}
                     <Text style={s.bankName}>{lines[0]}</Text>
                     {lines.slice(1).map((line, i) => (
                       <Text key={i} style={s.bankLine}>{line}</Text>
