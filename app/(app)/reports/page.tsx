@@ -108,6 +108,11 @@ export default async function ReportsPage({
   const trendNow = new Date();
   const trendMonths = monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, trendNow.getMonth() + 1);
 
+  // Rolling window for the all-jobs analyses (avg turnaround, common faults) so
+  // they don't scan every completed job the org has ever had — the query grew
+  // unbounded forever. Recent metrics are also more actionable than all-time.
+  const rollingStart = new Date(trendNow.getFullYear() - 1, trendNow.getMonth(), trendNow.getDate());
+
   const [
     statusGroup,
     completedAll,
@@ -135,8 +140,10 @@ export default async function ReportsPage({
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["status"], where: { orgId }, _count: { status: true } }),
     prisma.job.findMany({
-      where: { orgId, status: "COMPLETED" },
+      where: { orgId, status: "COMPLETED", completedAt: { gte: rollingStart } },
       select: { completedAt: true, receivedAt: true, diagnosisNotes: true, externalDiagnosis: true },
+      orderBy: { completedAt: "desc" },
+      take: 5000,
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
