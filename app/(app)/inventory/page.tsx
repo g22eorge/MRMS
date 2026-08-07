@@ -6,8 +6,10 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Prisma } from "@prisma/client";
+
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -61,35 +63,59 @@ export default async function InventoryPage({
 
   const canManage = can.manageInventory(user);
 
-  const [parts, partStatusCounts, locationCount, recentMovements] = await Promise.all([
+  // The stock filter (low = qtyOnHand <= reorderLevel) is a column-to-column
+  // comparison Prisma's `where` can't express, and the KPI row previously loaded
+  // the WHOLE catalog to reduce in JS. Run the list as parameterised SQL so we
+  // paginate in the DB and return aggregates, not every row.
+  const baseConds: Prisma.Sql[] = [Prisma.sql`"orgId" = ${orgId}`];
+  if (statusFilter !== "all") baseConds.push(Prisma.sql`"isActive" = ${statusFilter === "active" ? 1 : 0}`);
+  if (q) {
+    const like = `%${q}%`;
+    baseConds.push(Prisma.sql`("name" LIKE ${like} OR "sku" LIKE ${like} OR "manufacturer" LIKE ${like})`);
+  }
+  const stockConds: Prisma.Sql[] = [...baseConds];
+  if (statusFilter === "active" && stockFilter === "low") stockConds.push(Prisma.sql`("qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0)`);
+  if (statusFilter === "active" && stockFilter === "out") stockConds.push(Prisma.sql`"qtyOnHand" = 0`);
+  const rowWhere = Prisma.sql`WHERE ${Prisma.join(stockConds, " AND ")}`;
+
+  const coerceRow = (r: Record<string, unknown>): InventoryRow => ({
+    id: String(r.id),
+    sku: String(r.sku),
+    name: String(r.name),
+    manufacturer: r.manufacturer == null ? null : String(r.manufacturer),
+    qtyOnHand: Number(r.qtyOnHand),
+    qtyReserved: Number(r.qtyReserved),
+    reorderLevel: Number(r.reorderLevel),
+    unitCost: r.unitCost == null ? null : Number(r.unitCost),
+    isActive: Boolean(r.isActive),
+  });
+
+  const [kpiRows, lowStockTopRaw, filteredCountRows, partStatusCounts, locationCount, recentMovements] = await Promise.all([
+    prisma.$queryRaw<Array<Record<string, unknown>>>`
+      SELECT
+        SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN 1 ELSE 0 END) AS "lowStock",
+        SUM(CASE WHEN "qtyOnHand" = 0 THEN 1 ELSE 0 END) AS "outOfStock",
+        COALESCE(SUM(COALESCE("unitCost", 0) * "qtyOnHand"), 0) AS "totalValue",
+        COALESCE(SUM("qtyReserved"), 0) AS "totalReserved",
+        COALESCE(SUM("qtyOnHand"), 0) AS "totalOnHand",
+        COALESCE(SUM(CASE WHEN "qtyOnHand" - "qtyReserved" > 0 THEN "qtyOnHand" - "qtyReserved" ELSE 0 END), 0) AS "totalAvailable",
+        SUM(CASE WHEN "qtyOnHand" > 0 AND ("unitCost" IS NULL OR "unitCost" <= 0) THEN 1 ELSE 0 END) AS "noCostItems",
+        SUM(CASE WHEN "reorderLevel" <= 0 THEN 1 ELSE 0 END) AS "noReorderItems",
+        SUM(CASE WHEN "qtyReserved" > "qtyOnHand" THEN 1 ELSE 0 END) AS "overReserved",
+        COALESCE(SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN ("reorderLevel" - "qtyOnHand") * COALESCE("unitCost", 0) ELSE 0 END), 0) AS "workingCapitalAtRisk"
+      FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = 1
+    `.catch(() => [] as Array<Record<string, unknown>>),
+    prisma.$queryRaw<Array<Record<string, unknown>>>`
+      SELECT id, sku, name, manufacturer, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
+      FROM "Part"
+      WHERE "orgId" = ${orgId} AND "isActive" = 1 AND "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0
+      ORDER BY ("reorderLevel" - "qtyOnHand") DESC
+      LIMIT 6
+    `.catch(() => [] as Array<Record<string, unknown>>),
+    prisma.$queryRaw<Array<{ c: number | bigint }>>`SELECT COUNT(*) AS c FROM "Part" ${rowWhere}`.catch(() => [{ c: 0 }]),
     prisma.part
-      .findMany({
-        where: {
-          orgId,
-          ...(statusFilter === "all" ? {} : { isActive: statusFilter === "active" }),
-          ...(q ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }, { manufacturer: { contains: q } }] } : {}),
-        },
-        select: {
-          id: true,
-          sku: true,
-          name: true,
-          manufacturer: true,
-          qtyOnHand: true,
-          qtyReserved: true,
-          reorderLevel: true,
-          unitCost: true,
-          isActive: true,
-        },
-        orderBy: [{ qtyOnHand: "asc" }, { name: "asc" }],
-      })
-      .catch(() => [] as InventoryRow[]),
-    prisma.part
-      .groupBy({
-        by: ["isActive"],
-        where: { orgId },
-        _count: { _all: true },
-      })
-      .catch(() => []),
+      .groupBy({ by: ["isActive"], where: { orgId }, _count: { _all: true } })
+      .catch(() => [] as Array<{ isActive: boolean; _count: { _all: number } }>),
     prisma.stockLocation.count({ where: { orgId, isActive: true } }).catch(() => 0),
     prisma.partStockTransaction.findMany({
       where: { part: { orgId } },
@@ -102,32 +128,31 @@ export default async function InventoryPage({
     }).catch(() => [] as MovementRow[]),
   ]);
 
-  const activeParts = parts.filter((p) => p.isActive);
+  const kpi = kpiRows[0] ?? {};
+  const num = (v: unknown) => Number(v ?? 0) || 0;
+  const lowStockCount = num(kpi.lowStock);
+  const outOfStockCount = num(kpi.outOfStock);
+  const totalValue = num(kpi.totalValue);
+  const totalReserved = num(kpi.totalReserved);
+  const totalOnHand = num(kpi.totalOnHand);
+  const totalAvailable = num(kpi.totalAvailable);
+  const stockAccuracyRisk = num(kpi.noCostItems) + num(kpi.noReorderItems) + num(kpi.overReserved);
+  const workingCapitalAtRisk = num(kpi.workingCapitalAtRisk);
+  const lowStockTop = lowStockTopRaw.map(coerceRow);
+
   const activePartCount = partStatusCounts.find((r) => r.isActive)?._count._all ?? 0;
   const inactivePartCount = partStatusCounts.find((r) => !r.isActive)?._count._all ?? 0;
   const totalPartCount = activePartCount + inactivePartCount;
 
-  const lowStock = activeParts.filter((p) => p.qtyOnHand <= p.reorderLevel && p.reorderLevel > 0);
-  const outOfStock = activeParts.filter((p) => p.qtyOnHand === 0);
-  const totalValue = activeParts.reduce((sum, p) => sum + (p.unitCost ?? 0) * p.qtyOnHand, 0);
-  const totalReserved = activeParts.reduce((sum, p) => sum + p.qtyReserved, 0);
-  const totalOnHand = activeParts.reduce((sum, p) => sum + p.qtyOnHand, 0);
-  const totalAvailable = activeParts.reduce((sum, p) => sum + Math.max(0, p.qtyOnHand - p.qtyReserved), 0);
-  const noCostItems = activeParts.filter((p) => p.qtyOnHand > 0 && (p.unitCost == null || p.unitCost <= 0));
-  const noReorderItems = activeParts.filter((p) => p.reorderLevel <= 0);
-  const overReserved = activeParts.filter((p) => p.qtyReserved > p.qtyOnHand);
-  const stockAccuracyRisk = noCostItems.length + noReorderItems.length + overReserved.length;
-  const workingCapitalAtRisk = lowStock.reduce((sum, p) => sum + Math.max(0, p.reorderLevel - p.qtyOnHand) * (p.unitCost ?? 0), 0);
-
-  const filteredParts =
-    statusFilter === "active" && stockFilter === "low" ? lowStock
-    : statusFilter === "active" && stockFilter === "out" ? outOfStock
-    : parts;
-
-  // KPIs above are computed from the whole (in-memory filtered) dataset; only the
-  // displayed rows are paginated here.
-  const pageView = paginationView(page, filteredParts.length);
-  const pageRows = filteredParts.slice(pageView.skip, pageView.skip + pageView.take);
+  const filteredTotal = Number(filteredCountRows[0]?.c ?? 0);
+  const pageView = paginationView(page, filteredTotal);
+  const pageRowsRaw = await prisma.$queryRaw<Array<Record<string, unknown>>>`
+    SELECT id, sku, name, manufacturer, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
+    FROM "Part" ${rowWhere}
+    ORDER BY "qtyOnHand" ASC, name ASC
+    LIMIT ${pageView.take} OFFSET ${pageView.skip}
+  `.catch(() => [] as Array<Record<string, unknown>>);
+  const pageRows = pageRowsRaw.map(coerceRow);
   const hrefForPage = pageHrefBuilder("/inventory", {
     status: statusFilter,
     stock: stockFilter !== "all" ? stockFilter : "",
@@ -161,10 +186,10 @@ export default async function InventoryPage({
           {
             key: "low",
             label: "Low stock",
-            value: lowStock.length,
-            sub: `${outOfStock.length} out · ${formatMoney(workingCapitalAtRisk)} reorder gap`,
+            value: lowStockCount,
+            sub: `${outOfStockCount} out · ${formatMoney(workingCapitalAtRisk)} reorder gap`,
             tone: "warn",
-            muted: lowStock.length === 0,
+            muted: lowStockCount === 0,
           },
           {
             key: "reserved",
@@ -208,9 +233,9 @@ export default async function InventoryPage({
             <>
               <span className="mx-1 h-5 w-px bg-[var(--line)]" aria-hidden="true" />
               {([
-                { label: `${activeParts.length} all stock`, value: "all" },
-                { label: `${lowStock.length} low`, value: "low" },
-                { label: `${outOfStock.length} out`, value: "out" },
+                { label: `${activePartCount} all stock`, value: "all" },
+                { label: `${lowStockCount} low`, value: "low" },
+                { label: `${outOfStockCount} out`, value: "out" },
               ] as const).map(({ label, value }) => (
                 <Link
                   key={value}
@@ -279,7 +304,7 @@ export default async function InventoryPage({
           <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
             Inventory Items
             <span className="ml-1.5 font-normal normal-case tracking-normal text-[var(--ink-muted)]">
-              {filteredParts.length}{q ? ` matching "${q}"` : ""}
+              {filteredTotal}{q ? ` matching "${q}"` : ""}
             </span>
           </p>
           {canManage && (
@@ -435,7 +460,7 @@ export default async function InventoryPage({
             <Link href="/inventory/purchase-requests/new" className="text-xs font-semibold text-[var(--accent)] hover:underline">New request</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
-            {lowStock.slice(0, 6).map((part) => {
+            {lowStockTop.map((part) => {
               const gap = Math.max(0, part.reorderLevel - part.qtyOnHand);
               return (
                 <Link key={part.id} href={`/inventory/${part.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--panel-strong)]/50">
@@ -450,7 +475,7 @@ export default async function InventoryPage({
                 </Link>
               );
             })}
-            {lowStock.length === 0 ? <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No replenishment exceptions.</p> : null}
+            {lowStockCount === 0 ? <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No replenishment exceptions.</p> : null}
           </div>
         </div>
       </div>
