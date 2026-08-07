@@ -178,7 +178,7 @@ export async function AdminDashboard({
       {/* ── Mobile home screen (unchanged, hidden on desktop) ── */}
       <MobileHomeDashboard
         userName={userName}
-        orgName={orgName ?? "Dduuka ProMax"}
+        orgName={orgName ?? "Duuka ProMax"}
         receivedToday={receivedToday}
         completedToday={completedToday}
         inRepairCount={inRepairCount}

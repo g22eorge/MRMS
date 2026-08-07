@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Eagle Info Solutions — Device Repair & Business Management",
     description:
-      "Submit a device repair request online. Eagle Info Solutions repairs phones, laptops and tablets in Kampala — written quote, no-fix-no-fee, 30-day warranty. Powered by Dduuka ProMax.",
+      "Submit a device repair request online. Eagle Info Solutions repairs phones, laptops and tablets in Kampala — written quote, no-fix-no-fee, 30-day warranty. Powered by Duuka ProMax.",
     alternates: { canonical: "/" },
   };
 }
@@ -32,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const MODULES = [
   {
     group: "Service & Repairs",
+    blurb: "Every device tracked from intake to handover.",
     color: "from-blue-500/20 to-blue-500/5",
     border: "border-blue-500/20",
     accent: "text-blue-400",
@@ -44,6 +45,7 @@ const MODULES = [
   },
   {
     group: "Stock & Supply",
+    blurb: "Know what you hold and what to reorder.",
     color: "from-amber-500/20 to-amber-500/5",
     border: "border-amber-500/20",
     accent: "text-amber-400",
@@ -57,6 +59,7 @@ const MODULES = [
   },
   {
     group: "Customers & Sales",
+    blurb: "Sell, chase leads, and keep clients close.",
     color: "from-emerald-500/20 to-emerald-500/5",
     border: "border-emerald-500/20",
     accent: "text-emerald-400",
@@ -71,6 +74,7 @@ const MODULES = [
   },
   {
     group: "Documents",
+    blurb: "Branded quotes, invoices, and receipts.",
     color: "from-purple-500/20 to-purple-500/5",
     border: "border-purple-500/20",
     accent: "text-purple-400",
@@ -84,6 +88,7 @@ const MODULES = [
   },
   {
     group: "Finance",
+    blurb: "See profit, cash, and who owes you.",
     color: "from-[#D4AF37]/25 to-[#D4AF37]/5",
     border: "border-[#D4AF37]/25",
     accent: "text-[#D4AF37]",
@@ -96,6 +101,7 @@ const MODULES = [
   },
   {
     group: "Reports & Analytics",
+    blurb: "Turn daily activity into decisions.",
     color: "from-sky-500/20 to-sky-500/5",
     border: "border-sky-500/20",
     accent: "text-sky-400",
@@ -109,6 +115,7 @@ const MODULES = [
   },
   {
     group: "Communications",
+    blurb: "Reach clients on WhatsApp automatically.",
     color: "from-emerald-500/20 to-emerald-500/5",
     border: "border-emerald-500/20",
     accent: "text-emerald-400",
@@ -121,6 +128,7 @@ const MODULES = [
   },
   {
     group: "AI Assistance",
+    blurb: "Ask the system anything; get flagged on risks.",
     color: "from-fuchsia-500/20 to-fuchsia-500/5",
     border: "border-fuchsia-500/20",
     accent: "text-fuchsia-300",
@@ -135,6 +143,7 @@ const MODULES = [
   },
   {
     group: "Security & Admin",
+    blurb: "Right access per role, fully audited.",
     color: "from-red-500/20 to-red-500/5",
     border: "border-red-500/20",
     accent: "text-red-400",
@@ -501,13 +510,13 @@ export default async function Page() {
           </div>
         </section>
 
-        {/* ── Divider with Dduuka ProMax intro ── */}
+        {/* ── Divider with Duuka ProMax intro ── */}
         <div className="relative py-6">
           <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div className="relative flex justify-center">
             <div className="flex items-center gap-3 rounded-full border border-white/8 bg-[#050505] px-5 py-2">
               <span className="text-[13px] text-white/30">Also available as a</span>
-              <span className="text-[13px] font-bold text-[#D4AF37]/70">Dduuka ProMax</span>
+              <span className="text-[13px] font-bold text-[#D4AF37]/70">Duuka ProMax</span>
               <span className="text-[13px] text-white/30">business system</span>
               <a href="#business-system" className="text-[13px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">
                 Learn more ↓
@@ -517,7 +526,7 @@ export default async function Page() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
-            SYSTEM SHOWCASE — Dduuka ProMax for business owners
+            SYSTEM SHOWCASE — Duuka ProMax for business owners
         ══════════════════════════════════════════════════════════════ */}
         <section id="business-system" className="py-12">
 
@@ -534,7 +543,7 @@ export default async function Page() {
           {/* Heading */}
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]/90">Dduuka ProMax — Business Management System</span>
+            <span className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]/90">Duuka ProMax — Business Management System</span>
           </div>
           <h2 className="mt-3 text-2xl font-extrabold text-white md:text-3xl">
             Manage your entire business like a pro
@@ -552,13 +561,8 @@ export default async function Page() {
               >
                 <div className={`mb-3 ${mod.accent}`}>{mod.icon}</div>
                 <p className="text-sm font-bold text-white">{mod.group}</p>
-                <ul className="mt-2 space-y-1">
-                  {mod.items.map((item) => (
-                    <li key={item} className="text-[13px] text-white/45 leading-snug">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
+                <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${mod.accent} opacity-70`}>{mod.items.length} tools</p>
               </div>
             ))}
           </div>
@@ -576,7 +580,7 @@ export default async function Page() {
             <div className="relative max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-                <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Get Dduuka ProMax for Your Business</span>
+                <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Get Duuka ProMax for Your Business</span>
               </div>
 
               <h3 className="text-2xl font-extrabold leading-snug text-white md:text-3xl">
@@ -588,7 +592,7 @@ export default async function Page() {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
-                  href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Dduuka%20ProMax%20for%20my%20business.%20Please%20send%20me%20pricing%20and%20setup%20details."
+                  href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20for%20my%20business.%20Please%20send%20me%20pricing%20and%20setup%20details."
                   target="_blank" rel="noreferrer"
                   className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90"
                   style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
