@@ -22,6 +22,7 @@ export function SubmitButton({
   fullWidth,
   className,
   disabled,
+  bare,
 }: {
   children: ReactNode;
   pendingLabel?: ReactNode;
@@ -30,6 +31,12 @@ export function SubmitButton({
   fullWidth?: boolean;
   className?: string;
   disabled?: boolean;
+  /**
+   * When true, use `className` verbatim instead of the shared buttonClasses().
+   * Lets an existing custom-styled inline submit keep its exact look while
+   * still gaining the pending disable + label (the double-submit guard).
+   */
+  bare?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
@@ -37,7 +44,7 @@ export function SubmitButton({
       type="submit"
       disabled={pending || disabled}
       aria-busy={pending || undefined}
-      className={buttonClasses(variant, size, { fullWidth, className })}
+      className={bare ? className : buttonClasses(variant, size, { fullWidth, className })}
     >
       {pending ? pendingLabel : children}
     </button>

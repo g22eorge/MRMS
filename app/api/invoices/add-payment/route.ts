@@ -4,6 +4,7 @@ import { orgDb } from "@/lib/db";
 import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { toBaseAmount } from "@/lib/currency";
+import { findRecentDuplicate } from "@/lib/dedup";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 import { createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/document-workflow";
@@ -72,6 +73,16 @@ export async function POST(request: Request) {
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Double-submit guard: an identical payment landed on this invoice seconds
+      // ago (impatient click on a slow server) — reuse it instead of charging twice.
+      const dup = await findRecentDuplicate(tx.payment, {
+        orgId,
+        invoiceId,
+        amount,
+        method,
+        kind: "PAYMENT",
+      });
+      if (dup) return;
       const payment = await tx.payment.create({
         data: {
           orgId: orgId,

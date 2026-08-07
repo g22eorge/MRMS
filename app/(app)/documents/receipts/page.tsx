@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { formatMoney, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
@@ -81,24 +82,30 @@ export default async function ReceiptsPage({
       const exchangeRateToBase = invCurrency === baseCurrency ? null : (rateRaw ? Number(rateRaw) : null);
       if (invCurrency !== baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) return null;
 
+      let deduped = false;
       await prisma.$transaction(async (tx) => {
+        const dup = await findRecentDuplicate(tx.payment, { orgId, invoiceId: invoice.id, amount, method });
+        if (dup) { deduped = true; return; }
         const payment = await tx.payment.create({ data: { orgId, invoiceId: invoice.id, amount, method, reference: reference || null, currency: invCurrency, exchangeRateToBase, createdById: user.id } });
         await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount, currency: invCurrency, issuedById: user.id });
         await syncInvoicePaymentState(tx, { orgId, invoiceId: invoice.id, baseCurrency, actorUserId: user.id });
       });
-      await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "RECEIPT_CREATED", summary: "Receipt generated from invoice" });
+      if (!deduped) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "RECEIPT_CREATED", summary: "Receipt generated from invoice" });
     } else {
       const sale = await prisma.sale.findFirst({ where: { id: sourceId, orgId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, currency: true, clientId: true } });
       if (!sale || sale.paidAmount + amount > sale.totalAmount) return null;
       const saleCurrency = normalizeCurrency(sale.currency, baseCurrency);
       if (saleCurrency !== baseCurrency || currency !== baseCurrency) return null;
 
+      let deduped = false;
       await prisma.$transaction(async (tx) => {
+        const dup = await findRecentDuplicate(tx.payment, { orgId, saleId: sale.id, amount, method });
+        if (dup) { deduped = true; return; }
         const payment = await tx.payment.create({ data: { orgId, saleId: sale.id, amount, method, reference: reference || null, currency: saleCurrency, createdById: user.id } });
         await createReceiptForPayment(tx, { orgId, paymentId: payment.id, saleId: sale.id, clientId: sale.clientId, amount, currency: saleCurrency, issuedById: user.id });
         await syncSalePaymentState(tx, { orgId, saleId: sale.id });
       });
-      await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: sale.id, action: "RECEIPT_CREATED", summary: "Receipt generated from sale" });
+      if (!deduped) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: sale.id, action: "RECEIPT_CREATED", summary: "Receipt generated from sale" });
     }
     revalidatePath("/documents/receipts");
     revalidatePath("/documents/invoices");

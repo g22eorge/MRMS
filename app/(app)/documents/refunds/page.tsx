@@ -7,10 +7,12 @@ import { Prisma } from "@prisma/client";
 import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
@@ -116,6 +118,21 @@ export default async function RefundsPage({
     const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
       return;
+    }
+
+    // Double-submit guard: an identical refund landed seconds ago — reuse it
+    // instead of paying out twice.
+    const dupRefund = await findRecentDuplicate(prisma.refund, {
+      orgId,
+      invoiceId,
+      saleId,
+      creditNoteId,
+      amount: amountRaw,
+      method,
+    });
+    if (dupRefund) {
+      revalidatePath("/documents/refunds");
+      redirect("/documents/refunds");
     }
 
     const refund = await prisma.$transaction(async (tx) => {
@@ -582,9 +599,9 @@ export default async function RefundsPage({
               />
             </div>
             <div className="flex justify-end gap-2 sm:col-span-2 lg:col-span-3">
-              <button type="submit" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90">
+              <SubmitButton bare pendingLabel="Issuing…" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-60">
                 Issue Refund
-              </button>
+              </SubmitButton>
             </div>
           </form>
           ) : (

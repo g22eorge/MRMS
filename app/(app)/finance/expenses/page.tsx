@@ -11,9 +11,11 @@ import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment } from "@/lib/accounting/post";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -219,6 +221,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
         ? (methodRaw as PaymentMethod)
         : null;
     const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+
+    // Double-submit guard: an identical expense landed seconds ago — reuse it
+    // instead of recording (and paying out) the same money twice.
+    const dupExpense = await findRecentDuplicate(db.expense, { orgId, description, amount: amountRaw, category });
+    if (dupExpense) {
+      revalidatePath("/finance/expenses");
+      return;
+    }
 
     const inner = `EXP-${new Date().getFullYear()}-`;
     const [tag, existingNumbers] = await Promise.all([
@@ -480,12 +490,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     </div>
                   </div>
                 </details>
-                <button
-                  type="submit"
-                  className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold"
-                >
+                <SubmitButton bare pendingLabel="Saving…" className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold disabled:opacity-60">
                   Save Expense
-                </button>
+                </SubmitButton>
               </form>
             </div>
           </details>

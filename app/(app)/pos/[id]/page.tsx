@@ -11,6 +11,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -23,6 +24,7 @@ import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { computeVat } from "@/lib/commercial/vat";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -520,6 +522,16 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       : "OTHER" as PaymentMethod;
 
     await prisma.$transaction(async (tx) => {
+      // Double-submit guard: an identical till payment landed seconds ago — reuse
+      // it instead of recording the same money twice.
+      const dupPayment = await findRecentDuplicate(tx.payment, {
+        orgId,
+        saleId,
+        amount,
+        method: safeMethod,
+        kind: "PAYMENT",
+      });
+      if (dupPayment) return;
       const payment = await tx.payment.create({
         data: {
           orgId,
@@ -612,6 +624,10 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if ((priorCredited._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) posReject(saleId, "This return exceeds the value of the sale.");
 
     const result = await prisma.$transaction(async (tx) => {
+      // Double-submit guard: an identical credit note for this sale landed seconds ago.
+      const dupCn = await findRecentDuplicate(tx.creditNote, { orgId, saleId, totalAmount });
+      if (dupCn) return { id: dupCn.id, creditNoteNumber: dupCn.creditNoteNumber, deduped: true };
+
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
 
       const created = await tx.creditNote.create({
@@ -641,17 +657,19 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       // M10: reflect the return on the sale (PARTIALLY_RETURNED / RETURNED).
       await syncSalePaymentState(tx, { orgId, saleId });
 
-      return { id: created.id, creditNoteNumber };
+      return { id: created.id, creditNoteNumber, deduped: false };
     });
 
-    await writeSystemAuditEvent({
-      orgId,
-      actorUserId: user.id,
-      entityType: "CreditNote",
-      entityId: result.id,
-      action: "CREDIT_NOTE_CREATED",
-      summary: `Credit note ${result.creditNoteNumber} for sale ${existingSale.saleNumber} (${formatMoney(totalAmount, currency)})`,
-    });
+    if (!result.deduped) {
+      await writeSystemAuditEvent({
+        orgId,
+        actorUserId: user.id,
+        entityType: "CreditNote",
+        entityId: result.id,
+        action: "CREDIT_NOTE_CREATED",
+        summary: `Credit note ${result.creditNoteNumber} for sale ${existingSale.saleNumber} (${formatMoney(totalAmount, currency)})`,
+      });
+    }
 
     revalidatePath(`/pos/${saleId}`);
   }
@@ -758,6 +776,20 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     const exchangeRateToBase = currency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (currency !== org.baseCurrency) {
       if (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0) posReject(saleId, "Enter a valid exchange rate for this foreign-currency refund.");
+    }
+
+    // Double-submit guard: an identical refund against this credit note landed
+    // seconds ago — don't pay it out twice.
+    const dupRefund = await findRecentDuplicate(prisma.refund, {
+      orgId,
+      saleId,
+      creditNoteId: creditNote.id,
+      amount,
+      method: safeMethod,
+    });
+    if (dupRefund) {
+      revalidatePath(`/pos/${saleId}`);
+      return;
     }
 
     const refund = await prisma.refund.create({
@@ -1074,7 +1106,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               ))}
             </select>
             <input name="reference" placeholder="Ref (optional)" className={field} />
-            <Button type="submit" size="sm" className="px-4">Add</Button>
+            <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}
 
@@ -1115,7 +1147,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Issue Credit Note</p>
                 <input type="hidden" name="saleId" value={sale.id} />
                 <input name="reason" placeholder="Reason (optional)" className={`${fieldOnStrong} ml-auto max-w-xs`} />
-                <Button type="submit" size="sm">Create</Button>
+                <SubmitButton size="sm" pendingLabel="Creating…">Create</SubmitButton>
               </div>
               <DataTable
                 frameless
@@ -1166,7 +1198,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                     className={fieldOnStrong}
                   />
                   <input name="reference" placeholder="Ref (optional)" className={fieldOnStrong} />
-                  <Button type="submit" size="sm" className="px-4">Refund</Button>
+                  <SubmitButton size="sm" className="px-4" pendingLabel="Refunding…">Refund</SubmitButton>
                 </form>
               )}
             </div>

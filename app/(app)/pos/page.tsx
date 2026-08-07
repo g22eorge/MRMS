@@ -6,6 +6,7 @@ import { formatMoneyCompact, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate } from "@/lib/date-eat";
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
@@ -114,6 +115,15 @@ export default async function PosPage({
     const { user: _u2, orgId: _orgId2 } = await requireOrgSession();
     const db = orgDb(_orgId2);
     if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK"].includes(_u2.role))) redirect("/dashboard");
+
+    // Double-submit guard: a double-tap on "New Sale" would open two empty tills.
+    // Reuse the just-created empty draft (nothing is lost — it has no items yet).
+    const recentEmpty = await findRecentDuplicate(db.sale, {
+      createdById: _u2.id,
+      status: "OPEN",
+      totalAmount: 0,
+    });
+    if (recentEmpty) redirect(`/pos/${recentEmpty.id}`);
 
     const saleNumber = await nextSaleNumber(db, _orgId2);
     // Seed VAT intent from the org default so a sale only charges VAT when the

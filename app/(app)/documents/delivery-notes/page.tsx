@@ -6,10 +6,12 @@ import { type DeliveryMethod, Prisma } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
@@ -91,6 +93,10 @@ export default async function DeliveryNotesPage({
           }))
         : [{ description: fallbackDescription, quantity: 1 }];
 
+      // Double-submit guard: a delivery note for this invoice landed seconds ago.
+      const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, invoiceId: invoice.id });
+      if (dupDn) { revalidatePath("/documents/delivery-notes"); redirect("/documents/delivery-notes"); }
+
       const noteRecord = await prisma.$transaction(async (tx) => {
         const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
         return tx.deliveryNote.create({
@@ -127,6 +133,10 @@ export default async function DeliveryNotesPage({
             quantity: Math.max(1, item.quantity),
           }))
         : [{ description: `Sale handover for ${sale.saleNumber}`, quantity: 1 }];
+
+      // Double-submit guard: a delivery note for this sale landed seconds ago.
+      const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, saleId: sale.id });
+      if (dupDn) { revalidatePath("/documents/delivery-notes"); redirect("/documents/delivery-notes"); }
 
       const noteRecord = await prisma.$transaction(async (tx) => {
         const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
@@ -420,7 +430,7 @@ export default async function DeliveryNotesPage({
               {DELIVERY_METHODS.map((method) => <option key={method} value={method}>{method.replaceAll("_", " ")}</option>)}
             </select>
             <input name="note" placeholder="Optional note" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm" />
-            <button type="submit" className="btn-premium h-9 rounded-lg px-5 text-sm font-semibold">Create Delivery Note</button>
+            <SubmitButton bare pendingLabel="Creating…" className="btn-premium h-9 rounded-lg px-5 text-sm font-semibold disabled:opacity-60">Create Delivery Note</SubmitButton>
           </form>
         </div>
       ) : (

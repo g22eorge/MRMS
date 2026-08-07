@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { resolveTechCost } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { hasJobPayoutColumns } from "@/lib/payouts";
@@ -890,6 +891,24 @@ export async function recordClientPaymentAction(formData: FormData) {
         throw new Error("This payment will overpay the client bill. Tick confirm overpayment if this is intentional.");
       }
 
+      // Double-submit guard: an identical payment on this invoice landed seconds
+      // ago (impatient click on a slow server) — don't record the money twice.
+      const dupPayment = await findRecentDuplicate(tx.payment, {
+        orgId,
+        invoiceId: invoice.id,
+        amount: payload.amount,
+        method: safeMethod,
+        kind: payload.kind,
+      });
+      if (dupPayment) {
+        return {
+          paidAmount: existingPaidAmount,
+          isPaid: existingPaidAmount >= invoice.totalAmount,
+          invoiceNumber: safeInvoiceNumber,
+          deduped: true,
+        };
+      }
+
       const payment = await tx.payment.create({
         data: {
           orgId,
@@ -961,22 +980,24 @@ export async function recordClientPaymentAction(formData: FormData) {
         },
       });
 
-      return { paidAmount, isPaid, invoiceNumber: safeInvoiceNumber };
+      return { paidAmount, isPaid, invoiceNumber: safeInvoiceNumber, deduped: false };
     });
 
     revalidatePath(`/jobs/${job.id}`);
     revalidatePath("/documents/invoices");
     revalidatePath("/reports");
     revalidatePath("/dashboard");
-    notifyPaymentReceived({
-      orgId,
-      // Client gets a confirmation for real payments only, not refunds.
-      jobId: payload.kind === "REFUND" ? undefined : job.id,
-      jobNumber: job.jobNumber,
-      amount: payload.amount,
-      currency: org.baseCurrency,
-      actorName: user.name ?? user.email ?? "Unknown",
-    }).catch(() => {});
+    if (!result.deduped) {
+      notifyPaymentReceived({
+        orgId,
+        // Client gets a confirmation for real payments only, not refunds.
+        jobId: payload.kind === "REFUND" ? undefined : job.id,
+        jobNumber: job.jobNumber,
+        amount: payload.amount,
+        currency: org.baseCurrency,
+        actorName: user.name ?? user.email ?? "Unknown",
+      }).catch(() => {});
+    }
     return { ok: true, ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to record payment";

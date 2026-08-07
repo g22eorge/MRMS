@@ -6,10 +6,12 @@ import { type PaymentMethod } from "@prisma/client";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
@@ -127,6 +129,20 @@ export default async function CreditNotesPage({
     if (alreadyRefunded + amountRaw > cn.totalAmount) return;
 
     const method = parsePaymentMethod(methodRaw, "CASH");
+
+    // Double-submit guard: an identical refund against this credit note landed
+    // seconds ago — don't pay it out twice.
+    const dupRefund = await findRecentDuplicate(prisma.refund, {
+      orgId,
+      saleId: cn.saleId,
+      creditNoteId: cn.id,
+      amount: amountRaw,
+      method,
+    });
+    if (dupRefund) {
+      revalidatePath("/documents/credit-notes");
+      redirect("/documents/credit-notes");
+    }
 
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
@@ -247,6 +263,13 @@ export default async function CreditNotesPage({
     const saleTotal = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { totalAmount: true } });
     const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
     if (saleTotal && (priorCredited._sum.totalAmount ?? 0) + totalAmount > saleTotal.totalAmount) return;
+
+    // Double-submit guard: an identical credit note for this sale landed seconds ago.
+    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, saleId, totalAmount });
+    if (dupCn) {
+      revalidatePath("/documents/credit-notes");
+      redirect("/documents/credit-notes");
+    }
 
     let creditNoteNumber = "";
     let creditNoteId = "";
@@ -479,7 +502,7 @@ export default async function CreditNotesPage({
                   </select>
                 </div>
                 <input name="reference" placeholder="Reference (optional)" className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]" />
-                <button type="submit" className="w-full rounded bg-[var(--accent)]/20 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/30">Issue Refund</button>
+                <SubmitButton bare pendingLabel="Issuing…" className="w-full rounded bg-[var(--accent)]/20 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/30 disabled:opacity-60">Issue Refund</SubmitButton>
               </form>
             </div>
           </>
