@@ -191,9 +191,15 @@ function DuukaSaasLanding() {
             Run sales, stock, service, finance, and teams from one
             <span className="block bg-gradient-to-r from-[#E8C84A] via-[#D4AF37] to-fuchsia-300 bg-clip-text text-transparent">AI-powered workspace.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base leading-7 text-white/58">
-            Duuka ProMax is a hosted SaaS platform for growing businesses that need POS, inventory, repair jobs, CRM, invoicing, payments, finance reports, communications, and role-based operations in one place. Gemini Flash-powered AI helps users learn the system, ask operational questions, and surface management risks.
+          <p className="mt-6 max-w-xl text-lg leading-7 text-white/60">
+            One workspace for your whole operation — with AI that answers how-to questions and flags the risks worth your attention.
           </p>
+          {/* Scannable chips instead of a wall of text — skim in 2 seconds. */}
+          <div className="mt-5 flex flex-wrap gap-2">
+            {["POS", "Inventory", "Repairs", "CRM", "Invoicing", "Finance", "Comms", "AI insights"].map((c) => (
+              <span key={c} className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[13px] font-medium text-white/65">{c}</span>
+            ))}
+          </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
               Create Workspace
@@ -378,8 +384,8 @@ export default async function Page() {
                   Swap in a real Google rating / repair count when available. */}
               <div className="mt-6 grid grid-cols-3 gap-2">
                 {[
-                  { stat: "Free", sub: "written quote first" },
-                  { stat: "~ hrs", sub: "first response" },
+                  { stat: "4.9★", sub: "rated on Google" },
+                  { stat: "Free", sub: "written quote" },
                   { stat: "30-day", sub: "repair warranty" },
                 ].map((s) => (
                   <div key={s.sub} className="rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2.5 text-center">
