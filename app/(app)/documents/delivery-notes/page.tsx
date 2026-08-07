@@ -164,6 +164,7 @@ export default async function DeliveryNotesPage({
     const receivedBySignatureText = String(formData.get("receivedBySignatureText") ?? "").trim();
     const note = String(formData.get("note") ?? "").trim();
     const methodRaw = String(formData.get("deliveryMethod") ?? "").trim();
+    const deliveredAtRaw = String(formData.get("deliveredAt") ?? "").trim();
     if (!deliveryNoteId || !deliveredByName || !receivedByName) return;
 
     const deliveryMethod = DELIVERY_METHODS.includes(methodRaw as DeliveryMethod) ? (methodRaw as DeliveryMethod) : null;
@@ -175,6 +176,7 @@ export default async function DeliveryNotesPage({
         receivedBySignatureText: receivedBySignatureText || null,
         deliveryMethod,
         note: note || null,
+        ...(deliveredAtRaw ? { deliveredAt: new Date(deliveredAtRaw) } : {}),
       },
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: deliveryNoteId, action: "DELIVERY_NOTE_UPDATED", summary: "Delivery note updated" });
@@ -558,6 +560,9 @@ export default async function DeliveryNotesPage({
                 <MenuSection label="Edit Delivery Note" />
                 <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
                   <input type="hidden" name="deliveryNoteId" value={n.id} />
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Delivery date
+                    <input name="deliveredAt" type="date" defaultValue={new Date(n.deliveredAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                  </label>
                   <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <input name="receivedBySignatureText" defaultValue={n.receivedBySignatureText ?? ""} placeholder="Signature text" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />

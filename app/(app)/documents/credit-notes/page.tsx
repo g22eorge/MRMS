@@ -296,6 +296,18 @@ export default async function CreditNotesPage({
     redirect("/documents/credit-notes");
   }
 
+  async function updateCreditNoteDateAction(formData: FormData) {
+    "use server";
+    const { user, orgId } = await requireOrgSession();
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    const id = String(formData.get("creditNoteId") ?? "").trim();
+    const issueDateRaw = String(formData.get("issueDate") ?? "").trim();
+    if (!id || !issueDateRaw) return;
+    await prisma.creditNote.updateMany({ where: { id, orgId }, data: { issuedAt: new Date(issueDateRaw) } });
+    revalidatePath("/documents/credit-notes");
+    redirect("/documents/credit-notes");
+  }
+
   async function deleteCreditNoteAction(formData: FormData) {
     "use server";
     const { user, orgId } = await requireOrgSession();
@@ -472,6 +484,14 @@ export default async function CreditNotesPage({
             </div>
           </>
         ) : null}
+        <MenuSection label="Edit Credit Note" />
+        <form action={updateCreditNoteDateAction} className="p-3">
+          <input type="hidden" name="creditNoteId" value={cn.id} />
+          <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+            <input name="issueDate" type="date" defaultValue={new Date(cn.issuedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+          </label>
+          <div className="mt-2"><MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save issue date</MenuActionButton></div>
+        </form>
         {user.role === "ADMIN" && cn.refunds.length === 0 ? (
           <MenuDestructiveRow>
             <form action={deleteCreditNoteAction}>

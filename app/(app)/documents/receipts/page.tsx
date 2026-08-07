@@ -117,6 +117,7 @@ export default async function ReceiptsPage({
     const methodRaw = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
     const note = String(formData.get("note") ?? "").trim();
+    const issueDateRaw = String(formData.get("issueDate") ?? "").trim();
     if (!paymentId || !Number.isFinite(amount) || amount <= 0) return;
 
     const method = parsePaymentMethod(methodRaw, "OTHER");
@@ -126,6 +127,9 @@ export default async function ReceiptsPage({
       select: { amount: true, invoiceId: true, saleId: true, currency: true, exchangeRateToBase: true },
     });
     if (!source) return;
+    // Governance: a voided receipt is a closed record — never edit it.
+    const existingReceipt = await prisma.receipt.findFirst({ where: { orgId, paymentId }, select: { voidedAt: true } });
+    if (existingReceipt?.voidedAt) return;
     // Ledger delta in the payment's own currency (matching how the original
     // "pay:<id>" entry posted), so an amount change keeps the books in step.
     const ledgerDelta = Math.round((amount - source.amount + Number.EPSILON) * 100) / 100;
@@ -150,7 +154,7 @@ export default async function ReceiptsPage({
 
       // Keep the linked Receipt document in sync (no relation/cascade exists,
       // so the amount must be updated explicitly or the job timeline goes stale).
-      await tx.receipt.updateMany({ where: { orgId, paymentId }, data: { amount } });
+      await tx.receipt.updateMany({ where: { orgId, paymentId }, data: { amount, ...(issueDateRaw ? { issuedAt: new Date(issueDateRaw) } : {}) } });
 
       // Post a balanced adjusting entry for the amount change so the ledger tracks
       // the new receipt amount (unique per edit, so repeated edits each adjust).
@@ -299,6 +303,7 @@ export default async function ReceiptsPage({
         reference: true,
         note: true,
         receivedAt: true,
+        receipts: { select: { issuedAt: true }, orderBy: { issuedAt: "desc" }, take: 1 },
         sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
         invoice: { select: { id: true, invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
       },
@@ -382,8 +387,8 @@ export default async function ReceiptsPage({
     switch (method) {
       case "CASH":          return "border-emerald-500/30 bg-emerald-500/15 text-emerald-700";
       case "MOBILE_MONEY":  return "border-sky-500/30 bg-sky-500/15 text-sky-700";
-      case "CARD":          return "border-purple-500/30 bg-purple-500/15 text-purple-700";
-      case "BANK_TRANSFER": return "border-indigo-500/30 bg-indigo-500/15 text-indigo-700";
+      case "CARD":          return "border-slate-500/30 bg-slate-500/15 text-slate-600";
+      case "BANK_TRANSFER": return "border-blue-500/30 bg-blue-500/15 text-blue-700";
       default:              return "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]";
     }
   }
@@ -518,6 +523,9 @@ export default async function ReceiptsPage({
                     <MenuSection label="Edit Receipt" />
                     <form action={updateReceiptAction} className="space-y-2 p-3">
                       <input type="hidden" name="paymentId" value={p.id} />
+                      <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                        <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                      </label>
                       <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
                         {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
@@ -640,6 +648,9 @@ export default async function ReceiptsPage({
                   <MenuSection label="Edit Receipt" />
                   <form action={updateReceiptAction} className="space-y-2 p-3">
                     <input type="hidden" name="paymentId" value={p.id} />
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                      <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                    </label>
                     <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50">
                       {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}

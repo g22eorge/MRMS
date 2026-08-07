@@ -209,6 +209,7 @@ export default async function InvoiceDetailPage({
     clientId: invoice.client?.id ?? "",
     invoiceType: invoice.invoiceType ?? "SERVICE",
     subject: invoice.subject ?? "",
+    issueDate: invoice.issuedAt ? new Date(invoice.issuedAt).toISOString().slice(0, 10) : "",
     dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "",
     notes: invoice.notes ?? "",
     // Invoice has no taxRate/taxLabel columns — tax lives per line. Derive it.
@@ -499,6 +500,7 @@ export default async function InvoiceDetailPage({
                 data: {
                   subject: String(fd.get("subject") ?? "").trim() || null,
                   notes: String(fd.get("notes") ?? "").trim() || null,
+                  ...(String(fd.get("issueDate") ?? "").trim() ? { issuedAt: new Date(String(fd.get("issueDate"))) } : {}),
                   dueDate: fd.get("dueDate") ? new Date(String(fd.get("dueDate"))) : null,
                   invoiceType: ((): InvoiceType => {
                     const t = String(fd.get("invoiceType") ?? "SERVICE").trim();

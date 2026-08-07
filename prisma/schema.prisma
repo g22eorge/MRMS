@@ -2823,6 +2823,7 @@ model Quotation {
   taxRate        Float?
   totalAmount    Float     @default(0)
   notes          String?
+  issueDate      DateTime?
   validUntil     DateTime?
   sentAt         DateTime?
   acceptedAt     DateTime?

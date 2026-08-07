@@ -228,6 +228,7 @@ async function runCriticalPageSchemaRepair(changes: Array<{ kind: string; detail
     await addColumn("Quotation", cols, "vatAmount", "REAL", "0");
     await addColumn("Quotation", cols, "taxLabel", "TEXT");
     await addColumn("Quotation", cols, "taxRate", "REAL");
+    await addColumn("Quotation", cols, "issueDate", "DATETIME");
     await addColumn("Quotation", cols, "convertedToInvoiceId", "TEXT");
     if (hadQuotationNumber && !hadQuoteNumber) {
       await prisma.$executeRawUnsafe('UPDATE "Quotation" SET "quoteNumber" = "quotationNumber" WHERE "quoteNumber" IS NULL OR trim("quoteNumber") = \'\'');

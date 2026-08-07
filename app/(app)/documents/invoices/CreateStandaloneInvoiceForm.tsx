@@ -51,6 +51,7 @@ type Props = {
     clientId?: string;
     invoiceType?: string;
     subject?: string;
+    issueDate?: string;
     dueDate?: string;
     notes?: string;
     taxEnabled?: boolean;
@@ -230,6 +231,16 @@ export function CreateStandaloneInvoiceForm({
         <div className="grid grid-cols-1 min-[900px]:grid-cols-[1fr_260px]">
           <div className="divide-y divide-[var(--line)]">
             <div className="p-4">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                  <input name="issueDate" type="date" aria-label="Issue date" max={new Date().toISOString().slice(0, 10)} defaultValue={initialData?.issueDate ?? new Date().toISOString().slice(0, 10)} className="mt-0.5 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                </label>
+                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Due date
+                  <input name="dueDate" type="date" aria-label="Due date" defaultValue={initialData?.dueDate ?? ""} className="mt-0.5 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                </label>
+              </div>
+            </div>
+            <div className="p-4">
               <CustomerPicker
                 clients={clients}
                 mode={customer.mode}
@@ -270,7 +281,6 @@ export function CreateStandaloneInvoiceForm({
           ))}
         </select>
         <input name="subject" placeholder="Subject" defaultValue={initialData?.subject ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-        <input name="dueDate" type="date" defaultValue={initialData?.dueDate ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
         <input name="notes" placeholder="Notes or payment terms" defaultValue={initialData?.notes ?? ""} className="h-9 rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
               </div>
             </div>

@@ -51,7 +51,7 @@ export async function GET(
   const clientLocation = quotation.client
     ? [quotation.client.organization, quotation.client.address].filter(Boolean).join("\n") || null
     : quotation.lead?.organization ?? null;
-  const issuedAt = quotation.sentAt ?? quotation.createdAt;
+  const issuedAt = quotation.issueDate ?? quotation.sentAt ?? quotation.createdAt;
   const validUntil = quotation.validUntil ?? new Date(issuedAt.getTime() + branding.quoteValidityDays * 86400000);
   const currency = quotation.currency;
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");

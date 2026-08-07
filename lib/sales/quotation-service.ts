@@ -18,6 +18,7 @@ export type CreateQuotationInput = {
     organization?: string;
     address?: string;
   };
+  issueDate?: string;
   validUntil?: string;
   notes?: string;
   taxApplicable?: boolean;
@@ -174,6 +175,7 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
         taxRate: vatAmount > 0 ? taxRate : null,
         totalAmount,
         currency,
+        issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
         validUntil: data.validUntil ? new Date(data.validUntil) : null,
         notes: data.notes ? sanitizeText(data.notes) : null,
         items: {

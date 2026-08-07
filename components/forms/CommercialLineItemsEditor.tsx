@@ -6,7 +6,7 @@ import { commercialLineTotal } from "@/lib/forms/line-items";
 import type { LineWithKey } from "@/hooks/useLineItemsState";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import { LineItemsPanel, PartSelect, type PartSelectOption } from "./LineItemsPanel";
+import { LineItemsPanel, type PartSelectOption } from "./LineItemsPanel";
 
 type CommercialLineItemsEditorProps = {
   items: LineWithKey<CommercialLineItemData>[];
@@ -38,6 +38,7 @@ export function CommercialLineItemsEditor({
   type Item = LineWithKey<CommercialLineItemData>;
 
   const [creatingLineKey, setCreatingLineKey] = useState<number | null>(null);
+  const [openComboKey, setOpenComboKey] = useState<number | null>(null);
 
   // Inline create form component
   function CreatePartInlineForm({ onCancel }: { onCancel: () => void }) {
@@ -108,53 +109,58 @@ export function CommercialLineItemsEditor({
 
   const columns: DataTableColumn<Item>[] = [
     {
-      key: "item",
-      header: "Item",
-      headerClassName: "w-72",
-      className: "w-72 align-top",
+      key: "description",
+      header: "Item / Description",
+      className: "align-top",
       cell: (item) => {
-        const isCreating = item.key === creatingLineKey;
+        if (item.key === creatingLineKey) {
+          return <CreatePartInlineForm onCancel={() => setCreatingLineKey(null)} />;
+        }
+        const q = item.description.trim().toLowerCase();
+        const matches = (q ? parts.filter((p) => `${p.sku} ${p.name}`.toLowerCase().includes(q)) : parts).slice(0, 6);
+        const open = openComboKey === item.key;
         return (
-          <>
-            {isCreating ? (
-              <CreatePartInlineForm
-                onCancel={() => setCreatingLineKey(null)}
-              />
-            ) : (
-              <PartSelect
-                value={item.partId}
-                parts={parts}
-                onChange={(partId) => {
-                  if (partId === "__new__") {
-                    setCreatingLineKey(item.key);
-                  } else {
-                    onSelectPart(item.key, partId);
-                  }
-                }}
-                allowCustom
-                customLabel="Custom line"
-                showStock
-                showCreateOption={!!onCreatePart}
-                createOptionLabel="+ Create new part…"
-                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
-              />
-            )}
-          </>
+          <div className="relative">
+            <input
+              value={item.description}
+              onChange={(event) => onUpdateLine(item.key, { description: event.target.value, partId: "" })}
+              onFocus={() => setOpenComboKey(item.key)}
+              onBlur={() => window.setTimeout(() => setOpenComboKey((k) => (k === item.key ? null : k)), 120)}
+              placeholder="Type a product or service — or pick from inventory"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
+            />
+            {open && (matches.length > 0 || (onCreatePart && q)) ? (
+              <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1 shadow-lg">
+                {matches.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => { onSelectPart(item.key, p.id); setOpenComboKey(null); }}
+                    className="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] hover:bg-[var(--panel-strong)]"
+                  >
+                    <span className="font-semibold text-[var(--ink)]">{p.name}</span>
+                    <span className="text-[var(--ink-muted)]"> · {p.sku}{p.qtyOnHand != null ? ` (${p.qtyOnHand})` : ""}</span>
+                  </button>
+                ))}
+                {q && matches.length === 0 ? (
+                  <div className="px-2.5 py-1.5 text-[12px] text-[var(--ink-muted)]">No inventory match — this stays a custom line.</div>
+                ) : null}
+                {onCreatePart && q ? (
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => { setCreatingLineKey(item.key); setOpenComboKey(null); }}
+                    className="mt-1 block w-full truncate rounded-md border border-dashed border-[var(--accent)]/45 px-2.5 py-1.5 text-left text-[13px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                  >
+                    + Create &ldquo;{item.description.trim()}&rdquo; as a new inventory part
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         );
       },
-    },
-    {
-      key: "description",
-      header: "Description",
-      className: "align-top",
-      cell: (item) => (
-        <input
-          value={item.description}
-          onChange={(event) => onUpdateLine(item.key, { description: event.target.value })}
-          placeholder="Product, service, or package"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
-        />
-      ),
     },
     {
       key: "qty",
@@ -222,7 +228,7 @@ export function CommercialLineItemsEditor({
   return (
     <LineItemsPanel
       title="Products & Services"
-      subtitle="Use inventory items or custom lines."
+      subtitle="Type each line — pick from inventory or write a custom one."
       addLabel="Add Line"
       onAddLine={onAddLine}
       className={`rounded-lg bg-[var(--panel-strong)] ${className ?? ""}`}

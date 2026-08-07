@@ -108,6 +108,7 @@ export default async function InvoicesPage({
     const subject = String(formData.get("subject") ?? "").trim();
     const invoiceTypeRaw = String(formData.get("invoiceType") ?? "SERVICE").trim();
     const currency = normalizeCurrency(formData.get("currency"), orgCurrency);
+    const issueDateRaw = String(formData.get("issueDate") ?? "").trim();
     const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
     const notes = String(formData.get("notes") ?? "").trim();
     const taxApplicable = String(formData.get("taxApplicable") ?? "") === "1";
@@ -164,6 +165,7 @@ export default async function InvoicesPage({
       ? (invoiceTypeRaw as InvoiceType)
       : ("SERVICE" as InvoiceType);
     const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+    const issuedAt = issueDateRaw ? new Date(issueDateRaw) : new Date();
     const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
     const taxAmount = roundMoney(taxRate > 0 ? subtotal * (taxRate / 100) : 0, currency);
     const totalAmount = roundMoney(subtotal + taxAmount, currency);
@@ -209,6 +211,7 @@ export default async function InvoicesPage({
           currency,
           status: "ISSUED" as InvoiceStatus,
           totalAmount,
+          issuedAt,
           dueDate,
           notes: notes ? sanitizeText(notes) : null,
           lines: {

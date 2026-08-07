@@ -5,6 +5,7 @@ import { getCurrentUserRole } from "@/lib/session";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
@@ -46,6 +47,49 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
     },
   });
   if (!note) redirect("/documents/delivery-notes");
+
+  const canEditItems = can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role);
+  const isEdit = sp.edit === "1" && canEditItems;
+
+  async function addDeliveryItem(fd: FormData) {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+    const target = await prisma.deliveryNote.findFirst({ where: { id, orgId: actorOrg }, select: { id: true } });
+    if (!target) return;
+    const description = sanitizeText(String(fd.get("description") ?? "").trim());
+    const quantity = Math.max(1, Math.round(Number(fd.get("quantity")) || 1));
+    if (!description) return;
+    await prisma.deliveryNoteItem.create({ data: { deliveryNoteId: id, description, quantity } });
+    revalidatePath(`/documents/delivery-notes/${id}`);
+    redirect(`/documents/delivery-notes/${id}?edit=1`);
+  }
+
+  async function updateDeliveryItem(fd: FormData) {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+    const itemId = String(fd.get("itemId") ?? "").trim();
+    const owned = await prisma.deliveryNoteItem.findFirst({ where: { id: itemId, deliveryNote: { id, orgId: actorOrg } }, select: { id: true } });
+    if (!owned) return;
+    const description = sanitizeText(String(fd.get("description") ?? "").trim());
+    const quantity = Math.max(1, Math.round(Number(fd.get("quantity")) || 1));
+    await prisma.deliveryNoteItem.update({ where: { id: itemId }, data: { ...(description ? { description } : {}), quantity } });
+    revalidatePath(`/documents/delivery-notes/${id}`);
+    redirect(`/documents/delivery-notes/${id}?edit=1`);
+  }
+
+  async function removeDeliveryItem(fd: FormData) {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+    const itemId = String(fd.get("itemId") ?? "").trim();
+    const owned = await prisma.deliveryNoteItem.findFirst({ where: { id: itemId, deliveryNote: { id, orgId: actorOrg } }, select: { id: true } });
+    if (!owned) return;
+    await prisma.deliveryNoteItem.delete({ where: { id: itemId } });
+    revalidatePath(`/documents/delivery-notes/${id}`);
+    redirect(`/documents/delivery-notes/${id}?edit=1`);
+  }
 
   const client = note.invoice?.job?.client ?? note.invoice?.client ?? note.sale?.client ?? null;
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
@@ -124,8 +168,45 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <div className={cardClass}>
-            <div className={cardHeadClass}>Items delivered</div>
-            {note.items.length ? (
+            <div className={`${cardHeadClass} flex items-center justify-between`}>
+              <span>Items delivered{isEdit ? " · editing" : ""}</span>
+              {canEditItems ? (
+                <a href={`/documents/delivery-notes/${id}${isEdit ? "" : "?edit=1"}`} className="text-[11px] font-semibold normal-case tracking-normal text-[var(--accent)] hover:underline">
+                  {isEdit ? "Done" : "Edit"}
+                </a>
+              ) : null}
+            </div>
+            {isEdit ? (
+              <div className="divide-y divide-[var(--line)]">
+                {note.items.map((item) => (
+                  <div key={item.id} className="flex flex-wrap items-end gap-2 p-3">
+                    <form action={updateDeliveryItem} className="flex flex-1 flex-wrap items-end gap-2">
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
+                        <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <label className="w-16 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                        <input name="quantity" type="number" min="1" step="1" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[12px] font-semibold">Save</button>
+                    </form>
+                    <form action={removeDeliveryItem}>
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[12px] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                    </form>
+                  </div>
+                ))}
+                <form action={addDeliveryItem} className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3">
+                  <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add item
+                    <input name="description" required placeholder="Item delivered" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </label>
+                  <label className="w-16 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                    <input name="quantity" type="number" min="1" step="1" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </label>
+                  <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[12px] font-bold">Add</button>
+                </form>
+              </div>
+            ) : note.items.length ? (
               <DataTable
                 frameless
                 rows={note.items}

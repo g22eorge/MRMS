@@ -14,6 +14,8 @@ import type { BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
+import { addQuotationItem, updateQuotationItem, removeQuotationItem } from "@/app/(app)/sales/actions";
+import { QuotationStages } from "@/components/documents/QuotationStages";
 import { shareQuotationDocument } from "@/lib/notifications/share-document";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
@@ -59,6 +61,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       status: true,
       currency: true,
       totalAmount: true,
+      issueDate: true,
       validUntil: true,
       notes: true,
       discountAmount: true,
@@ -89,7 +92,10 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     : null;
 
   const isVoid = quotation.status === "VOID";
-  const isEdit = sp?.edit === "1";
+  // Governance: a quotation is only editable while it is still a DRAFT and has
+  // not been converted to an invoice. Once sent/accepted/converted it is locked.
+  const canEdit = quotation.status === "DRAFT" && !quotation.convertedToInvoiceId;
+  const isEdit = sp?.edit === "1" && canEdit;
   const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
@@ -159,7 +165,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       )}
       {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
       <Link href={`/api/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">PDF</Link>
-      <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link>
+      {canEdit ? <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link> : null}
     </>
   );
 
@@ -180,7 +186,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   ) : null;
 
   const rows = [
-    { label: "Created", value: formatEATDate(quotation.createdAt) },
+    { label: "Issue date", value: formatEATDate(quotation.issueDate ?? quotation.createdAt) },
     { label: "Valid until", value: quotation.validUntil ? formatEATDate(quotation.validUntil) : "—" },
     { label: "Subtotal", value: formatMoney(subtotal, currency) },
     ...(quotation.discountAmount > 0 ? [{ label: "Discount", value: `− ${formatMoney(quotation.discountAmount, currency)}` }] : []),
@@ -223,9 +229,94 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
+            <div className={`${cardClass} px-4 py-3`}>
+              <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
+            </div>
             <div className={cardClass}>
-              <div className={cardHeadClass}>Line Items</div>
-              {quotation.items.length ? (
+              <div className={cardHeadClass}>Line Items{isEdit && quotation.status === "DRAFT" ? " · editing" : ""}</div>
+              {isEdit && quotation.status === "DRAFT" ? (
+                <>
+                  <div className="divide-y divide-[var(--line)]">
+                    {quotation.items.map((item) => (
+                      <div key={item.id} className="flex flex-wrap items-end gap-2 p-3">
+                        <form
+                          action={async (fd: FormData) => {
+                            "use server";
+                            await updateQuotationItem(String(fd.get("itemId") ?? ""), {
+                              description: String(fd.get("description") ?? ""),
+                              quantity: Number(fd.get("quantity")) || 1,
+                              unitPrice: Number(fd.get("unitPrice")) || 0,
+                              discount: Number(fd.get("discount")) || 0,
+                            });
+                            revalidatePath(`/documents/quotations/${id}`);
+                            redirect(`/documents/quotations/${id}?edit=1`);
+                          }}
+                          className="flex flex-1 flex-wrap items-end gap-2"
+                        >
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
+                            <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                          </label>
+                          <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                            <input name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                          </label>
+                          <label className="w-24 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
+                            <input name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                          </label>
+                          <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
+                            <input name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                          </label>
+                          <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[12px] font-semibold">Save</button>
+                        </form>
+                        <form
+                          action={async (fd: FormData) => {
+                            "use server";
+                            await removeQuotationItem(String(fd.get("itemId") ?? ""));
+                            revalidatePath(`/documents/quotations/${id}`);
+                            redirect(`/documents/quotations/${id}?edit=1`);
+                          }}
+                        >
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[12px] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                        </form>
+                      </div>
+                    ))}
+                    <form
+                      action={async (fd: FormData) => {
+                        "use server";
+                        await addQuotationItem(id, {
+                          description: String(fd.get("description") ?? ""),
+                          quantity: Number(fd.get("quantity")) || 1,
+                          unitPrice: Number(fd.get("unitPrice")) || 0,
+                          discount: Number(fd.get("discount")) || 0,
+                        });
+                        revalidatePath(`/documents/quotations/${id}`);
+                        redirect(`/documents/quotations/${id}?edit=1`);
+                      }}
+                      className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
+                    >
+                      <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
+                        <input name="description" required placeholder="New line item" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                        <input name="quantity" type="number" min="1" step="any" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <label className="w-24 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
+                        <input name="unitPrice" type="number" min="0" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
+                        <input name="discount" type="number" min="0" max="100" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                      </label>
+                      <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[12px] font-bold">Add line</button>
+                    </form>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
+                    <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
+                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
+                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
+                  </div>
+                </>
+              ) : quotation.items.length ? (
                 <>
                   <DataTable
                     frameless
@@ -262,10 +353,12 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   "use server";
                   const { user: actor, orgId: actorOrg } = await requireOrgSession();
                   if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+                  const issueDateRaw = String(fd.get("issueDate") ?? "").trim();
                   const validUntilRaw = String(fd.get("validUntil") ?? "").trim();
                   await prisma.quotation.updateMany({
-                    where: { id, orgId: actorOrg },
+                    where: { id, orgId: actorOrg, status: "DRAFT", convertedToInvoiceId: null },
                     data: {
+                      issueDate: issueDateRaw ? new Date(issueDateRaw) : null,
                       validUntil: validUntilRaw ? new Date(validUntilRaw) : null,
                       notes: String(fd.get("notes") ?? "").trim() || null,
                     },
@@ -278,6 +371,10 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
               >
                 <div className={cardHeadClass}>Edit quotation</div>
                 <div className="grid grid-cols-1 gap-3 p-4 min-[600px]:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issue Date</p>
+                    <input name="issueDate" type="date" defaultValue={(quotation.issueDate ?? quotation.createdAt) ? new Date(quotation.issueDate ?? quotation.createdAt).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </div>
                   <div>
                     <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Valid Until</p>
                     <input name="validUntil" type="date" defaultValue={quotation.validUntil ? new Date(quotation.validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />

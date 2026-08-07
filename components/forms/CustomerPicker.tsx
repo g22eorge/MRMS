@@ -41,77 +41,48 @@ export function CustomerPicker({
             .includes(normalized),
         )
       : clients;
-    return rows.slice(0, 18);
+    return rows.slice(0, 8);
   }, [clients, query]);
+
+  const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
 
   return (
     <section className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Customer</p>
-        <Link href={clientsPageHref} className="text-xs font-semibold text-[var(--accent)] hover:underline">
-          Client page
-        </Link>
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1">
-        {(["existing", "new"] as const).map((nextMode) => (
+        {(selectedClient || mode === "new") ? (
           <button
-            key={nextMode}
             type="button"
-            onClick={() => onModeChange(nextMode)}
-            className={`rounded-md px-3 py-1.5 text-xs font-bold capitalize transition ${
-              mode === nextMode ? "bg-[var(--accent)] text-black" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            }`}
+            onClick={() => { onSelectClient(""); onModeChange("existing"); }}
+            className="text-xs font-semibold text-[var(--accent)] hover:underline"
           >
-            {nextMode}
+            Change
           </button>
-        ))}
+        ) : (
+          <Link href={clientsPageHref} className="text-xs font-semibold text-[var(--accent)] hover:underline">
+            Client page
+          </Link>
+        )}
       </div>
 
-      {mode === "existing" ? (
-        <div className="mt-2 space-y-2">
-          <input
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search client, phone, address"
-            className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none focus:border-[var(--accent)]/50"
-          />
-          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-            {filteredClients.map((client) => (
-              <button
-                key={client.id}
-                type="button"
-                onClick={() => onSelectClient(client.id)}
-                className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                  selectedClientId === client.id
-                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                    : "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]/40"
-                }`}
-              >
-                <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{client.fullName}</span>
-                <span className="block truncate text-[12px] text-[var(--ink-muted)]">
-                  {[client.phone, client.email, client.organization].filter(Boolean).join(" - ") || "Client record"}
-                </span>
-                {client.address ? (
-                  <span className="mt-0.5 block truncate text-[11px] text-[var(--ink-muted)]/75">{client.address}</span>
-                ) : null}
-              </button>
-            ))}
-            {!filteredClients.length ? (
-              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-4 text-center text-xs text-[var(--ink-muted)]">
-                No client found
-              </div>
-            ) : null}
-          </div>
+      {selectedClient ? (
+        /* Chosen existing client */
+        <div className="mt-2 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-3 py-2.5">
+          <p className="truncate text-[13px] font-bold text-[var(--ink)]">{selectedClient.fullName}</p>
+          <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+            {[selectedClient.phone, selectedClient.email, selectedClient.organization].filter(Boolean).join(" - ") || "Client record"}
+          </p>
         </div>
-      ) : (
+      ) : mode === "new" ? (
+        /* Creating a new client — name prefilled from what was typed */
         <div className="mt-2 grid gap-2">
           {(
             [
               ["fullName", "Client name *"],
               ["phone", "Phone *"],
-              ["email", "Email"],
-              ["organization", "Organization"],
-              ["address", "Address / location"],
+              ["email", "Email (optional)"],
+              ["organization", "Organization (optional)"],
+              ["address", "Address / location (optional)"],
             ] as const
           ).map(([field, placeholder]) => (
             <input
@@ -122,6 +93,47 @@ export function CustomerPicker({
               className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none focus:border-[var(--accent)]/50"
             />
           ))}
+          <p className="px-1 text-[11px] text-[var(--ink-muted)]">A new client will be created with this document.</p>
+        </div>
+      ) : (
+        /* Smart search — one field for existing OR new */
+        <div className="mt-2 space-y-2">
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Type a name, phone, or company…"
+            autoComplete="off"
+            className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none focus:border-[var(--accent)]/50"
+          />
+          {query.trim() ? (
+            <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+              {filteredClients.map((client) => (
+                <button
+                  key={client.id}
+                  type="button"
+                  onClick={() => onSelectClient(client.id)}
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[var(--accent)]/40"
+                >
+                  <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{client.fullName}</span>
+                  <span className="block truncate text-[12px] text-[var(--ink-muted)]">
+                    {[client.phone, client.email, client.organization].filter(Boolean).join(" - ") || "Client record"}
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => { onSelectClient(""); onNewClientChange({ fullName: query.trim() }); onModeChange("new"); }}
+                className="flex w-full items-center gap-2 rounded-lg border border-dashed border-[var(--accent)]/45 bg-[var(--accent)]/5 px-3 py-2 text-left transition hover:bg-[var(--accent)]/10"
+              >
+                <span className="text-[16px] font-bold leading-none text-[var(--accent)]">+</span>
+                <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--ink)]">
+                  Add new customer <span className="text-[var(--ink-muted)]">&ldquo;{query.trim()}&rdquo;</span>
+                </span>
+              </button>
+            </div>
+          ) : (
+            <p className="px-1 text-[12px] text-[var(--ink-muted)]">Start typing to find a client — or add a new one.</p>
+          )}
         </div>
       )}
     </section>

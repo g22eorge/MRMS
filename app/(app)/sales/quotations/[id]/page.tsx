@@ -8,6 +8,7 @@ import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { QuotationStages } from "@/components/documents/QuotationStages";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
@@ -127,6 +128,7 @@ export default async function QuotationDetailPage({
     "use server";
     try {
       await updateQuotationDetails(id, {
+        issueDate: String(formData.get("issueDate") ?? ""),
         validUntil: String(formData.get("validUntil") ?? ""),
         notes: String(formData.get("notes") ?? ""),
       });
@@ -346,13 +348,23 @@ export default async function QuotationDetailPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
+      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
+      </section>
       {/* -- Edit draft -- */}
       {showEdit ? (
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className={cardLabel}>Edit Draft</p>
           </div>
-          <form action={updateDetailsAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
+          <form action={updateDetailsAction} className="grid gap-2 p-3 md:grid-cols-[minmax(0,150px)_minmax(0,150px)_minmax(0,1fr)_auto]">
+            <input
+              type="date"
+              name="issueDate"
+              aria-label="Issue date"
+              defaultValue={(quotation.issueDate ?? quotation.createdAt).toISOString().slice(0, 10)}
+              className={field}
+            />
             <input
               type="date"
               name="validUntil"
@@ -481,6 +493,7 @@ export default async function QuotationDetailPage({
           rows={[
             ...(quotation.discountAmount > 0 ? [{ label: "Discount", value: `-${formatMoney(quotation.discountAmount, currency)}` }] : []),
             ...(quotation.vatAmount > 0 ? [{ label: `${taxDisplayLabel}${taxDisplayRate !== null ? ` (${taxDisplayRate}%)` : ""}`, value: formatMoney(quotation.vatAmount, currency) }] : []),
+            { label: "Issue date", value: formatEATDate(quotation.issueDate ?? quotation.createdAt) },
             { label: "Valid Until", value: quotation.validUntil ? (isExpired ? `${formatEATDate(quotation.validUntil)} · expired` : formatEATDate(quotation.validUntil)) : "Open" },
             { label: "Created by", value: quotation.createdBy?.name ?? "unknown" },
           ]}

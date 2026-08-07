@@ -60,6 +60,7 @@ type Props = {
   defaultTaxRate: number;
   defaultTaxLabel: string;
   initialData?: {
+    issueDate?: string;
     validUntil?: string;
     notes?: string;
     taxEnabled?: boolean;
@@ -107,6 +108,9 @@ export function NewQuotationForm({
     address: "",
   });
   const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
+  const [issueDate, setIssueDate] = useState(
+    initialData?.issueDate ?? new Date().toISOString().slice(0, 10),
+  );
   const [validUntil, setValidUntil] = useState(initialData?.validUntil ?? "");
   const [notes, setNotes] = useState(initialData?.notes ?? "");
   const initialTaxKey = taxRates.find((rate) => rate.isDefault)?.id
@@ -240,6 +244,7 @@ export function NewQuotationForm({
             clientId: customerMode === "existing" && selectedSource?.kind === "client" ? selectedSource.id : undefined,
             jobId: customerMode === "existing" && selectedSource?.kind === "job" ? selectedSource.id : undefined,
             newClient: customerMode === "new" ? newClient : undefined,
+            issueDate: issueDate || undefined,
             validUntil: validUntil || undefined,
             notes: notes || undefined,
             taxApplicable: taxEnabled,
@@ -276,65 +281,45 @@ export function NewQuotationForm({
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.55fr)]">
         <div className="min-w-0 space-y-4">
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Date</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold text-[var(--ink-muted)]">
+                Issue Date
+                <input name="issueDate" type="date" max={new Date().toISOString().slice(0, 10)} value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="text-xs font-semibold text-[var(--ink-muted)]">
+                Valid Until
+                <input name="validUntil" type="date" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+              </label>
+            </div>
+          </section>
+          <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
               <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Customer</p>
-              <Link href="/clients?create=1" className="text-xs font-semibold text-[var(--accent)] hover:underline">New client</Link>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-1">
-              {(["existing", "new"] as const).map((mode) => (
+              {(selectedSource || customerMode === "new") ? (
                 <button
-                  key={mode}
                   type="button"
-                  onClick={() => setCustomerMode(mode)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-bold capitalize transition ${
-                    customerMode === mode ? "bg-[var(--accent)] text-black" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-                  }`}
+                  onClick={() => { setSelectedSourceKey(""); setCustomerMode("existing"); }}
+                  className="text-xs font-semibold text-[var(--accent)] hover:underline"
                 >
-                  {mode}
+                  Change
                 </button>
-              ))}
+              ) : null}
             </div>
 
-            {customerMode === "existing" ? (
-              <div className="mt-3 space-y-2">
-                <input
-                  value={sourceQuery}
-                  onChange={(event) => setSourceQuery(event.target.value)}
-                  placeholder="Search clients, leads, jobs, phone, address"
-                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
-                />
-                <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                  {filteredSources.map((source) => (
-                    <button
-                      key={source.key}
-                      type="button"
-                      onClick={() => setSelectedSourceKey(source.key)}
-                      className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                        selectedSourceKey === source.key
-                          ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                          : "border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--accent)]/35"
-                      }`}
-                    >
-                      <span className="flex items-start justify-between gap-2">
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{source.title}</span>
-                          <span className="block truncate text-[12px] text-[var(--ink-muted)]">{source.meta || source.detail}</span>
-                        </span>
-                        <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                          {source.badge}
-                        </span>
-                      </span>
-                      {source.detail ? <span className="mt-1 block truncate text-[11px] text-[var(--ink-muted)]/75">{source.detail}</span> : null}
-                    </button>
-                  ))}
-                  {filteredSources.length === 0 ? (
-                    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-4 text-center text-xs text-[var(--ink-muted)]">
-                      No customer source found
-                    </div>
-                  ) : null}
+            {selectedSource ? (
+              /* An existing customer is chosen */
+              <div className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-3 py-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-bold text-[var(--ink)]">{selectedSource.title}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{selectedSource.meta || selectedSource.detail || ""}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{selectedSource.badge}</span>
                 </div>
               </div>
-            ) : (
+            ) : customerMode === "new" ? (
+              /* Creating a new customer — name is prefilled from what was typed */
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <input
                   value={newClient.fullName}
@@ -351,37 +336,65 @@ export function NewQuotationForm({
                 <input
                   value={newClient.email}
                   onChange={(event) => setNewClient((prev) => ({ ...prev, email: event.target.value }))}
-                  placeholder="Email"
+                  placeholder="Email (optional)"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
                 <input
                   value={newClient.organization}
                   onChange={(event) => setNewClient((prev) => ({ ...prev, organization: event.target.value }))}
-                  placeholder="Organization"
+                  placeholder="Organization (optional)"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
                 <input
                   value={newClient.address}
                   onChange={(event) => setNewClient((prev) => ({ ...prev, address: event.target.value }))}
-                  placeholder="Address / location"
+                  placeholder="Address / location (optional)"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
+                <p className="px-1 text-[11px] text-[var(--ink-muted)]">A new client will be created with this quotation.</p>
+              </div>
+            ) : (
+              /* Smart search — one field for existing OR new */
+              <div className="mt-3 space-y-2">
+                <input
+                  value={sourceQuery}
+                  onChange={(event) => setSourceQuery(event.target.value)}
+                  placeholder="Type a name, phone, or company…"
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+                />
+                {sourceQuery.trim() ? (
+                  <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                    {filteredSources.slice(0, 8).map((source) => (
+                      <button
+                        key={source.key}
+                        type="button"
+                        onClick={() => setSelectedSourceKey(source.key)}
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-left transition hover:border-[var(--accent)]/40"
+                      >
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{source.title}</span>
+                            <span className="block truncate text-[12px] text-[var(--ink-muted)]">{source.meta || source.detail}</span>
+                          </span>
+                          <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{source.badge}</span>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedSourceKey(""); setNewClient((prev) => ({ ...prev, fullName: sourceQuery.trim() })); setCustomerMode("new"); }}
+                      className="flex w-full items-center gap-2 rounded-lg border border-dashed border-[var(--accent)]/45 bg-[var(--accent)]/5 px-3 py-2 text-left transition hover:bg-[var(--accent)]/10"
+                    >
+                      <span className="text-[16px] font-bold leading-none text-[var(--accent)]">+</span>
+                      <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--ink)]">Add new customer <span className="text-[var(--ink-muted)]">&ldquo;{sourceQuery.trim()}&rdquo;</span></span>
+                    </button>
+                  </div>
+                ) : (
+                  <p className="px-1 text-[12px] text-[var(--ink-muted)]">Start typing to find an existing customer — or add a new one.</p>
+                )}
               </div>
             )}
-
-            <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
-              {customerMode === "existing" ? (
-                <>
-                  <p className="font-semibold text-[var(--ink)]">{selectedSource?.title ?? "Recipient not selected"}</p>
-                  <p className="mt-0.5 truncate">{selectedSource?.meta || selectedSource?.detail || "Select a customer source."}</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold text-[var(--ink)]">{newClient.fullName.trim() || "New client"}</p>
-                  <p className="mt-0.5 truncate">{[newClient.phone, newClient.address].filter(Boolean).join(" - ") || "Client will be created with this quotation."}</p>
-                </>
-              )}
-            </div>
           </section>
 
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -424,28 +437,15 @@ export function NewQuotationForm({
           </section>
 
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Details</p>
-            <div className="grid grid-cols-1 gap-3">
-              <label className="text-xs font-semibold text-[var(--ink-muted)]">
-                Valid Until
-                <input
-                  name="validUntil"
-                  type="date"
-                  value={validUntil}
-                  onChange={(event) => setValidUntil(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
-                />
-              </label>
-              <FormTextarea
-                label="Notes"
-                name="notes"
-                size="md"
-                rows={4}
-                placeholder="Terms, delivery notes, warranty, product availability..."
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-              />
-            </div>
+            <FormTextarea
+              label="Notes"
+              name="notes"
+              size="md"
+              rows={4}
+              placeholder="Terms, delivery notes, warranty, product availability..."
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+            />
           </section>
         </div>
 

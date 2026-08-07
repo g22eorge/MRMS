@@ -415,7 +415,7 @@ export async function addQuotationItem(
 
 export async function updateQuotationDetails(
   quotationId: string,
-  data: { validUntil?: string; notes?: string },
+  data: { issueDate?: string; validUntil?: string; notes?: string },
 ) {
   const { user, orgId } = await requireOrgSession();
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
@@ -425,6 +425,7 @@ export async function updateQuotationDetails(
   await prisma.quotation.update({
     where: { id: quotationId },
     data: {
+      ...(data.issueDate !== undefined ? { issueDate: data.issueDate ? new Date(data.issueDate) : null } : {}),
       validUntil: data.validUntil ? new Date(data.validUntil) : null,
       notes: sanitizeOptionalText(data.notes),
     },
