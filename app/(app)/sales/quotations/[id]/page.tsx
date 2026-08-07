@@ -349,7 +349,22 @@ export default async function QuotationDetailPage({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
+          {/* Contextual next step — the one action that moves this quote forward. */}
+          {canSend ? (
+            <form action={sendAction}><Button type="submit" size="sm" className="font-bold">Send to client →</Button></form>
+          ) : canAccept ? (
+            <div className="flex items-center gap-2">
+              <form action={acceptAction}><Button type="submit" size="sm" className="font-bold">Mark accepted →</Button></form>
+              {canReject ? <form action={rejectAction}><Button type="submit" variant="ghost" size="sm">Reject</Button></form> : null}
+            </div>
+          ) : canConvert ? (
+            <form action={convertToInvoiceAction}><Button type="submit" size="sm" className="font-bold">Convert to invoice →</Button></form>
+          ) : quotation.convertedToInvoiceId ? (
+            <Button href="/documents/invoices" variant="secondary" size="sm">View invoice →</Button>
+          ) : null}
+        </div>
       </section>
       {/* -- Edit draft -- */}
       {showEdit ? (
