@@ -539,10 +539,8 @@ export default async function Page() {
           <h2 className="mt-3 text-2xl font-extrabold text-white md:text-3xl">
             Manage your entire business like a pro
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/45">
-            Dduuka ProMax is the complete business management system behind Eagle Info Solutions —
-            covering sales, inventory, finance, repair service, CRM, documents, and daily operations.
-            It also includes Gemini Flash-powered AI guidance and business insights to help teams learn the system faster and make better decisions.
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-white/55">
+            The complete system that runs Eagle Info Solutions — with built-in AI guidance. Everything below, in one place:
           </p>
 
           {/* Module grid */}
@@ -584,11 +582,8 @@ export default async function Page() {
               <h3 className="text-2xl font-extrabold leading-snug text-white md:text-3xl">
                 Want this system for<br />your business?
               </h3>
-              <p className="mt-3 text-sm leading-relaxed text-white/55">
-                Dduuka ProMax is a complete business management system — sales, inventory,
-                invoicing, finance, CRM, repair service support, AI assistance, and daily operations.
-                Available as a hosted deployment for businesses, service centres, and technology
-                companies. Includes setup, data migration, staff training, and ongoing support.
+              <p className="mt-3 text-base leading-relaxed text-white/60">
+                Hosted for your business — setup, data migration, staff training, and ongoing support included.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
