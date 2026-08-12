@@ -317,7 +317,12 @@ const EIS_GOOGLE_REVIEW_URL = "https://g.page/EagleInfoSolutions/review?rc";
  */
 function statusMessageLinks(orgId: string, jobNumber: string, newStatus: JobStatus) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
-  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(jobNumber)}` : "";
+  // Keep the ref human-readable in the link: encode the genuinely unsafe
+  // characters but leave "/" literal (it's valid in a query value), so a job
+  // number like EIS-3/2025/0042 reads cleanly instead of EIS-3%2F2025%2F0042.
+  // /feedback reads params.ref back verbatim, so the DB lookup still matches.
+  const ref = encodeURIComponent(jobNumber).replace(/%2F/gi, "/");
+  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${ref}` : "";
   const isServiceDone = newStatus === JobStatus.COMPLETED || newStatus === JobStatus.CLOSED;
   const reviewUrl = isServiceDone && orgId === EIS_ORG_ID
     ? (process.env.GOOGLE_REVIEW_URL?.trim() || EIS_GOOGLE_REVIEW_URL)
