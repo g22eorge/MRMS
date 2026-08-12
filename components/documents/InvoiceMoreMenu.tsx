@@ -36,8 +36,10 @@ export function InvoiceMoreMenu({
         body: JSON.stringify({ action: "void" }),
       });
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        window.alert(text || "Could not void the invoice.");
+        // The endpoint returns JSON { error }, e.g. "This invoice has payments
+        // recorded. Refund … first, then void." Surface that, not the raw body.
+        const msg = await res.json().then((j) => j?.error).catch(() => null);
+        window.alert(msg || "Could not void the invoice.");
         setPending(false);
         return;
       }

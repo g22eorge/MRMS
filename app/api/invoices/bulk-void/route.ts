@@ -26,10 +26,15 @@ export async function POST(req: NextRequest) {
   // stock, audit) instead of a blanket updateMany that silently leaked stock.
   // Pre-fetch org-scoped so the raw tx updates below are tenant-safe, and so we
   // only touch — and audit — invoices that were actually not already void.
-  const targets = await db.invoice.findMany({
+  // Exclude invoices with money collected: same gate as single-void, since
+  // voiding would orphan received cash + its ledger entries against a cancelled
+  // document. Those must be refunded first. Report how many were skipped.
+  const candidates = await db.invoice.findMany({
     where: { id: { in: ids }, orgId, status: { not: "VOID" } },
-    select: { id: true, invoiceNumber: true },
+    select: { id: true, invoiceNumber: true, paidAmount: true },
   });
+  const targets = candidates.filter((c) => (c.paidAmount ?? 0) <= 0.005);
+  const skippedPaid = candidates.length - targets.length;
 
   for (const target of targets) {
     await prisma.$transaction(async (tx) => {
@@ -61,5 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   revalidatePath("/documents/invoices");
-  return NextResponse.redirect(new URL("/documents/invoices", req.url));
+  const dest = new URL("/documents/invoices", req.url);
+  if (skippedPaid > 0) dest.searchParams.set("voidSkipped", String(skippedPaid));
+  return NextResponse.redirect(dest);
 }

@@ -17,7 +17,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   const db = prisma as any;
   const { id } = await ctx.params;
 
-  const invoice = await prisma.invoice.findFirst({ where: { id, orgId }, select: { id: true, orgId: true, invoiceNumber: true, status: true, jobId: true, totalAmount: true, clientId: true } });
+  const invoice = await prisma.invoice.findFirst({ where: { id, orgId }, select: { id: true, orgId: true, invoiceNumber: true, status: true, jobId: true, totalAmount: true, paidAmount: true, clientId: true } });
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await _req.json().catch(() => ({}));
@@ -105,6 +105,16 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   if (action === "void") {
     if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    // Don't void an invoice that has collected money — voiding leaves the
+    // payments and their ledger entries in place, so a paid VOID invoice would
+    // orphan received cash against a cancelled document. Refund/reverse the
+    // payments first (which reopens the invoice), then void. Epsilon guards float.
+    if (invoice.status !== "VOID" && (invoice.paidAmount ?? 0) > 0.005) {
+      return NextResponse.json(
+        { error: "This invoice has payments recorded. Refund or delete the payments first, then void it." },
+        { status: 400 },
+      );
     }
     const alreadyVoid = invoice.status === "VOID";
     const updated = await prisma.$transaction(async (tx) => {

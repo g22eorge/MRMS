@@ -53,7 +53,7 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; page?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; voidSkipped?: string; page?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   if (!user.orgId) redirect("/dashboard");
@@ -81,6 +81,7 @@ export default async function InvoicesPage({
   const remindedParam = params.reminded ?? "";
   const remindedBulkParam = params.remindedBulk ?? "";
   const reminderSkippedParam = params.reminderSkipped ?? "";
+  const voidSkippedParam = params.voidSkipped ?? "";
   const reminderFailedParam = params.reminderFailed ?? "";
   const reminderErrorParam = params.reminderError ?? "";
 
@@ -589,6 +590,13 @@ export default async function InvoicesPage({
         <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
           <p className="text-[13px] font-medium text-red-700">
             {reminderErrorParam === "forbidden" ? "You do not have permission to send invoice reminders." : decodeURIComponent(reminderErrorParam)}
+          </p>
+        </div>
+      )}
+      {voidSkippedParam && Number(voidSkippedParam) > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-amber-700">
+            Skipped {voidSkippedParam} invoice{Number(voidSkippedParam) === 1 ? "" : "s"} with payments recorded — refund the payments first, then void.
           </p>
         </div>
       )}
