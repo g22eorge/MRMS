@@ -123,7 +123,7 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
           { label: "Overdue (3d+)", val: String(overdueWithDays.length), sub: `${unassignedCount} unassigned`, href: "/jobs", color: overdueWithDays.length > 0 ? "text-amber-600" : "text-[var(--ink-muted)]" },
           { label: "Parts Used MTD", val: String(partsConsumed), sub: "units consumed", href: "/inventory", color: "text-[var(--ink)]" },
         ].map(t => (
-          <Link key={t.label} href={t.href} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px]">
+          <Link key={t.label} href={t.href} className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px]">
             <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
             <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
             <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{t.sub}</p>
@@ -144,7 +144,7 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
 
       <div className="grid gap-3 lg:grid-cols-2">
         {/* Technician completions leaderboard */}
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <section className="dc-card px-3 py-2.5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completions This Month</p>
           {topTechs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No completed jobs this month.</p>
@@ -167,7 +167,7 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
         </section>
 
         {/* Active workload */}
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5" id="tech-workload">
+        <section className="dc-card px-3 py-2.5" id="tech-workload">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Workload</p>
             {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[0.75rem] font-bold text-amber-600">{unassignedCount} unassigned</Link>}

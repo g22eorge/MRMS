@@ -43,7 +43,7 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
       />
 
       {openSession ? (
-        <Link href="/pos" className="panel-shadow block rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/pos" className="dc-card block px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Session</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
@@ -64,7 +64,7 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Continue session →</p>
         </Link>
       ) : (
-        <Link href="/pos" className="panel-shadow block rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/pos" className="dc-card block px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">No Active Session</p>
           <p className="mt-2 text-sm text-[var(--ink-muted)]">Open a new POS session to start recording sales.</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Open session →</p>

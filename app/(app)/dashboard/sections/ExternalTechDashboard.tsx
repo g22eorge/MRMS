@@ -93,22 +93,22 @@ export async function ExternalTechDashboard({
       />
 
       <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
-        <Link href="/technicians" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/technicians" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned Jobs ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold">{jobs.length}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Open queue →</p>
         </Link>
-        <Link href="/technicians?ready=1" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/technicians?ready=1" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Jobs ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{openCount}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Jobs needing action →</p>
         </Link>
-        <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/jobs?status=COMPLETED" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{completedCount}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed jobs →</p>
         </Link>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 sm:p-5">
+        <div className="dc-card px-3 py-2.5 sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payout Outstanding</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{formatMoneyCompact(outstandingTotal, currency)}</p>
           <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid to date: {formatMoneyCompact(paidTotal, currency)}</p>
@@ -122,7 +122,7 @@ export async function ExternalTechDashboard({
         title="Recent Assigned Jobs"
         storageKey="dashboard.external.recentAssigned"
         groupName="mobile-dashboard-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
+        className="dc-card p-3 lg:hidden"
       >
         {jobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>

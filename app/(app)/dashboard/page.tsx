@@ -34,51 +34,61 @@ export default async function DashboardPage({
   const period: "month" | "year" = filters.period === "year" ? "year" : "month";
   const orgId = user.orgId ?? null;
 
-  switch (user.role) {
-    case "TECHNICIAN_EXTERNAL":
-      return <ExternalTechDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;
+  // One dashboard design language: `calm-scope` remaps the app tokens
+  // (--panel/--ink/--line/--accent…) to the shared --dc-* "calm" palette that
+  // AdminDashboard already speaks, so every role dashboard renders on the same
+  // flat, soft-bordered surface instead of the older crisper panel look. Same
+  // mechanism the job-detail page uses (.jobdetail-cal). Structural layout stays
+  // role-specific; only the visual vocabulary converges.
+  const content = (() => {
+    switch (user.role) {
+      case "TECHNICIAN_EXTERNAL":
+        return <ExternalTechDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;
 
-    case "TECHNICIAN_INTERNAL":
-      return <InternalTechDashboard userId={session.user.id} orgId={orgId ?? ""} permissionUser={permissionUser} period={period} filters={filters} />;
+      case "TECHNICIAN_INTERNAL":
+        return <InternalTechDashboard userId={session.user.id} orgId={orgId ?? ""} permissionUser={permissionUser} period={period} filters={filters} />;
 
-    case "TECH_MANAGER":
-      return <TechManagerDashboard orgId={orgId} />;
+      case "TECH_MANAGER":
+        return <TechManagerDashboard orgId={orgId} />;
 
-    case "ADMIN":
-      return <AdminDashboard userName={user.name} orgId={orgId} permissionUser={permissionUser} />;
+      case "ADMIN":
+        return <AdminDashboard userName={user.name} orgId={orgId} permissionUser={permissionUser} />;
 
-    case "OPS":
-      return <OpsDashboard orgId={orgId} period={period} filters={filters} />;
+      case "OPS":
+        return <OpsDashboard orgId={orgId} period={period} filters={filters} />;
 
-    case "FRONT_DESK":
-    case "INTAKE":
-      return <IntakeDashboard userId={session.user.id} orgId={orgId ?? ""} period={period} filters={filters} />;
+      case "FRONT_DESK":
+      case "INTAKE":
+        return <IntakeDashboard userId={session.user.id} orgId={orgId ?? ""} period={period} filters={filters} />;
 
-    case "MANAGER":
-      return <ManagerDashboard orgId={orgId} />;
+      case "MANAGER":
+        return <ManagerDashboard orgId={orgId} />;
 
-    case "FINANCE":
-      return <FinanceDashboard orgId={orgId ?? ""} />;
+      case "FINANCE":
+        return <FinanceDashboard orgId={orgId ?? ""} />;
 
-    case "SALES":
-      return <SalesDashboard userId={user.id} orgId={orgId} />;
+      case "SALES":
+        return <SalesDashboard userId={user.id} orgId={orgId} />;
 
-    case "SALES_MANAGER":
-      return <SalesManagerDashboard orgId={orgId} />;
+      case "SALES_MANAGER":
+        return <SalesManagerDashboard orgId={orgId} />;
 
-    case "SALES_CORPORATE":
-      return <SalesCorporateDashboard userId={session.user.id} orgId={orgId} />;
+      case "SALES_CORPORATE":
+        return <SalesCorporateDashboard userId={session.user.id} orgId={orgId} />;
 
-    case "SALES_RETAIL":
-      return <SalesRetailDashboard userId={session.user.id} orgId={orgId} />;
+      case "SALES_RETAIL":
+        return <SalesRetailDashboard userId={session.user.id} orgId={orgId} />;
 
-    case "SALES_POS":
-      return <SalesPosDashboard userId={session.user.id} />;
+      case "SALES_POS":
+        return <SalesPosDashboard userId={session.user.id} />;
 
-    case "TECH_FIELD":
-      return <TechFieldDashboard userId={session.user.id} />;
+      case "TECH_FIELD":
+        return <TechFieldDashboard userId={session.user.id} />;
 
-    default:
-      return <SystemOverviewDashboard orgId={orgId ?? ""} />;
-  }
+      default:
+        return <SystemOverviewDashboard orgId={orgId ?? ""} />;
+    }
+  })();
+
+  return <div className="calm-scope">{content}</div>;
 }

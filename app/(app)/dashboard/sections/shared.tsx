@@ -189,7 +189,7 @@ export function RevenueMarginTrendSection({
   emptyMessage?: string;
 }) {
   return (
-    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+    <section className="dc-card px-3 py-2.5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>

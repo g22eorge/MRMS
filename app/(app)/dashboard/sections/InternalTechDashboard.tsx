@@ -155,7 +155,7 @@ export async function InternalTechDashboard({
         title="Recent Assigned Jobs"
         storageKey="dashboard.internal.recentAssigned"
         groupName="mobile-dashboard-sections"
-        className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:hidden"
+        className="dc-card p-3 lg:hidden"
       >
         {assignedJobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>
@@ -176,22 +176,22 @@ export async function InternalTechDashboard({
       </PersistedDisclosure>
 
       <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
-        <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/jobs" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold">{assignedJobs.length}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">View my jobs →</p>
         </Link>
-        <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/jobs?status=DIAGNOSING" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{diagnosing}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Needs diagnosis work →</p>
         </Link>
-        <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/jobs?status=IN_REPAIR" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{inRepair}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Active repairs →</p>
         </Link>
-        <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
+        <Link href="/jobs?status=COMPLETED" className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
           <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{completed}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed repairs →</p>
