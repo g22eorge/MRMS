@@ -152,11 +152,11 @@ export async function SalesDashboard({ userId, orgId }: { userId: string | undef
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--panel-strong)]">
             <div
-              className={`h-full rounded-full transition-all ${(targetPct ?? 0) >= 100 ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
+              className={`h-full rounded-full transition-colors ${(targetPct ?? 0) >= 100 ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
               style={{ width: `${Math.min(100, targetPct ?? 0)}%` }}
             />
           </div>
-          <div className="mt-1.5 flex justify-between text-[12px] text-[var(--ink-muted)]">
+          <div className="mt-1.5 flex justify-between text-[0.75rem] text-[var(--ink-muted)]">
             <span>{formatMoneyCompact(totalRevenueMtd, currency)} achieved</span>
             <span>target {formatMoneyCompact(teamTargetRevenue, currency)}</span>
           </div>
@@ -172,9 +172,9 @@ export async function SalesDashboard({ userId, orgId }: { userId: string | undef
           { label: "Conversion Rate",    val: `${conversionRate}%`,                            sub: `${wonMtd} won vs ${prevMonthJobCount} last month`,                                                                             href: "/jobs?status=COMPLETED,READY_FOR_PICKUP",       color: conversionRate >= 50 ? "text-emerald-600" : "text-amber-600" },
         ].map(t => (
           <Link key={t.label} href={t.href} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[15px] font-black leading-tight ${t.color}`}>{t.val}</p>
-            <p className="mt-1 text-[12px] text-[var(--ink-muted)]">{t.sub}</p>
+            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
+            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
+            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{t.sub}</p>
           </Link>
         ))}
       </div>

@@ -41,7 +41,7 @@ export async function SystemOverviewDashboard({ orgId }: { orgId: string }) {
         ].map((item) => (
           <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center gap-0.5 py-3 transition hover:bg-[var(--panel-strong)]">
             <p className={`text-lg font-bold ${item.color}`}>{item.value}</p>
-            <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
+            <p className="text-[0.75rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
           </Link>
         ))}
       </div>

@@ -97,10 +97,10 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
       {(overdueWithDays.length > 0 || awaitingApprovalCount > 0 || unassignedCount > 0) && (
         <section className="panel-shadow rounded-xl border border-[var(--accent)]/25 bg-[var(--panel)] px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <span className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Attention Required</span>
-            {awaitingApprovalCount > 0 && <Link href="/jobs?status=AWAITING_APPROVAL" className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2.5 py-1 text-[13px] font-medium text-[var(--accent)]">{awaitingApprovalCount} awaiting approval</Link>}
-            {overdueWithDays.length > 0 && <span className="rounded-full border border-white/10 bg-[#0b0b0b] px-2.5 py-1 text-[13px] font-medium text-white/90">{overdueWithDays.length} overdue 3+ days</span>}
-            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[13px] font-medium text-[var(--ink)]">{unassignedCount} unassigned</Link>}
+            <span className="text-[0.8125rem] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Attention Required</span>
+            {awaitingApprovalCount > 0 && <Link href="/jobs?status=AWAITING_APPROVAL" className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2.5 py-1 text-[0.8125rem] font-medium text-[var(--accent)]">{awaitingApprovalCount} awaiting approval</Link>}
+            {overdueWithDays.length > 0 && <span className="rounded-full border border-white/10 bg-[#0b0b0b] px-2.5 py-1 text-[0.8125rem] font-medium text-white/90">{overdueWithDays.length} overdue 3+ days</span>}
+            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[0.8125rem] font-medium text-[var(--ink)]">{unassignedCount} unassigned</Link>}
           </div>
         </section>
       )}
@@ -113,8 +113,8 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
           { label: "Ready Pickup", val: String(statusCount.get("READY_FOR_PICKUP") ?? 0), href: "/jobs?status=READY_FOR_PICKUP", color: "text-[var(--accent)]" },
         ].map(t => (
           <Link key={t.label} href={t.href} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[15px] font-black leading-tight ${t.color}`}>{t.val}</p>
+            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
+            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
           </Link>
         ))}
       </div>
@@ -139,7 +139,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Workload</p>
-            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[12px] font-bold text-amber-600">{unassignedCount} unassigned</Link>}
+            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[0.75rem] font-bold text-amber-600">{unassignedCount} unassigned</Link>}
           </div>
           {techRows.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No active assignments.</p>
@@ -149,21 +149,21 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
                 <Link key={t.id} href={`/jobs?assignedToId=${t.id}`} className="group flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold group-hover:text-[var(--accent)] transition-colors">{t.name}</p>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : t.role === "TECHNICIAN_INTERNAL" ? "Internal" : t.role}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : t.role === "TECHNICIAN_INTERNAL" ? "Internal" : t.role}</p>
                   </div>
-                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-slate-500/15 text-slate-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
+                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-slate-500/15 text-slate-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
                 </Link>
               ))}
               {overdueWithDays.length > 0 && (
                 <div className="mt-2 border-t border-[var(--line)] pt-2">
-                  <p className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue Jobs</p>
+                  <p className="mb-1.5 text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue Jobs</p>
                   {overdueWithDays.slice(0, 4).map(j => (
                     <Link key={j.id} href={`/jobs/${j.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-amber-500/30 mb-1">
                       <div className="min-w-0">
                         <p className="mono truncate text-xs font-bold text-[var(--accent)]">{j.jobNumber}</p>
-                        <p className="truncate text-[12px] text-[var(--ink-muted)]">{statusLabel[j.status as keyof typeof statusLabel] ?? j.status}</p>
+                        <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{statusLabel[j.status as keyof typeof statusLabel] ?? j.status}</p>
                       </div>
-                      <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${j.ageDays >= 8 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-600"}`}>{j.ageDays}d</span>
+                      <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${j.ageDays >= 8 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-600"}`}>{j.ageDays}d</span>
                     </Link>
                   ))}
                 </div>

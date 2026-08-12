@@ -47,15 +47,15 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Session</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Total Sales</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Total Sales</p>
               <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{formatMoney(openSession.totalSales, currency)}</p>
             </div>
             <div>
-              <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sales Count</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sales Count</p>
               <p className="mt-1 text-xl font-semibold text-[var(--ink)]">{openSession.salesCount}</p>
             </div>
             <div>
-              <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Opened At</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Opened At</p>
               <p className="mt-1 text-xl font-semibold text-[var(--ink)]">
                 {openSession.openedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
@@ -65,7 +65,7 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
         </Link>
       ) : (
         <Link href="/pos" className="panel-shadow block rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">No Active Session</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">No Active Session</p>
           <p className="mt-2 text-sm text-[var(--ink-muted)]">Open a new POS session to start recording sales.</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Open session →</p>
         </Link>

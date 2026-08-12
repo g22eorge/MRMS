@@ -124,9 +124,9 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
           { label: "Parts Used MTD", val: String(partsConsumed), sub: "units consumed", href: "/inventory", color: "text-[var(--ink)]" },
         ].map(t => (
           <Link key={t.label} href={t.href} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[15px] font-black leading-tight ${t.color}`}>{t.val}</p>
-            <p className="mt-1 text-[12px] text-[var(--ink-muted)]">{t.sub}</p>
+            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
+            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
+            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{t.sub}</p>
           </Link>
         ))}
       </div>
@@ -135,9 +135,9 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
       {(overdueWithDays.length > 0 || unassignedCount > 0) && (
         <section className="panel-shadow rounded-xl border border-[var(--accent)]/25 bg-[var(--panel)] px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <span className="text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Attention Required</span>
-            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[13px] font-medium text-[var(--ink)]">{unassignedCount} unassigned</Link>}
-            {overdueWithDays.length > 0 && <span className="rounded-full border border-white/10 bg-[#0b0b0b] px-2.5 py-1 text-[13px] font-medium text-white/90">{overdueWithDays.length} overdue 3+ days</span>}
+            <span className="text-[0.8125rem] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Attention Required</span>
+            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[0.8125rem] font-medium text-[var(--ink)]">{unassignedCount} unassigned</Link>}
+            {overdueWithDays.length > 0 && <span className="rounded-full border border-white/10 bg-[#0b0b0b] px-2.5 py-1 text-[0.8125rem] font-medium text-white/90">{overdueWithDays.length} overdue 3+ days</span>}
           </div>
         </section>
       )}
@@ -153,12 +153,12 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
               {topTechs.map((t, i) => (
                 <div key={t.name} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[12px] font-bold text-[var(--ink-muted)] w-4">{i + 1}</span>
+                    <span className="text-[0.75rem] font-bold text-[var(--ink-muted)] w-4">{i + 1}</span>
                     <p className="truncate text-xs font-semibold text-[var(--ink)]">{t.name}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[12px] text-[var(--ink-muted)]">{t.avgDays.toFixed(1)}d avg</span>
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[12px] font-bold text-emerald-600">{t.count} done</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{t.avgDays.toFixed(1)}d avg</span>
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.75rem] font-bold text-emerald-600">{t.count} done</span>
                   </div>
                 </div>
               ))}
@@ -170,7 +170,7 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5" id="tech-workload">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Workload</p>
-            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[12px] font-bold text-amber-600">{unassignedCount} unassigned</Link>}
+            {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[0.75rem] font-bold text-amber-600">{unassignedCount} unassigned</Link>}
           </div>
           {techRows.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No active assignments.</p>
@@ -180,18 +180,18 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
                 <Link key={t.id} href={`/jobs?assignedToId=${t.id}`} className="group flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold group-hover:text-[var(--accent)] transition-colors">{t.name}</p>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{t.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"}</p>
                   </div>
-                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-slate-500/15 text-slate-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
+                  <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${t.role === "TECHNICIAN_EXTERNAL" ? "bg-slate-500/15 text-slate-400" : "bg-sky-500/15 text-sky-500"}`}>{t.count} active</span>
                 </Link>
               ))}
               {overdueWithDays.length > 0 && (
                 <div className="mt-2 border-t border-[var(--line)] pt-2">
-                  <p className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue Jobs</p>
+                  <p className="mb-1.5 text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Overdue Jobs</p>
                   {overdueWithDays.slice(0, 4).map(j => (
                     <Link key={j.id} href={`/jobs/${j.id}`} className="mb-1 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-amber-500/30">
                       <p className="mono truncate text-xs font-bold text-[var(--accent)]">{j.jobNumber}</p>
-                      <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold ${j.ageDays >= 8 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-600"}`}>{j.ageDays}d</span>
+                      <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${j.ageDays >= 8 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-600"}`}>{j.ageDays}d</span>
                     </Link>
                   ))}
                 </div>

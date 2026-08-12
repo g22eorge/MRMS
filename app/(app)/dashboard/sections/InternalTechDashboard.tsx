@@ -129,20 +129,20 @@ export async function InternalTechDashboard({
       {canUpdatePricing ? (
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2.5">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[13px]">Pricing Controls</p>
+            <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[0.8125rem]">Pricing Controls</p>
             <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
           </div>
           <div className="grid gap-2 p-3 grid-cols-2 sm:grid-cols-3">
             <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-center">
-              <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--accent)]">Needs Pricing</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.08em] text-[var(--accent)]">Needs Pricing</p>
               <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{pricingPendingCount}</p>
             </Link>
             <Link href="/jobs?status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP,COMPLETED" className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-center">
-              <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--accent)]">Priced Jobs</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.08em] text-[var(--accent)]">Priced Jobs</p>
               <p className="mt-1 text-lg font-semibold text-[var(--accent)]">{pricedCount}</p>
             </Link>
             <Link href="/jobs?pricing=priced" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-center col-span-2 sm:col-span-1">
-              <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
+              <p className="text-[0.75rem] uppercase tracking-[0.08em] text-[var(--ink-muted)]">Margin</p>
               <p className={`mt-1 text-sm font-semibold ${marginTotal >= 0 ? "text-[var(--accent)]" : "text-red-500"}`}>
                 {marginTotal >= 0 ? "+" : ""}{formatMoneyCompact(marginTotal, getAppCurrency())}
               </p>
@@ -165,7 +165,7 @@ export async function InternalTechDashboard({
               <li key={job.id} className="border-b border-[var(--line)] pb-1.5 last:border-0 last:pb-0">
                 <Link href={`/jobs/${job.id}`} className="flex items-center justify-between gap-2 group">
                   <p className="truncate text-xs font-medium text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{job.jobNumber}</p>
-                  <span className="shrink-0 text-[12px] text-[var(--ink-muted)]">
+                  <span className="shrink-0 text-[0.75rem] text-[var(--ink-muted)]">
                     {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
                   </span>
                 </Link>
@@ -177,22 +177,22 @@ export async function InternalTechDashboard({
 
       <div className="hidden gap-3 2xl:grid 2xl:grid-cols-4">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold">{assignedJobs.length}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">View my jobs →</p>
         </Link>
         <Link href="/jobs?status=DIAGNOSING" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Diagnosing ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{diagnosing}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Needs diagnosis work →</p>
         </Link>
         <Link href="/jobs?status=IN_REPAIR" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">In Repair ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{inRepair}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Active repairs →</p>
         </Link>
         <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed ({selectedPeriodLabel})</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{completed}</p>
           <p className="mt-3 text-xs font-medium text-[var(--accent)]">Completed repairs →</p>
         </Link>

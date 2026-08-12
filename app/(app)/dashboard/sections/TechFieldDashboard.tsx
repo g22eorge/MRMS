@@ -47,12 +47,12 @@ export async function TechFieldDashboard({ userId }: { userId: string }) {
 
       <div className="grid gap-3 grid-cols-2">
         <Link href="/jobs" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned Jobs</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Assigned Jobs</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{assignedJobs}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View queue →</p>
         </Link>
         <Link href="/jobs?status=COMPLETED" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed Today</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Completed Today</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{completedToday}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View completed →</p>
         </Link>

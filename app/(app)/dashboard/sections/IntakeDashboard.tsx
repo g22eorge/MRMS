@@ -82,7 +82,7 @@ export async function IntakeDashboard({
         ].map((item) => (
           <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center gap-0.5 py-3 transition hover:bg-[var(--panel-strong)]">
             <p className={`text-lg font-bold ${item.color}`}>{item.value}</p>
-            <p className="text-[13px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
+            <p className="text-[0.8125rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
           </Link>
         ))}
       </div>
@@ -97,7 +97,7 @@ export async function IntakeDashboard({
         ].map((item) => (
           <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center gap-0.5 py-3 transition hover:bg-[var(--panel-strong)]">
             <p className={`text-lg font-bold ${item.color}`}>{item.value}</p>
-            <p className="text-[13px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
+            <p className="text-[0.8125rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{item.label}</p>
           </Link>
         ))}
       </div>

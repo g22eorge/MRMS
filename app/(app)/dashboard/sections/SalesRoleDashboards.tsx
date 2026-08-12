@@ -56,22 +56,22 @@ export async function SalesManagerDashboard({ orgId }: { orgId: string | null })
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Link href="/sales" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Leads</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Leads</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{leadsOpen}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View pipeline →</p>
         </Link>
         <Link href="/sales?tab=leads&status=WON" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Won Leads</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Won Leads</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{leadsWon}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View won leads →</p>
         </Link>
         <Link href="/sales?tab=quotations" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quotations Pending</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Quotations Pending</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{quotationsPending}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">Review quotations →</p>
         </Link>
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue This Month</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue This Month</p>
           <p className="mt-1 text-xl font-semibold text-[var(--ink)]">{formatMoney(salesThisMonth, currency)}</p>
           <p className="mt-2 text-xs text-[var(--ink-muted)]">Paid sales</p>
         </div>
@@ -124,22 +124,22 @@ export async function SalesCorporateDashboard({ userId, orgId }: { userId: strin
 
       <div className="grid gap-3 lg:grid-cols-4">
         <Link href="/sales?tab=quotations" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Draft Quotations</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Draft Quotations</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{myQuotationsDraft}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open drafts →</p>
         </Link>
         <Link href="/sales?tab=quotations" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sent Quotations</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sent Quotations</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{myQuotationsSent}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">Track sent →</p>
         </Link>
         <Link href="/sales" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Leads</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Leads</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{myLeads}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View my leads →</p>
         </Link>
         <Link href="/documents/invoices" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Invoices</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Open Invoices</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{openInvoices}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open invoices →</p>
         </Link>
@@ -192,17 +192,17 @@ export async function SalesRetailDashboard({ userId, orgId }: { userId: string; 
 
       <div className="grid gap-3 lg:grid-cols-3">
         <Link href="/sales" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">My Leads</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">My Leads</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{myLeads}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View leads →</p>
         </Link>
         <Link href="/sales?tab=quotations" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">My Quotations</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">My Quotations</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{myQuotations}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">View quotations →</p>
         </Link>
         <Link href="/pos" className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active POS</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active POS</p>
           <p className="mt-1 text-xl font-semibold text-[var(--accent)]">{posOpen}</p>
           <p className="mt-2 text-xs font-medium text-[var(--accent)]">Open POS →</p>
         </Link>

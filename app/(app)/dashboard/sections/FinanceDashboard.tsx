@@ -67,8 +67,8 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
           { label: "Overdue (30d+)", val: String(overdueCount), href: "/documents/invoices", color: overdueCount > 0 ? "text-red-400" : "text-[var(--ink-muted)]" },
         ].map(t => (
           <Link key={t.label} href={t.href} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[15px] font-black leading-tight ${t.color}`}>{t.val}</p>
+            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
+            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
           </Link>
         ))}
       </div>
@@ -122,11 +122,11 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Unpaid Invoices</p>
-          <Link href="/documents/invoices" className="text-[13px] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
+          <Link href="/documents/invoices" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
         </div>
         {unpaidInvoices.length === 0 ? (
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
-            <p className="text-[13px] font-medium text-emerald-600">All invoices paid — nothing outstanding.</p>
+            <p className="text-[0.8125rem] font-medium text-emerald-600">All invoices paid — nothing outstanding.</p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -137,11 +137,11 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
                 <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
                   <div className="min-w-0">
                     <p className="mono truncate text-xs font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
-                    <p className="truncate text-[12px] text-[var(--ink-muted)]">{inv.job?.client?.fullName ?? "—"} · {inv.job?.jobNumber ?? "—"}</p>
+                    <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{inv.job?.client?.fullName ?? "—"} · {inv.job?.jobNumber ?? "—"}</p>
                   </div>
                   <div className="ml-3 shrink-0 text-right">
                     <p className="text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(balance, currency)}</p>
-                    <span className={`text-[12px] font-medium ${ageDays > 60 ? "text-red-400" : ageDays > 30 ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>{ageDays}d</span>
+                    <span className={`text-[0.75rem] font-medium ${ageDays > 60 ? "text-red-400" : ageDays > 30 ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>{ageDays}d</span>
                   </div>
                 </div>
               );

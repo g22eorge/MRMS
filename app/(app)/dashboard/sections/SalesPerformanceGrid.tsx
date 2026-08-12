@@ -50,7 +50,7 @@ export function SalesPerformanceGrid({
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Performance — {periodKey}</p>
-          <Link href="/reports" className="text-[13px] font-semibold text-[var(--accent)] hover:underline">Full report →</Link>
+          <Link href="/reports" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">Full report →</Link>
         </div>
         {staffRows.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No sales activity this month yet.</p>
@@ -62,17 +62,17 @@ export function SalesPerformanceGrid({
                 <div key={s.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0 text-[12px] font-bold text-[var(--ink-muted)] w-4">{i + 1}</span>
+                      <span className="shrink-0 text-[0.75rem] font-bold text-[var(--ink-muted)] w-4">{i + 1}</span>
                       <p className="truncate text-xs font-semibold text-[var(--ink)]">{s.name}</p>
                     </div>
                     <div className="ml-3 shrink-0 flex items-center gap-2">
                       {pct !== null && (
-                        <span className={`text-[12px] font-bold ${pct >= 100 ? "text-emerald-600" : pct >= 60 ? "text-[var(--accent)]" : "text-amber-600"}`}>{pct}%</span>
+                        <span className={`text-[0.75rem] font-bold ${pct >= 100 ? "text-emerald-600" : pct >= 60 ? "text-[var(--accent)]" : "text-amber-600"}`}>{pct}%</span>
                       )}
                       <span className="text-xs font-bold text-[var(--ink)]">{formatMoneyCompact(s.totalRev, currency)}</span>
                     </div>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-3 text-[12px] text-[var(--ink-muted)]">
+                  <div className="mt-1.5 flex items-center gap-3 text-[0.75rem] text-[var(--ink-muted)]">
                     <span className="text-sky-600">{formatMoneyCompact(s.repairRev, currency)} repair</span>
                     <span className="text-[var(--accent)]">{formatMoneyCompact(s.posRev, currency)} POS</span>
                     {s.target > 0 && (
@@ -95,7 +95,7 @@ export function SalesPerformanceGrid({
         {/* My own target summary if viewer has a personal target */}
         {myTargetRevenue > 0 && (
           <div className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-3 py-2">
-            <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">My Target</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">My Target</p>
             <p className="mt-0.5 text-xs text-[var(--ink)]">{formatMoneyCompact(myTargetRevenue, currency)} this month</p>
           </div>
         )}
@@ -122,7 +122,7 @@ export function SalesPerformanceGrid({
                   <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-[var(--line)]">
                     <div className={`h-full rounded-full ${ch.color}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="shrink-0 text-[12px] text-[var(--ink-muted)]">{ch.count}</span>
+                  <span className="shrink-0 text-[0.75rem] text-[var(--ink-muted)]">{ch.count}</span>
                 </div>
               </div>
             );
@@ -133,7 +133,7 @@ export function SalesPerformanceGrid({
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Pending Approvals</p>
-            <Link href="/jobs?status=AWAITING_APPROVAL" className="text-[13px] font-semibold text-[var(--accent)] hover:underline">All →</Link>
+            <Link href="/jobs?status=AWAITING_APPROVAL" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">All →</Link>
           </div>
           {quotedJobs.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">No quotes pending.</p>
@@ -145,11 +145,11 @@ export function SalesPerformanceGrid({
                   <Link key={j.id} href={`/jobs/${j.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                     <div className="min-w-0">
                       <p className="mono truncate text-xs font-bold text-[var(--accent)]">{j.jobNumber}</p>
-                      <p className="truncate text-[12px] text-[var(--ink-muted)]">{j.client?.fullName ?? "—"}</p>
+                      <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{j.client?.fullName ?? "—"}</p>
                     </div>
                     <div className="ml-3 shrink-0 text-right">
                       {j.clientBill && <p className="text-xs font-semibold text-[var(--ink)]">{formatMoneyCompact(j.clientBill, currency)}</p>}
-                      <span className={`text-[12px] font-medium ${waitDays > 3 ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>{waitDays}d wait</span>
+                      <span className={`text-[0.75rem] font-medium ${waitDays > 3 ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>{waitDays}d wait</span>
                     </div>
                   </Link>
                 );
@@ -157,7 +157,7 @@ export function SalesPerformanceGrid({
               {readyPickup > 0 && (
                 <Link href="/jobs?status=READY_FOR_PICKUP" className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 transition hover:border-emerald-500/50">
                   <p className="text-xs font-semibold text-emerald-600">{readyPickup} jobs ready for pickup</p>
-                  <span className="text-[13px] font-bold text-emerald-600">→</span>
+                  <span className="text-[0.8125rem] font-bold text-emerald-600">→</span>
                 </Link>
               )}
             </div>

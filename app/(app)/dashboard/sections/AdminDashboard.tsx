@@ -22,7 +22,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 function CardHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-baseline gap-2">
-      <h4 className="text-[12.5px] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">{title}</h4>
+      <h4 className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">{title}</h4>
       {note}
     </div>
   );
@@ -31,7 +31,7 @@ function CardHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: 
 function SectionHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
   return (
     <div className="mb-2.5 flex items-baseline gap-2 px-1">
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">{title}</h3>
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">{title}</h3>
       {note}
     </div>
   );
@@ -204,11 +204,11 @@ export async function AdminDashboard({
         {/* Greeting */}
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-[20px] font-bold tracking-[-0.02em] text-[var(--dc-ink)]">{greeting}, {userName}</h2>
-            <p className="mt-0.5 text-[12.5px] text-[var(--dc-ink-2)]">{dateLine}</p>
+            <h2 className="text-[1.25rem] font-bold tracking-[-0.02em] text-[var(--dc-ink)]">{greeting}, {userName}</h2>
+            <p className="mt-0.5 text-[0.78125rem] text-[var(--dc-ink-2)]">{dateLine}</p>
           </div>
           {canCreateJob ? (
-            <Link href="/jobs/new" className="dc-btn ml-auto inline-flex items-center gap-1.5 rounded-[10px] px-[15px] py-[9px] text-[12.5px] font-semibold">
+            <Link href="/jobs/new" className="dc-btn ml-auto inline-flex items-center gap-1.5 rounded-[10px] px-[15px] py-[9px] text-[0.78125rem] font-semibold">
               + {routeLabel("/jobs/new")}
             </Link>
           ) : null}
@@ -225,9 +225,9 @@ export async function AdminDashboard({
               { k: "Balances due", v: formatMoneyCompact(outstandingValue, currency), href: "/documents/invoices?status=ISSUED", tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", foot: `${completedUnpaidCount} completed & unpaid` },
             ] as const).map((kpi) => (
               <Link key={kpi.k} href={kpi.href} className="dc-card dc-lift block px-5 py-[18px]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">{kpi.k}</p>
-                <p className={`mt-1.5 text-[30px] font-bold leading-none tracking-[-0.025em] tabular-nums ${kpi.tone}`}>{kpi.v}</p>
-                <p className="mt-1.5 text-[11.5px] text-[var(--dc-ink-3)]">{kpi.foot}</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">{kpi.k}</p>
+                <p className={`mt-1.5 text-[1.875rem] font-bold leading-none tracking-[-0.025em] tabular-nums ${kpi.tone}`}>{kpi.v}</p>
+                <p className="mt-1.5 text-[0.71875rem] text-[var(--dc-ink-3)]">{kpi.foot}</p>
               </Link>
             ))}
           </div>
@@ -239,15 +239,15 @@ export async function AdminDashboard({
             title="Repair pipeline"
             href="/jobs"
             hrefLabel={`${routeLabel("/jobs")} →`}
-            note={conversionRate > 0 ? <span className="text-[11px] text-[var(--dc-ink-3)]">· {conversionRate}% conversion</span> : undefined}
+            note={conversionRate > 0 ? <span className="text-[0.6875rem] text-[var(--dc-ink-3)]">· {conversionRate}% conversion</span> : undefined}
           />
           <Card className="grid grid-cols-8 gap-1 p-2">
             {statusData.map((s) => {
               const hot = hotStages.has(s.key);
               return (
                 <Link key={s.key} href={`/jobs?status=${s.key}`} className="flex flex-col items-center gap-1 rounded-xl py-3.5 text-center transition hover:bg-[var(--dc-panel-2)]">
-                  <p className={`text-[19px] font-bold leading-none tabular-nums ${s.value === 0 ? "text-[var(--dc-ink-3)]" : hot ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink)]"}`}>{s.value}</p>
-                  <p className="text-[10.5px] text-[var(--dc-ink-3)]">{s.name}</p>
+                  <p className={`text-[1.1875rem] font-bold leading-none tabular-nums ${s.value === 0 ? "text-[var(--dc-ink-3)]" : hot ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink)]"}`}>{s.value}</p>
+                  <p className="text-[0.65625rem] text-[var(--dc-ink-3)]">{s.name}</p>
                 </Link>
               );
             })}
@@ -263,17 +263,17 @@ export async function AdminDashboard({
               title="Needs action"
               href="/jobs"
               hrefLabel={`${routeLabel("/jobs")} →`}
-              note={<span className={`text-[10.5px] font-semibold ${needsOpen > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-good)]"}`}>{needsOpen > 0 ? `${needsOpen} open` : "all clear"}</span>}
+              note={<span className={`text-[0.65625rem] font-semibold ${needsOpen > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-good)]"}`}>{needsOpen > 0 ? `${needsOpen} open` : "all clear"}</span>}
             />
             <div className="space-y-0.5">
               {needs.map((n) => (
                 <Link key={n.label} href={n.href} className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-[var(--dc-panel-2)]">
                   <span className={`h-9 w-[3px] shrink-0 rounded-full ${sevMark[n.sev]}`} />
                   <div className="min-w-0">
-                    <p className="text-[13px] text-[var(--dc-ink)]">{n.label}</p>
-                    <p className="text-[11px] text-[var(--dc-ink-3)]">{n.sub}</p>
+                    <p className="text-[0.8125rem] text-[var(--dc-ink)]">{n.label}</p>
+                    <p className="text-[0.6875rem] text-[var(--dc-ink-3)]">{n.sub}</p>
                   </div>
-                  <p className={`ml-auto text-[15px] font-bold tabular-nums ${sevTone(n.sev, n.count)}`}>{n.count}</p>
+                  <p className={`ml-auto text-[0.9375rem] font-bold tabular-nums ${sevTone(n.sev, n.count)}`}>{n.count}</p>
                 </Link>
               ))}
             </div>
@@ -283,13 +283,13 @@ export async function AdminDashboard({
           <div className="space-y-4">
             <Card className="p-5">
               <CardHead title="Cash this month" href="/finance" hrefLabel="Finance →" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">Collected</p>
-              <p className="mt-1 text-[27px] font-bold leading-none tracking-[-0.025em] tabular-nums text-[var(--dc-accent-2)]">{formatMoneyCompact(totalMtd, currency)}</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">Collected</p>
+              <p className="mt-1 text-[1.6875rem] font-bold leading-none tracking-[-0.025em] tabular-nums text-[var(--dc-accent-2)]">{formatMoneyCompact(totalMtd, currency)}</p>
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {channels.map((c) => (
                   <Link key={c.label} href={c.href} className="rounded-[11px] bg-[var(--dc-panel-2)] px-3 py-2.5 transition hover:opacity-80">
-                    <p className="text-[10.5px] text-[var(--dc-ink-3)]">{c.label}</p>
-                    <p className="mt-0.5 text-[14px] font-bold tabular-nums text-[var(--dc-ink)]">{formatMoneyCompact(c.value, currency)}</p>
+                    <p className="text-[0.65625rem] text-[var(--dc-ink-3)]">{c.label}</p>
+                    <p className="mt-0.5 text-[0.875rem] font-bold tabular-nums text-[var(--dc-ink)]">{formatMoneyCompact(c.value, currency)}</p>
                   </Link>
                 ))}
               </div>
@@ -300,10 +300,10 @@ export async function AdminDashboard({
                 {position.map((p) => (
                   <Link key={p.label} href={p.href} className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-[var(--dc-panel-2)]">
                     <div className="min-w-0">
-                      <p className="text-[12.5px] text-[var(--dc-ink)]">{p.label}</p>
-                      {p.sub ? <p className="text-[11px] text-[var(--dc-ink-3)]">{p.sub}</p> : null}
+                      <p className="text-[0.78125rem] text-[var(--dc-ink)]">{p.label}</p>
+                      {p.sub ? <p className="text-[0.6875rem] text-[var(--dc-ink-3)]">{p.sub}</p> : null}
                     </div>
-                    <p className={`ml-auto text-[14px] font-bold tabular-nums ${p.tone}`}>{formatMoneyCompact(p.value, currency)}</p>
+                    <p className={`ml-auto text-[0.875rem] font-bold tabular-nums ${p.tone}`}>{formatMoneyCompact(p.value, currency)}</p>
                   </Link>
                 ))}
               </div>
@@ -317,11 +317,11 @@ export async function AdminDashboard({
                 title="Revenue trend"
                 href="/reports"
                 hrefLabel={`${routeLabel("/reports")} →`}
-                note={<span className="text-[10.5px] text-[var(--dc-ink-3)]">margin {marginPct}%</span>}
+                note={<span className="text-[0.65625rem] text-[var(--dc-ink-3)]">margin {marginPct}%</span>}
               />
               <div className="flex items-baseline gap-2">
-                <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums text-[var(--dc-ink)]">{formatMoneyCompact(ytdRevenue, currency)}</span>
-                <span className="text-[11.5px] text-[var(--dc-ink-3)]">year to date</span>
+                <span className="text-[1.375rem] font-bold tracking-[-0.02em] tabular-nums text-[var(--dc-ink)]">{formatMoneyCompact(ytdRevenue, currency)}</span>
+                <span className="text-[0.71875rem] text-[var(--dc-ink-3)]">year to date</span>
               </div>
               {ytdRevenue > 0 ? (
                 <svg className="mt-2.5 block h-12 w-full" viewBox="0 0 300 48" preserveAspectRatio="none" aria-hidden="true">
@@ -336,7 +336,7 @@ export async function AdminDashboard({
                   <circle cx={lastPt[0]} cy={lastPt[1]} r="3" fill="var(--dc-accent)" />
                 </svg>
               ) : (
-                <p className="mt-3 rounded-lg bg-[var(--dc-panel-2)] px-3 py-2 text-[12px] text-[var(--dc-ink-3)]">No revenue yet this year.</p>
+                <p className="mt-3 rounded-lg bg-[var(--dc-panel-2)] px-3 py-2 text-[0.75rem] text-[var(--dc-ink-3)]">No revenue yet this year.</p>
               )}
             </Card>
 
@@ -346,14 +346,14 @@ export async function AdminDashboard({
                 {funnel.map((f, i) => (
                   <React.Fragment key={f.label}>
                     <Link href="/sales/leads" className="flex flex-1 flex-col items-center rounded-lg py-1.5 transition hover:bg-[var(--dc-panel-2)]">
-                      <span className="text-[17px] font-bold tabular-nums text-[var(--dc-ink)]">{f.value}</span>
-                      <span className="text-[10px] text-[var(--dc-ink-3)]">{f.label}</span>
+                      <span className="text-[1.0625rem] font-bold tabular-nums text-[var(--dc-ink)]">{f.value}</span>
+                      <span className="text-[0.625rem] text-[var(--dc-ink-3)]">{f.label}</span>
                     </Link>
                     {i < funnel.length - 1 ? <span className="px-1 text-[var(--dc-ink-3)]">›</span> : null}
                   </React.Fragment>
                 ))}
               </div>
-              <div className="mt-3 flex items-center gap-4 border-t border-[var(--dc-line)] pt-3 text-[12px] text-[var(--dc-ink-2)]">
+              <div className="mt-3 flex items-center gap-4 border-t border-[var(--dc-line)] pt-3 text-[0.75rem] text-[var(--dc-ink-2)]">
                 <Link href="/sales/leads?status=WON" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-good)]">{wonCount}</b> won</Link>
                 <Link href="/sales/leads?status=LOST" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-crit)]">{lostCount}</b> lost</Link>
                 <Link href="/inventory?filter=low" className="ml-auto transition hover:opacity-80">
@@ -366,19 +366,19 @@ export async function AdminDashboard({
             <Card className="p-5">
               <CardHead title="Top technicians" href="/technicians" hrefLabel="Leaderboard →" />
               {techLeaderboard.length === 0 ? (
-                <p className="rounded-lg bg-[var(--dc-panel-2)] px-3 py-2 text-[12px] text-[var(--dc-ink-3)]">No completed jobs this month.</p>
+                <p className="rounded-lg bg-[var(--dc-panel-2)] px-3 py-2 text-[0.75rem] text-[var(--dc-ink-3)]">No completed jobs this month.</p>
               ) : (
                 <div className="space-y-0.5">
                   {techLeaderboard.slice(0, 4).map((tech, i) => {
                     const avg = tech.count > 0 ? `${(tech.totalDays / tech.count).toFixed(1)}d avg` : null;
                     return (
                       <div key={tech.name} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-                        <span className="w-4 text-center text-[12px] font-bold text-[var(--dc-ink-3)]">{i + 1}</span>
+                        <span className="w-4 text-center text-[0.75rem] font-bold text-[var(--dc-ink-3)]">{i + 1}</span>
                         <div className="min-w-0">
-                          <p className="truncate text-[12.5px] font-semibold text-[var(--dc-ink)]">{tech.name}</p>
-                          {avg ? <p className="text-[10.5px] text-[var(--dc-ink-3)]">{avg}</p> : null}
+                          <p className="truncate text-[0.78125rem] font-semibold text-[var(--dc-ink)]">{tech.name}</p>
+                          {avg ? <p className="text-[0.65625rem] text-[var(--dc-ink-3)]">{avg}</p> : null}
                         </div>
-                        <p className="ml-auto text-[13px] font-bold tabular-nums text-[var(--dc-ink)]">{tech.count} <span className="text-[10.5px] font-normal text-[var(--dc-ink-3)]">done</span></p>
+                        <p className="ml-auto text-[0.8125rem] font-bold tabular-nums text-[var(--dc-ink)]">{tech.count} <span className="text-[0.65625rem] font-normal text-[var(--dc-ink-3)]">done</span></p>
                       </div>
                     );
                   })}

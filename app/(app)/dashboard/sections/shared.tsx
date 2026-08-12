@@ -45,7 +45,7 @@ export function RepairStatusReference({
   return (
     <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(212,175,55,0.06),rgba(212,175,55,0.02))]">
       <div className="border-b border-[var(--line)] px-4 py-3">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repair Status Guide</p>
+        <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repair Status Guide</p>
         <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{title}</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">{guidance}</p>
       </div>
@@ -55,7 +55,7 @@ export function RepairStatusReference({
             <Link href={step.href} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition hover:-translate-y-[1px] ${step.tone}`}>
               {step.label}
             </Link>
-            {index < repairFlowReference.length - 1 ? <span className="text-[12px] text-[var(--ink-muted)]">→</span> : null}
+            {index < repairFlowReference.length - 1 ? <span className="text-[0.75rem] text-[var(--ink-muted)]">→</span> : null}
           </div>
         ))}
       </div>
@@ -88,7 +88,7 @@ export function DashboardPeriodBar({
       <div className="flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-1">
         <Link
           href={monthHref}
-          className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all ${
+          className={`rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
             period === "month"
               ? "bg-[var(--accent)] text-black shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -98,7 +98,7 @@ export function DashboardPeriodBar({
         </Link>
         <Link
           href={yearHref}
-          className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all ${
+          className={`rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
             period === "year"
               ? "bg-[var(--accent)] text-black shadow-sm"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -113,12 +113,12 @@ export function DashboardPeriodBar({
         options={selectorOptions}
         hiddenFields={{ period }}
         className="flex items-center"
-        selectClassName="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[var(--accent)]/50"
+        selectClassName="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[0.75rem] outline-none focus:border-[var(--accent)]/50"
       />
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="ml-auto rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
+          className="ml-auto rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/30 hover:text-[var(--accent)]"
         >
           {actionLabel}
         </Link>
@@ -148,9 +148,9 @@ export function DashboardHero({
 }) {
   return (
     <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-      <p className="text-[13px] font-bold text-[var(--ink)]">{title}</p>
+      <p className="text-[0.8125rem] font-bold text-[var(--ink)]">{title}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
+        <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">
           {primaryLabel}
         </Link>
         {secondaryHref && secondaryLabel ? (
@@ -231,9 +231,9 @@ export function RevenueMarginTrendSection({
                 href={href}
                 className="w-[92px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-2 text-center transition hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5"
               >
-                <p className="text-[13px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
+                <p className="text-[0.8125rem] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{m.key.slice(5)}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(m.revenue, currency)}</p>
-                <p className={`text-[12px] ${m.margin >= 0 ? "text-emerald-600" : "text-[var(--ink)]"}`}>{formatMoneyCompact(m.margin, currency)}</p>
+                <p className={`text-[0.75rem] ${m.margin >= 0 ? "text-emerald-600" : "text-[var(--ink)]"}`}>{formatMoneyCompact(m.margin, currency)}</p>
               </Link>
             );
           })}
