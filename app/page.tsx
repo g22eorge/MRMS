@@ -206,9 +206,9 @@ function PricingPlans() {
   return (
     <div>
       <div className="mb-9 max-w-2xl">
-        <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Pricing</p>
+        <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Pricing</p>
         <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">One system. A plan for every size.</h2>
-        <p className="mt-3 text-sm leading-6 text-white/48">
+        <p className="mt-3 text-sm leading-6 text-white/55">
           Start on <span className="font-semibold text-white/75">Duuka</span> free — no card needed. Move up only when you
           outgrow it. Amounts in UGX per month.
         </p>
@@ -226,26 +226,26 @@ function PricingPlans() {
           >
             {p.popular && (
               <span
-                className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black"
+                className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-black"
                 style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
               >
                 Most popular
               </span>
             )}
 
-            <p className={`text-[13px] font-bold uppercase tracking-wide ${p.popular ? "text-[#E8C84A]" : "text-white/75"}`}>
+            <p className={`text-[0.8125rem] font-bold uppercase tracking-wide ${p.popular ? "text-[#E8C84A]" : "text-white/75"}`}>
               {p.name}
             </p>
-            <p className="mt-1 text-[12px] leading-snug text-white/40">{p.tagline}</p>
+            <p className="mt-1 text-[0.75rem] leading-snug text-white/55">{p.tagline}</p>
 
             <div className="mt-4 flex items-baseline gap-1">
               {p.price === null ? (
-                <span className="text-[28px] font-black tracking-tight text-white">Free</span>
+                <span className="text-[1.75rem] font-black tracking-tight text-white">Free</span>
               ) : (
                 <>
-                  <span className="text-[13px] font-medium text-white/45">UGX</span>
-                  <span className="text-[28px] font-black tabular-nums tracking-tight text-white">{p.price}</span>
-                  <span className="text-[12px] text-white/40">/mo</span>
+                  <span className="text-[0.8125rem] font-medium text-white/55">UGX</span>
+                  <span className="text-[1.75rem] font-black tabular-nums tracking-tight text-white">{p.price}</span>
+                  <span className="text-[0.75rem] text-white/55">/mo</span>
                 </>
               )}
             </div>
@@ -253,13 +253,13 @@ function PricingPlans() {
             <div className="my-4 h-px bg-white/8" />
 
             {p.inherits && (
-              <p className="mb-2 text-[12px] leading-snug text-white/45">
+              <p className="mb-2 text-[0.75rem] leading-snug text-white/55">
                 Everything in <span className="font-semibold text-white/70">{p.inherits}</span>, plus:
               </p>
             )}
             <ul className="space-y-2">
               {p.features.map((f) => (
-                <li key={f} className="flex gap-2 text-[12px] leading-snug text-white/65">
+                <li key={f} className="flex gap-2 text-[0.75rem] leading-snug text-white/65">
                   <Check />
                   <span>{f}</span>
                 </li>
@@ -272,14 +272,14 @@ function PricingPlans() {
                   href={p.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="block rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-[13px] font-semibold text-white/75 transition hover:border-[#D4AF37]/40 hover:text-white"
+                  className="block rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-[0.8125rem] font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#D4AF37]/40 hover:text-white"
                 >
                   {p.cta}
                 </a>
               ) : (
                 <Link
                   href={p.href}
-                  className={`block rounded-xl px-4 py-2.5 text-center text-[13px] font-bold transition ${
+                  className={`block rounded-xl px-4 py-2.5 text-center text-[0.8125rem] font-bold transition active:scale-[0.98] ${
                     p.popular
                       ? "text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] hover:opacity-90"
                       : "border border-white/15 bg-white/5 text-white/75 hover:border-[#D4AF37]/40 hover:text-white"
@@ -294,7 +294,7 @@ function PricingPlans() {
         ))}
       </div>
 
-      <p className="mt-6 text-[12px] text-white/35">
+      <p className="mt-6 text-[0.75rem] text-white/55">
         Every plan includes the core system. Higher plans raise your limits and unlock extras like more branches and custom
         branding. Cancel anytime.
       </p>
@@ -315,10 +315,10 @@ function DuukaSaasLanding() {
             <AppLogoDark height={44} priority />
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/register" className="hidden rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/20 sm:inline-flex">
+            <Link href="/register" className="hidden rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition active:scale-[0.98] hover:bg-[#D4AF37]/20 sm:inline-flex">
               Start Free
             </Link>
-            <Link href="/login" className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition hover:border-white/20 hover:text-white">
+            <Link href="/login" className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition active:scale-[0.98] hover:border-white/20 hover:text-white">
               Login
             </Link>
           </div>
@@ -329,7 +329,7 @@ function DuukaSaasLanding() {
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">One system for your whole business</span>
+            <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">One system for your whole business</span>
           </div>
           <h1 className="max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
             Run everything from
@@ -341,19 +341,19 @@ function DuukaSaasLanding() {
           {/* Scannable chips instead of a wall of text — skim in 2 seconds. */}
           <div className="mt-5 flex flex-wrap gap-2">
             {["POS", "Inventory", "Repairs", "CRM", "Invoicing", "Finance", "Comms"].map((c) => (
-              <span key={c} className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[13px] font-medium text-white/65">{c}</span>
+              <span key={c} className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[0.8125rem] font-medium text-white/65">{c}</span>
             ))}
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+            <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
               Create Workspace
             </Link>
-            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-[#D4AF37]/30 hover:text-white">
+            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
               Talk to Sales
             </a>
           </div>
-          <p className="mt-5 text-[13px] text-white/40">
+          <p className="mt-5 text-[0.8125rem] text-white/55">
             Built for retail shops, service centres, wholesalers, clinics, workshops — any team that sells, stocks, or serves.
           </p>
         </div>
@@ -368,9 +368,9 @@ function DuukaSaasLanding() {
             <div className="flex items-center justify-between border-b border-white/8 pb-3">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#E8C84A]" />
-                <p className="text-[12px] font-bold text-white">Operations Dashboard</p>
+                <p className="text-[0.75rem] font-bold text-white">Operations Dashboard</p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-emerald-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
               </span>
             </div>
@@ -379,13 +379,13 @@ function DuukaSaasLanding() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               {[
                 { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-[#E8C84A]" },
-                { v: "18", l: "Open orders", d: "3 due today", tone: "text-white/45" },
-                { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/45" },
+                { v: "18", l: "Open orders", d: "3 due today", tone: "text-white/55" },
+                { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/55" },
               ].map((k) => (
                 <div key={k.l} className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-                  <p className="text-[15px] font-extrabold text-white">{k.v}</p>
-                  <p className="mt-0.5 text-[10px] text-white/40">{k.l}</p>
-                  <p className={`mt-1 text-[10px] font-semibold ${k.tone}`}>{k.d}</p>
+                  <p className="text-[0.9375rem] font-extrabold text-white">{k.v}</p>
+                  <p className="mt-0.5 text-[0.625rem] text-white/55">{k.l}</p>
+                  <p className={`mt-1 text-[0.625rem] font-semibold ${k.tone}`}>{k.d}</p>
                 </div>
               ))}
             </div>
@@ -393,8 +393,8 @@ function DuukaSaasLanding() {
             {/* Revenue chart */}
             <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-white/50">Revenue · last 7 days</p>
-                <p className="text-[11px] font-bold text-[#E8C84A]">▲ 12%</p>
+                <p className="text-[0.6875rem] font-semibold text-white/50">Revenue · last 7 days</p>
+                <p className="text-[0.6875rem] font-bold text-[#E8C84A]">▲ 12%</p>
               </div>
               <svg viewBox="0 0 240 64" className="mt-2 w-full" role="img" aria-label="Revenue trend chart">
                 <defs>
@@ -411,7 +411,7 @@ function DuukaSaasLanding() {
 
             {/* Needs attention feed */}
             <div className="mt-3">
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">Needs attention</p>
+              <p className="mb-1.5 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-white/55">Needs attention</p>
               <div className="space-y-1.5">
                 {[
                   { dot: "bg-red-400/70", t: "Invoice #INV-000482 overdue", s: "2 days" },
@@ -420,8 +420,8 @@ function DuukaSaasLanding() {
                 ].map((r) => (
                   <div key={r.t} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2.5 py-1.5">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
-                    <p className="flex-1 truncate text-[11px] text-white/70">{r.t}</p>
-                    <p className="text-[11px] font-semibold text-white/40">{r.s}</p>
+                    <p className="flex-1 truncate text-[0.6875rem] text-white/70">{r.t}</p>
+                    <p className="text-[0.6875rem] font-semibold text-white/55">{r.s}</p>
                   </div>
                 ))}
               </div>
@@ -442,12 +442,12 @@ function DuukaSaasLanding() {
             ].map((t) => (
               <div key={t.l} className="text-center sm:text-left">
                 <p className="text-xl font-black tracking-tight text-[#E8C84A] sm:text-2xl">{t.v}</p>
-                <p className="mt-1 text-[13px] font-semibold text-white/80">{t.l}</p>
-                <p className="mt-0.5 text-[12px] leading-snug text-white/40">{t.d}</p>
+                <p className="mt-1 text-[0.8125rem] font-semibold text-white/80">{t.l}</p>
+                <p className="mt-0.5 text-[0.75rem] leading-snug text-white/55">{t.d}</p>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-[11px] leading-snug text-white/30">
+          <p className="mt-6 text-[0.6875rem] leading-snug text-white/55">
             Runs on managed cloud infrastructure with automatic backups and encrypted connections. Uptime shown is our
             target service availability.
           </p>
@@ -456,17 +456,17 @@ function DuukaSaasLanding() {
 
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="mb-8 max-w-2xl">
-          <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Product Suite</p>
+          <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Product Suite</p>
           <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Everything your business needs to operate daily</h2>
-          <p className="mt-3 text-sm leading-6 text-white/48">Start with the modules you need, then expand into full operations, finance, reporting, and communications.</p>
+          <p className="mt-3 text-sm leading-6 text-white/55">Start with the modules you need, then expand into full operations, finance, reporting, and communications.</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((mod) => (
             <div key={mod.group} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-white/[0.04]">
               <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
               <p className="text-sm font-bold text-white">{mod.group}</p>
-              <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-white/35">{mod.items.length} tools</p>
+              <p className="mt-1.5 text-[0.8125rem] leading-snug text-white/55">{mod.blurb}</p>
+              <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-wide text-white/55">{mod.items.length} tools</p>
             </div>
           ))}
         </div>
@@ -483,36 +483,36 @@ function DuukaSaasLanding() {
                 <div className="overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0d0d0d]">
                   {/* status row */}
                   <div className="flex items-center justify-between px-4 pb-2 pt-3">
-                    <span className="text-[10px] font-medium text-white/45">9:41</span>
+                    <span className="text-[0.625rem] font-medium text-white/55">9:41</span>
                     <span className="h-1.5 w-14 rounded-full bg-white/8" />
-                    <span className="text-[10px] font-medium text-white/45">Duuka</span>
+                    <span className="text-[0.625rem] font-medium text-white/55">Duuka</span>
                   </div>
                   <div className="px-3 pb-4">
                     <div className="flex items-center justify-between border-b border-white/8 pb-2">
-                      <p className="text-[12px] font-bold text-white">Dashboard</p>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-300">
+                      <p className="text-[0.75rem] font-bold text-white">Dashboard</p>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-emerald-300">
                         <span className="h-1 w-1 rounded-full bg-emerald-400" /> Live
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2">
-                        <p className="text-[13px] font-extrabold text-white">UGX 4.2M</p>
-                        <p className="mt-0.5 text-[8px] text-white/40">Revenue · mo</p>
+                        <p className="text-[0.8125rem] font-extrabold text-white">UGX 4.2M</p>
+                        <p className="mt-0.5 text-[0.5rem] text-white/55">Revenue · mo</p>
                       </div>
                       <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2">
-                        <p className="text-[13px] font-extrabold text-[#E8C84A]">▲ 12%</p>
-                        <p className="mt-0.5 text-[8px] text-white/40">vs last month</p>
+                        <p className="text-[0.8125rem] font-extrabold text-[#E8C84A]">▲ 12%</p>
+                        <p className="mt-0.5 text-[0.5rem] text-white/55">vs last month</p>
                       </div>
                     </div>
                     <div className="mt-1.5 rounded-lg border border-white/8 bg-white/[0.02] p-2">
-                      <p className="mb-1 text-[8px] font-semibold text-white/45">Last 7 days</p>
+                      <p className="mb-1 text-[0.5rem] font-semibold text-white/55">Last 7 days</p>
                       <svg viewBox="0 0 200 40" className="w-full" role="img" aria-label="Sales trend">
                         {[14, 20, 12, 26, 22, 30, 36].map((h, i) => (
                           <rect key={i} x={4 + i * 28} y={40 - h} width="16" height={h} rx="2" fill="#E8C84A" opacity={i === 6 ? 1 : 0.8} />
                         ))}
                       </svg>
                     </div>
-                    <div className="mt-2 rounded-lg py-1.5 text-center text-[10px] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                    <div className="mt-2 rounded-lg py-1.5 text-center text-[0.625rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
                       + New sale
                     </div>
                   </div>
@@ -523,7 +523,7 @@ function DuukaSaasLanding() {
 
           {/* Copy */}
           <div className="order-1 lg:order-2">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Mobile</p>
+            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Mobile</p>
             <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Run your business from your pocket</h2>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
               Works on any Android or iOS device — sell, invoice, and check your numbers on the go. Everything syncs in
@@ -536,17 +536,17 @@ function DuukaSaasLanding() {
                 "Create invoices & receipts on the go",
                 "Real-time sync — no exports",
               ].map((f) => (
-                <li key={f} className="flex gap-2 text-[13px] leading-snug text-white/65">
+                <li key={f} className="flex gap-2 text-[0.8125rem] leading-snug text-white/65">
                   <Check />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
                 Start free
               </Link>
-              <span className="text-[12px] text-white/40">Install straight from your phone&apos;s browser — no download needed.</span>
+              <span className="text-[0.75rem] text-white/55">Install straight from your phone&apos;s browser — no download needed.</span>
             </div>
           </div>
         </div>
@@ -575,10 +575,10 @@ function DuukaSaasLanding() {
               Start free in minutes — or talk to us about setup, migration, and training.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+              <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
                 Create Workspace
               </Link>
-              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition hover:border-[#D4AF37]/30 hover:text-white">
+              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
                 Talk to Sales
               </a>
@@ -620,7 +620,7 @@ export default async function Page() {
           <div className="flex items-center gap-2">
             <a
               href="#repair-form"
-              className="hidden items-center gap-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/20 sm:flex"
+              className="hidden items-center gap-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition active:scale-[0.98] hover:bg-[#D4AF37]/20 sm:flex"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -639,14 +639,14 @@ export default async function Page() {
             <a
               href="https://wa.me/256772006344?text=Hi%20Eagle%20Info%2C%20I%20have%20a%20device%20I%20need%20repaired."
               target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-lg bg-[#25D366]/15 border border-[#25D366]/25 px-3 py-2 text-xs font-semibold text-[#25D366] transition hover:bg-[#25D366]/25"
+              className="flex items-center gap-1.5 rounded-lg bg-[#25D366]/15 border border-[#25D366]/25 px-3 py-2 text-xs font-semibold text-[#25D366] transition active:scale-[0.98] hover:bg-[#25D366]/25"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5" aria-hidden><path d={WA_PATH}/></svg>
               <span className="hidden sm:inline">WhatsApp</span>
             </a>
             <Link
               href="/login"
-              className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/60 transition hover:border-white/20 hover:text-white"
+              className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/60 transition active:scale-[0.98] hover:border-white/20 hover:text-white"
             >
               Staff Login
             </Link>
@@ -699,7 +699,7 @@ export default async function Page() {
               {/* Company badge */}
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-1.5">
                 <Image src="/eagle-info-logo.png" alt="" width={16} height={16} className="h-4 w-4 object-contain" />
-                <span className="text-[13px] font-semibold text-white/60">Eagle Info Solutions</span>
+                <span className="text-[0.8125rem] font-semibold text-white/60">Eagle Info Solutions</span>
               </div>
 
               <h1 className="text-3xl font-extrabold leading-tight text-white xl:text-4xl">
@@ -724,7 +724,7 @@ export default async function Page() {
                 ].map((s) => (
                   <div key={s.sub} className="rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2.5 text-center">
                     <p className="text-base font-extrabold text-[#E8C84A]">{s.stat}</p>
-                    <p className="mt-0.5 text-[11px] leading-tight text-white/45">{s.sub}</p>
+                    <p className="mt-0.5 text-[0.6875rem] leading-tight text-white/55">{s.sub}</p>
                   </div>
                 ))}
               </div>
@@ -755,25 +755,25 @@ export default async function Page() {
                 ].map((t) => (
                   <div key={t.label} className="flex items-start gap-2.5">
                     <span className="mt-0.5 text-[#D4AF37]/60">{t.icon}</span>
-                    <p className="text-[13px] leading-tight text-white/55">{t.label}</p>
+                    <p className="text-[0.8125rem] leading-tight text-white/55">{t.label}</p>
                   </div>
                 ))}
               </div>
 
               {/* Alternative contact */}
               <div className="mt-7 flex flex-col gap-2">
-                <p className="text-[13px] font-semibold uppercase tracking-widest text-white/25">Or contact us directly</p>
+                <p className="text-[0.8125rem] font-semibold uppercase tracking-widest text-white/55">Or contact us directly</p>
                 <a
                   href="https://wa.me/256772006344?text=Hi%20Eagle%20Info%2C%20I%20have%20a%20device%20I%20need%20repaired.%20Please%20help%20me."
                   target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-lg bg-[#25D366]/12 border border-[#25D366]/25 px-4 py-2.5 text-sm font-semibold text-[#25D366] transition hover:bg-[#25D366]/20"
+                  className="flex items-center gap-2 rounded-lg bg-[#25D366]/12 border border-[#25D366]/25 px-4 py-2.5 text-sm font-semibold text-[#25D366] transition active:scale-[0.98] hover:bg-[#25D366]/20"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 shrink-0" aria-hidden><path d={WA_PATH}/></svg>
                   +256 772 006 344 on WhatsApp
                 </a>
                 <a
                   href="/address"
-                  className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/3 px-4 py-2.5 text-sm text-white/45 transition hover:border-white/15 hover:text-white/65"
+                  className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/3 px-4 py-2.5 text-sm text-white/55 transition hover:border-white/15 hover:text-white/65"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden>
                     <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
@@ -797,11 +797,11 @@ export default async function Page() {
                   <div className="mb-5 flex items-center justify-between">
                     <div>
                       <p className="text-base font-bold text-white">Repair Request Form</p>
-                      <p className="mt-0.5 text-xs text-white/35">All fields marked * are required</p>
+                      <p className="mt-0.5 text-xs text-white/55">All fields marked * are required</p>
                     </div>
                     <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/8 px-3 py-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      <span className="text-[12px] font-semibold text-emerald-400">Live</span>
+                      <span className="text-[0.75rem] font-semibold text-emerald-400">Live</span>
                     </div>
                   </div>
                   <RepairRequestForm />
@@ -819,7 +819,7 @@ export default async function Page() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-white/80">Had a bad experience?</p>
-              <p className="mt-0.5 text-xs text-white/40">
+              <p className="mt-0.5 text-xs text-white/55">
                 We take every complaint seriously. Tell us what went wrong and we&apos;ll make it right.
               </p>
             </div>
@@ -840,10 +840,10 @@ export default async function Page() {
           <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div className="relative flex justify-center">
             <div className="flex items-center gap-3 rounded-full border border-white/8 bg-[#050505] px-5 py-2">
-              <span className="text-[13px] text-white/30">Also available as a</span>
-              <span className="text-[13px] font-bold text-[#D4AF37]/70">Duuka ProMax</span>
-              <span className="text-[13px] text-white/30">business system</span>
-              <a href="#business-system" className="text-[13px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">
+              <span className="text-[0.8125rem] text-white/55">Also available as a</span>
+              <span className="text-[0.8125rem] font-bold text-[#D4AF37]/70">Duuka ProMax</span>
+              <span className="text-[0.8125rem] text-white/55">business system</span>
+              <a href="#business-system" className="text-[0.8125rem] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">
                 Learn more ↓
               </a>
             </div>
@@ -860,7 +860,7 @@ export default async function Page() {
             {STATS.map((s) => (
               <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] p-4 text-center">
                 <p className="text-2xl font-extrabold text-[#D4AF37]">{s.value}</p>
-                <p className="mt-0.5 text-[13px] text-white/40">{s.label}</p>
+                <p className="mt-0.5 text-[0.8125rem] text-white/55">{s.label}</p>
               </div>
             ))}
           </div>
@@ -868,7 +868,7 @@ export default async function Page() {
           {/* Heading */}
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]/90">Duuka ProMax — Business Management System</span>
+            <span className="text-[0.8125rem] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]/90">Duuka ProMax — Business Management System</span>
           </div>
           <h2 className="mt-3 text-2xl font-extrabold text-white md:text-3xl">
             Manage your entire business like a pro
@@ -886,8 +886,8 @@ export default async function Page() {
               >
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
                 <p className="text-sm font-bold text-white">{mod.group}</p>
-                <p className="mt-1.5 text-[13px] leading-snug text-white/55">{mod.blurb}</p>
-                <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-white/35">{mod.items.length} tools</p>
+                <p className="mt-1.5 text-[0.8125rem] leading-snug text-white/55">{mod.blurb}</p>
+                <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-wide text-white/55">{mod.items.length} tools</p>
               </div>
             ))}
           </div>
@@ -910,7 +910,7 @@ export default async function Page() {
             <div className="relative max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-                <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Get Duuka ProMax for Your Business</span>
+                <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Get Duuka ProMax for Your Business</span>
               </div>
 
               <h3 className="text-2xl font-extrabold leading-snug text-white md:text-3xl">
@@ -924,7 +924,7 @@ export default async function Page() {
                 <a
                   href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20for%20my%20business.%20Please%20send%20me%20pricing%20and%20setup%20details."
                   target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]"
                   style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
@@ -933,7 +933,7 @@ export default async function Page() {
                 <a
                   href="https://app.eagleinfosolutions.com"
                   target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-[#D4AF37]/30 hover:text-white"
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
                     <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
@@ -942,7 +942,7 @@ export default async function Page() {
                 </a>
                 <a
                   href="tel:+256772006344"
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition hover:border-white/25 hover:text-white"
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-white/25 hover:text-white"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.8 19.79 19.79 0 0 1 2 1.18 2 2 0 0 1 4 .03h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 7.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/>
@@ -964,7 +964,7 @@ export default async function Page() {
               <Image src="/eagle-info-logo.png" alt="Eagle Info Solutions" width={28} height={28} className="h-7 w-7 object-contain" />
               <div>
                 <p className="text-xs font-bold text-white">Eagle Info Solutions</p>
-                <p className="text-[12px] text-white/30">Powered by Duuka ProMax · © {new Date().getFullYear()}</p>
+                <p className="text-[0.75rem] text-white/55">Powered by Duuka ProMax · © {new Date().getFullYear()}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -975,12 +975,12 @@ export default async function Page() {
                 { href: "https://www.linkedin.com/company/104326797/", label: "LinkedIn", icon: <><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" fill="currentColor"/><circle cx="4" cy="4" r="2" fill="currentColor"/></> },
               ].map((s) => (
                 <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/8 text-white/40 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]">
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/8 text-white/55 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]">
                   <svg width="12" height="12" viewBox="0 0 24 24">{s.icon}</svg>
                 </a>
               ))}
               <Link href="/complaint" className="text-xs font-semibold text-red-400/60 transition hover:text-red-400">Complaint</Link>
-              <Link href="/login" className="text-xs font-semibold text-white/35 transition hover:text-[#D4AF37]">Staff Login</Link>
+              <Link href="/login" className="text-xs font-semibold text-white/55 transition hover:text-[#D4AF37]">Staff Login</Link>
             </div>
           </div>
         </div>
