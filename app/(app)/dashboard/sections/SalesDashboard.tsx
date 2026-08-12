@@ -145,7 +145,7 @@ export async function SalesDashboard({ userId, orgId }: { userId: string | undef
       {teamTargetRevenue > 0 && (
         <section className="dc-card px-3 py-2.5">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Team Target — {period}</p>
+            <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Team Target — {period}</p>
             <span className={`text-sm font-black ${(targetPct ?? 0) >= 100 ? "text-emerald-600" : (targetPct ?? 0) >= 60 ? "text-[var(--accent)]" : "text-amber-600"}`}>
               {targetPct ?? 0}%
             </span>

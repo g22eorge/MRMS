@@ -75,7 +75,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
 
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="dc-card px-3 py-2.5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Invoice Ageing</p>
+          <p className="mb-3 text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Invoice Ageing</p>
           <div className="space-y-2">
             {[
               { label: "Current (0–30 days)", amount: ageingCurrent, color: "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[var(--accent)]" },
@@ -95,7 +95,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
         </section>
 
         <section className="dc-card px-3 py-2.5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">MTD Cash In — {mtdLabel}</p>
+          <p className="mb-3 text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">MTD Cash In — {mtdLabel}</p>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5">
               <p className="text-xs text-[var(--ink-muted)]">Invoice payments</p>
@@ -121,7 +121,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
 
       <section className="dc-card px-3 py-2.5">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Unpaid Invoices</p>
+          <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Unpaid Invoices</p>
           <Link href="/documents/invoices" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">View all →</Link>
         </div>
         {unpaidInvoices.length === 0 ? (

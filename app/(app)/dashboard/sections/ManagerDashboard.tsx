@@ -123,7 +123,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
 
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="dc-card px-3 py-2.5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Live Pipeline</p>
+          <p className="mb-3 text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Live Pipeline</p>
           <div className="space-y-1.5">
             {UI_JOB_STATUSES.filter(s => s !== "CLOSED" && s !== "COMPLETED").map(s => {
               const count = statusCount.get(s) ?? 0;
@@ -138,7 +138,7 @@ export async function ManagerDashboard({ orgId }: { orgId: string | null }) {
         </section>
         <section className="dc-card px-3 py-2.5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Workload</p>
+            <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Staff Workload</p>
             {unassignedCount > 0 && <Link href="/jobs?assignedToId=unassigned" className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[0.75rem] font-bold text-amber-600">{unassignedCount} unassigned</Link>}
           </div>
           {techRows.length === 0 ? (

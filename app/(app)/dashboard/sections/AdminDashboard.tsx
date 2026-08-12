@@ -8,34 +8,7 @@ import { routeLabel } from "@/lib/nav/registry";
 import { can } from "@/lib/permissions";
 
 import { loadAdminDashboardData } from "./admin-data";
-import type { PermissionUser } from "./shared";
-
-/** ── Calm dashboard primitives — flat, borderless cards on soft shadow ──── */
-
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`dc-card ${className}`}>{children}</div>;
-}
-
-// Executive look: card/section headers are plain titles — no "→ go here" link
-// clutter. The tiles and rows inside each card remain clickable for drill-down.
-// (href/hrefLabel kept in the signature so call sites don't change.)
-function CardHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
-  return (
-    <div className="mb-3 flex items-baseline gap-2">
-      <h4 className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">{title}</h4>
-      {note}
-    </div>
-  );
-}
-
-function SectionHead({ title, href: _href, hrefLabel: _hrefLabel, note }: { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode }) {
-  return (
-    <div className="mb-2.5 flex items-baseline gap-2 px-1">
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">{title}</h3>
-      {note}
-    </div>
-  );
-}
+import { Card, CardHead, SectionHead, type PermissionUser } from "./shared";
 
 /** ── Admin dashboard ───────────────────────────────────────────────────── */
 

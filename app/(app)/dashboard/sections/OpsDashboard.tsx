@@ -92,7 +92,7 @@ export async function OpsDashboard({
 
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="dc-card px-3 py-2.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Billing Queue</p>
+          <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Billing Queue</p>
           <div className="mt-3 space-y-2">
             <Link href="/jobs?status=IN_REPAIR,READY_FOR_PICKUP,AWAITING_APPROVAL" className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm hover:border-[var(--accent)]/30">
               <span>Pending billing jobs</span>
@@ -105,7 +105,7 @@ export async function OpsDashboard({
           </div>
         </section>
         <section className="dc-card px-3 py-2.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Cash Exposure</p>
+          <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Cash Exposure</p>
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
               <span>Revenue ({selectedPeriodLabel})</span>

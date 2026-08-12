@@ -13,6 +13,40 @@ import { asDateInputValue, type TrendMonth } from "./data";
 
 export type PermissionUser = { role: Role; permissions?: string[] };
 
+/** ── Calm dashboard primitives — the one header/card vocabulary every
+ *  dashboard shares (promoted from AdminDashboard so role dashboards use the
+ *  same set). Flat card on soft shadow; plain titles, no "→" link clutter. ── */
+
+export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`dc-card ${className}`}>{children}</div>;
+}
+
+// Executive look: headers are plain titles — no "→ go here" link clutter. The
+// tiles/rows inside each card stay clickable for drill-down. href/hrefLabel are
+// accepted (and ignored) so call sites can pass them without breaking.
+type HeadProps = { title: string; href?: string; hrefLabel?: string; note?: React.ReactNode };
+
+/** Card title — bold, sentence-case, primary ink. Optional trailing `note`
+ *  (a badge/link) sits on the baseline beside it. */
+export function CardHead({ title, note }: HeadProps) {
+  return (
+    <div className="mb-3 flex items-baseline gap-2">
+      <h4 className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">{title}</h4>
+      {note}
+    </div>
+  );
+}
+
+/** Section eyebrow — small uppercase label above a group of cards. */
+export function SectionHead({ title, note }: HeadProps) {
+  return (
+    <div className="mb-2.5 flex items-baseline gap-2 px-1">
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[var(--dc-ink-3)]">{title}</h3>
+      {note}
+    </div>
+  );
+}
+
 export const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
@@ -127,9 +161,17 @@ export function DashboardPeriodBar({
   );
 }
 
+// The one dashboard header pattern: a calm greeting-style heading + a stat
+// summary subtitle + a calm accent primary (dc-btn) and quiet secondary links.
+// Matches AdminDashboard's desktop greeting so every role opens the same way —
+// no bordered gold-button toolbar. `icon` is kept in the signature for call-site
+// compatibility but the calm header doesn't use it.
+const heroSecondary =
+  "inline-flex items-center rounded-lg border border-[var(--dc-line)] px-3 py-[9px] text-[0.78125rem] font-semibold text-[var(--dc-ink-2)] transition active:scale-[0.98] hover:border-[var(--dc-accent)] hover:text-[var(--dc-ink)]";
+
 export function DashboardHero({
   title,
-  summary: _summary,
+  summary,
   primaryHref,
   primaryLabel,
   secondaryHref,
@@ -147,26 +189,22 @@ export function DashboardHero({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="panel-shadow flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-      <p className="text-[0.8125rem] font-bold text-[var(--ink)]">{title}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link href={primaryHref} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">
+    <div className="flex flex-wrap items-center gap-4">
+      <div className="min-w-0">
+        <h2 className="text-[1.25rem] font-bold tracking-[-0.02em] text-[var(--dc-ink)]">{title}</h2>
+        {summary ? <p className="mt-0.5 text-[0.78125rem] text-[var(--dc-ink-2)]">{summary}</p> : null}
+      </div>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        <Link href={primaryHref} className="dc-btn inline-flex items-center gap-1.5 rounded-[10px] px-[15px] py-[9px] text-[0.78125rem] font-semibold active:scale-[0.98]">
           {primaryLabel}
         </Link>
         {secondaryHref && secondaryLabel ? (
-          <Link
-            href={secondaryHref}
-            className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-          >
+          <Link href={secondaryHref} className={heroSecondary}>
             {secondaryLabel}
           </Link>
         ) : null}
         {extraActions?.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="inline-flex items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-          >
+          <Link key={action.href} href={action.href} className={heroSecondary}>
             {action.label}
           </Link>
         ))}

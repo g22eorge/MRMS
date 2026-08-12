@@ -44,7 +44,7 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
 
       {openSession ? (
         <Link href="/pos" className="dc-card block px-3 py-2.5 transition hover:-translate-y-[2px] sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Active Session</p>
+          <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Active Session</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">Total Sales</p>

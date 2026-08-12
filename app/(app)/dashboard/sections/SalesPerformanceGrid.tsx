@@ -49,7 +49,7 @@ export function SalesPerformanceGrid({
       {/* ── Individual staff performance ── */}
       <section className="dc-card px-3 py-2.5">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Performance — {periodKey}</p>
+          <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Staff Performance — {periodKey}</p>
           <Link href="/reports" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">Full report →</Link>
         </div>
         {staffRows.length === 0 ? (
@@ -105,7 +105,7 @@ export function SalesPerformanceGrid({
       <div className="space-y-3">
         {/* Revenue by channel */}
         <section className="dc-card px-3 py-2.5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Revenue by Channel MTD</p>
+          <p className="mb-3 text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Revenue by Channel MTD</p>
           {[
             { label: "Repair Jobs",       amount: repairRevenueMtd,                    color: "bg-sky-500",    textColor: "text-sky-600",    count: `${wonMtd} completed` },
             { label: "POS Sales",         amount: posRevenueMtd,                       color: "bg-[var(--accent)]", textColor: "text-[var(--accent)]", count: `${salesCount} sales` },
@@ -132,7 +132,7 @@ export function SalesPerformanceGrid({
         {/* Pending approvals */}
         <section className="dc-card px-3 py-2.5">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Pending Approvals</p>
+            <p className="text-[0.78125rem] font-bold tracking-[-0.01em] text-[var(--dc-ink)]">Pending Approvals</p>
             <Link href="/jobs?status=AWAITING_APPROVAL" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">All →</Link>
           </div>
           {quotedJobs.length === 0 ? (
