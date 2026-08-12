@@ -495,7 +495,7 @@ export default async function PosPage({
                   <div className="flex items-center gap-3">
                   <Link href={`/pos/${s.id}`} className="shrink-0">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-black ${
-                      s.status === "PAID" ? "bg-emerald-500/15 text-emerald-600"
+                      s.status === "PAID" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                       : s.status === "VOID" ? "bg-red-500/15 text-red-600"
                       : "bg-[var(--accent)]/15 text-[var(--accent)]"
                     }`}>
@@ -513,7 +513,7 @@ export default async function PosPage({
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <p className="text-[14px] font-black tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
                     {balance > 0 && s.status !== "VOID" ? (
-                      <span className="text-[12px] font-semibold text-amber-600">{formatMoneyCompact(balance, cur)} due</span>
+                      <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">{formatMoneyCompact(balance, cur)} due</span>
                     ) : (
                       <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
                     )}
@@ -567,8 +567,8 @@ export default async function PosPage({
                   const balance = Math.max(0, s.totalAmount - s.paidAmount);
                   if (s.status === "VOID") return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
                   return balance > 0
-                    ? <span className="font-semibold text-amber-600">{formatMoneyCompact(balance, cur)}</span>
-                    : <span className="font-semibold text-emerald-600">Cleared</span>;
+                    ? <span className="font-semibold text-amber-600 dark:text-amber-400">{formatMoneyCompact(balance, cur)}</span>
+                    : <span className="font-semibold text-emerald-600 dark:text-emerald-400">Cleared</span>;
                 },
               },
               { key: "status", header: "Status", cell: (s) => <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge> },

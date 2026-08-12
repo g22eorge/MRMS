@@ -11,6 +11,7 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { can } from "@/lib/permissions";
 import { adjustStockAction, updatePartAction, togglePartActiveAction } from "../actions";
 import { FormField, FormRow } from "@/components/ui/form-field";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
 export default async function PartDetailPage({
   params,
@@ -197,10 +198,12 @@ export default async function PartDetailPage({
                         className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
                       <input name="reason" placeholder="Reason"
                         className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
-                      <button type="submit"
+                      <ConfirmSubmitButton
+                        message="Write off this stock? It removes units from on-hand and can't be undone."
+                        confirmLabel="Write off"
                         className="h-8 shrink-0 rounded-lg border border-red-400/40 bg-red-500/8 px-4 text-[12px] font-bold text-red-600 transition hover:bg-red-500/15">
                         − Issue
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   </div>
                 </details>

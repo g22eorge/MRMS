@@ -53,9 +53,9 @@ const LEAD_STATUS_TONES: Record<string, BadgeTone> = {
 const LEAD_TILE_TONES: Record<string, string> = {
   NEW:           "bg-sky-500/15 text-sky-600",
   CONTACTED:     "bg-slate-500/15 text-slate-600",
-  QUALIFIED:     "bg-amber-500/15 text-amber-600",
-  PROPOSAL_SENT: "bg-amber-500/15 text-amber-600",
-  WON:           "bg-emerald-500/15 text-emerald-600",
+  QUALIFIED:     "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  PROPOSAL_SENT: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  WON:           "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
   LOST:          "bg-red-500/15 text-red-600",
   STALE:         "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
 };
@@ -582,7 +582,7 @@ export default async function SalesPage({
           {activeTab === "quotations" && quoteCount > 0 ? (
             <p className="ml-auto text-[12px] text-[var(--ink-muted)]">
               {formatMoneyCompact(quoteTotal, currency)} quoted ·{" "}
-              <span className="font-semibold text-emerald-600">{formatMoneyCompact(acceptedTotal, currency)} accepted</span> ({acceptanceRate}%)
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatMoneyCompact(acceptedTotal, currency)} accepted</span> ({acceptanceRate}%)
             </p>
           ) : null}
         </div>
@@ -715,7 +715,7 @@ export default async function SalesPage({
                           <p className="font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(lead.estimatedValue, currency)}</p>
                         ) : null}
                         {isOverdue ? (
-                          <span className="text-[12px] font-semibold text-amber-600">
+                          <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">
                             {Math.floor((now.getTime() - new Date(lead.followUpAt!).getTime()) / 86400000)}d overdue
                           </span>
                         ) : (
@@ -808,7 +808,7 @@ export default async function SalesPage({
                     const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !TERMINAL_STATUSES.includes(lead.status);
                     if (!lead.followUpAt) return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
                     return (
-                      <span className={`text-[12px] ${isOverdue ? "font-semibold text-amber-600" : "text-[var(--ink-muted)]"}`}>
+                      <span className={`text-[12px] ${isOverdue ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
                         {formatEATDate(lead.followUpAt)}
                       </span>
                     );
@@ -886,7 +886,7 @@ export default async function SalesPage({
               return (
                 <div className="flex items-center gap-3 px-4 py-3">
                   <Link href={`/sales/quotations/${q.id}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black ${
-                    q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600"
+                    q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                     : q.status === "REJECTED" ? "bg-red-500/15 text-red-600"
                     : q.status === "SENT" ? "bg-sky-500/15 text-sky-600"
                     : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -902,7 +902,7 @@ export default async function SalesPage({
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <p className="font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(q.totalAmount, q.currency)}</p>
                     {isExpired ? (
-                      <span className="text-[12px] font-semibold text-amber-600">expired</span>
+                      <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">expired</span>
                     ) : (
                       <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
                     )}
@@ -948,7 +948,7 @@ export default async function SalesPage({
                   const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
                   if (!q.validUntil) return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
                   return (
-                    <span className={`text-[12px] ${isExpired ? "font-semibold text-amber-600" : "text-[var(--ink-muted)]"}`}>
+                    <span className={`text-[12px] ${isExpired ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
                       {formatEATDate(q.validUntil)}
                     </span>
                   );

@@ -1,6 +1,6 @@
 "use client";
 /**
- * AppLogo — renders the correct Duuka Pro Max logo for the current theme.
+ * AppLogo — renders the correct Duuka ProMax logo for the current theme.
  * Client component so it responds to live theme changes and only ever mounts
  * ONE <img> at a time (no CSS hide/show tricks that can be clobbered by
  * framework styles).
@@ -41,7 +41,7 @@ export function AppLogo({ height = 40, className = "", priority = false }: Props
   return (
     <Image
       src={isDark ? "/logo-dark.png" : "/logo-light.png"}
-      alt="Duuka Pro Max"
+      alt="Duuka ProMax"
       width={w}
       height={height}
       className={className}
@@ -57,7 +57,7 @@ export function AppLogoDark({ height = 40, className = "", priority = false }: P
   return (
     <Image
       src="/logo-dark.png"
-      alt="Duuka Pro Max"
+      alt="Duuka ProMax"
       width={w}
       height={height}
       className={className}

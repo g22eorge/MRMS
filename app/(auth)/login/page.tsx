@@ -114,7 +114,7 @@ export default async function LoginPage() {
           </div>
 
           <div className="relative flex items-center justify-between">
-            <p className="text-[13px] text-white/25">© {new Date().getFullYear()} Duuka Pro Max</p>
+            <p className="text-[13px] text-white/25">© {new Date().getFullYear()} Duuka ProMax</p>
             <a
               href="https://app.eagleinfosolutions.com"
               target="_blank"

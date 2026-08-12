@@ -356,7 +356,7 @@ export default async function PLPage({
               if (i === 0)
                 return <span className="text-emerald-700 dark:text-emerald-300">Revenue</span>;
               if (row.section === "EXPENSE" && (row.id === "exp-empty" || row.id === `exp-${expenses[0]?.code}`))
-                return <span className="text-red-700">Expenses</span>;
+                return <span className="text-red-700 dark:text-red-400">Expenses</span>;
               return null;
             }}
             rowClassName={(row) =>
@@ -434,7 +434,7 @@ export default async function PLPage({
                         className={`text-sm font-semibold tabular-nums ${
                           row.section === "REVENUE"
                             ? "text-emerald-700 dark:text-emerald-300/70"
-                            : "text-red-700/70"
+                            : "text-red-700 dark:text-red-400/70"
                         }`}
                       >
                         {formatMoney(row.priorAmount, currency)}
@@ -458,7 +458,7 @@ export default async function PLPage({
                     row.section === "REVENUE" ? row.amount >= row.priorAmount : row.amount <= row.priorAmount;
                   return (
                     <span
-                      className={`font-semibold tabular-nums ${improved ?"text-emerald-600" : "text-red-500"}`}
+                      className={`font-semibold tabular-nums ${improved ?"text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}
                     >
                       {changePct(row.amount, row.priorAmount) ?? "—"}
                     </span>
@@ -475,7 +475,7 @@ export default async function PLPage({
                   {totalRevenue > 0 && (
                     <span
                       className={`ml-2 text-[13px] font-semibold ${
-                        netMargin >= 0 ? "text-emerald-600" : "text-red-500"
+                        netMargin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"
                       }`}
                     >
                       ({netMargin.toFixed(1)}% margin)
@@ -484,21 +484,21 @@ export default async function PLPage({
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-lg font-bold tabular-nums ${
-                    netIncome >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700"
+                    netIncome >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-400"
                   }`}
                 >
                   {formatMoney(Math.abs(netIncome), currency)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-sm font-semibold tabular-nums ${
-                    priorNetIncome >= 0 ? "text-emerald-700 dark:text-emerald-300/60" : "text-red-700/60"
+                    priorNetIncome >= 0 ? "text-emerald-700 dark:text-emerald-300/60" : "text-red-700 dark:text-red-400/60"
                   }`}
                 >
                   {formatMoney(Math.abs(priorNetIncome), currency)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-[13px] font-semibold tabular-nums ${
-                    netIncome >= priorNetIncome ? "text-emerald-600" : "text-red-500"
+                    netIncome >= priorNetIncome ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"
                   }`}
                 >
                   {changePct(netIncome, priorNetIncome) ?? "—"}
@@ -534,7 +534,7 @@ export default async function PLPage({
                       key: "revenue",
                       header: "Revenue",
                       align: "right",
-                      className: "tabular-nums whitespace-nowrap text-emerald-600",
+                      className: "tabular-nums whitespace-nowrap text-emerald-600 dark:text-emerald-400",
                       cell: (row) => formatMoneyCompact(row.revenue, currency),
                     },
                     {
@@ -552,7 +552,7 @@ export default async function PLPage({
                       cell: (row) => (
                         <span
                           className={`text-sm font-semibold tabular-nums ${
-                            row.net >= 0 ? "text-emerald-600" : "text-red-500"
+                            row.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"
                           }`}
                         >
                           {row.net < 0 ? "−" : ""}
@@ -567,7 +567,7 @@ export default async function PLPage({
                       cell: (row) => (
                         <span
                           className={`text-[13px] tabular-nums ${
-                            row.revenue > 0 && row.net / row.revenue >= 0 ? "text-emerald-600" : "text-red-500"
+                            row.revenue > 0 && row.net / row.revenue >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"
                           }`}
                         >
                           {row.revenue > 0 ? ((row.net / row.revenue) * 100).toFixed(1) + "%" : "—"}

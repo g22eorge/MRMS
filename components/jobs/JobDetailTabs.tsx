@@ -293,7 +293,7 @@ function MessagesTab({
               const m = entry.msg;
               return (
                 <div key={m.id} className="flex flex-col items-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-[var(--accent)] px-3.5 py-2.5 text-sm text-white shadow-sm">
+                  <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-[var(--accent)] px-3.5 py-2.5 text-sm text-black shadow-sm">
                     <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-[12px] text-[var(--ink-muted)]">
@@ -970,7 +970,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 });
               }}
             >
-              <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[13px] font-bold text-white shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
+              <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[13px] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
                 {isStatusPending ? "Updating…" : (
                   <>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
@@ -1101,7 +1101,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             <button
               type="submit"
               disabled={isStatusPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-black shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60"
             >
               {isStatusPending ? (
                 <span>Updating…</span>

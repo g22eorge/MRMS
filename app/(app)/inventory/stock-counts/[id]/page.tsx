@@ -6,6 +6,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { approveStockCountAction, cancelStockCountAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -46,9 +47,12 @@ export default async function StockCountDetailPage({ params }: { params: Promise
           count.status === "SUBMITTED" ? (
             <form action={approveStockCountAction}>
               <input type="hidden" name="id" value={count.id} />
-              <button type="submit" className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <ConfirmSubmitButton
+                message="Approve this count and adjust stock? All counted variances will be applied to on-hand quantities and this can't be undone."
+                confirmLabel="Approve & adjust"
+                className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 Approve and adjust stock
-              </button>
+              </ConfirmSubmitButton>
             </form>
           ) : null
         }
@@ -58,7 +62,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
               <MenuDestructiveRow>
                 <form action={cancelStockCountAction}>
                   <input type="hidden" name="id" value={count.id} />
-                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Count</button>
+                  <ConfirmSubmitButton message="Cancel this stock count? This can't be undone." confirmLabel="Cancel count" className="w-full text-left text-[12px] text-red-600">Cancel Count</ConfirmSubmitButton>
                 </form>
               </MenuDestructiveRow>
             </RowActionsMenu>

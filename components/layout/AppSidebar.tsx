@@ -314,7 +314,7 @@ export function AppSidebar({
         {orgName && (
           <p className="truncate text-[13px] font-semibold text-[var(--dc-ink)]" title={orgName}>{orgName}</p>
         )}
-        <p className="mt-0.5 text-[12px] font-medium tracking-[0.08em] text-[var(--dc-accent-2)]" aria-hidden="true">Duuka Pro Max</p>
+        <p className="mt-0.5 text-[12px] font-medium tracking-[0.08em] text-[var(--dc-accent-2)]" aria-hidden="true">Duuka ProMax</p>
       </div>
     </aside>
   );

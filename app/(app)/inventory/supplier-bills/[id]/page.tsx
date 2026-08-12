@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { cancelSupplierBillAction, createSupplierPaymentAction, deleteSupplierPaymentAction } from "../actions";
 
@@ -57,7 +58,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
               <MenuDestructiveRow>
                 <form action={cancelSupplierBillAction}>
                   <input type="hidden" name="id" value={bill.id} />
-                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Bill</button>
+                  <ConfirmSubmitButton message="Cancel this supplier bill? This can't be undone." confirmLabel="Cancel bill" className="w-full text-left text-[12px] text-red-600">Cancel Bill</ConfirmSubmitButton>
                 </form>
               </MenuDestructiveRow>
             </RowActionsMenu>
@@ -152,7 +153,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
             <form action={deleteSupplierPaymentAction}>
               <input type="hidden" name="id" value={payment.id} />
               <input type="hidden" name="billId" value={bill.id} />
-              <button type="submit" className="font-semibold text-red-600 hover:text-red-700">Delete</button>
+              <ConfirmSubmitButton message="Delete this payment? The recorded amount will be reversed and this can't be undone." confirmLabel="Delete payment" className="font-semibold text-red-600 hover:text-red-700">Delete</ConfirmSubmitButton>
             </form>
           )}
         />

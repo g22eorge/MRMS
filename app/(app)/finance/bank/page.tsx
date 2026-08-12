@@ -224,7 +224,7 @@ export default async function BankPage({
           {
             label: "Credits This Month",
             value: formatMoneyCompact(globalCreditsThisMonth, currency),
-            valueClass: "text-emerald-600",
+            valueClass: "text-emerald-600 dark:text-emerald-400",
             sub: "all accounts",
           },
           {
@@ -330,7 +330,7 @@ export default async function BankPage({
                     </p>
                     {acctMonthNet !== 0 && (
                       <p
-                        className={`text-[12px] font-semibold ${acctMonthNet >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                        className={`text-[12px] font-semibold ${acctMonthNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}
                       >
                         {acctMonthNet >= 0 ? "+" : "−"}
                         {formatMoneyCompact(Math.abs(acctMonthNet), currency)} this month
@@ -380,7 +380,7 @@ export default async function BankPage({
                       </p>
                     </div>
                     {unreconciledTx.length > 0 && (
-                      <p className="mt-1.5 text-[13px] text-amber-600">
+                      <p className="mt-1.5 text-[13px] text-amber-600 dark:text-amber-400">
                         {unreconciledTx.length} not checked yet ·{" "}
                         {formatMoneyCompact(Math.abs(unreconciledAmount), currency)}
                       </p>
@@ -511,15 +511,15 @@ export default async function BankPage({
                       key: "in",
                       header: "In",
                       align: "right",
-                      headerClassName: "text-emerald-700",
-                      className: "font-medium text-emerald-700 whitespace-nowrap tabular-nums",
+                      headerClassName: "text-emerald-700 dark:text-emerald-400",
+                      className: "font-medium text-emerald-700 dark:text-emerald-400 whitespace-nowrap tabular-nums",
                       cell: (tx) => (tx.type === "CREDIT" ? formatMoney(tx.amount, currency) : ""),
                     },
                     {
                       key: "out",
                       header: "Out",
                       align: "right",
-                      headerClassName: "text-red-700",
+                      headerClassName: "text-red-700 dark:text-red-400",
                       className: "font-medium text-red-600 whitespace-nowrap tabular-nums",
                       cell: (tx) => (tx.type === "DEBIT" ? formatMoney(tx.amount, currency) : ""),
                     },
@@ -562,7 +562,7 @@ export default async function BankPage({
                       <td colSpan={2} className="px-4 py-2.5 text-[12px] font-bold text-[var(--ink-muted)]">
                         {transactions.length} transactions{q ? " (filtered)" : ""}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700">
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
                         {formatMoney(txCreditsTotal, currency)}
                       </td>
                       <td className="px-4 py-2.5 text-right font-bold tabular-nums text-red-600">
@@ -581,7 +581,7 @@ export default async function BankPage({
                         <div className={`px-4 py-3 ${tx.reconciledAt ? "opacity-60" : ""}`}>
                           <div className="mb-0.5 flex items-start justify-between gap-2">
                             <p className="font-medium text-[var(--ink)]">{tx.description}</p>
-                            <span className={`shrink-0 font-bold tabular-nums ${tx.type ==="CREDIT" ? "text-emerald-700" : "text-red-600"}`}>
+                            <span className={`shrink-0 font-bold tabular-nums ${tx.type ==="CREDIT" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600"}`}>
                               {tx.type === "CREDIT" ? "+" : "−"}{formatMoney(tx.amount, currency)}
                             </span>
                           </div>

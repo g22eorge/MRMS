@@ -944,7 +944,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
-              <Button type="submit" variant="secondary" size="sm">Save</Button>
+              <SubmitButton variant="secondary" size="sm" pendingLabel="Saving…">Save</SubmitButton>
             </form>
           </section>
 
@@ -971,7 +971,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             <input name="description" placeholder="Description" className={field} />
             <input name="quantity" placeholder="Qty" defaultValue={1} inputMode="numeric" aria-label="Quantity" className={field} required />
             <input name="unitPrice" placeholder="Price" inputMode="decimal" aria-label="Unit price" className={field} required />
-            <Button type="submit" size="sm" className="px-4">Add</Button>
+            <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}
 
@@ -1090,7 +1090,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 aria-label="Discount amount"
                 className={`${field} w-32 flex-none`}
               />
-              <Button type="submit" variant="secondary" size="sm">Apply</Button>
+              <SubmitButton variant="secondary" size="sm" pendingLabel="Applying…">Apply</SubmitButton>
             </form>
             <form
               action={toggleSaleVatAction}
@@ -1099,9 +1099,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               <input type="hidden" name="saleId" value={sale.id} />
               <input type="hidden" name="next" value={sale.taxApplicable ? "false" : "true"} />
               <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
-              <Button type="submit" variant="secondary" size="sm">
+              <SubmitButton variant="secondary" size="sm" pendingLabel="Updating…">
                 {sale.taxApplicable ? "Turn VAT off" : "Turn VAT on"}
-              </Button>
+              </SubmitButton>
               <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
                 {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
               </span>
@@ -1117,8 +1117,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           <p className="text-[12px] text-[var(--ink-muted)]">
             {sale.payments.length} recorded &middot;{" "}
             {balance > 0
-              ? <span className="font-semibold text-amber-600">{formatMoney(balance, saleCurrency)} due</span>
-              : <span className="font-semibold text-emerald-600">cleared</span>}
+              ? <span className="font-semibold text-amber-600 dark:text-amber-400">{formatMoney(balance, saleCurrency)} due</span>
+              : <span className="font-semibold text-emerald-600 dark:text-emerald-400">cleared</span>}
           </p>
         </div>
 
@@ -1224,7 +1224,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                     className={fieldOnStrong}
                   />
                   <input name="reference" placeholder="Ref (optional)" className={fieldOnStrong} />
-                  <SubmitButton size="sm" className="px-4" pendingLabel="Refunding…">Refund</SubmitButton>
+                  <ConfirmSubmitButton
+                    message="Pay out this refund? Money leaves the till and this cannot be undone."
+                    confirmLabel="Pay refund"
+                    className={buttonClasses("danger", "sm", { className: "px-4" })}
+                  >
+                    Refund
+                  </ConfirmSubmitButton>
                 </form>
               )}
             </div>

@@ -24,22 +24,22 @@ const ogImage = `${siteUrl}/eagle-info-logo.png`;
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Duuka Pro Max",
-    template: "%s | Duuka Pro Max",
+    default: "Duuka ProMax",
+    template: "%s | Duuka ProMax",
   },
   description: "Business management platform for repairs, sales, inventory, finance, documents, and daily operations.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Duuka Pro Max",
+    title: "Duuka ProMax",
     description: "Business management platform for repairs, sales, inventory, finance, documents, and daily operations.",
     url: "/",
-    siteName: "Duuka Pro Max",
+    siteName: "Duuka ProMax",
     type: "website",
-    images: [{ url: ogImage, width: 512, height: 512, alt: "Duuka Pro Max" }],
+    images: [{ url: ogImage, width: 512, height: 512, alt: "Duuka ProMax" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Duuka Pro Max",
+    title: "Duuka ProMax",
     description: "Business management platform for repairs, sales, inventory, finance, documents, and daily operations.",
     images: [ogImage],
   },

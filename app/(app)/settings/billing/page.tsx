@@ -58,7 +58,7 @@ async function subscribeToPlan(formData: FormData) {
     merchantReference: merchantRef,
     amount: PLAN_PRICES[targetPlan],
     currency: "UGX",
-    description: `Nexus ${targetPlan} plan`,
+    description: `Duuka ProMax ${targetPlan} plan`,
     callbackUrl: `${baseUrl}/api/billing/callback`,
     ipnId,
     email: user.email,

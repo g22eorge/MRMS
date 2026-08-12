@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { RowActionsMenu, MenuActionButton, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
 import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageType } from "@prisma/client";
 
@@ -199,9 +200,13 @@ export default async function OutboxPage({
           <MenuDestructiveRow>
             <form action={markDeadAction}>
               <input type="hidden" name="id" value={r.id} />
-              <button type="submit" className="w-full text-left text-[12px] text-red-600">
+              <ConfirmSubmitButton
+                message="Discard this message? It will be marked failed (DEAD) and won't be retried."
+                confirmLabel="Discard"
+                className="w-full text-left text-[12px] text-red-600"
+              >
                 Discard
-              </button>
+              </ConfirmSubmitButton>
             </form>
           </MenuDestructiveRow>
         ) : null}

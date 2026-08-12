@@ -14,6 +14,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -570,7 +572,7 @@ export default async function PayoutFollowupsPage({
                     <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
-                    <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
+                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
                   </form>
                 </div>
               );
@@ -621,7 +623,7 @@ export default async function PayoutFollowupsPage({
                     <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
-                    <button type="submit" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700">Collect</button>
+                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
                   </form>
                   <Link href={`/documents/invoices/${inv.id}`} className="h-8 inline-flex items-center rounded-lg border border-[var(--line)] px-2 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">View</Link>
                 </>
@@ -824,11 +826,13 @@ export default async function PayoutFollowupsPage({
                   {/* Mark Paid action */}
                   <form action={markExternalTechPaid} className="mt-2">
                     <input type="hidden" name="jobId" value={job.id} />
-                    <button type="submit"
+                    <ConfirmSubmitButton
+                      message={`Record a payout of ${formatMoneyCompact(remaining, currency)} to this technician? This can't be undone.`}
+                      confirmLabel="Mark paid"
                       className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
                       Mark Paid — {formatMoneyCompact(remaining, currency)}
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </div>
               );
@@ -879,11 +883,13 @@ export default async function PayoutFollowupsPage({
                 {/* Mark Paid directly on this page */}
                 <form action={markExternalTechPaid}>
                   <input type="hidden" name="jobId" value={job.id} />
-                  <button type="submit"
+                  <ConfirmSubmitButton
+                    message="Record this technician payout? This can't be undone."
+                    confirmLabel="Mark paid"
                     className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
                     Mark Paid
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
                 <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="btn-premium-secondary rounded-lg px-2.5 py-1.5">Open</Link>
               </>

@@ -12,7 +12,6 @@ import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
-import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
@@ -606,9 +605,13 @@ export default async function RefundsPage({
               />
             </div>
             <div className="flex justify-end gap-2 sm:col-span-2 lg:col-span-3">
-              <SubmitButton bare pendingLabel="Issuing…" className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-60">
+              <ConfirmSubmitButton
+                message="Issue this refund? Money leaves the business and this cannot be undone."
+                confirmLabel="Issue refund"
+                className="h-9 rounded-lg bg-[var(--accent)] px-5 text-sm font-semibold text-black hover:opacity-90"
+              >
                 Issue Refund
-              </SubmitButton>
+              </ConfirmSubmitButton>
             </div>
           </form>
           ) : (
