@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { JobStatus, NotificationChannel, NotificationType, OutboundMessageType, Prisma } from "@prisma/client";
 
 import { formatMoney } from "@/lib/currency";
+import { EIS_ORG_ID } from "@/lib/org";
 import { normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
@@ -298,6 +299,23 @@ function nudge2KeyFrom(nudge1Key: string): string {
   return nudge1Key;
 }
 
+/**
+ * Links appended to a client status update.
+ * - complaintUrl: the public complaint form, job number pre-filled (no login).
+ *   Built from NEXT_PUBLIC_APP_URL; omitted when that isn't configured.
+ * - reviewUrl: a Google review ask, ONLY on completion (COMPLETED/CLOSED) and —
+ *   for now — ONLY for Eagle's own repair business (scoped by org id so it can
+ *   never leak into another tenant's messages). Generalise to a per-org branding
+ *   setting when rolling out to commercial orgs. Reads GOOGLE_REVIEW_URL.
+ */
+function statusMessageLinks(orgId: string, jobNumber: string, newStatus: JobStatus) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
+  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(jobNumber)}` : "";
+  const isServiceDone = newStatus === JobStatus.COMPLETED || newStatus === JobStatus.CLOSED;
+  const reviewUrl = isServiceDone && orgId === EIS_ORG_ID ? (process.env.GOOGLE_REVIEW_URL?.trim() ?? "") : "";
+  return { complaintUrl, reviewUrl };
+}
+
 async function sendClientWhatsAppForStatusChange(input: {
   orgId: string;
   jobId: string;
@@ -320,13 +338,16 @@ async function sendClientWhatsAppForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
-  // Deep-link to the public complaint form with the job number pre-filled, so a
-  // customer can raise an issue straight from the status update — no login, no
-  // typing their reference. Only included when the public app URL is configured.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
-  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(input.jobNumber)}` : "";
+  const { complaintUrl, reviewUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
 
-  const fallback = `Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}.${complaintUrl ? `\n\nNot happy with something? Let us know: ${complaintUrl}` : ""}\n\n- Your Repair Team`;
+  // On completion we offer both — a review if they're happy, a complaint if not
+  // (honest routing, not review-gating). Mid-repair updates carry just the
+  // complaint link.
+  const blocks = [`Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}.`];
+  if (reviewUrl) blocks.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
+  if (complaintUrl) blocks.push(`${reviewUrl ? "Something not right? Tell us" : "Not happy with something? Let us know"}: ${complaintUrl}`);
+  blocks.push("- Your Repair Team");
+  const fallback = blocks.join("\n\n");
 
   const templateVars = {
     customerName: client.fullName,
@@ -335,8 +356,9 @@ async function sendClientWhatsAppForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
-    // Available to custom/policy templates as {{complaintUrl}}.
+    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}}.
     complaintUrl,
+    reviewUrl,
   };
 
   const rendered = await renderCommunicationTemplate({
@@ -523,8 +545,7 @@ async function sendClientEmailForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
-  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(input.jobNumber)}` : "";
+  const { complaintUrl, reviewUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
 
   const vars = {
     customerName: client.fullName,
@@ -533,12 +554,17 @@ async function sendClientEmailForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
-    // Available to custom/policy templates as {{complaintUrl}}.
+    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}}.
     complaintUrl,
+    reviewUrl,
   };
 
   const fallbackSubject = `Update on Job #${input.jobNumber}`;
-  const fallbackBody = `Hello ${client.fullName},\n\nUpdate on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.${complaintUrl ? `\n\nNot happy with something? Let us know: ${complaintUrl}` : ""}\n\nYour Repair Team`;
+  const bodyBlocks = [`Hello ${client.fullName},`, `Update on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.`];
+  if (reviewUrl) bodyBlocks.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
+  if (complaintUrl) bodyBlocks.push(`${reviewUrl ? "Something not right? Tell us: " : "Not happy with something? Let us know: "}${complaintUrl}`);
+  bodyBlocks.push("Your Repair Team");
+  const fallbackBody = bodyBlocks.join("\n\n");
 
   const rendered = await renderCommunicationTemplate({
     orgId: input.orgId,
