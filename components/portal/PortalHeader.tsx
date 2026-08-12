@@ -23,11 +23,11 @@ export function PortalHeader({
   userName: string;
   role: string;
   company: string;
-  active?: "dashboard" | "repairs" | "documents";
+  active?: "dashboard" | "repairs" | "documents" | "complaints";
   accounts?: Account[];
   activeClientId?: string;
 }) {
-  const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents") => (
+  const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents" | "complaints") => (
     <Link
       href={href}
       className={`rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold transition ${
@@ -65,6 +65,7 @@ export function PortalHeader({
         {link("/portal/dashboard", "Dashboard", "dashboard")}
         {link("/portal/repairs", "Repairs", "repairs")}
         {link("/portal/documents", "Documents", "documents")}
+        {link("/portal/complaints", "Complaints", "complaints")}
         <form action={portalLogoutAction}>
           <button type="submit" className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
             Sign out

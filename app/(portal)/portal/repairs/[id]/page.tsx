@@ -100,7 +100,10 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
       <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" accounts={accessibleClients} activeClientId={client.id} />
 
-      <Link href="/portal/repairs" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link href="/portal/repairs" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
+        <Link href={`/portal/complaints?ref=${job.id}`} className="text-[0.8125rem] font-semibold text-red-500 hover:text-red-600 hover:underline">Report an issue</Link>
+      </div>
 
       {/* Summary */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
