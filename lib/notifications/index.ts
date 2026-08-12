@@ -299,6 +299,13 @@ function nudge2KeyFrom(nudge1Key: string): string {
   return nudge1Key;
 }
 
+// Eagle Info Solutions' Google review link. Used as the default for the care
+// rollout — safe to hold in code because the reviewUrl below is gated to the
+// EIS org, so it can never be sent for any other tenant. GOOGLE_REVIEW_URL
+// overrides it. When commercial orgs get reviews, move this to a per-org
+// branding setting and drop the org gate.
+const EIS_GOOGLE_REVIEW_URL = "https://g.page/EagleInfoSolutions/review?rc";
+
 /**
  * Links appended to a client status update.
  * - complaintUrl: the public complaint form, job number pre-filled (no login).
@@ -306,13 +313,15 @@ function nudge2KeyFrom(nudge1Key: string): string {
  * - reviewUrl: a Google review ask, ONLY on completion (COMPLETED/CLOSED) and —
  *   for now — ONLY for Eagle's own repair business (scoped by org id so it can
  *   never leak into another tenant's messages). Generalise to a per-org branding
- *   setting when rolling out to commercial orgs. Reads GOOGLE_REVIEW_URL.
+ *   setting when rolling out to commercial orgs.
  */
 function statusMessageLinks(orgId: string, jobNumber: string, newStatus: JobStatus) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
   const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(jobNumber)}` : "";
   const isServiceDone = newStatus === JobStatus.COMPLETED || newStatus === JobStatus.CLOSED;
-  const reviewUrl = isServiceDone && orgId === EIS_ORG_ID ? (process.env.GOOGLE_REVIEW_URL?.trim() ?? "") : "";
+  const reviewUrl = isServiceDone && orgId === EIS_ORG_ID
+    ? (process.env.GOOGLE_REVIEW_URL?.trim() || EIS_GOOGLE_REVIEW_URL)
+    : "";
   return { complaintUrl, reviewUrl };
 }
 
