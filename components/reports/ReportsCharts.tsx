@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Line,
   LineChart,
   Pie,
@@ -18,6 +19,13 @@ import {
 } from "recharts";
 
 import { formatMoneyCompact } from "@/lib/currency";
+
+// Fixed categorical order (never cycled), drawn from the theme-adaptive --dc-*
+// semantic tokens so slice colors stay distinct and legible in light and dark.
+// Ordered to keep adjacent hues well separated (gold and amber sit far apart).
+const CATEGORICAL = ["var(--dc-accent)", "var(--dc-blue)", "var(--dc-good)", "var(--dc-violet)", "var(--dc-crit)", "var(--dc-warn)"] as const;
+// Legend/label text wears an ink token, never the series color.
+const legendStyle = { fontSize: 12, color: "var(--ink-muted)" } as const;
 
 export function ReportsCharts({
   statusData,
@@ -77,11 +85,11 @@ export function ReportsCharts({
               angle={-25}
               height={54}
               textAnchor="end"
-              tick={{ fontSize: 11, fill: "var(--ink-muted)" }}
+              tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
               axisLine={{ stroke: "var(--line)" }}
               tickLine={{ stroke: "var(--line)" }}
             />
-            <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
+            <YAxis tick={{ fontSize: 12, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
             <Tooltip contentStyle={tooltipStyle} />
             <Bar
               dataKey="value"
@@ -102,15 +110,19 @@ export function ReportsCharts({
         <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Repairs by Device Type</p>
         <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={220}>
           <PieChart>
-             <Pie data={deviceData} dataKey="value" nameKey="name" outerRadius={90}>
+             <Pie data={deviceData} dataKey="value" nameKey="name" outerRadius={80}>
                {deviceData.map((entry, index) => (
                  <Cell
                    key={entry.name}
-                   fill={["var(--ink)", "var(--accent)", "var(--ink-muted)", "var(--ink)", "var(--accent)", "var(--ink-muted)"][index % 6]}
+                   // Fixed categorical order — never cycled by rank. (Adjacent
+                   // slices previously repeated ink/accent/ink so they merged.)
+                   fill={CATEGORICAL[index % CATEGORICAL.length]}
                  />
                ))}
              </Pie>
             <Tooltip contentStyle={tooltipStyle} />
+            {/* Legend names each slice — identity is never carried by color alone. */}
+            <Legend wrapperStyle={legendStyle} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -157,9 +169,9 @@ export function RevenueLineChart({
       <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={180}>
         <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-          <XAxis dataKey="key" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
+          <XAxis dataKey="key" tick={{ fontSize: 12, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
           <YAxis
-            tick={{ fontSize: 11, fill: "var(--ink-muted)" }}
+            tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
             axisLine={{ stroke: "var(--line)" }}
             tickLine={{ stroke: "var(--line)" }}
             tickFormatter={(value) => formatMoneyCompact(Number(value), currency).replace(`${currency} `, "")}
@@ -184,11 +196,11 @@ export function RevenueLineChart({
             <Line
               type="monotone"
               dataKey="margin"
-              stroke="#10b981"
+              stroke="var(--dc-good)"
               strokeOpacity={0.9}
               strokeWidth={2}
               strokeDasharray="4 2"
-              dot={{ fill: "#10b981", strokeWidth: 0, r: 3 }}
+              dot={{ fill: "var(--dc-good)", strokeWidth: 0, r: 3 }}
               name="Margin"
             />
           )}
@@ -235,12 +247,14 @@ export function TechnicianBarChart({
             angle={-20}
             height={44}
             textAnchor="end"
-              tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+              tick={{ fontSize: 12, fill: "var(--ink-muted)" }}
               axisLine={{ stroke: "var(--line)" }}
               tickLine={{ stroke: "var(--line)" }}
             />
-          <YAxis tick={{ fontSize: 10, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
+          <YAxis tick={{ fontSize: 12, fill: "var(--ink-muted)" }} axisLine={{ stroke: "var(--line)" }} tickLine={{ stroke: "var(--line)" }} />
           <Tooltip contentStyle={tooltipStyle} />
+          {/* Two series (Assigned vs Completed) — legend required for identity. */}
+          <Legend wrapperStyle={legendStyle} />
           <Bar dataKey="total" fill="var(--panel-strong)" radius={[4, 4, 0, 0]} name="Assigned" />
           <Bar dataKey="completed" fill="var(--accent)" radius={[4, 4, 0, 0]} name="Completed" />
         </BarChart>
