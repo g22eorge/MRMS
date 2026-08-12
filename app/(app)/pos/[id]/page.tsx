@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { PaymentMethod } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
-import { formatMoney, normalizeCurrency, roundMoney } from "@/lib/currency";
+import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -24,6 +24,7 @@ import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeVat } from "@/lib/commercial/vat";
 
@@ -521,6 +522,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       ? (method as PaymentMethod)
       : "OTHER" as PaymentMethod;
 
+    // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
+    await ensureMoneySchema();
+
     await prisma.$transaction(async (tx) => {
       // Double-submit guard: an identical till payment landed seconds ago — reuse
       // it instead of recording the same money twice.
@@ -792,21 +796,43 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       return;
     }
 
-    const refund = await prisma.refund.create({
-      data: {
+    // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
+    // ensure the ledger/FX schema exists before opening the txn.
+    await ensureMoneySchema();
+    const refund = await prisma.$transaction(async (tx) => {
+      const created = await tx.refund.create({
+        data: {
+          orgId,
+          saleId,
+          invoiceId: null,
+          creditNoteId: creditNote.id,
+          currency,
+          exchangeRateToBase,
+          amount,
+          method: safeMethod,
+          reference: reference || null,
+          createdById: session.user.id,
+          note: note || null,
+        },
+        select: { id: true },
+      });
+      // Reduce the sale's collected amount by the refund (was never recomputed,
+      // leaving sale.paidAmount overstated after a POS refund).
+      await syncSalePaymentState(tx, { orgId, saleId });
+      // C5: cash-basis ledger post — reverse revenue, pay out cash. Every other
+      // refund path posts this; the POS path previously skipped it, so the ledger
+      // and cash reports overstated cash after a till refund. Post the base value.
+      const baseRefund = currency === org.baseCurrency
+        ? amount
+        : toBaseAmount({ amount, currency, baseCurrency: org.baseCurrency, exchangeRateToBase });
+      await postRefund(tx, {
         orgId,
-        saleId,
-        invoiceId: null,
-        creditNoteId: creditNote.id,
-        currency,
-        exchangeRateToBase,
-        amount,
-        method: safeMethod,
-        reference: reference || null,
-        createdById: session.user.id,
-        note: note || null,
-      },
-      select: { id: true },
+        userId: session.user.id,
+        amount: baseRefund,
+        reference: `refund:${created.id}`,
+        description: `Refund on sale ${saleId} (credit note ${creditNote.id})`,
+      });
+      return created;
     });
 
     await writeSystemAuditEvent({

@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 
 import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -135,6 +135,8 @@ export default async function RefundsPage({
       redirect("/documents/refunds");
     }
 
+    // Refund write + ledger reversal run inside the txn; ensure schema first.
+    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {
@@ -194,16 +196,21 @@ export default async function RefundsPage({
     const refundId = String(formData.get("refundId") ?? "").trim();
     if (!refundId) return;
 
-    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true, invoiceId: true } });
+    const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true, invoiceId: true, saleId: true } });
     if (!refund) return;
 
+    await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
       await tx.refund.deleteMany({ where: { id: refundId, orgId } });
-      // Reverse the refund's ledger post ("refund:<id>") and reopen the invoice's
+      // Reverse the refund's ledger post ("refund:<id>") and reopen the source's
       // paid state — deleting the refund undoes both the cash-out and the reduction.
+      // Handle a sale source too, mirroring the create path (was invoice-only, so a
+      // deleted sale refund left sale.paidAmount understated).
       await reverseJournalEntry(tx, { orgId, userId: user.id, originalReference: `refund:${refundId}`, description: "Reversal — refund deleted" });
       if (refund.invoiceId) {
         await syncInvoicePaymentState(tx, { orgId, invoiceId: refund.invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
+      } else if (refund.saleId) {
+        await syncSalePaymentState(tx, { orgId, saleId: refund.saleId });
       }
     });
     await writeSystemAuditEvent({

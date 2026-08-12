@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { type PaymentMethod } from "@prisma/client";
 
-import { formatMoney, formatMoneyCompact } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -130,6 +130,17 @@ export default async function CreditNotesPage({
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 
+    // Capture the FX rate for a non-base credit note so the ledger post and the
+    // sale's paid-state recompute both convert to base. Without it the refund
+    // stored exchangeRateToBase:null, so a foreign refund posted its document
+    // amount (e.g. 100 instead of ~380,000) and sumSalePaidAmount mis-netted it.
+    const refundCurrency = normalizeCurrency(cn.currency, org.baseCurrency);
+    const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
+    const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
+    if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
+      return;
+    }
+
     // Double-submit guard: an identical refund against this credit note landed
     // seconds ago — don't pay it out twice.
     const dupRefund = await findRecentDuplicate(prisma.refund, {
@@ -144,6 +155,8 @@ export default async function CreditNotesPage({
       redirect("/documents/credit-notes");
     }
 
+    // Refund write + ledger post run inside the txn; ensure schema first.
+    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {
@@ -151,6 +164,7 @@ export default async function CreditNotesPage({
           saleId: cn.saleId,
           creditNoteId: cn.id,
           currency: cn.currency,
+          exchangeRateToBase,
           amount: amountRaw,
           method,
           reference: reference || null,
@@ -160,13 +174,21 @@ export default async function CreditNotesPage({
         },
         select: { id: true },
       });
+      // Reduce the sale's paid state so the refunded cash isn't still counted as
+      // collected (was skipped, letting the refundable amount be double-drawn).
+      if (cn.saleId) {
+        await syncSalePaymentState(tx, { orgId, saleId: cn.saleId });
+      }
       // C5: cash-basis ledger post — reverse revenue, pay out cash. This mirrors
       // the refunds page; without it, refunds issued from a credit note never hit
-      // the ledger (cash would be overstated).
+      // the ledger (cash would be overstated). Post the base value of a foreign refund.
+      const baseRefund = refundCurrency === org.baseCurrency
+        ? amountRaw
+        : toBaseAmount({ amount: amountRaw, currency: refundCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase });
       await postRefund(tx, {
         orgId,
         userId: user.id,
-        amount: amountRaw,
+        amount: baseRefund,
         reference: `refund:${created.id}`,
         description: `Refund from credit note ${cn.creditNoteNumber}`,
       });

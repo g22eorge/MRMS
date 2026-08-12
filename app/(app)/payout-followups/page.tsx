@@ -9,7 +9,7 @@ import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
 import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
@@ -97,6 +97,8 @@ async function markExternalTechPaid(formData: FormData) {
   const alreadyPaid = existingPayouts.reduce((sum, payout) => sum + payout.amount, 0);
   const remaining = Math.max(0, payoutDue - alreadyPaid);
 
+  // Ledger post inside the txn depends on the C5 accounting tables.
+  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     if (remaining > 0) {
       const payout = await tx.technicianPayout.create({
@@ -178,6 +180,8 @@ async function receiveInvoicePaymentAction(formData: FormData) {
   const currency = getAppCurrency();
   const baseCurrency = org.baseCurrency;
 
+  // Payment + receipt + ledger post run inside the txn; ensure schema first.
+  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.create({
       data: { invoiceId: invoice.id, currency, amount: amountRaw, method, reference: reference || null, createdById: user.id, orgId },

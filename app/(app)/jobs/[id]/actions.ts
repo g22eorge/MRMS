@@ -12,7 +12,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { resolveTechCost } from "@/lib/billing";
 import { can } from "@/lib/permissions";
@@ -830,6 +830,11 @@ export async function recordClientPaymentAction(formData: FormData) {
   const issuedAt = job.invoiceIssuedAt ?? new Date();
   const invoiceNumber = job.invoiceNumber?.trim() || undefined;
 
+  // Ensure the FX column + cash-basis ledger tables exist before opening the
+  // transaction; a missing column/table would otherwise abort the whole payment
+  // (SQLite rolls back the transaction on the first failed statement).
+  await ensureMoneySchema();
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const existingInvoice = await tx.invoice.findFirst({
@@ -1035,6 +1040,9 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
     const safeMethod: PaymentMethod = (Object.values(PaymentMethod) as string[]).includes(rawMethod)
       ? (rawMethod as PaymentMethod)
       : PaymentMethod.OTHER;
+
+    // Ledger post below needs the C5 accounting tables present before the txn.
+    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       const payout = await tx.technicianPayout.create({

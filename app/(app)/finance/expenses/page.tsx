@@ -10,7 +10,7 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment } from "@/lib/accounting/post";
 import { formatMoneyCompact } from "@/lib/currency";
@@ -257,6 +257,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
     // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash. Idempotent
     // on the expense id, so a retry or backfill won't double-post.
+    await ensureMoneySchema();
     await prisma.$transaction((tx) =>
       postExpensePayment(tx, {
         orgId,

@@ -228,6 +228,105 @@ async function ensureQuotationTaxColumns() {
   return quotationTaxRepair;
 }
 
+let moneySchemaRepair: Promise<void> | null = null;
+
+/**
+ * Proactively ensure every table/column the money-write transaction touches
+ * exists BEFORE the transaction opens. This is deliberately NOT part of the
+ * reactive query extension below: those repairs fire *inside* the failing
+ * query, but on SQLite/libSQL the first failed statement aborts the whole
+ * enclosing $transaction, so an in-transaction ALTER can neither recover the
+ * payment nor run DDL against a connection that is holding a write lock
+ * (Turso deadlocks on that). Recording a client/invoice payment now also posts
+ * to the C5 cash-basis ledger (ChartOfAccount / JournalEntry / JournalLine) and
+ * writes an FX rate (Payment.exchangeRateToBase) — columns/tables added after
+ * some production DBs were provisioned. When any of those is missing the entire
+ * payment fails with a bare "no such column/table" schema error. Running these
+ * idempotent, non-transactional DDLs first keeps money-receiving working on
+ * databases that predate the accounting/FX schema. Memoized: runs once per
+ * process, and only re-arms on a genuine failure so a transient error can retry.
+ */
+export async function ensureMoneySchema(): Promise<void> {
+  moneySchemaRepair ??= (async () => {
+    const statements = [
+      // Payment columns added after the original table (kind + FX + links).
+      `ALTER TABLE "Payment" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'PAYMENT'`,
+      `ALTER TABLE "Payment" ADD COLUMN "exchangeRateToBase" REAL`,
+      `ALTER TABLE "Payment" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'UGX'`,
+      `ALTER TABLE "Payment" ADD COLUMN "saleId" TEXT`,
+      `ALTER TABLE "Payment" ADD COLUMN "createdById" TEXT`,
+      `ALTER TABLE "Payment" ADD COLUMN "note" TEXT`,
+      // Shared document/journal counter (RCT + JE numbers).
+      `CREATE TABLE IF NOT EXISTS "DocumentSequence" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT,
+        "type" TEXT NOT NULL,
+        "year" INTEGER NOT NULL,
+        "value" INTEGER NOT NULL DEFAULT 0,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "DocumentSequence_orgId_type_year_key" ON "DocumentSequence"("orgId","type","year")`,
+      // C5 cash-basis ledger tables the payment/refund post depends on.
+      `CREATE TABLE IF NOT EXISTS "ChartOfAccount" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "type" TEXT NOT NULL,
+        "parentId" TEXT,
+        "description" TEXT,
+        "isSystem" INTEGER NOT NULL DEFAULT 0,
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "ChartOfAccount_orgId_code_key" ON "ChartOfAccount"("orgId","code")`,
+      `CREATE INDEX IF NOT EXISTS "ChartOfAccount_orgId_type_idx" ON "ChartOfAccount"("orgId","type")`,
+      `CREATE TABLE IF NOT EXISTS "JournalEntry" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orgId" TEXT NOT NULL,
+        "entryNumber" TEXT NOT NULL,
+        "date" DATETIME NOT NULL,
+        "description" TEXT NOT NULL,
+        "reference" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'DRAFT',
+        "totalAmount" REAL NOT NULL DEFAULT 0,
+        "createdById" TEXT NOT NULL,
+        "postedAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "JournalEntry_orgId_entryNumber_key" ON "JournalEntry"("orgId","entryNumber")`,
+      `CREATE INDEX IF NOT EXISTS "JournalEntry_orgId_date_idx" ON "JournalEntry"("orgId","date")`,
+      `CREATE INDEX IF NOT EXISTS "JournalEntry_orgId_status_idx" ON "JournalEntry"("orgId","status")`,
+      `CREATE TABLE IF NOT EXISTS "JournalLine" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "journalEntryId" TEXT NOT NULL,
+        "accountId" TEXT NOT NULL,
+        "debit" REAL NOT NULL DEFAULT 0,
+        "credit" REAL NOT NULL DEFAULT 0,
+        "description" TEXT
+      )`,
+      `CREATE INDEX IF NOT EXISTS "JournalLine_journalEntryId_idx" ON "JournalLine"("journalEntryId")`,
+      `CREATE INDEX IF NOT EXISTS "JournalLine_accountId_idx" ON "JournalLine"("accountId")`,
+    ];
+    for (const statement of statements) {
+      try {
+        await basePrisma.$executeRawUnsafe(statement);
+      } catch (error) {
+        // Column/table/index already there — the steady-state path.
+        if (isDuplicateColumnError(error)) continue;
+        throw error;
+      }
+    }
+  })().catch((error) => {
+    moneySchemaRepair = null;
+    throw error;
+  });
+
+  return moneySchemaRepair;
+}
+
 export const prisma = basePrisma.$extends({
   query: {
     payment: {
