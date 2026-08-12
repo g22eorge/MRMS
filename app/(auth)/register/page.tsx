@@ -69,7 +69,7 @@ export default async function RegisterPage() {
             </div>
           </div>
 
-          <p className="relative text-[13px] text-white/25">© {new Date().getFullYear()} Duuka ProMax</p>
+          <p className="relative text-[13px] text-white/60">© {new Date().getFullYear()} Duuka ProMax</p>
         </section>
 
         {/* ── Right: register form ── */}
@@ -87,13 +87,13 @@ export default async function RegisterPage() {
             </div>
 
             <h2 className="text-2xl font-semibold text-white">Create your account</h2>
-            <p className="mt-1.5 text-sm text-white/40">Start managing your team in minutes — no credit card needed</p>
+            <p className="mt-1.5 text-sm text-white/60">Start managing your team in minutes — no credit card needed</p>
 
             <div className="mt-8">
               <RegisterForm />
             </div>
 
-            <p className="mt-6 text-center text-xs text-white/30">
+            <p className="mt-6 text-center text-xs text-white/60">
               Already have an account?{" "}
               <Link href="/login" className="text-[#D4AF37]/70 transition hover:text-[#D4AF37]">
                 Sign in

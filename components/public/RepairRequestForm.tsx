@@ -187,7 +187,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
   }
 
   const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/25";
-  const labelCls = "mb-1 block text-[13px] font-semibold uppercase tracking-wider text-white/40";
+  const labelCls = "mb-1 block text-[13px] font-semibold uppercase tracking-wider text-white/60";
 
   return (
     <form onSubmit={submit} noValidate>
@@ -228,7 +228,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
 
       {/* ── Row 2: Email ── */}
       <div className="mt-4">
-        <label className={labelCls}>Email Address <span className="text-white/25 normal-case font-normal">(optional)</span></label>
+        <label className={labelCls}>Email Address <span className="text-white/60 normal-case font-normal">(optional)</span></label>
         <input
           type="email" value={data.email} onChange={(e) => set("email", e.target.value)}
           placeholder="you@example.com" className={inputCls}
@@ -260,7 +260,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
 
       {/* ── Row 4: Model ── */}
       <div className="mt-4">
-        <label className={labelCls}>Model <span className="text-white/25 normal-case font-normal">(optional but helpful)</span></label>
+        <label className={labelCls}>Model <span className="text-white/60 normal-case font-normal">(optional but helpful)</span></label>
         <input
           value={data.model} onChange={(e) => set("model", e.target.value)}
           placeholder="e.g. Galaxy S21, iPhone 13, HP Pavilion…" className={inputCls}
@@ -297,9 +297,9 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                 onChange={(e) => set("handover_method", e.target.value)}
                 className="sr-only"
               />
-              <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#D4AF37]/80" : "text-white/40"}`}>{opt.icon}</span>
+              <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#D4AF37]/80" : "text-white/60"}`}>{opt.icon}</span>
               <span className="text-sm font-semibold text-white/80">{opt.label}</span>
-              <span className="text-[13px] text-white/35">{opt.desc}</span>
+              <span className="text-[13px] text-white/60">{opt.desc}</span>
             </label>
           ))}
         </div>
@@ -376,7 +376,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
             </>
           )}
         </button>
-        <p className="mt-2.5 text-center text-[13px] text-white/25">
+        <p className="mt-2.5 text-center text-[13px] text-white/60">
           We&apos;ll confirm your request and send a quote via WhatsApp or call.
         </p>
       </div>

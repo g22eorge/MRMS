@@ -30,7 +30,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
 
       {/* Pre-filled email (read-only) */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60">
           Email
         </label>
         <div className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/50">
@@ -40,7 +40,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
 
       {/* Name */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="name">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="name">
           Your name
         </label>
         <input
@@ -51,7 +51,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
           autoFocus
           autoComplete="name"
           placeholder="Jane Doe"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
         {state.fieldErrors?.name && (
           <p className="text-xs text-red-400">{state.fieldErrors.name[0]}</p>
@@ -60,7 +60,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="password">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="password">
           Set a password
         </label>
         <div className="relative">
@@ -71,12 +71,12 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
             required
             autoComplete="new-password"
             placeholder="Min. 8 characters"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/30 transition hover:text-white/60"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/60 transition hover:text-white/60"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -88,7 +88,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
 
       {/* Confirm */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="confirm">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="confirm">
           Confirm password
         </label>
         <input
@@ -98,7 +98,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
           required
           autoComplete="new-password"
           placeholder="Repeat password"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
         {state.fieldErrors?.confirm && (
           <p className="text-xs text-red-400">{state.fieldErrors.confirm[0]}</p>

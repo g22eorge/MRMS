@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         <div className="mb-8">
           <p className="mb-2 text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]/70">Legal</p>
           <h1 className="mb-2 text-3xl font-bold text-white">Privacy Policy</h1>
-          <p className="text-sm text-white/40">Effective date: {EFFECTIVE_DATE}</p>
+          <p className="text-sm text-white/60">Effective date: {EFFECTIVE_DATE}</p>
         </div>
 
         <div className="space-y-8 text-sm leading-relaxed text-white/65">
@@ -205,10 +205,10 @@ export default function PrivacyPage() {
       {/* Footer */}
       <footer className="border-t border-white/8 px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-white/25">© {new Date().getFullYear()} {COMPANY}</p>
+          <p className="text-[12px] text-white/60">© {new Date().getFullYear()} {COMPANY}</p>
           <nav className="flex gap-4">
-            <Link href="/" className="text-[12px] text-white/35 transition-colors hover:text-white">Home</Link>
-            <Link href="/terms" className="text-[12px] text-white/35 transition-colors hover:text-white">Terms of Service</Link>
+            <Link href="/" className="text-[12px] text-white/60 transition-colors hover:text-white">Home</Link>
+            <Link href="/terms" className="text-[12px] text-white/60 transition-colors hover:text-white">Terms of Service</Link>
           </nav>
         </div>
       </footer>

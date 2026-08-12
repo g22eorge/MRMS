@@ -42,7 +42,7 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
     <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
       {/* Email */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="email">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="email">
           Email
         </label>
         <input
@@ -52,13 +52,13 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
           required
           autoComplete="email"
           placeholder="you@example.com"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
       </div>
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="password">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="password">
           Password
         </label>
         <div className="relative">
@@ -69,12 +69,12 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
             required
             autoComplete="current-password"
             placeholder="••••••••"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/30 transition hover:text-white/60"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/60 transition hover:text-white/60"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -83,7 +83,7 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
 
       {/* Remember / Forgot */}
       <div className="flex items-center justify-between">
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-white/40 hover:text-white/60 transition">
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-white/60 hover:text-white/60 transition">
           <input
             type="checkbox"
             name="rememberMe"
@@ -120,7 +120,7 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
       </button>
 
       {allowSignup ? (
-        <p className="text-center text-xs text-white/30">
+        <p className="text-center text-xs text-white/60">
           New here?{" "}
           <Link href="/register" className="text-[#D4AF37]/70 transition hover:text-[#D4AF37]">
             Create a free account

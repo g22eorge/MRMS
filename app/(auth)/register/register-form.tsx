@@ -54,7 +54,7 @@ export function RegisterForm() {
     <form onSubmit={onSubmit} className="space-y-4">
       {/* Full name */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="name">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="name">
           Full name
         </label>
         <input
@@ -64,13 +64,13 @@ export function RegisterForm() {
           required
           autoComplete="name"
           placeholder="Jane Doe"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
       </div>
 
       {/* Email */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="email">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="email">
           Work email
         </label>
         <input
@@ -80,13 +80,13 @@ export function RegisterForm() {
           required
           autoComplete="email"
           placeholder="you@yourbusiness.com"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
       </div>
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="password">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="password">
           Password
         </label>
         <div className="relative">
@@ -97,12 +97,12 @@ export function RegisterForm() {
             required
             autoComplete="new-password"
             placeholder="Min. 8 characters"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-20 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/30 transition hover:text-white/60"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-white/60 transition hover:text-white/60"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -111,7 +111,7 @@ export function RegisterForm() {
 
       {/* Confirm password */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/40" htmlFor="confirmPassword">
+        <label className="text-xs font-medium uppercase tracking-[0.12em] text-white/60" htmlFor="confirmPassword">
           Confirm password
         </label>
         <input
@@ -121,7 +121,7 @@ export function RegisterForm() {
           required
           autoComplete="new-password"
           placeholder="Repeat password"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/45 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-2 focus:ring-[#D4AF37]/15"
         />
       </div>
 
@@ -134,7 +134,7 @@ export function RegisterForm() {
         {isPending ? "Creating account…" : "Create account"}
       </button>
 
-      <p className="text-center text-[13px] text-white/20">
+      <p className="text-center text-[13px] text-white/60">
         By signing up you agree to our terms of service.
       </p>
     </form>

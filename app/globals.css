@@ -838,7 +838,10 @@ tr:has(details[open]) {
 }
 
 .theme-blackgold :where(input, select, textarea)::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  /* Was rgba(255,255,255,0.35) (~2.4:1 on the dark surface — failed AA and
+     overrode the --ink-muted rule above). Use the muted token (0.52 ≈ 5.3:1),
+     matching the light-theme placeholder rule. */
+  color: var(--ink-muted);
 }
 
 .theme-blackgold :where(input, select, textarea):focus {

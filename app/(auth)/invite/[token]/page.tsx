@@ -37,7 +37,7 @@ export default async function AcceptInvitePage({ params }: Props) {
               <h2 className="text-lg font-semibold text-white">
                 {isUsed ? "Invite already used" : isExpired ? "Invite expired" : "Invalid invite link"}
               </h2>
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-white/60">
                 {isUsed
                   ? "This invite link has already been accepted. Try signing in instead."
                   : isExpired
@@ -55,7 +55,7 @@ export default async function AcceptInvitePage({ params }: Props) {
                 <h2 className="mt-2 text-2xl font-semibold text-white">
                   Join {invite.org.name}
                 </h2>
-                <p className="mt-1.5 text-sm text-white/40">
+                <p className="mt-1.5 text-sm text-white/60">
                   Set up your account to get started as{" "}
                   <span className="text-white/60 font-medium">
                     {invite.role.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
