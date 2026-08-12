@@ -891,30 +891,6 @@ export default async function ReportsPage({
             <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{returningClientRows.length} of {uniqueClientsCount} returning</p>
           </div>
         </div>
-        {(delayedJobs.length > 0 || approvalDelays.filter((j) => j.daysPending >= 2).length > 0 || lowStockItems.length > 0) && (
-          <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2">
-            <div className="flex flex-wrap gap-4">
-              {delayedJobs.length > 0 && (
-                <Link href="/reports?tab=operations" className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                  {delayedJobs.length} aging job{delayedJobs.length !== 1 ? "s" : ""} need attention
-                </Link>
-              )}
-              {approvalDelays.filter((j) => j.daysPending >= 2).length > 0 && (
-                <Link href="/jobs?status=AWAITING_APPROVAL" className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:underline">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  {approvalDelays.filter((j) => j.daysPending >= 2).length} approval{approvalDelays.filter((j) => j.daysPending >= 2).length !== 1 ? "s" : ""} pending 2+ days
-                </Link>
-              )}
-              {lowStockItems.length > 0 && (
-                <Link href="/reports?tab=operations" className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:underline">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  {lowStockItems.length} item{lowStockItems.length !== 1 ? "s" : ""} low on stock
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </section>
       </div>
 
@@ -1155,34 +1131,6 @@ export default async function ReportsPage({
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "operations" && (
         <>
-          {/* Action Required banner */}
-          {(delayedJobs.length > 0 || approvalDelays.filter((j) => j.daysPending >= 2).length > 0) && (
-            <section className="panel-shadow overflow-hidden rounded-xl border border-red-500/30 bg-red-500/10">
-              <div className="border-b border-red-500/20 px-4 py-2.5">
-                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-red-500">Action Required</p>
-              </div>
-              <div className="divide-y divide-red-500/15">
-                {delayedJobs.length > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-red-500">{delayedJobs.length} job{delayedJobs.length !== 1 ? "s" : ""} aging 3+ days without resolution</p>
-                      <p className="text-xs text-red-400">Oldest: {delayedJobs[0].jobNumber} — {delayedJobs[0].ageDays} days open</p>
-                    </div>
-                    <Link href="/jobs" className="text-xs font-semibold text-red-400 hover:text-red-500 hover:underline">View jobs →</Link>
-                  </div>
-                )}
-                {approvalDelays.filter((j) => j.daysPending >= 2).length > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <p className="text-sm font-semibold text-amber-500">
-                      {approvalDelays.filter((j) => j.daysPending >= 2).length} client approval{approvalDelays.filter((j) => j.daysPending >= 2).length !== 1 ? "s" : ""} waiting 2+ days — follow up needed
-                    </p>
-                    <Link href="/jobs?status=AWAITING_APPROVAL" className="text-xs font-semibold text-amber-400 hover:text-amber-500 hover:underline">Review →</Link>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
