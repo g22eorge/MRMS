@@ -330,6 +330,27 @@ function statusMessageLinks(orgId: string, jobNumber: string, newStatus: JobStat
   return { complaintUrl, reviewUrl };
 }
 
+/**
+ * Append the review/complaint links to a rendered message body when they aren't
+ * already present. These links are a care-level footer, so they must survive
+ * whether the body came from a custom CommunicationTemplate or the built-in
+ * fallback: a template that never references {complaintUrl}/{reviewUrl} would
+ * otherwise silently drop them (the fallback carries them, but a resolved
+ * template pre-empts the fallback). A link already in the body — a custom
+ * template that opts in — is skipped so it isn't duplicated.
+ */
+function appendClientLinks(body: string, complaintUrl: string, reviewUrl: string): string {
+  const extra: string[] = [];
+  if (reviewUrl && !body.includes(reviewUrl)) {
+    extra.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
+  }
+  if (complaintUrl && !body.includes(complaintUrl)) {
+    extra.push(`${reviewUrl ? "Something not right? Tell us" : "Not happy with something? Let us know"}: ${complaintUrl}`);
+  }
+  if (extra.length === 0) return body;
+  return `${body.trimEnd()}\n\n${extra.join("\n\n")}`;
+}
+
 async function sendClientWhatsAppForStatusChange(input: {
   orgId: string;
   jobId: string;
@@ -383,10 +404,12 @@ async function sendClientWhatsAppForStatusChange(input: {
     fallback: { body: fallback },
   });
 
+  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl);
+
   const enqueueResult = await enqueueWhatsAppMessage({
     orgId: input.orgId,
     to: client.phone,
-    body: rendered.body,
+    body,
     type,
     jobId: input.jobId,
     provider: "meta",
@@ -588,11 +611,13 @@ async function sendClientEmailForStatusChange(input: {
     fallback: { subject: fallbackSubject, body: fallbackBody },
   });
 
+  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl);
+
   const enqueueResult = await enqueueEmailMessage({
     orgId: input.orgId,
     to: client.email,
     subject: rendered.subject ?? fallbackSubject,
-    body: rendered.body,
+    body,
     type,
     jobId: input.jobId,
     templateKey,
