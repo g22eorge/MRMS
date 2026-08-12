@@ -37,7 +37,7 @@ export default async function ScheduleVisitPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="px-4 py-3">
           <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Field</p>
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Schedule Field Visit</p>

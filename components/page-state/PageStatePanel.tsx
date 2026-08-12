@@ -17,7 +17,7 @@ export function PageStatePanel({
 }) {
   return (
     <section
-      className={`panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 sm:p-6 ${
+      className={`dc-card p-5 sm:p-6 ${
         align === "center" ? "text-center" : "text-left"
       } ${className}`}
     >

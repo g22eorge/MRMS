@@ -145,7 +145,7 @@ export function BusinessCopilot() {
   }
 
   return (
-    <section className="panel-shadow flex flex-col rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+    <section className="dc-card flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-3">
         <div className="flex items-center gap-2.5">

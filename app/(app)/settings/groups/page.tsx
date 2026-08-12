@@ -194,7 +194,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
 
   return (
     <section className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Permission Groups</p>
@@ -204,7 +204,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <Disclosure>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Groups</p>
@@ -246,7 +246,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
         <div className="space-y-4">
           {selected ? (
             <>
-              <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+              <div className="dc-card px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Group</p>
                   <RowActionsMenu label="Group actions" size="compact">
@@ -270,7 +270,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 </div>
               </div>
 
-              <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+              <div className="dc-card px-3 py-2.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Members</p>
                 <form action={addMemberAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
@@ -335,7 +335,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 </div>
               </div>
 
-              <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+              <div className="dc-card px-3 py-2.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Permissions</p>
                 <form action={saveGroupPermissionsAction} className="mt-3 space-y-2">
                   <input type="hidden" name="id" value={selected.id} />
@@ -355,7 +355,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
               </div>
             </>
           ) : (
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--ink-muted)]">
+            <div className="dc-card p-6 text-sm text-[var(--ink-muted)]">
               Create a group to get started.
             </div>
           )}

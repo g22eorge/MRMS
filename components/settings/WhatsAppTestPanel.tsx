@@ -21,7 +21,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
   }, [result]);
 
   return (
-    <div className="panel-shadow space-y-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+    <div className="dc-card space-y-5 p-5">
       {/* Header */}
       <div>
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">

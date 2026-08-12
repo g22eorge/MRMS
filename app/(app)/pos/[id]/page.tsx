@@ -936,7 +936,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
           {/* -- Sale settings -- */}
-          <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <section className="dc-card overflow-hidden">
             <form action={updateSaleAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
               <input type="hidden" name="saleId" value={sale.id} />
               <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
@@ -949,7 +949,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           </section>
 
       {/* -- Items -- */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Items</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
@@ -1111,7 +1111,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       </section>
 
       {/* -- Payments -- */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Payments</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
@@ -1155,7 +1155,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
       <details
         open={creditNotes.length > 0 || refunds.length > 0}
-        className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+        className="dc-card overflow-hidden"
       >
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
           <p className={cardLabel}>Return / Refund</p>

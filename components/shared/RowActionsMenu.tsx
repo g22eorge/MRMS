@@ -150,7 +150,7 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
       {open && typeof document !== "undefined" && createPortal(
         <div
           ref={popupRef}
-          className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+          className="dc-card overflow-hidden"
           onClickCapture={(event) => {
             const target = event.target as HTMLElement;
             if (target.closest("a")) setTimeout(close, 0);

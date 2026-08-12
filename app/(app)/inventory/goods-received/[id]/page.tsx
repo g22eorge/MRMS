@@ -144,7 +144,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
 
       <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
-          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <section className="dc-card p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Trail</p>
               <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[0.6875rem] font-semibold text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</span>
@@ -178,7 +178,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             ) : null}
           </section>
 
-          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <section className="dc-card p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Contact</p>
               <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="text-xs font-semibold text-[var(--accent)] hover:underline">Open Supplier</Link>
@@ -222,14 +222,14 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
           </ActivitySection>
 
           {grn.note ? (
-            <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+            <section className="dc-card px-4 py-3">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Note</p>
               <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)]">{grn.note}</p>
             </section>
           ) : null}
         </div>
 
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <div>
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Received Items</p>
@@ -312,7 +312,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
 function Metric({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: "neutral" | "amber" | "green" }) {
   const color = tone === "amber" ? "text-amber-600" : tone === "green" ? "text-emerald-600" : "text-[var(--ink)]";
   return (
-    <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+    <div className="dc-card px-3 py-2.5">
       <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
       <p className={`mt-1 truncate text-lg font-black tabular-nums ${color}`}>{value}</p>
       <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{hint}</p>
@@ -331,7 +331,7 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
 
 function ActivitySection({ title, count, action, children }: { title: string; count: number; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+    <section className="dc-card overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title} ({count})</p>
         {action}

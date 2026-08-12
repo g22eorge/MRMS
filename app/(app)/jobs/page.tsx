@@ -690,7 +690,7 @@ export default async function JobsPage({
       ) : null}
 
       {/* ── Desktop filter bar (hidden on mobile) — calm flat toolbar ── */}
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] hidden overflow-hidden lg:block">
+      <div className="dc-card hidden overflow-hidden lg:block">
         {/* Row: view toggle | status chips | actions */}
         <div className="flex items-center gap-2 p-3">
           {/* View toggle */}
@@ -854,7 +854,7 @@ export default async function JobsPage({
       {/* ── Results ── */}
       {isBoard ? (
         boardRows.length === 0 ? (
-          <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] py-14 text-center">
+          <div className="dc-card flex flex-col items-center gap-2 py-14 text-center">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-[var(--ink-muted)]/40" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
             </svg>
@@ -867,7 +867,7 @@ export default async function JobsPage({
           <JobBoardView jobs={boardRows} showClient={!isExternalTech} />
         )
       ) : rows.length === 0 ? (
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] flex flex-col items-center gap-3 py-16 text-center">
+        <div className="dc-card flex flex-col items-center gap-3 py-16 text-center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-[var(--ink-muted)] opacity-30" aria-hidden><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           <p className="text-[0.875rem] font-semibold text-[var(--ink-muted)]">No repairs found</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">

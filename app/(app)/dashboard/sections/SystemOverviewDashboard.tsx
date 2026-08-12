@@ -33,7 +33,7 @@ export async function SystemOverviewDashboard({ orgId }: { orgId: string }) {
       />
 
       {/* Quick-link row */}
-      <div className="panel-shadow grid grid-cols-3 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card grid grid-cols-3 divide-x divide-[var(--line)] overflow-hidden">
         {[
           { label: "Total Jobs",  value: String(totalJobs),    href: "/jobs",                                                                              color: "text-[var(--ink)]" },
           { label: "Open",        value: String(openJobs),     href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP",       color: "text-[var(--accent)]" },

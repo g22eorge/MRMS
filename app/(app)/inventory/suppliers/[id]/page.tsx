@@ -256,7 +256,7 @@ export default async function SupplierDetailPage({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.4fr)]">
         <div className="space-y-4">
-          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <section className="dc-card p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Contact</p>
               <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[0.6875rem] font-semibold text-[var(--ink-muted)]">Since {fmt(supplier.createdAt)}</span>
@@ -279,7 +279,7 @@ export default async function SupplierDetailPage({
         </div>
 
         <div className="space-y-4">
-          <section id="price-list" className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <section id="price-list" className="dc-card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
               <div>
                 <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Price List</p>
@@ -368,7 +368,7 @@ export default async function SupplierDetailPage({
 function Metric({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: "neutral" | "amber" | "green" }) {
   const color = tone === "amber" ? "text-amber-600" : tone === "green" ? "text-emerald-600" : "text-[var(--ink)]";
   return (
-    <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+    <div className="dc-card px-3 py-2.5">
       <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
       <p className={`mt-1 truncate text-lg font-black tabular-nums ${color}`}>{value}</p>
       <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{hint}</p>

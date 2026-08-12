@@ -334,7 +334,7 @@ export default async function CashFlowPage({
 
       {/* ── KPI Strip ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Inflow</p>
           <p className="mt-1 text-lg font-bold text-emerald-600">{formatMoneyCompact(totalInflow, currency)}</p>
           <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
@@ -343,7 +343,7 @@ export default async function CashFlowPage({
             ) : "No prior data"}
           </p>
         </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Outflow</p>
           <p className="mt-1 text-lg font-bold text-red-500">{formatMoneyCompact(totalOutflow, currency)}</p>
           <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
@@ -359,7 +359,7 @@ export default async function CashFlowPage({
           </p>
           <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{operatingMarginPct}% operating margin</p>
         </div>
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Bank Activity</p>
           <p className={`mt-1 text-lg font-bold ${netBank >= 0 ? "text-emerald-600" : "text-amber-600"}`}>
             {netBank >= 0 ? "+" : ""}{formatMoneyCompact(netBank, currency)}
@@ -369,7 +369,7 @@ export default async function CashFlowPage({
       </div>
 
       {/* ── Statement Table ────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-2.5">
           <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             Statement of Cash Flows — {periodLabel}
@@ -419,7 +419,7 @@ export default async function CashFlowPage({
 
       {/* ── Expense Breakdown ─────────────────────────────────────────────── */}
       {topExpenseCategories.length > 0 && (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-2.5">
             <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Expense Breakdown — {periodLabel}</p>
           </div>

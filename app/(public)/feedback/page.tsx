@@ -162,7 +162,7 @@ export default async function FeedbackPage({
 
         <form action={submitComplaintAction} className="space-y-4">
           {/* Job number lookup */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
+          <div className="dc-card p-4 space-y-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Your Job Reference
             </p>
@@ -183,7 +183,7 @@ export default async function FeedbackPage({
           </div>
 
           {/* Contact info */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
+          <div className="dc-card p-4 space-y-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Your Details
             </p>
@@ -210,7 +210,7 @@ export default async function FeedbackPage({
           </div>
 
           {/* Complaint details */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
+          <div className="dc-card p-4 space-y-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Complaint Details
             </p>

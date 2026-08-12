@@ -124,7 +124,7 @@ export default async function PartDetailPage({
       {part.manufacturer ? <p className="-mt-2 px-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{part.manufacturer}</p> : null}
 
       {/* ── KPI cards ── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="grid grid-cols-2 gap-px bg-[var(--line)] sm:grid-cols-4">
           {[
             { label: "On Hand",    value: part.qtyOnHand,        color: isOut ? "text-red-500" : isLow ? "text-amber-500" : "text-[var(--ink)]" },
@@ -149,7 +149,7 @@ export default async function PartDetailPage({
 
           {/* Quick stock actions */}
           {canManage && (
-            <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="dc-card overflow-hidden">
               <div className="border-b border-[var(--line)] px-5 py-2.5">
                 <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">
                   <svg className="h-3.5 w-3.5 text-[var(--accent)]" viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1a.75.75 0 0 0-1.5 0v5.5h-5.5a.75.75 0 0 0 0 1.5h5.5v5.5a.75.75 0 0 0 1.5 0V8h5.5a.75.75 0 0 0 0-1.5h-5.5V1Z"/></svg>
@@ -243,7 +243,7 @@ export default async function PartDetailPage({
           )}
 
           {/* Movement log */}
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="dc-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
               <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Movement Log</p>
               <p className="text-[0.6875rem] tabular-nums text-[var(--ink-muted)]">{transactions.length} entries</p>
@@ -324,7 +324,7 @@ export default async function PartDetailPage({
 
         {/* ── Right: Static Details ── */}
         <div className="space-y-4">
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="dc-card overflow-hidden">
             <div className="border-b border-[var(--line)] px-5 py-2.5">
               <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Static Details</p>
             </div>
@@ -364,7 +364,7 @@ export default async function PartDetailPage({
 
           {/* Reservations */}
           {part.reservations.length > 0 && (
-            <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="dc-card overflow-hidden">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
                 <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Reserved For Jobs</p>
                 <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.6875rem] font-bold text-amber-700">

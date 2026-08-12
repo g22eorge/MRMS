@@ -104,7 +104,7 @@ export default async function StockLocationsPage({
           {saved ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600">Location updated.</div> : null}
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="dc-card px-3 py-2.5">
             <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Location</p>
             <form action={createStockLocationAction} className="grid gap-2 md:grid-cols-[1.4fr_0.7fr_1fr_auto]">
               <input name="name" placeholder="Location name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />

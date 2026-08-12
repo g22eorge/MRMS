@@ -24,7 +24,7 @@ export type PageHeaderProps = {
 export function PageHeader({ title, eyebrow, description, actions, kpis }: PageHeaderProps) {
   return (
     <>
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="min-w-0">
             {eyebrow ? (

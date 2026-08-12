@@ -55,7 +55,7 @@ export default async function DataHealPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Data Heal</p>
@@ -71,7 +71,7 @@ export default async function DataHealPage({
         </div>
       </div>
 
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <section className="dc-card px-3 py-2.5">
         {feedback.mode ? (
           <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink)]">
             {feedback.mode === "dry" ? "Dry check complete" : "Heal run complete"}: checked {feedback.checked ?? "0"},
@@ -89,7 +89,7 @@ export default async function DataHealPage({
         </div>
       </section>
 
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         <div className="border-b border-[var(--line)] px-4 py-3">
           <p className="text-sm font-semibold text-[var(--ink)]">Dry-run Preview</p>
           <p className="text-xs text-[var(--ink-muted)]">Showing up to 25 rows that can be healed right now.</p>

@@ -63,7 +63,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
   }
 
   return (
-    <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+    <form action={formAction} className="dc-card space-y-4 p-4">
       <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
         <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">Alert Scope</p>
         <p className="mt-1 text-sm text-[var(--ink)]">These switches control which notifications are generated for you.</p>

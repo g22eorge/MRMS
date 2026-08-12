@@ -242,7 +242,7 @@ export default async function AccountLedgerPage({
 
       {/* ── KPI TILES ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             All-Time Balance
           </p>
@@ -253,7 +253,7 @@ export default async function AccountLedgerPage({
           <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">{allLines.length} postings</p>
         </div>
 
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             {periodLabel} — Debits
           </p>
@@ -262,7 +262,7 @@ export default async function AccountLedgerPage({
           </p>
         </div>
 
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             {periodLabel} — Credits
           </p>
@@ -271,7 +271,7 @@ export default async function AccountLedgerPage({
           </p>
         </div>
 
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Closing Balance</p>
           <p className={`mt-1 text-lg font-bold tabular-nums ${closingBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
             {closingBalance < 0 ? "−" : ""}

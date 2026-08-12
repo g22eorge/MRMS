@@ -65,7 +65,7 @@ export default async function FinanceReportsPage() {
           <Link
             key={r.href}
             href={r.href}
-            className="panel-shadow flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5"
+            className="dc-card flex flex-col gap-2 p-5"
           >
             <span className="text-[var(--accent)]">{r.icon}</span>
             <p className="font-semibold text-[var(--ink)]">{r.title}</p>

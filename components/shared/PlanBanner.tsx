@@ -46,7 +46,7 @@ export function PlanBanner({ plan, limits, usage }: Props) {
     (limits.maxParts !== Infinity && usage.parts >= limits.maxParts);
 
   return (
-    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
+    <section className="dc-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Plan</p>

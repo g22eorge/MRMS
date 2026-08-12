@@ -280,7 +280,7 @@ export function NewQuotationForm({
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.55fr)]">
         <div className="min-w-0 space-y-4">
-          <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <section className="dc-card min-w-0 p-3">
             <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Date</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-xs font-semibold text-[var(--ink-muted)]">
@@ -293,7 +293,7 @@ export function NewQuotationForm({
               </label>
             </div>
           </section>
-          <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <section className="dc-card min-w-0 p-3">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Customer</p>
               {(selectedSource || customerMode === "new") ? (
@@ -397,7 +397,7 @@ export function NewQuotationForm({
             )}
           </section>
 
-          <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <section className="dc-card min-w-0 p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
               <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--accent)] hover:underline">Tax rates</Link>
@@ -436,7 +436,7 @@ export function NewQuotationForm({
             </div>
           </section>
 
-          <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <section className="dc-card min-w-0 px-3 py-2.5">
             <FormTextarea
               label="Notes"
               name="notes"
@@ -458,7 +458,7 @@ export function NewQuotationForm({
           onRemoveLine={removeLine}
           onUpdateLine={updateLine}
           onSelectPart={selectPart}
-          className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+          className="dc-card min-w-0"
         />
       </div>
 

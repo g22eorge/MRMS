@@ -185,7 +185,7 @@ export default async function ComplaintsPage({
         ],
       }}
       filters={
-        <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <div className="dc-card flex flex-wrap items-center gap-2 px-4 py-3">
           {[
             { label: "All", key: "" },
             ...STATUSES.map((s) => ({ label: COMPLAINT_STATUS_LABELS[s], key: s })),

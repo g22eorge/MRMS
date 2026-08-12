@@ -4,7 +4,7 @@ export default function PosError({ error, reset }: { error: Error; reset: () => 
   const digest = (error as Error & { digest?: string }).digest;
 
   return (
-    <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+    <div className="dc-card p-5">
       <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Point of Sale Error</p>
       <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Could not load the POS page</h2>
       <p className="mt-1 text-sm text-[var(--ink-muted)]">

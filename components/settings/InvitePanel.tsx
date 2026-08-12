@@ -47,7 +47,7 @@ export function InvitePanel({ inviteAction, roleOptions }: Props) {
   };
 
   return (
-    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+    <section className="dc-card p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Invite Team Member</p>
       <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
         Generate a 7-day invite link. Send it via WhatsApp, email, or any channel.

@@ -68,7 +68,7 @@ export default async function SuppliersPage({
         ],
       }}
       filters={
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Supplier</p>
           <form
             action={async (formData: FormData) => {

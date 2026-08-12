@@ -355,7 +355,7 @@ export default async function BalanceSheetPage({
                   : currentRatio >= 1 ? "text-amber-600"
                   : "text-red-500";
                 return (
-                  <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+                  <div className="dc-card px-3 py-2.5">
                     <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Current Ratio</p>
                     <p className={`mt-1 text-xl font-bold tabular-nums ${color}`}>
                       {currentRatio !== null ? currentRatio.toFixed(2) : "—"}
@@ -376,7 +376,7 @@ export default async function BalanceSheetPage({
                   : dte < 2 ? "text-amber-600"
                   : "text-red-500";
                 return (
-                  <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+                  <div className="dc-card px-3 py-2.5">
                     <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Debt-to-Equity</p>
                     <p className={`mt-1 text-xl font-bold tabular-nums ${color}`}>
                       {dte !== null ? dte.toFixed(2) : "—"}
@@ -386,7 +386,7 @@ export default async function BalanceSheetPage({
                 );
               })()}
               {/* Working Capital */}
-              <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+              <div className="dc-card px-3 py-2.5">
                 <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Working Capital</p>
                 <p className={`mt-1 text-xl font-bold tabular-nums ${workingCapital >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                   {workingCapital < 0 ? "−" : ""}{formatMoneyCompact(Math.abs(workingCapital), currency)}

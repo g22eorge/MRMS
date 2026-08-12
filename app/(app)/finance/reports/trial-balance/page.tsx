@@ -147,7 +147,7 @@ export default async function TrialBalancePage({
           />
 
           {/* ── LEDGER TABLE ─────────────────────────────────────────────── */}
-          <div className="panel-shadow overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="dc-card overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-[var(--line)] text-[0.75rem] uppercase tracking-wide text-[var(--ink-muted)]">

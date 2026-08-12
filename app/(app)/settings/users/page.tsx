@@ -914,7 +914,7 @@ export default async function UsersPage({
   } catch (error) {
     console.error("[settings/users] failed to load", error);
     return (
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-sm text-[var(--ink-muted)]">
+      <section className="dc-card p-6 text-sm text-[var(--ink-muted)]">
         Could not load user access controls right now. Please retry after a moment.
       </section>
     );
@@ -937,7 +937,7 @@ export default async function UsersPage({
   return (
     <Disclosure>
     <div className="space-y-3">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card overflow-hidden px-4 py-3">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">User Management</p>
         <p className="text-[0.8125rem] text-[var(--ink-muted)]">Manage team access, roles and permissions</p>
       </div>
@@ -950,7 +950,7 @@ export default async function UsersPage({
 
       {/* Add User — inline, toggled by client state */}
       <DisclosurePanel>
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <section className="dc-card p-3">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add User</p>
             <DisclosureButton label="✕ Close" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]" />
@@ -976,7 +976,7 @@ export default async function UsersPage({
       <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
 
         {/* Left: search + user list */}
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Users</p>
             <DisclosureButton
@@ -1021,7 +1021,7 @@ export default async function UsersPage({
 
         {/* Right: selected user */}
         {selectedUser ? (
-          <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <section className="dc-card">
             {/* User header */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2.5">
               <div className="min-w-0">
@@ -1098,7 +1098,7 @@ export default async function UsersPage({
                     saveAction={saveAccessChanges}
                   />
                   {user.role === "ADMIN" ? (
-                    <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                    <section className="dc-card p-3">
                       <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Access mode</p>
                       <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Read-only users can view records but cannot create or change anything.</p>
                       <form action={setUserAccessMode} className="mt-2 flex flex-wrap items-center gap-2">
@@ -1157,7 +1157,7 @@ export default async function UsersPage({
             </div>
           </section>
         ) : (
-          <div className="panel-shadow flex items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel)] p-12 text-[0.8125rem] text-[var(--ink-muted)]">
+          <div className="dc-card flex items-center justify-center p-12 text-[0.8125rem] text-[var(--ink-muted)]">
             Select a user to manage their profile and access.
           </div>
         )}

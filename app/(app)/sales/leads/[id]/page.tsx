@@ -184,7 +184,7 @@ export default async function LeadDetailPage({
         <div className="space-y-4">
           {/* ── Stage update ── */}
           {canEdit ? (
-            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <section className="dc-card overflow-hidden">
               <div className="border-b border-[var(--line)] px-4 py-2.5"><p className={cardLabel}>Stage</p></div>
               <form action={updateStatusAction} className="p-3">
                 {filters.statusError ? <p className={errorBox}>{filters.statusError}</p> : null}
@@ -204,7 +204,7 @@ export default async function LeadDetailPage({
           {/* ── Edit details (opened from the action bar) ── */}
           {canEdit ? (
             <DisclosurePanel>
-            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <section className="dc-card overflow-hidden">
               <div className="border-b border-[var(--line)] px-4 py-2.5">
                 <p className={cardLabel}>Edit Lead</p>
               </div>
@@ -247,7 +247,7 @@ export default async function LeadDetailPage({
 
           {/* ── Interest / Notes ── */}
           {lead.interest || lead.notes ? (
-            <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <section className="dc-card overflow-hidden">
               <div className="space-y-1 px-4 py-3 text-[0.8125rem]">
                 {lead.interest ? (
                   <p className="text-[var(--ink-muted)]"><span className="font-semibold text-[var(--ink)]">Interest</span> · {lead.interest}</p>
@@ -260,7 +260,7 @@ export default async function LeadDetailPage({
           ) : null}
 
           {/* ── Activity ── */}
-          <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <section className="dc-card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
               <p className={cardLabel}>Activity</p>
               <p className="text-[0.75rem] text-[var(--ink-muted)]">

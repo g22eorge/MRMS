@@ -225,7 +225,7 @@ export default async function FieldPage({
         <div className="grid gap-4 lg:grid-cols-3">
 
           {/* Visit type breakdown */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+          <div className="dc-card px-3 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Visit Types — This Month</p>
             {typeBreakdown.length === 0 ? (
               <p className="mt-3 text-sm text-[var(--ink-muted)]">No visits this month.</p>
@@ -250,7 +250,7 @@ export default async function FieldPage({
           </div>
 
           {/* Staff breakdown */}
-          <div className="lg:col-span-2 panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="lg:col-span-2 dc-card overflow-hidden">
             <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50 px-4 py-2.5">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Performance — This Month</p>
             </div>

@@ -430,7 +430,7 @@ export default async function PosPage({
       />
 
       {/* ══ DESKTOP: Stat chips + New Sale ══ */}
-      <div className="panel-shadow hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 lg:flex">
+      <div className="dc-card hidden flex-wrap items-center gap-2 px-4 py-3 lg:flex">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {segmentChips.map(({ seg, long }) => (
             <Link
@@ -452,7 +452,7 @@ export default async function PosPage({
       </div>
 
       {/* ══ DESKTOP: Filter panel ══ */}
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+      <div className="dc-card hidden lg:block">
         <form className="flex items-center gap-2 p-3">
           {segment !== "all" ? <input type="hidden" name="period" value={segment} /> : null}
           <input
@@ -471,7 +471,7 @@ export default async function PosPage({
 
       {/* ── Sales table / cards ── */}
       {sales.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <rect x="8" y="5" width="24" height="30" rx="3" stroke="currentColor" strokeWidth="2"/>
             <path d="M14 13h12M14 20h12M14 27h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -482,7 +482,7 @@ export default async function PosPage({
           ) : null}
         </div>
       ) : (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <DataTable
             frameless
             rows={sales}

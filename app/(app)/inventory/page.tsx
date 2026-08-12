@@ -210,7 +210,7 @@ export default async function InventoryPage({
       />
 
       {/* ── Filter panel: chips + search, same shape as every other list page ── */}
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card">
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
           {([
             { label: `${activePartCount} active`, value: "active" },
@@ -280,7 +280,7 @@ export default async function InventoryPage({
       {/* Add Item panel */}
       {canManage && (
         <DisclosurePanel>
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Item</p>
           </div>
@@ -299,7 +299,7 @@ export default async function InventoryPage({
       )}
 
       {/* Items table */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
             Inventory Items
@@ -430,7 +430,7 @@ export default async function InventoryPage({
       />
 
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent stock changes</p>
             <Link href="/inventory/stock-counts" className="text-xs font-semibold text-[var(--accent)] hover:underline">Audit stock</Link>
@@ -454,7 +454,7 @@ export default async function InventoryPage({
           </div>
         </div>
 
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Running low</p>
             <Link href="/inventory/purchase-requests/new" className="text-xs font-semibold text-[var(--accent)] hover:underline">New request</Link>

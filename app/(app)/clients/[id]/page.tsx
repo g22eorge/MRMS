@@ -255,7 +255,7 @@ export default async function ClientDetailPage({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-5">
           {clientBrief ? (
-            <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <div className="dc-card overflow-hidden">
               <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
                 <p className="text-sm text-[var(--ink)] [overflow-wrap:anywhere]">{clientBrief}</p>
               </div>
@@ -276,7 +276,7 @@ export default async function ClientDetailPage({
       />
 
       {statement ? (
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
             <div className="flex items-center gap-4 text-[0.8125rem]">
@@ -322,7 +322,7 @@ export default async function ClientDetailPage({
       ) : null}
 
       {canEdit ? (
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+        <div className="dc-card px-3 py-2.5">
           <div className="mb-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
             <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
@@ -401,7 +401,7 @@ export default async function ClientDetailPage({
         <MergeClientPanel sourceId={client.id} sourceName={client.fullName} sourceEmail={client.email} candidates={mergeCandidates} />
       ) : null}
 
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <div className="dc-card px-3 py-2.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Job History</p>
           <div className="flex items-center gap-2">
@@ -461,7 +461,7 @@ export default async function ClientDetailPage({
         )}
       </div>
 
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Client Notes</p>
           <p className="text-[0.8125rem] text-[var(--ink-muted)]">Internal notes visible to your team only</p>

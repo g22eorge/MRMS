@@ -51,7 +51,7 @@ export default async function NewSupplierBillPage({
 
   return (
     <div className="max-w-5xl space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <div className="px-4 py-3">
           <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Supplier Bill</p>

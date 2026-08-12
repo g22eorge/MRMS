@@ -49,7 +49,7 @@ export function SupplierActivityFeed({
   const visible = filter === "ALL" ? items : items.filter((item) => item.type === filter);
 
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+    <section className="dc-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">History ({items.length})</p>
         <div className="flex gap-1.5">

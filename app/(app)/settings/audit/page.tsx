@@ -74,7 +74,7 @@ export default async function SettingsAuditPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Audit Timeline</p>
@@ -85,7 +85,7 @@ export default async function SettingsAuditPage({
         </div>
       </div>
 
-      <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <form className="dc-card px-3 py-2.5">
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
           <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]">
             <option value="">All actions</option>

@@ -151,7 +151,7 @@ export default async function TechnicianPayoutsPage({
               Payout columns are not migrated yet in this environment. Run latest Prisma migrations.
             </div>
           ) : null}
-          <form className="panel-shadow grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:grid-cols-4">
+          <form className="dc-card grid gap-2 p-3 lg:grid-cols-4">
             <input name="q" defaultValue={filters.q} placeholder="Search job # / device" className={controlClass} />
             <select name="paid" defaultValue={filters.paid} className={controlClass}>
               <option value="">All statuses</option>

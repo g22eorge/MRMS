@@ -71,7 +71,7 @@ export function ReportsCharts({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="panel-shadow h-72 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="dc-card h-72 p-4">
         <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Jobs by Status</p>
         <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={220}>
           <BarChart
@@ -106,7 +106,7 @@ export function ReportsCharts({
         </ResponsiveContainer>
         <p className="mt-2 text-[0.8125rem] text-[var(--ink-muted)]">Tip: click a bar to open the matching jobs.</p>
       </div>
-      <div className="panel-shadow h-72 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="dc-card h-72 p-4">
         <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Repairs by Device Type</p>
         <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={220}>
           <PieChart>
@@ -236,7 +236,7 @@ export function TechnicianBarChart({
   if (!shouldRender || data.length === 0) return null;
 
   return (
-    <div className="panel-shadow h-56 w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+    <div className="dc-card h-56 w-full p-4">
       <p className="mb-2 text-xs uppercase tracking-[0.15em] text-[var(--ink-muted)]">Completed vs Assigned</p>
       <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={160}>
         <BarChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 32 }}>

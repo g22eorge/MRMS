@@ -280,7 +280,7 @@ export default async function TechniciansPage({
 
       {/* ── Per-tech workload (admin/ops only) ── */}
       {isAdmin && techWorkload.length > 0 && (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Technician Workload</p>
             <Link href="/settings/users" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">Manage →</Link>
@@ -321,7 +321,7 @@ export default async function TechniciansPage({
       )}
 
       {/* Filter + Quick Actions — unified panel */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         {(() => {
           function statusHref(nextStatus: string) {
             const params = new URLSearchParams();
@@ -406,7 +406,7 @@ export default async function TechniciansPage({
 
 
       {/* Work Queue */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-xs text-[var(--ink-muted)]">

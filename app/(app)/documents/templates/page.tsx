@@ -161,7 +161,7 @@ export default async function DocumentTemplatesPage() {
         const currentKey  = currentKeys[kind];
 
         return (
-          <section key={kind} className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <section key={kind} className="dc-card overflow-hidden">
             <div className="border-b border-[var(--line)] px-4 py-3">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
                 {KIND_LABELS[kind]}

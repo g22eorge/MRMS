@@ -28,7 +28,7 @@ export function ChangePasswordForm() {
   const label = "mb-1 block text-[0.75rem] font-medium text-[var(--ink-muted)]";
 
   return (
-    <form action={formAction} className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+    <form action={formAction} className="dc-card overflow-hidden">
       <div className="border-b border-[var(--line)] px-4 py-2.5">
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Password</p>
         <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">At least 8 characters, different from your current one.</p>

@@ -392,7 +392,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       />
 
       {/* ══ DESKTOP: Status chips + search ══ */}
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+      <div className="dc-card hidden lg:block">
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
           {statusChips.map(({ key, long, url, active }) => (
             <Link
@@ -427,7 +427,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
       {/* ── New campaign ── */}
       <DisclosurePanel>
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className={cardLabel}>New Campaign</p>
           </div>
@@ -457,7 +457,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       </DisclosurePanel>
 
       {campaigns.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <path d="M5 12h20l10-5v26l-10-5H5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
             <path d="M11 22v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -470,14 +470,14 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           {/* ── Campaign list ── */}
           <div className="space-y-4">
             {pageCampaigns.length === 0 ? (
-              <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-10 text-center">
+              <div className="dc-card flex flex-col items-center gap-2 px-6 py-10 text-center">
                 <p className="text-sm font-medium text-[var(--ink-muted)]">No campaigns match this view</p>
                 {hasFilters ? (
                   <Link href={href({ status: null, q: "" })} className="text-xs text-[var(--accent)] hover:underline">Clear filters</Link>
                 ) : null}
               </div>
             ) : (
-              <div className="panel-shadow divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <div className="dc-card divide-y divide-[var(--line)] overflow-hidden">
                 {pageCampaigns.map((c) => {
                   const sentCount = c.contacts.filter((cc) => SENT_LIKE.includes(cc.status)).length;
                   const repliedCount = c.contacts.filter((cc) => cc.status === "RESPONDED").length;
@@ -521,7 +521,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
           {/* ── Selected campaign ── */}
           {!selected ? (
-            <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+            <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
               <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
                 <circle cx="14" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
                 <path d="M19 19l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -530,7 +530,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             </div>
           ) : (
             <div className="space-y-4">
-              <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <section className="dc-card overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -615,7 +615,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 </div>
               </section>
 
-              <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+              <section className="dc-card overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
                   <p className={cardLabel}>Contacts</p>
                   <p className="text-[0.75rem] text-[var(--ink-muted)]">

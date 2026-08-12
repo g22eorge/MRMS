@@ -73,7 +73,7 @@ export async function IntakeDashboard({
       </div>
 
       {/* Compact inline KPI strip — replaces 2×2 mobile card grid */}
-      <div className="panel-shadow grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:hidden">
+      <div className="dc-card grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden lg:hidden">
         {[
           { label: "Captured",  value: capturedThisMonth, href: "/jobs/new",                                                                          color: "text-[var(--ink)]" },
           { label: "Open",      value: openFromIntake,    href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP",       color: "text-[var(--accent)]" },
@@ -88,7 +88,7 @@ export async function IntakeDashboard({
       </div>
 
       {/* Compact 4-stat strip for desktop */}
-      <div className="panel-shadow hidden grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:grid">
+      <div className="dc-card hidden grid-cols-4 divide-x divide-[var(--line)] overflow-hidden lg:grid">
         {[
           { label: `Captured (${selectedPeriodLabel})`, value: capturedThisMonth, href: "/jobs/new",                                                                          color: "text-[var(--ink)]" },
           { label: "Open queue",                        value: openFromIntake,    href: "/jobs?status=RECEIVED,DIAGNOSING,AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP",       color: "text-[var(--accent)]" },

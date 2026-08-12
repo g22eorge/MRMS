@@ -70,7 +70,7 @@ export function ExternalTechJobView({
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div className="dc-card overflow-hidden p-4">
         <div className="mb-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
           <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">External Work Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)]">Update diagnosis, required parts, and ETA only. Client identity remains hidden in this workspace.</p>
@@ -109,7 +109,7 @@ export function ExternalTechJobView({
             router.refresh();
           });
         }}
-        className="panel-shadow space-y-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 [&_*]:min-w-0"
+        className="dc-card space-y-3 overflow-hidden p-4 [&_*]:min-w-0"
       >
         <h3 className="font-semibold">External Diagnosis</h3>
         <textarea

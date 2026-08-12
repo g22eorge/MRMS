@@ -671,7 +671,7 @@ export function IntakeClient({
         }}
       />
       {/* brief */}
-      <details className="panel-shadow mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" open={pendingCount > 0}>
+      <details className="dc-card mb-4 p-3" open={pendingCount > 0}>
         <summary className="list-none">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>

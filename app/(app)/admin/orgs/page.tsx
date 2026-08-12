@@ -49,7 +49,7 @@ export default async function AdminOrgsPage() {
           return (
             <div
               key={org.id}
-              className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]"
+              className="dc-card"
             >
               {/* Org header */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">

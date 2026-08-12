@@ -107,7 +107,7 @@ export function DocumentFilterBar({
 
   if (mode === "form") {
     return (
-      <form className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <form className="dc-card flex flex-wrap items-center gap-2 px-3 py-2.5">
         <input
           name="q"
           defaultValue={q}

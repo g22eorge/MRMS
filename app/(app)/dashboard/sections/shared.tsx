@@ -117,7 +117,7 @@ export function DashboardPeriodBar({
   actionLabel?: string;
 }) {
   return (
-    <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+    <div className="dc-card flex flex-wrap items-center gap-2 px-3 py-2.5">
       {/* Period toggle */}
       <div className="flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] p-1">
         <Link

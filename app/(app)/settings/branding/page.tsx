@@ -303,7 +303,7 @@ export default async function BrandingPage({
         </div>
       ) : null}
 
-      <form action={saveBrandingAction} className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] [&_*]:min-w-0">
+      <form action={saveBrandingAction} className="dc-card overflow-hidden [&_*]:min-w-0">
         {/* Company details — the essentials a starter fills in; everything else
             is tucked into optional drawers below. */}
         <div className="border-b border-[var(--line)] p-4">
@@ -410,7 +410,7 @@ export default async function BrandingPage({
         </div>
       </form>
 
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <div className="dc-card overflow-hidden px-3 py-2.5">
         <p className="mb-2 text-sm font-semibold">Invoice Logo</p>
         <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG, WEBP (max 5MB). Recommended wide aspect ratio.</p>
 

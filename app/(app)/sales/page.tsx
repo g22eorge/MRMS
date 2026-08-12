@@ -565,7 +565,7 @@ export default async function SalesPage({
 
       {/* ══ DESKTOP: Tabs + primary action ══ */}
       {tabs.length > 1 ? (
-        <div className="panel-shadow hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 lg:flex">
+        <div className="dc-card hidden flex-wrap items-center gap-2 px-4 py-3 lg:flex">
           {tabs.map((t) => (
             <Link
               key={t.key}
@@ -589,7 +589,7 @@ export default async function SalesPage({
       ) : null}
 
       {/* ══ DESKTOP: Stage chips + search ══ */}
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] lg:block">
+      <div className="dc-card hidden lg:block">
         {activeTab === "leads" ? (
           <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--line)] px-3 py-2 [scrollbar-width:none]">
             {statusChips.map(({ key, short, count, url, active }) => (
@@ -628,7 +628,7 @@ export default async function SalesPage({
       {/* ── New lead form ── */}
       {activeTab === "leads" && can.createLeads(user) ? (
         <DisclosurePanel>
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
           </div>
@@ -676,7 +676,7 @@ export default async function SalesPage({
       {/* ── Leads ── */}
       {activeTab === "leads" ? (
         leads.length === 0 ? (
-          <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+          <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
             <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
               <circle cx="20" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
               <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -687,7 +687,7 @@ export default async function SalesPage({
             ) : null}
           </div>
         ) : (
-          <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+          <div className="dc-card overflow-hidden">
             <DataTable
               frameless
               rows={leads}
@@ -860,7 +860,7 @@ export default async function SalesPage({
         )
       ) : /* ── Quotations ── */
       quotations.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <rect x="8" y="5" width="24" height="30" rx="3" stroke="currentColor" strokeWidth="2"/>
             <path d="M14 13h12M14 20h12M14 27h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -875,7 +875,7 @@ export default async function SalesPage({
           ) : null}
         </div>
       ) : (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <DataTable
             frameless
             rows={quotations}

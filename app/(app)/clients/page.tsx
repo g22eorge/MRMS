@@ -306,7 +306,7 @@ export default async function ClientsPage({
       />
 
       {/* ══ DESKTOP: Stat chips + New Client ══ */}
-      <div className="panel-shadow hidden lg:flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card hidden lg:flex flex-wrap items-center gap-2 px-4 py-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {([
             { seg: "all",  label: `${totalClients} total`          },
@@ -334,7 +334,7 @@ export default async function ClientsPage({
       </div>
 
       {/* ══ DESKTOP: Filter panel ══ */}
-      <div className="panel-shadow hidden lg:block rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card hidden lg:block">
         <form className="space-y-2.5 p-3">
           <div className="flex items-center gap-2">
             <input
@@ -389,7 +389,7 @@ export default async function ClientsPage({
 
       {/* ── Clients table / cards ── */}
       {clients.length === 0 ? (
-        <div className="panel-shadow flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-14 text-center">
+        <div className="dc-card flex flex-col items-center gap-2 px-6 py-14 text-center">
           <svg viewBox="0 0 40 40" fill="none" className="h-10 w-10 opacity-20" aria-hidden="true">
             <circle cx="20" cy="14" r="7" stroke="currentColor" strokeWidth="2"/>
             <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -400,7 +400,7 @@ export default async function ClientsPage({
           ) : null}
         </div>
       ) : (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
 
           {/* ── Rows: shared DataTable (desktop table + mobile cards) ── */}
           <DataTable

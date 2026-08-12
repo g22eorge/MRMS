@@ -156,7 +156,7 @@ export default async function ProcurementPage() {
       }
     >
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Requests to review</p>
             <Link href="/inventory/purchase-requests" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
@@ -222,7 +222,7 @@ export default async function ProcurementPage() {
           )}
         </section>
 
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Waiting to arrive</p>
             <Link href="/inventory/purchase-orders" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All orders</Link>
@@ -280,7 +280,7 @@ export default async function ProcurementPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
             <Link href="/inventory/supplier-bills" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All bills</Link>
@@ -299,7 +299,7 @@ export default async function ProcurementPage() {
           </div>
         </section>
 
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recently received</p>
             <Link href="/inventory/goods-received" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All receipts</Link>

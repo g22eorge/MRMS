@@ -138,7 +138,7 @@ export default async function ServiceHubPage() {
 
       {/* ── At-a-glance: today's field visits + open complaints ── */}
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Today&apos;s Field Visits</p>
             <Link href="/field" className="text-xs font-semibold text-[var(--accent)] hover:underline">All visits</Link>
@@ -167,7 +167,7 @@ export default async function ServiceHubPage() {
           </div>
         </div>
 
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Complaints</p>
             <Link href="/complaints" className="text-xs font-semibold text-[var(--accent)] hover:underline">All complaints</Link>

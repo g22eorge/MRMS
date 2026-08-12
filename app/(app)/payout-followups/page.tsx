@@ -513,7 +513,7 @@ export default async function PayoutFollowupsPage({
       </div>
 
       {/* Filters */}
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+      <section className="dc-card p-3">
         <form className="flex flex-wrap items-center gap-2">
           {/* Stay on the active list when filtering. */}
           <input type="hidden" name="section" value={activeTab} />

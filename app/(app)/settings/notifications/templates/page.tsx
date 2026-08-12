@@ -111,7 +111,7 @@ export default async function NotificationTemplatesPage({
 
   if (!supportsCommsTemplates()) {
     return (
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <section className="dc-card px-3 py-2.5">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Templates</p>
         <p className="mt-2 text-sm text-[var(--ink-muted)]">
           Templates are not available in this runtime (older database/client). Deploy the latest schema to enable them.

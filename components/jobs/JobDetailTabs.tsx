@@ -96,7 +96,7 @@ function statusWatchLabel(status: JobStatus, ageHours: number) {
 }
 
 const panelShellClass =
-  "panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden p-5";
+  "dc-card overflow-hidden p-5";
 const softSectionClass =
   "space-y-3 rounded-xl bg-[var(--panel-strong)] p-3";
 const fieldClass =
@@ -265,7 +265,7 @@ function MessagesTab({
   }
 
   return (
-    <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+    <div className="dc-card overflow-hidden">
       <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
         <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
           Messages
@@ -1196,7 +1196,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
       <aside className="space-y-3 lg:sticky lg:top-4">
         {/* Device */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="dc-card p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-[var(--ink-muted)]">
               {job.photos?.[0]?.id ? (
@@ -1214,7 +1214,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
 
         {/* Client & technician */}
-        <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+        <div className="dc-card p-4">
           <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Client &amp; technician</p>
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
             <span className="text-[0.71875rem] text-[var(--ink-muted)]">Client</span>
@@ -1234,7 +1234,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
         {/* Money */}
         {canViewFinancials ? (
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="dc-card p-4">
             <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Money</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between"><span className="text-[0.71875rem] text-[var(--ink-muted)]">Client bill</span><span className="text-[0.78125rem] font-bold tabular-nums text-[var(--accent-fg)]">{formatBillAmount(clientBillValue)}</span></div>
@@ -1247,7 +1247,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
         {/* Attention */}
         {attentionItems.length > 0 ? (
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="dc-card p-4">
             <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-amber-600">Needs attention</p>
             <div className="space-y-2">
               {attentionItems.map((item) => (
@@ -1262,7 +1262,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
         {/* Delivery — the handover record, shown once captured */}
         {hasDelivery ? (
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+          <div className="dc-card p-4">
             <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Delivery</p>
             <div className="space-y-2">
               {deliveryMethodLabel ? (
@@ -1785,7 +1785,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           ) : null}
 
           {/* ── Section 1: Billing Details ────────────────────────────── */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+          <div className="dc-card overflow-hidden">
             <div className="flex items-center gap-2 bg-[var(--panel-strong)] px-3 py-2.5">
               <p className="text-xs font-semibold text-[var(--ink)]">Billing</p>
             </div>
@@ -1872,7 +1872,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
           {/* ── Section 2: Client Payments ────────────────────────────── */}
           {canManageFinancials && typeof job.clientBill === "number" && job.clientBill > 0 ? (
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+            <div className="dc-card overflow-hidden">
               <div className="flex items-center justify-between gap-2 bg-[var(--panel-strong)] px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-semibold text-[var(--ink)]">Payments</p>
@@ -2073,7 +2073,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
           {/* ── Section 3: Technician Payouts ─────────────────────────── */}
           {hasPayoutControls ? (
-            <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+            <div className="dc-card overflow-hidden">
               <div className="flex items-center justify-between gap-2 bg-[var(--panel-strong)] px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-semibold text-[var(--ink)]">Tech payout</p>
@@ -2191,7 +2191,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           ) : null}
 
           {/* ── Section 4: Financial Summary ──────────────────────────── */}
-          <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+          <div className="dc-card overflow-hidden">
             <div className="flex items-center gap-3 bg-[var(--panel-strong)] px-4 py-2.5">
               <p className="text-xs font-semibold text-[var(--ink)]">Financial summary</p>
             </div>
@@ -2656,7 +2656,7 @@ function StatusShareButton({ jobNumber, compact = false }: { jobNumber: string; 
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         <span>Share Status</span>
       </summary>
-      <div className="panel-shadow absolute left-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card absolute left-0 z-20 mt-2 w-52 overflow-hidden">
         <div className="p-3 space-y-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client status link</p>
           <p className="break-all rounded bg-[var(--panel-strong)] px-2 py-1.5 mono text-[0.75rem] text-[var(--ink-muted)]">

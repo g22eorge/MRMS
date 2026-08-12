@@ -554,7 +554,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       </div>
 
       {/* ── FILTER BAR ───────────────────────────────────────────────────── */}
-      <div className="panel-shadow flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+      <div className="dc-card flex flex-wrap items-center gap-2 px-4 py-2.5">
         <form method="GET" action="/finance/expenses" className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {catFilter && <input type="hidden" name="category" value={catFilter} />}
           {periodFilter !== "all" && <input type="hidden" name="period" value={periodFilter} />}
@@ -596,7 +596,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       </div>
 
       {/* ── EXPENSE TABLE ────────────────────────────────────────────────── */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <div className="dc-card overflow-hidden">
         <DataTable
           frameless
           rows={expenses}

@@ -478,7 +478,7 @@ export default async function ReceiptsPage({
           const receiptWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
 
           return (
-            <article key={p.id} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <article key={p.id} className="dc-card p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">

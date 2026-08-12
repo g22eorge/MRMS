@@ -24,7 +24,7 @@ export default async function NotificationSettingsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Notifications</p>
@@ -52,7 +52,7 @@ export default async function NotificationSettingsPage() {
       </div>
 
       {canSeeOutbox ? (
-        <div className="panel-shadow flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <div className="dc-card flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Outbox</p>
             <p className="text-xs text-[var(--ink-muted)]">Delivery status for WhatsApp and email.</p>

@@ -16,7 +16,7 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
   const [, startDelete] = useTransition();
 
   return (
-    <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+    <div className="dc-card p-5">
       <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
         {current ? "Update Credentials" : "Connect WhatsApp Business"}
       </p>

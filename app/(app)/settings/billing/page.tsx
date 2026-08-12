@@ -199,7 +199,7 @@ export default async function BillingPage({
           <p className="mt-1 text-sm text-red-300/80">{alertBody}</p>
         </div>
 
-        <div className="panel-shadow flex items-center rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+        <div className="dc-card flex items-center px-4 py-2.5">
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Choose a plan</p>
         </div>
 
@@ -415,12 +415,12 @@ export default async function BillingPage({
       ) : null}
 
       {/* Header */}
-      <div className="panel-shadow flex items-center rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+      <div className="dc-card flex items-center px-4 py-2.5">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Billing &amp; Plan</p>
       </div>
 
       {isAdmin ? (
-        <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+        <section className="dc-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Payment provider</p>
@@ -440,7 +440,7 @@ export default async function BillingPage({
       ) : null}
 
       {/* Current status card */}
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
+      <section className="dc-card p-5 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Current plan</p>
@@ -506,7 +506,7 @@ export default async function BillingPage({
       <PlanBanner plan={planInfo.plan} limits={planInfo} usage={{ users: activeUserCount, jobsThisMonth, parts: partCount }} />
 
       {/* Enabled modules */}
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
+      <section className="dc-card p-5 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Enabled modules</p>
           <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--ink-muted)]">

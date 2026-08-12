@@ -146,7 +146,7 @@ export default async function FinancePage() {
 
       {/* ── Collection mix ── */}
       {revTotal > 0 && channels.length > 0 ? (
-        <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <div className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Collection mix</p>
             <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatMoney(revTotal, currency)} collected</p>

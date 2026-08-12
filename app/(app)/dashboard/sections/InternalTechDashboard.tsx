@@ -127,7 +127,7 @@ export async function InternalTechDashboard({
       </div>
 
       {canUpdatePricing ? (
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="border-b border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2.5">
             <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--accent)] sm:text-[0.8125rem]">Pricing Controls</p>
             <p className="mt-0.5 text-xs text-[var(--ink)] sm:text-sm">You can update client pricing directly from job Financials.</p>
@@ -198,7 +198,7 @@ export async function InternalTechDashboard({
         </Link>
       </div>
 
-      <div className="panel-shadow hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 2xl:block">
+      <div className="dc-card hidden px-3 py-2.5 2xl:block">
         <p className="mb-2 text-sm font-semibold">Recent Assigned Jobs</p>
         {assignedJobs.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No assigned jobs yet.</p>

@@ -79,7 +79,7 @@ export default async function NewQuotationPage({
 
   return (
     <div className="space-y-4">
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <div className="dc-card px-3 py-2.5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Documents</p>

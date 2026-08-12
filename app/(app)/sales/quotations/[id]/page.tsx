@@ -349,7 +349,7 @@ export default async function QuotationDetailPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
-      <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+      <section className="dc-card px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <QuotationStages status={quotation.status} converted={!!quotation.convertedToInvoiceId} />
           {/* Contextual next step — the one action that moves this quote forward. */}
@@ -369,7 +369,7 @@ export default async function QuotationDetailPage({
       </section>
       {/* -- Edit draft -- */}
       {showEdit ? (
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+        <section className="dc-card overflow-hidden">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className={cardLabel}>Edit Draft</p>
           </div>
@@ -398,7 +398,7 @@ export default async function QuotationDetailPage({
       ) : null}
 
       {/* -- Line items -- */}
-      <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+      <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Line Items</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
@@ -524,7 +524,7 @@ export default async function QuotationDetailPage({
       </div>
 
       {quotation.notes ? (
-        <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+        <section className="dc-card overflow-hidden px-4 py-2.5">
           <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
           <p className="mt-0.5 whitespace-pre-wrap text-[0.8125rem] text-[var(--ink)]">{quotation.notes}</p>
         </section>

@@ -47,7 +47,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
 
   if (!editing) {
     return (
-      <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+      <div className="dc-card px-3 py-2.5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Client Profile</p>
@@ -81,7 +81,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
   }
 
   return (
-    <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+    <form action={formAction} className="dc-card space-y-4 px-3 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">Edit Client Profile</p>
