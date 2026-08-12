@@ -108,6 +108,19 @@ const MODULES = [
     items: ["WhatsApp Notifications", "Message Templates", "Meta Business Integration", "Delivery Outbox", "Status Alerts"],
   },
   {
+    group: "Client Portal",
+    blurb: "Your customers track repairs and get updates themselves.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+        <rect x="3" y="4" width="18" height="14" rx="2" />
+        <path d="M3 8h18" />
+        <circle cx="12" cy="12.4" r="1.6" />
+        <path d="M9.2 15.8a2.8 2.8 0 0 1 5.6 0" />
+      </svg>
+    ),
+    items: ["Live Repair Tracking", "Online Repair Requests", "Receipts & Documents", "Status Notifications", "Secure Client Login"],
+  },
+  {
     group: "Security & Admin",
     blurb: "Right access per role, fully audited.",
     icon: (
@@ -120,7 +133,7 @@ const MODULES = [
 ];
 
 const STATS = [
-  { value: "8", label: "Modules" },
+  { value: "9", label: "Modules" },
   { value: "9", label: "User Roles" },
   { value: "50+", label: "Features" },
   { value: "Cloud", label: "Hosted" },
@@ -547,6 +560,98 @@ function DuukaSaasLanding() {
                 Start free
               </Link>
               <span className="text-[0.75rem] text-white/55">Install straight from your phone&apos;s browser — no download needed.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Client Portal ── */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Copy */}
+          <div>
+            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Client Portal</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Give your customers their own window</h2>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
+              Every client gets a secure login to track their repairs live, submit new requests, and download their
+              receipts and invoices — so your team fields fewer &ldquo;is it ready yet?&rdquo; calls.
+            </p>
+            <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+              {[
+                "Live repair status tracking",
+                "Submit repair requests online",
+                "Receipts, invoices & quotes",
+                "Automatic status updates",
+              ].map((f) => (
+                <li key={f} className="flex gap-2 text-[0.8125rem] leading-snug text-white/65">
+                  <Check />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                Start free
+              </Link>
+              <span className="text-[0.75rem] text-white/55">Your customers sign in from any browser — nothing to install.</span>
+            </div>
+          </div>
+
+          {/* Portal mock — a client tracking their repair */}
+          <div className="relative">
+            <div className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-[#D4AF37]/10 blur-[70px]" />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl">
+              {/* Browser chrome */}
+              <div className="flex items-center gap-1.5 border-b border-white/8 px-4 py-2.5">
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+                <span className="h-2 w-2 rounded-full bg-white/15" />
+                <span className="ml-2 truncate rounded-md bg-white/5 px-2.5 py-1 text-[0.5rem] text-white/40">care.eagleinfosolutions.com/portal</span>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[0.5rem] font-bold uppercase tracking-[0.16em] text-[#D4AF37]">Client Portal</p>
+                    <p className="text-[0.8125rem] font-bold text-white">Welcome back, Sarah</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-emerald-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Ready for pickup
+                  </span>
+                </div>
+
+                {/* Repair card with status timeline */}
+                <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.03] p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[0.6875rem] font-bold text-white">iPhone 13 · Screen repair</p>
+                    <p className="text-[0.5rem] text-white/40">EIS-3/2025/0042</p>
+                  </div>
+                  <div className="relative mt-3.5">
+                    <div className="absolute inset-x-1.5 top-[5px] h-0.5 rounded-full bg-[#E8C84A]/60" />
+                    <div className="relative flex justify-between">
+                      {["Received", "Diagnosed", "In repair", "Ready"].map((step) => (
+                        <div key={step} className="flex flex-col items-center">
+                          <span className="h-3 w-3 rounded-full border-2 border-[#0b0b0b] bg-[#E8C84A]" />
+                          <span className="mt-1 text-[0.4375rem] text-white/60">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents row */}
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  {["Receipt", "Invoice", "Quote"].map((d) => (
+                    <div key={d} className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.02] px-2 py-1.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-white/40" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></svg>
+                      <span className="text-[0.5rem] text-white/60">{d}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-2 rounded-lg py-1.5 text-center text-[0.5rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                  + New repair request
+                </div>
+              </div>
             </div>
           </div>
         </div>
