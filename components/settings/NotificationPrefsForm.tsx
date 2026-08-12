@@ -65,7 +65,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
   return (
     <form action={formAction} className="panel-shadow space-y-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
       <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">Alert Scope</p>
+        <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">Alert Scope</p>
         <p className="mt-1 text-sm text-[var(--ink)]">These switches control which notifications are generated for you.</p>
       </div>
 
@@ -79,7 +79,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       </div>
 
       {/* Jobs & Repairs */}
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs &amp; Repairs</p>
+      <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Jobs &amp; Repairs</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Toggle name="notifyJobCreated"     label="Job Created"         hint="When a new job is opened."                    defaultChecked={prefs.notifyJobCreated} />
         <Toggle name="notifyRepairRequest"  label="Repair Requests"     hint="When a new online repair request arrives."    defaultChecked={prefs.notifyRepairRequest} />
@@ -93,7 +93,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       </div>
 
       {/* Finance */}
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Finance</p>
+      <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Finance</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Toggle name="notifyPaymentReceived"  label="Payment Received"   hint="When a client payment is recorded."          defaultChecked={prefs.notifyPaymentReceived} />
         <Toggle name="notifyPayoutGenerated"  label="Payout Generated"   hint="When a technician payout is recorded."       defaultChecked={prefs.notifyPayoutGenerated} />
@@ -102,13 +102,13 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       </div>
 
       {/* Sales */}
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sales &amp; CRM</p>
+      <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Sales &amp; CRM</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Toggle name="notifyLeadStatus" label="Lead Won / Lost" hint="When a lead is marked won or lost." defaultChecked={prefs.notifyLeadStatus} />
       </div>
 
       {/* Inventory */}
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Inventory</p>
+      <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Inventory</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Toggle name="notifyStockAlert"     label="Low / Out of Stock"    hint="When a part hits the reorder level or runs out." defaultChecked={prefs.notifyStockAlert} />
         <Toggle name="notifyStockMovement"  label="Stock Received / Transfers / Counts" hint="When goods are received, transfers complete, or stock counts are approved." defaultChecked={prefs.notifyStockMovement} />

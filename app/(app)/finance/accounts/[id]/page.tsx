@@ -196,7 +196,7 @@ export default async function AccountLedgerPage({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
       {(account.parent || account.description) && (
-        <p className="text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
           {account.parent ? <>under <span className="mono">{account.parent.code}</span> {account.parent.name}</> : null}
           {account.parent && account.description ? " · " : null}
           {account.description ?? ""}
@@ -208,7 +208,7 @@ export default async function AccountLedgerPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           <option value="0">All months</option>
           {MONTHS.map((m, i) => (
@@ -218,7 +218,7 @@ export default async function AccountLedgerPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -243,18 +243,18 @@ export default async function AccountLedgerPage({
       {/* ── KPI TILES ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             All-Time Balance
           </p>
           <p className={`mt-1 text-lg font-bold tabular-nums ${allTimeBalance >= 0 ? "text-[var(--ink)]" : "text-red-500"}`}>
             {allTimeBalance < 0 ? "−" : ""}
             {formatMoneyCompact(Math.abs(allTimeBalance), currency)}
           </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">{allLines.length} postings</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">{allLines.length} postings</p>
         </div>
 
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             {periodLabel} — Debits
           </p>
           <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">
@@ -263,7 +263,7 @@ export default async function AccountLedgerPage({
         </div>
 
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             {periodLabel} — Credits
           </p>
           <p className="mt-1 text-lg font-bold tabular-nums text-[var(--ink)]">
@@ -272,12 +272,12 @@ export default async function AccountLedgerPage({
         </div>
 
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Closing Balance</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Closing Balance</p>
           <p className={`mt-1 text-lg font-bold tabular-nums ${closingBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
             {closingBalance < 0 ? "−" : ""}
             {formatMoneyCompact(Math.abs(closingBalance), currency)}
           </p>
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">{lines.length} transactions</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">{lines.length} transactions</p>
         </div>
       </div>
 
@@ -291,7 +291,7 @@ export default async function AccountLedgerPage({
           {
             key: "date",
             header: "Date",
-            className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+            className: "whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]",
             cell: (row) =>
               !row.journalEntry
                 ? "—"
@@ -332,7 +332,7 @@ export default async function AccountLedgerPage({
             key: "memo",
             header: "Memo",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
             cell: (row) => (row.id === "__opening__" ? null : row.description || "—"),
           },
           {
@@ -371,7 +371,7 @@ export default async function AccountLedgerPage({
                 </span>
               ) : (
                 <span
-                  className={`text-[12px] font-semibold tabular-nums ${
+                  className={`text-[0.75rem] font-semibold tabular-nums ${
                     row.runningBalance >= 0 ? "text-[var(--ink)]" : "text-red-600"
                   }`}
                 >

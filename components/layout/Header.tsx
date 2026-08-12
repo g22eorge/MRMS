@@ -129,14 +129,14 @@ export function Header({
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-            className="hidden h-9 w-64 items-center gap-2 rounded-[10px] border border-[var(--dc-line)] bg-[var(--dc-panel)] px-2.5 text-[13px] text-[var(--dc-ink-3)] transition hover:border-[var(--dc-ink-3)]/50 hover:text-[var(--dc-ink)] md:flex lg:w-72"
+            className="hidden h-9 w-64 items-center gap-2 rounded-[10px] border border-[var(--dc-line)] bg-[var(--dc-panel)] px-2.5 text-[0.8125rem] text-[var(--dc-ink-3)] transition hover:border-[var(--dc-ink-3)]/50 hover:text-[var(--dc-ink)] md:flex lg:w-72"
             aria-label="Open command palette"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
             </svg>
             Search
-            <kbd className="ml-auto rounded-[5px] border border-[var(--dc-line)] px-1.5 py-0.5 text-[10.5px] font-semibold tracking-wide text-[var(--dc-ink-3)]">⌘K</kbd>
+            <kbd className="ml-auto rounded-[5px] border border-[var(--dc-line)] px-1.5 py-0.5 text-[0.65625rem] font-semibold tracking-wide text-[var(--dc-ink-3)]">⌘K</kbd>
           </button>
 
           {/* Spacer pushes the action group to the right edge */}
@@ -192,10 +192,10 @@ export function Header({
               className="flex h-9 items-center gap-2 rounded-[10px] py-0 pl-1 pr-1 transition hover:bg-[var(--dc-panel-2)] sm:pr-1.5"
               title="Account menu"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[var(--dc-accent)] text-[12px] font-black text-[#1c1600] select-none">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[var(--dc-accent)] text-[0.75rem] font-black text-[#1c1600] select-none">
                 {initials(userName)}
               </div>
-              <span className="hidden truncate text-[12.5px] font-semibold leading-none text-[var(--dc-ink)] sm:block max-w-[110px]">
+              <span className="hidden truncate text-[0.78125rem] font-semibold leading-none text-[var(--dc-ink)] sm:block max-w-[110px]">
                 {userName.split(" ")[0]}
               </span>
               <svg className="hidden sm:block h-3.5 w-3.5 text-[var(--dc-ink-3)] transition-transform duration-150" style={{ transform: menuOpen ? "rotate(180deg)" : "none" }} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -214,17 +214,17 @@ export function Header({
                 >
                   {/* Identity */}
                   <div className="flex items-center gap-2.5 border-b border-[var(--dc-line)] px-3.5 py-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--dc-accent)] text-[13px] font-black text-[#1c1600]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--dc-accent)] text-[0.8125rem] font-black text-[#1c1600]">
                       {initials(userName)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[13px] font-bold text-[var(--dc-ink)]">{userName}</p>
-                        <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-wide leading-none ${roleAccent(role)}`}>
+                        <p className="truncate text-[0.8125rem] font-bold text-[var(--dc-ink)]">{userName}</p>
+                        <span className={`shrink-0 rounded-full px-1.5 py-[2px] text-[0.625rem] font-bold uppercase tracking-wide leading-none ${roleAccent(role)}`}>
                           {roleDisplay(role)}
                         </span>
                       </div>
-                      <p className="truncate text-[12px] text-[var(--dc-ink-3)]">{userEmail}</p>
+                      <p className="truncate text-[0.75rem] text-[var(--dc-ink-3)]">{userEmail}</p>
                     </div>
                   </div>
 
@@ -253,7 +253,7 @@ export function Header({
                       <Link
                         role="menuitem"
                         href="/platform"
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-[12px] font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/8"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-[0.75rem] font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/8"
                         onClick={closeMenu}
                       >
                         <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -282,7 +282,7 @@ export function Header({
                         router.push("/login");
                         router.refresh();
                       }}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-[12px] font-semibold text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-[0.75rem] font-semibold text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
                     >
                       <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" />
@@ -327,7 +327,7 @@ function MenuItem({
     <button
       role="menuitem"
       type="button"
-      className="flex w-full items-center gap-2.5 px-3.5 py-1.5 text-[12px] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
+      className="flex w-full items-center gap-2.5 px-3.5 py-1.5 text-[0.75rem] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
       onClick={onClick}
     >
       <span className="shrink-0 text-[var(--dc-ink-3)]">{icon}</span>
@@ -390,7 +390,7 @@ function ThemePicker() {
           role="menu"
           className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-[var(--dc-line)] bg-[var(--dc-panel)] p-1.5 shadow-xl"
         >
-          <p className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--dc-ink-3)]">Theme</p>
+          <p className="px-2.5 py-1.5 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--dc-ink-3)]">Theme</p>
           {THEME_OPTIONS.map((o) => {
             const isActive = o.key === theme;
             return (
@@ -400,7 +400,7 @@ function ThemePicker() {
                 role="menuitemradio"
                 aria-checked={isActive}
                 onClick={() => { setTheme(o.key); setOpen(false); }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8125rem] font-medium text-[var(--dc-ink)] transition hover:bg-[var(--dc-panel-2)]"
               >
                 <span className="h-4 w-4 shrink-0 rounded-full ring-1 ring-black/15 dark:ring-white/15" style={{ background: o.swatch }} aria-hidden="true" />
                 <span className="flex-1 text-left">{o.label}</span>

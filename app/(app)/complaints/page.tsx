@@ -195,7 +195,7 @@ export default async function ComplaintsPage({
               <Link
                 key={key || "all"}
                 href={key ? `/complaints?status=${key}` : "/complaints"}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition ${
                   active
                     ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                     : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"
@@ -209,8 +209,8 @@ export default async function ComplaintsPage({
           <form method="GET" className="ml-auto flex gap-1.5">
             {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
             <input name="q" defaultValue={params.q ?? ""} placeholder="Search client, description…"
-              className="h-7 min-w-[160px] rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-            <button type="submit" className="h-7 rounded-full border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+              className="h-7 min-w-[160px] rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+            <button type="submit" className="h-7 rounded-full border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
           </form>
         </div>
       }
@@ -226,8 +226,8 @@ export default async function ComplaintsPage({
             <div className="px-4 py-3">
               <div className="mb-1.5 flex items-start justify-between gap-2">
                 <div>
-                  <p className="mono text-[12px] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
-                  <p className="text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
+                  <p className="mono text-[0.75rem] font-bold text-[var(--ink)]">{c.complaintNumber}</p>
+                  <p className="text-[0.75rem] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
                 </div>
                 <StatusBadge tone={toneFor(STATUS_TONES, c.status)} className="shrink-0">
                   {COMPLAINT_STATUS_LABELS[c.status]}
@@ -236,8 +236,8 @@ export default async function ComplaintsPage({
               <p className="mb-1 font-semibold text-[var(--ink)]">{c.clientName}
                 <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{c.clientPhone}</span>
               </p>
-              <p className="mb-1.5 line-clamp-2 text-[12px] text-[var(--ink-muted)]">{c.description}</p>
-              <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
+              <p className="mb-1.5 line-clamp-2 text-[0.75rem] text-[var(--ink-muted)]">{c.description}</p>
+              <div className="flex items-center gap-2 text-[0.8125rem] text-[var(--ink-muted)]">
                 <span>{COMPLAINT_CATEGORY_LABELS[c.category]}</span>
                 {(sla === "overdue-ack" || sla === "overdue-res") && (
                   <span className={`font-semibold ${sla === "overdue-ack" ? "text-red-600" : "text-amber-600"}`}>
@@ -259,7 +259,7 @@ export default async function ComplaintsPage({
             cell: (c) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{c.complaintNumber}</p>
-                <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
+                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{new Date(c.createdAt).toLocaleDateString()}</p>
               </>
             ),
           },
@@ -271,8 +271,8 @@ export default async function ComplaintsPage({
               return (
                 <>
                   <StatusBadge tone={toneFor(STATUS_TONES, c.status)}>{COMPLAINT_STATUS_LABELS[c.status]}</StatusBadge>
-                  {sla === "overdue-ack" && <p className="mt-1 text-[12px] font-semibold text-red-600">Ack overdue</p>}
-                  {sla === "overdue-res" && <p className="mt-1 text-[12px] font-semibold text-amber-600">Resolution overdue</p>}
+                  {sla === "overdue-ack" && <p className="mt-1 text-[0.75rem] font-semibold text-red-600">Ack overdue</p>}
+                  {sla === "overdue-res" && <p className="mt-1 text-[0.75rem] font-semibold text-amber-600">Resolution overdue</p>}
                 </>
               );
             },
@@ -283,7 +283,7 @@ export default async function ComplaintsPage({
             cell: (c) => (
               <>
                 <p className="text-[var(--ink)]">{COMPLAINT_CATEGORY_LABELS[c.category]}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{c.channel}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{c.channel}</p>
               </>
             ),
           },
@@ -293,7 +293,7 @@ export default async function ComplaintsPage({
             cell: (c) => (
               <>
                 <p className="font-semibold text-[var(--ink)]">{c.clientName}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{c.clientPhone}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{c.clientPhone}</p>
               </>
             ),
           },

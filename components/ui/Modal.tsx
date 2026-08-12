@@ -74,10 +74,10 @@ export function ModalHeader({ title, subtitle, onClose }: ModalHeaderProps) {
   return (
     <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
       <div>
-        <p className="text-[13px] font-semibold text-[var(--ink)]">
+        <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">
           {title}
         </p>
-        {subtitle ? <p className="text-[12px] text-[var(--ink-muted)]">{subtitle}</p> : null}
+        {subtitle ? <p className="text-[0.75rem] text-[var(--ink-muted)]">{subtitle}</p> : null}
       </div>
       {onClose ? <ModalCloseButton onClose={onClose} /> : null}
     </div>

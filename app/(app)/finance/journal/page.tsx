@@ -336,7 +336,7 @@ export default async function JournalPage({
         </div>
       ) : (
         <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <summary className="cursor-pointer list-none px-4 py-2.5 text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
+          <summary className="cursor-pointer list-none px-4 py-2.5 text-[0.8125rem] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
             + New Journal Entry
           </summary>
           <NewJournalEntryForm accounts={accounts} createEntry={createEntry} />
@@ -348,7 +348,7 @@ export default async function JournalPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           <option value="0">All months</option>
           {MONTHS.map((m, i) => (
@@ -358,7 +358,7 @@ export default async function JournalPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -367,7 +367,7 @@ export default async function JournalPage({
         <select
           name="status"
           defaultValue={statusFilter}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           <option value="all">All statuses</option>
           {STATUSES.map((s) => (
@@ -378,7 +378,7 @@ export default async function JournalPage({
           name="q"
           defaultValue={sp.q ?? ""}
           placeholder="Search description, reference…"
-          className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         />
         <button
           type="submit"
@@ -512,7 +512,7 @@ export default async function JournalPage({
                 <div className="flex items-baseline gap-3 px-4 py-2.5">
                   <p className="text-sm font-medium text-[var(--ink)]">{entry.description}</p>
                   {entry.reference && (
-                    <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 mono text-[13px] text-[var(--ink-muted)]">
+                    <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 mono text-[0.8125rem] text-[var(--ink-muted)]">
                       {entry.reference}
                     </span>
                   )}
@@ -560,7 +560,7 @@ export default async function JournalPage({
                     tableFooter={
                       <>
                         <tr>
-                          <td colSpan={2} className="px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+                          <td colSpan={2} className="px-3 py-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
                             Totals
                           </td>
                           <td className="px-3 py-2 text-right font-semibold text-[var(--ink)]">
@@ -572,7 +572,7 @@ export default async function JournalPage({
                         </tr>
                         {!balanced && (
                           <tr>
-                            <td colSpan={4} className="px-3 pb-2 text-right text-[12px] font-semibold text-red-500">
+                            <td colSpan={4} className="px-3 pb-2 text-right text-[0.75rem] font-semibold text-red-500">
                               Imbalance: {formatMoney(Math.abs(lineDebit - lineCredit), currency)}
                             </td>
                           </tr>

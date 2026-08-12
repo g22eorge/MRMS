@@ -64,7 +64,7 @@ export function StatusBadge({ children, tone = "neutral", dot = false, solid = f
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] font-semibold leading-tight ${badge} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.75rem] font-semibold leading-tight ${badge} ${className}`}
     >
       {dot ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${solid ? "bg-white/80" : (cfg ?? TONES.neutral).dot}`} aria-hidden="true" /> : null}
       {children}

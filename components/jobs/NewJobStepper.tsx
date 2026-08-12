@@ -248,7 +248,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
       <button
         type="submit"
         disabled={pending || extraDisabled}
-        className="btn-premium rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:py-2 sm:text-sm"
+        className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:py-2 sm:text-sm"
       >
         {pending ? "Creating…" : "Create Job"}
       </button>
@@ -267,7 +267,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                 : idx === step ? "bg-[var(--accent)] ring-[var(--accent)]/50"
                 : "bg-[var(--panel-strong)] ring-[var(--line)]"
               }`} />
-              <p className={`mt-1 text-center text-[13px] font-bold uppercase leading-none tracking-wide ${
+              <p className={`mt-1 text-center text-[0.8125rem] font-bold uppercase leading-none tracking-wide ${
                 idx === step ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
               }`}>{label}</p>
             </button>
@@ -285,7 +285,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             key={label}
             type="button"
             onClick={() => setStep(idx)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition sm:py-2 sm:text-sm ${
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[0.8125rem] font-medium transition sm:py-2 sm:text-sm ${
               idx === step
                 ? "bg-[var(--accent)] text-white"
                 : idx < step
@@ -393,7 +393,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
             <button
               type="button"
               onClick={() => setDevices((prev) => [...prev, blankDevice()])}
-              className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px]"
+              className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.8125rem]"
             >
               Add another device
             </button>

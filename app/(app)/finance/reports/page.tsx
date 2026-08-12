@@ -69,8 +69,8 @@ export default async function FinanceReportsPage() {
           >
             <span className="text-[var(--accent)]">{r.icon}</span>
             <p className="font-semibold text-[var(--ink)]">{r.title}</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">{r.desc}</p>
-            <p className="mt-auto text-[13px] font-semibold text-[var(--accent)]">Open Report →</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">{r.desc}</p>
+            <p className="mt-auto text-[0.8125rem] font-semibold text-[var(--accent)]">Open Report →</p>
           </Link>
         ))}
       </div>

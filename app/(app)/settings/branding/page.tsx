@@ -16,7 +16,7 @@ import { planLabel, resolveTemplateKey, splitTemplatesByPlan } from "@/lib/pdf/t
 import { prisma } from "@/lib/prisma";
 
 const brandingFieldClass =
-  "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
+  "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
 type SearchParams = {
   saved?: string;
@@ -307,7 +307,7 @@ export default async function BrandingPage({
         {/* Company details — the essentials a starter fills in; everything else
             is tucked into optional drawers below. */}
         <div className="border-b border-[var(--line)] p-4">
-          <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Company details</p>
+          <p className="mb-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Company details</p>
           <div className="grid gap-2 lg:grid-cols-2">
             <input name="companyName" defaultValue={settings.companyName} placeholder="Company name" className={brandingFieldClass} />
             <input name="companyTagline" defaultValue={settings.companyTagline ?? ""} placeholder="Tagline" className={brandingFieldClass} />
@@ -321,12 +321,12 @@ export default async function BrandingPage({
 
         {/* Document numbering */}
         <details className="border-b border-[var(--line)]">
-          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document numbering <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional, the default is fine</span></summary>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document numbering <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional, the default is fine</span></summary>
           <div className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
             <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className={brandingFieldClass} />
             <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className={brandingFieldClass} />
             <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className={brandingFieldClass} />
-            <p className="text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
+            <p className="text-[0.8125rem] text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
               Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
             </p>
             <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className={brandingFieldClass} />
@@ -336,7 +336,7 @@ export default async function BrandingPage({
 
         {/* Document Templates */}
         <details className="border-b border-[var(--line)]">
-          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document templates <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— {planLabel(plan)} plan</span></summary>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document templates <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— {planLabel(plan)} plan</span></summary>
           <div className="grid gap-3 px-4 pb-4 lg:grid-cols-2">
             {[
               { label: "Invoice", name: "invoiceTemplateKey", value: selectedInvoiceKey, allowed: invoiceTemplates.allowed, locked: invoiceTemplates.locked },
@@ -345,8 +345,8 @@ export default async function BrandingPage({
               { label: "Receipt", name: "receiptTemplateKey", value: selectedReceiptKey, allowed: receiptTemplates.allowed, locked: receiptTemplates.locked },
             ].map(({ label, name, value, allowed, locked }) => (
               <div key={name}>
-                <p className="mb-1 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">{label}</p>
-                <select name={name} defaultValue={value} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+                <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">{label}</p>
+                <select name={name} defaultValue={value} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
                   {allowed.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                   {locked.map((t) => <option key={t.key} value={t.key} disabled>{t.label} (Upgrade to {planLabel(t.minPlan)})</option>)}
                 </select>
@@ -357,7 +357,7 @@ export default async function BrandingPage({
 
         {/* VAT & Sign-off */}
         <details className="border-b border-[var(--line)]">
-          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">VAT &amp; signatures <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">VAT &amp; signatures <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
           <div className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
             <select name="vatDefaultApplicable" defaultValue={settings.vatDefaultApplicable ? "true" : "false"} className={brandingFieldClass}>
               <option value="false">Charge VAT on sales: off (default)</option>
@@ -376,7 +376,7 @@ export default async function BrandingPage({
 
         {/* Colors */}
         <details className="border-b border-[var(--line)]">
-          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Colours <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Colours <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
           <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { name: "primaryColor", label: "Primary", value: settings.primaryColor },
@@ -388,7 +388,7 @@ export default async function BrandingPage({
             ].map(({ name, label, value }) => (
               <div key={name} className="flex items-center gap-2">
                 <input type="color" name={name} defaultValue={value} className="h-8 w-10 cursor-pointer rounded border" />
-                <span className="text-[13px] text-[var(--ink-muted)]">{label}</span>
+                <span className="text-[0.8125rem] text-[var(--ink-muted)]">{label}</span>
               </div>
             ))}
           </div>
@@ -396,17 +396,17 @@ export default async function BrandingPage({
 
         {/* Terms & Footer */}
         <details>
-          <summary className="cursor-pointer select-none px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Terms &amp; footer <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Terms &amp; footer <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
           <div className="grid gap-2 px-4 pb-4">
-            <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Payment to (bank accounts shown on invoices &amp; receipts)</label>
+            <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Payment to (bank accounts shown on invoices &amp; receipts)</label>
             <BankAccountsEditor initial={parsePaymentAccounts(settings.paymentAccounts)} />
           </div>
         </details>
 
         <div className="border-t border-[var(--line)] px-4 py-3">
-          <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px]">Save branding</button>
+          <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem]">Save branding</button>
         </div>
       </form>
 

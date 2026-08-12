@@ -105,7 +105,7 @@ export default async function StockOpsPage() {
           <Link
             key={l.href}
             href={l.href}
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
           >
             {l.label}
           </Link>
@@ -116,7 +116,7 @@ export default async function StockOpsPage() {
       <div className="space-y-5">
         {GROUPS.map((group) => (
           <section key={group.label}>
-            <h2 className="mb-2.5 px-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            <h2 className="mb-2.5 px-0.5 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
               {group.label}
             </h2>
             {/* Mobile */}
@@ -131,8 +131,8 @@ export default async function StockOpsPage() {
                     <NavIcon d={item.icon} color={item.color} />
                   </span>
                   <div>
-                    <p className="text-[13px] font-semibold text-[var(--ink)]">{item.label}</p>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{item.description}</p>
+                    <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">{item.label}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.description}</p>
                   </div>
                 </Link>
               ))}
@@ -149,8 +149,8 @@ export default async function StockOpsPage() {
                     <NavIcon d={item.icon} color={item.color} />
                   </span>
                   <div>
-                    <p className="text-[13px] font-semibold text-[var(--ink)]">{item.label}</p>
-                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{item.description}</p>
+                    <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">{item.label}</p>
+                    <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{item.description}</p>
                   </div>
                 </Link>
               ))}

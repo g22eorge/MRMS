@@ -97,8 +97,8 @@ export default async function PlatformAuditPage({
 
       <form className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="grid gap-3 md:grid-cols-3">
-          <input name="orgId" defaultValue={orgId} placeholder="Filter by org ID" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
-          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
+          <input name="orgId" defaultValue={orgId} placeholder="Filter by org ID" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
+          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]">
             <option value="">All actions</option>
             {actionOptions.map((item) => (
               <option key={item} value={item}>{item}</option>
@@ -122,7 +122,7 @@ export default async function PlatformAuditPage({
           {
             key: "when",
             header: "When",
-            className: "align-top whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+            className: "align-top whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => fmt(event.createdAt),
           },
           {
@@ -132,7 +132,7 @@ export default async function PlatformAuditPage({
             cell: (event) => (
               <>
                 <p className="mono font-semibold text-[var(--ink)]">{event.action}</p>
-                <p className="mt-1 max-w-[220px] text-[12px] text-[var(--ink-muted)]">{event.summary ?? "—"}</p>
+                <p className="mt-1 max-w-[220px] text-[0.75rem] text-[var(--ink-muted)]">{event.summary ?? "—"}</p>
               </>
             ),
           },
@@ -145,14 +145,14 @@ export default async function PlatformAuditPage({
               return org ? (
                 <Link href={PLATFORM_ROUTES.org(org.id)} className="font-medium text-[var(--ink)] hover:underline">{org.name}</Link>
               ) : (
-                <span className="mono text-[12px] text-[var(--ink-muted)]">{event.orgId ?? "—"}</span>
+                <span className="mono text-[0.75rem] text-[var(--ink-muted)]">{event.orgId ?? "—"}</span>
               );
             },
           },
           {
             key: "actor",
             header: "Actor",
-            className: "align-top text-[12px] text-[var(--ink-muted)]",
+            className: "align-top text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => {
               const actor = event.actorUserId ? actorMap.get(event.actorUserId) : null;
               return actor ? <span>{actor.name}<br /><span className="mono">{actor.email}</span></span> : event.actorUserId ?? "—";
@@ -172,7 +172,7 @@ export default async function PlatformAuditPage({
           {
             key: "after",
             header: "After",
-            className: "align-top max-w-[260px] mono text-[12px] text-[var(--ink-muted)]",
+            className: "align-top max-w-[260px] mono text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => compactJson(event.afterJson),
           },
         ]}

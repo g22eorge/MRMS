@@ -388,7 +388,7 @@ export default async function DeliveryNotesPage({
           <DisclosureButton
             label="Create Delivery Note"
             openLabel="Cancel"
-            className="btn-premium rounded-lg px-3 py-1.5 text-[12px]"
+            className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]"
           />
         }
         kpis={[
@@ -402,7 +402,7 @@ export default async function DeliveryNotesPage({
       <DisclosurePanel>
       {hasDeliverySources ? (
         <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-          <div className="border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-semibold text-[var(--ink)]">
+          <div className="border-b border-[var(--line)] px-4 py-2.5 text-[0.75rem] font-semibold text-[var(--ink)]">
             Create Delivery Note from paid invoice or sale
           </div>
           <form action={createDeliveryNoteAction} className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -435,7 +435,7 @@ export default async function DeliveryNotesPage({
         </div>
       ) : (
         <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-[13px] font-semibold text-[var(--ink)]">No paid invoices or sales are ready for delivery notes.</p>
+          <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">No paid invoices or sales are ready for delivery notes.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/documents/invoices?create=1#create-invoice" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Create invoice</Link>
             <Link href="/pos" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open POS</Link>
@@ -456,7 +456,7 @@ export default async function DeliveryNotesPage({
             <Link
               key={m}
               href={`/documents/delivery-notes?period=${periodFilter}&method=${m}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                 methodFilter === m
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
                   : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
@@ -480,7 +480,7 @@ export default async function DeliveryNotesPage({
             cell: (n) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{n.deliveryNoteNumber}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
                 {/* Client + source visible on mobile (those columns hidden at md/lg) */}
                 <p className="mt-0.5 font-medium text-[var(--ink)] lg:hidden">
                   {n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? ""}
@@ -517,7 +517,7 @@ export default async function DeliveryNotesPage({
             className: "text-[var(--ink-muted)]",
             cell: (n) => (
               <>
-                {formatEATDate(n.deliveredAt)}<br /><span className="text-[12px]">{formatEATTime(n.deliveredAt)}</span>
+                {formatEATDate(n.deliveredAt)}<br /><span className="text-[0.75rem]">{formatEATTime(n.deliveredAt)}</span>
               </>
             ),
           },
@@ -570,7 +570,7 @@ export default async function DeliveryNotesPage({
                 <MenuSection label="Edit Delivery Note" />
                 <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
                   <input type="hidden" name="deliveryNoteId" value={n.id} />
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Delivery date
+                  <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Delivery date
                     <input name="deliveredAt" type="date" defaultValue={new Date(n.deliveredAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   </label>
                   <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />

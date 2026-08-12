@@ -105,7 +105,7 @@ export function UserAccessControlPanel({
       <input type="hidden" name="role" value={role} />
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 panel-shadow">
-        <label htmlFor="role-select" className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Role</label>
+        <label htmlFor="role-select" className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Role</label>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <div className="relative">
             <select
@@ -115,7 +115,7 @@ export function UserAccessControlPanel({
                 setRole(event.target.value);
                 setSelectedPermissions(new Set(roleDefaultPermissions[event.target.value] ?? []));
               }}
-              className="appearance-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] py-2 pl-3 pr-9 text-[14px] font-semibold text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15"
+              className="appearance-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] py-2 pl-3 pr-9 text-[0.875rem] font-semibold text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15"
             >
               {uniqueRoleOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -123,7 +123,7 @@ export function UserAccessControlPanel({
             </select>
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true">▾</span>
           </div>
-          <p className="min-w-0 flex-1 text-[13px] leading-snug text-[var(--ink-muted)]">
+          <p className="min-w-0 flex-1 text-[0.8125rem] leading-snug text-[var(--ink-muted)]">
             {uniqueRoleOptions.find((option) => option.value === role)?.description ?? "Sets this person's default permissions."}
           </p>
         </div>

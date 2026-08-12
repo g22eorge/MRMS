@@ -208,7 +208,7 @@ export default async function FieldPage({
         actions: isManager ? (
           <Link
             href="/field/new"
-            className="btn-premium inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px]"
+            className="btn-premium inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.75rem]"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
               <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -226,7 +226,7 @@ export default async function FieldPage({
 
           {/* Visit type breakdown */}
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Visit Types — This Month</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Visit Types — This Month</p>
             {typeBreakdown.length === 0 ? (
               <p className="mt-3 text-sm text-[var(--ink-muted)]">No visits this month.</p>
             ) : (
@@ -252,7 +252,7 @@ export default async function FieldPage({
           {/* Staff breakdown */}
           <div className="lg:col-span-2 panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/50 px-4 py-2.5">
-              <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Performance — This Month</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Staff Performance — This Month</p>
             </div>
             <DataTable
               frameless
@@ -264,13 +264,13 @@ export default async function FieldPage({
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="font-medium text-[var(--ink)]">{row.name}</p>
-                      <p className="text-[13px] text-[var(--ink-muted)] capitalize">{row.role.replace(/_/g, " ").toLowerCase()}</p>
+                      <p className="text-[0.8125rem] text-[var(--ink-muted)] capitalize">{row.role.replace(/_/g, " ").toLowerCase()}</p>
                     </div>
                     <span className={`text-sm font-bold tabular-nums ${row.rate >= 80 ? "text-emerald-700" : row.rate >= 60 ? "text-amber-700" : row.completed + row.failed > 0 ? "text-red-600" : "text-[var(--ink-muted)]"}`}>
                       {row.completed + row.failed > 0 ? `${row.rate}%` : "—"}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px] text-[var(--ink-muted)]">
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
                     <span>Total: <strong className="text-[var(--ink)]">{row.total}</strong></span>
                     <span>Pending: {row.pending}</span>
                     <span className="text-emerald-700">Done: <strong>{row.completed}</strong></span>
@@ -320,9 +320,9 @@ export default async function FieldPage({
         <form method="GET" className="flex gap-2 flex-1 min-w-[200px]">
           {statusParam && <input type="hidden" name="status" value={statusParam} />}
           <input name="q" defaultValue={q} placeholder="Search visit #, job, client, technician…"
-            className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
-          {q && <a href={`/field${statusParam ? `?status=${statusParam}` : ""}`} className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
+            className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+          {q && <a href={`/field${statusParam ? `?status=${statusParam}` : ""}`} className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
         </form>
       </div>
 
@@ -357,7 +357,7 @@ export default async function FieldPage({
               </div>
               <Link href={`/field/${visit.id}`} className="shrink-0 text-xs font-semibold text-[var(--accent)] hover:underline">View →</Link>
             </div>
-            <p className="mt-1 text-[12px] text-[var(--ink)]">{formatEATDateTime(visit.scheduledAt)}</p>
+            <p className="mt-1 text-[0.75rem] text-[var(--ink)]">{formatEATDateTime(visit.scheduledAt)}</p>
             <p className="mt-0.5 line-clamp-1 text-[var(--ink-muted)]">{visit.address}</p>
             <div className="mt-0.5 flex flex-wrap gap-x-3 text-[var(--ink-muted)]">
               {visit.contactName && <span>Contact: {visit.contactName}{visit.contactPhone ? ` (${visit.contactPhone})` : ""}</span>}
@@ -400,7 +400,7 @@ export default async function FieldPage({
           {
             key: "contact",
             header: "Contact",
-            className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+            className: "whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]",
             cell: (visit) => (
               <>
                 {visit.contactName ?? "—"}

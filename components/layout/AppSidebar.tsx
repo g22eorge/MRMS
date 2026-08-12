@@ -201,7 +201,7 @@ export function AppSidebar({
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={`group relative flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40 focus-visible:ring-offset-1 ${
+        className={`group relative flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[0.8125rem] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40 focus-visible:ring-offset-1 ${
           active
             ? "bg-[var(--dc-accent-soft)] font-semibold text-[var(--dc-accent-2)] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--dc-accent)]"
             : "font-medium text-[var(--dc-ink-2)] hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
@@ -217,12 +217,12 @@ export function AppSidebar({
         <span className="flex-1 truncate">{item.label}</span>
         <span className="flex items-center gap-1">
           {typeof nb === "number" && nb > 0 && (
-            <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[10px] font-bold text-[#1c1600]">
+            <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold text-[#1c1600]">
               {nb > 99 ? "99+" : nb} new
             </span>
           )}
           {typeof cb === "number" && cb > 0 && (
-            <span className="rounded-full bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--dc-ink-2)]">
+            <span className="rounded-full bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[0.65625rem] font-bold text-[var(--dc-ink-2)]">
               {cb > 99 ? "99+" : cb}
             </span>
           )}
@@ -261,12 +261,12 @@ export function AppSidebar({
                 type="button"
                 onClick={() => toggleGroup(section.group)}
                 aria-expanded={open}
-                className="flex w-full items-center gap-2 rounded-[9px] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--dc-ink-3)] transition-colors hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40"
+                className="flex w-full items-center gap-2 rounded-[9px] px-2 py-1.5 text-[0.625rem] font-bold uppercase tracking-[0.13em] text-[var(--dc-ink-3)] transition-colors hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40"
               >
                 <span>{section.label}</span>
                 <span className="h-px flex-1 bg-[var(--dc-line-soft)]" />
                 {!open && attention > 0 && (
-                  <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[10px] font-bold text-[#1c1600]">
+                  <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold text-[#1c1600]">
                     {attention > 99 ? "99+" : attention}
                   </span>
                 )}
@@ -288,12 +288,12 @@ export function AppSidebar({
       {/* ── Platform admin section ── */}
       {isPlatformAdmin && (
         <div className="border-t border-[var(--dc-line-soft)] px-3 py-2">
-          <p className="mb-1 px-2 text-[13px] font-bold uppercase tracking-[0.18em] text-amber-500/70">
+          <p className="mb-1 px-2 text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-amber-500/70">
             Platform Admin
           </p>
           <Link
             href="/admin/orgs"
-            className={`flex items-center gap-2 rounded-[9px] px-2 py-1.5 text-[12px] font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-[9px] px-2 py-1.5 text-[0.75rem] font-medium transition-colors ${
               pathname.startsWith("/admin/orgs")
                 ? "bg-amber-500/15 text-amber-600"
                 : "text-[var(--dc-ink-2)] hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
@@ -312,9 +312,9 @@ export function AppSidebar({
       {/* ── Footer ── */}
       <div className="border-t border-[var(--dc-line-soft)] px-5 py-3 text-left">
         {orgName && (
-          <p className="truncate text-[13px] font-semibold text-[var(--dc-ink)]" title={orgName}>{orgName}</p>
+          <p className="truncate text-[0.8125rem] font-semibold text-[var(--dc-ink)]" title={orgName}>{orgName}</p>
         )}
-        <p className="mt-0.5 text-[12px] font-medium tracking-[0.08em] text-[var(--dc-accent-2)]" aria-hidden="true">Duuka ProMax</p>
+        <p className="mt-0.5 text-[0.75rem] font-medium tracking-[0.08em] text-[var(--dc-accent-2)]" aria-hidden="true">Duuka ProMax</p>
       </div>
     </aside>
   );

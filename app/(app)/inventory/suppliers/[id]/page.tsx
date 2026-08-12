@@ -258,8 +258,8 @@ export default async function SupplierDetailPage({
         <div className="space-y-4">
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Contact</p>
-              <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">Since {fmt(supplier.createdAt)}</span>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Contact</p>
+              <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[0.6875rem] font-semibold text-[var(--ink-muted)]">Since {fmt(supplier.createdAt)}</span>
             </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
               <InfoRow label="Person">{supplier.contactName || "-"}</InfoRow>
@@ -269,7 +269,7 @@ export default async function SupplierDetailPage({
             </div>
             {supplier.notes ? (
               <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Notes</p>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Notes</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ink)]">{supplier.notes}</p>
               </div>
             ) : null}
@@ -282,24 +282,24 @@ export default async function SupplierDetailPage({
           <section id="price-list" className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
               <div>
-                <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Price List</p>
-                <p className="text-[13px] text-[var(--ink-muted)]">{prices.length} supplier terms captured</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Price List</p>
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">{prices.length} supplier terms captured</p>
               </div>
               {averageLeadDays != null ? <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]">{averageLeadDays}d avg lead</span> : null}
             </div>
 
             <form action={createSupplierPriceAction} className="grid gap-2 border-b border-[var(--line)] p-3 md:grid-cols-[1.2fr_1fr_0.7fr_0.55fr_0.55fr_0.55fr_auto]">
               <input type="hidden" name="supplierId" value={supplier.id} />
-              <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">No linked item</option>
                 {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
               </select>
-              <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-semibold">Add</button>
+              <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-semibold">Add</button>
             </form>
 
             <DataTable
@@ -315,7 +315,7 @@ export default async function SupplierDetailPage({
                   cell: (price) => (
                     <>
                       <p className="font-semibold text-[var(--ink)]">{price.partId ? partLabel.get(price.partId) ?? price.description : price.description}</p>
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
+                      <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{price.sku ?? "No SKU"} · valid from {fmt(price.validFrom)}</p>
                     </>
                   ),
                 },
@@ -369,9 +369,9 @@ function Metric({ label, value, hint, tone }: { label: string; value: string; hi
   const color = tone === "amber" ? "text-amber-600" : tone === "green" ? "text-emerald-600" : "text-[var(--ink)]";
   return (
     <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
+      <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
       <p className={`mt-1 truncate text-lg font-black tabular-nums ${color}`}>{value}</p>
-      <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{hint}</p>
+      <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{hint}</p>
     </div>
   );
 }
@@ -379,7 +379,7 @@ function Metric({ label, value, hint, tone }: { label: string; value: string; hi
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[92px_1fr] gap-3 py-2 text-sm">
-      <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
+      <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
       <div className="min-w-0 whitespace-pre-wrap text-[var(--ink)]">{children}</div>
     </div>
   );

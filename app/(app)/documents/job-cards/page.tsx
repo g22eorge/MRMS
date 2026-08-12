@@ -166,8 +166,8 @@ export default async function JobCardsPage({
 
       {/* ── Mobile: tap any job → Job Card button at the bottom ── */}
       <div className="sm:hidden rounded-xl border border-sky-500/20 bg-sky-500/6 px-4 py-3">
-        <p className="text-[12px] font-semibold text-sky-500 mb-1">Print a job card</p>
-        <p className="text-[13px] text-[var(--ink-muted)] leading-relaxed">
+        <p className="text-[0.75rem] font-semibold text-sky-500 mb-1">Print a job card</p>
+        <p className="text-[0.8125rem] text-[var(--ink-muted)] leading-relaxed">
           Tap any job below → the <strong className="text-[var(--ink)]">Generate Job Card</strong> button appears at the bottom of the screen — prints or downloads instantly.
         </p>
       </div>
@@ -180,7 +180,7 @@ export default async function JobCardsPage({
         actions={
           <Link
             href="/jobs/new"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[13px] font-bold text-black transition hover:brightness-105"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
             New Repair Job
@@ -203,7 +203,7 @@ export default async function JobCardsPage({
         ] as const).map(({ label, value }) => (
           <Link key={value}
             href={`/documents/job-cards?${new URLSearchParams({ ...(q ? { q } : {}), ...(statusFilter ? { status: statusFilter } : {}), period: value === "all" ? "" : value }).toString()}`}
-            className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+            className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
             {label}
           </Link>
         ))}
@@ -216,12 +216,12 @@ export default async function JobCardsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search job #, client, device…"
-          className="flex-1 min-w-[180px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50"
+          className="flex-1 min-w-[180px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50"
         />
         <select
           name="status"
           defaultValue={statusFilter ?? ""}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
         >
           <option value="">All statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -261,7 +261,7 @@ export default async function JobCardsPage({
                 <Link href={`/jobs/${job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">
                   {job.jobNumber}
                 </Link>
-                <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] sm:hidden">{job.client.fullName}</p>
+                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] sm:hidden">{job.client.fullName}</p>
               </>
             ),
           },
@@ -273,7 +273,7 @@ export default async function JobCardsPage({
             cell: (job) => (
               <>
                 <p className="font-medium text-[var(--ink)]">{job.client.fullName}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{job.client.phone}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client.phone}</p>
               </>
             ),
           },
@@ -341,7 +341,7 @@ export default async function JobCardsPage({
                     text={jobUrl}
                     label="Copy job link"
                     title="Copy job page link"
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[0.75rem] font-medium text-[var(--ink)] transition hover:bg-[var(--panel-strong)]"
                   />
                 </div>
               </RowActionsMenu>

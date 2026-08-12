@@ -491,7 +491,7 @@ export default async function RefundsPage({
             <DisclosureButton
               label="+ New Refund"
               openLabel="Cancel"
-              className="btn-premium rounded-lg px-3 py-1.5 text-[12px]"
+              className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]"
             />
           ) : undefined
         }
@@ -509,17 +509,17 @@ export default async function RefundsPage({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Issue New Refund</p>
-              <p className="text-[13px] text-[var(--ink-muted)]">Record cash-out against an invoice, sale, or credit note.</p>
+              <p className="text-[0.8125rem] text-[var(--ink-muted)]">Record cash-out against an invoice, sale, or credit note.</p>
             </div>
             <DisclosureButton
               label="Cancel"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
             />
           </div>
           {hasRefundSources ? (
           <form action={createRefundAction} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-[13px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Refund Source
               </label>
               <select
@@ -558,7 +558,7 @@ export default async function RefundsPage({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[13px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Amount ({currency})
               </label>
               <input
@@ -572,7 +572,7 @@ export default async function RefundsPage({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[13px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Method
               </label>
               <select
@@ -585,7 +585,7 @@ export default async function RefundsPage({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[13px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Reference
               </label>
               <input
@@ -595,7 +595,7 @@ export default async function RefundsPage({
               />
             </div>
             <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-              <label className="text-[13px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Note
               </label>
               <input
@@ -615,7 +615,7 @@ export default async function RefundsPage({
             </div>
           </form>
           ) : (
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-3 text-[13px] text-[var(--ink-muted)]">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-3 text-[0.8125rem] text-[var(--ink-muted)]">
               No paid invoices, sales, or credit notes have refundable balances.
             </div>
           )}
@@ -638,7 +638,7 @@ export default async function RefundsPage({
           <select
             name="type"
             defaultValue={typeFilter}
-            className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+            className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
           >
             <option value="all">All Types</option>
             <option value="invoice">Invoice Refunds</option>
@@ -647,7 +647,7 @@ export default async function RefundsPage({
           <select
             name="method"
             defaultValue={methodFilter}
-            className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+            className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
           >
             <option value="all">All Methods</option>
             {PAYMENT_METHODS.map((m) => (
@@ -656,7 +656,7 @@ export default async function RefundsPage({
           </select>
           <button
             type="submit"
-            className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]"
+            className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]"
           >
             Filter
           </button>
@@ -683,7 +683,7 @@ export default async function RefundsPage({
                 </div>
                 <StatusBadge tone="neutral" className="shrink-0">{r.method.replace(/_/g, " ")}</StatusBadge>
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem]">
                 <span className="font-medium text-[var(--ink)]">{clientName}</span>
                 <span className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(r.amount, refundCurrency)}</span>
                 <span className="text-[var(--ink-muted)]">{formatEATDate(r.refundedAt)}</span>
@@ -694,7 +694,7 @@ export default async function RefundsPage({
                   {r.note && <span className="line-clamp-1">{r.note}</span>}
                 </div>
               )}
-              <div className="mt-1 flex items-center justify-between text-[13px] text-[var(--ink-muted)]">
+              <div className="mt-1 flex items-center justify-between text-[0.8125rem] text-[var(--ink-muted)]">
                 <span>By: {r.createdBy?.name ?? "—"}</span>
                 {refundActionsMenu(r)}
               </div>
@@ -723,7 +723,7 @@ export default async function RefundsPage({
                     <span className="mono font-semibold">{sourceLabel}</span>
                   )}
                   {r.creditNote && (
-                    <span className="text-[12px] text-[var(--ink-muted)]">
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">
                       CN: {r.creditNote.creditNoteNumber}
                     </span>
                   )}

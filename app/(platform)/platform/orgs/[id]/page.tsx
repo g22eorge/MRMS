@@ -30,13 +30,13 @@ const STATUS_CHIP = PLATFORM_STATUS_CHIP;
 const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">{children}</p>;
+  return <p className="text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">{children}</p>;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
+      <p className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
       <p className="mt-0.5 text-sm font-medium text-[var(--ink)]">{value}</p>
     </div>
   );
@@ -99,14 +99,14 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-[var(--ink)]">{org.name}</h1>
-            <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${PLAN_CHIP[org.plan] ?? ""}`}>
+            <span className={`rounded-full border px-2.5 py-0.5 text-[0.8125rem] font-semibold ${PLAN_CHIP[org.plan] ?? ""}`}>
               {org.plan}
             </span>
-            <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${STATUS_CHIP[org.billingStatus] ?? ""}`}>
+            <span className={`rounded-full border px-2.5 py-0.5 text-[0.8125rem] font-semibold ${STATUS_CHIP[org.billingStatus] ?? ""}`}>
               {org.billingStatus}
             </span>
             {!org.isActive && (
-              <span className="rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-0.5 text-[13px] font-semibold text-red-700 dark:text-red-400">
+              <span className="rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-0.5 text-[0.8125rem] font-semibold text-red-700 dark:text-red-400">
                 INACTIVE
               </span>
             )}
@@ -133,7 +133,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           { label: `SMS ${smsUsed}/${smsLimit}`, value: `${smsPct}%` },
         ].map((m) => (
           <div key={m.label} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">{m.label}</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">{m.label}</p>
             <p className="mt-1 text-xl font-bold text-[var(--ink)]">{m.value}</p>
           </div>
         ))}
@@ -317,12 +317,12 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             <SectionTitle>Admin Access</SectionTitle>
           </div>
           <div className="space-y-3 px-5 py-4">
-            <p className="text-[13px] text-[var(--ink-muted)]">
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">
               Reset a locked-out administrator. This sets a new password and signs them out of every device.
             </p>
             {orgUsers.filter((u) => u.role === "ADMIN").map((u) => (
               <div key={u.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5">
-                <p className="mb-2 text-[13px] font-medium text-[var(--ink)]">
+                <p className="mb-2 text-[0.8125rem] font-medium text-[var(--ink)]">
                   {u.name} <span className="text-[var(--ink-muted)]">· {u.email}</span>
                 </p>
                 <UserPasswordResetForm userId={u.id} action={resetOrgAdminPasswordAction} />
@@ -373,7 +373,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               key: "reference",
               header: "Reference",
               headerClassName: "hidden md:table-cell",
-              className: "hidden mono text-[12px] text-[var(--ink-muted)] md:table-cell",
+              className: "hidden mono text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
               cell: (e) => e.txRef ?? "—",
             },
           ]}
@@ -415,8 +415,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                     <ModuleIcon module={mod} className="h-4 w-4 text-[var(--accent)]" />
                     <span className={`h-2 w-2 rounded-full ${isGranted ? "bg-emerald-500" : enabledModuleSet.size === 0 ? "bg-[var(--ink-muted)]/30" : "bg-red-400"}`} />
                   </div>
-                  <p className="mt-1.5 text-[13px] font-bold leading-tight">{MODULE_LABELS[mod]}</p>
-                  <p className="mt-0.5 text-[12px] font-semibold uppercase tracking-wide opacity-60">
+                  <p className="mt-1.5 text-[0.8125rem] font-bold leading-tight">{MODULE_LABELS[mod]}</p>
+                  <p className="mt-0.5 text-[0.75rem] font-semibold uppercase tracking-wide opacity-60">
                     {isGranted ? "ON — click to disable" : enabledModuleSet.size === 0 ? "default on" : "OFF — click to enable"}
                   </p>
                 </button>

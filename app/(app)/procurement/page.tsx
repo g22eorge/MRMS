@@ -141,7 +141,7 @@ export default async function ProcurementPage() {
         ],
       }}
       footer={
-        <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-[12px] text-[var(--ink-muted)]">
+        <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-[0.75rem] text-[var(--ink-muted)]">
           <span className="font-semibold uppercase tracking-[0.14em]">Export CSV</span>
           {EXPORTS.map((item) => (
             <a
@@ -158,11 +158,11 @@ export default async function ProcurementPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Requests to review</p>
-            <Link href="/inventory/purchase-requests" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Requests to review</p>
+            <Link href="/inventory/purchase-requests" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
           </div>
           {reviewQueue.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No requests waiting for review.</p>
+            <p className="px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">No requests waiting for review.</p>
           ) : (
           <DataTable
             frameless
@@ -176,7 +176,7 @@ export default async function ProcurementPage() {
                 cell: (request) => (
                   <>
                     <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
                   </>
                 ),
               },
@@ -195,7 +195,7 @@ export default async function ProcurementPage() {
                       <form action={convertPurchaseRequestToPoAction} className="inline-flex justify-end">
                         <input type="hidden" name="id" value={request.id} />
                         <input type="hidden" name="supplierId" value={request.supplierId} />
-                        <button type="submit" className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-slate-700">Convert</button>
+                        <button type="submit" className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1.5 text-[0.75rem] font-semibold text-slate-700">Convert</button>
                       </form>
                     ) : (
                       <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">Convert</Button>
@@ -206,12 +206,12 @@ export default async function ProcurementPage() {
                       <form action={reviewPurchaseRequestAction}>
                         <input type="hidden" name="id" value={request.id} />
                         <input type="hidden" name="action" value="APPROVED" />
-                        <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700">Approve</button>
+                        <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[0.75rem] font-semibold text-emerald-700">Approve</button>
                       </form>
                       <form action={reviewPurchaseRequestAction}>
                         <input type="hidden" name="id" value={request.id} />
                         <input type="hidden" name="action" value="REJECTED" />
-                        <button type="submit" className="rounded-lg border border-red-500/25 px-2.5 py-1.5 text-[12px] font-semibold text-red-600">Reject</button>
+                        <button type="submit" className="rounded-lg border border-red-500/25 px-2.5 py-1.5 text-[0.75rem] font-semibold text-red-600">Reject</button>
                       </form>
                     </div>
                   );
@@ -224,11 +224,11 @@ export default async function ProcurementPage() {
 
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Waiting to arrive</p>
-            <Link href="/inventory/purchase-orders" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All orders</Link>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Waiting to arrive</p>
+            <Link href="/inventory/purchase-orders" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All orders</Link>
           </div>
           {receivingQueue.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">Nothing waiting to arrive.</p>
+            <p className="px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">Nothing waiting to arrive.</p>
           ) : (
           <DataTable
             frameless
@@ -242,7 +242,7 @@ export default async function ProcurementPage() {
                 cell: (order) => (
                   <>
                     <Link href={`/inventory/purchase-orders/${order.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{poRef(order)}</Link>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{order.status}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{order.status}</p>
                   </>
                 ),
               },
@@ -282,8 +282,8 @@ export default async function ProcurementPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
-            <Link href="/inventory/supplier-bills" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All bills</Link>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
+            <Link href="/inventory/supplier-bills" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All bills</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {billQueue.map((bill) => (
@@ -295,14 +295,14 @@ export default async function ProcurementPage() {
                 <p className="shrink-0 text-right text-xs font-bold tabular-nums text-[var(--ink)]">{bill.currency} {Math.max(0, bill.totalAmount - bill.paidAmount).toLocaleString()}</p>
               </Link>
             ))}
-            {billQueue.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">No supplier bills due.</p> : null}
+            {billQueue.length === 0 ? <p className="px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">No supplier bills due.</p> : null}
           </div>
         </section>
 
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recently received</p>
-            <Link href="/inventory/goods-received" className="text-[12px] font-semibold text-[var(--accent)] hover:underline">All receipts</Link>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Recently received</p>
+            <Link href="/inventory/goods-received" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All receipts</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {recentGrns.map((grn) => (
@@ -314,7 +314,7 @@ export default async function ProcurementPage() {
                 <p className="shrink-0 text-xs text-[var(--ink-muted)]">{grn.po ? poRef(grn.po) : "No PO"}</p>
               </Link>
             ))}
-            {recentGrns.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">Nothing received yet.</p> : null}
+            {recentGrns.length === 0 ? <p className="px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">Nothing received yet.</p> : null}
           </div>
         </section>
       </div>

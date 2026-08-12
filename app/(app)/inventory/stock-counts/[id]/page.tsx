@@ -62,7 +62,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
               <MenuDestructiveRow>
                 <form action={cancelStockCountAction}>
                   <input type="hidden" name="id" value={count.id} />
-                  <ConfirmSubmitButton message="Cancel this stock count? This can't be undone." confirmLabel="Cancel count" className="w-full text-left text-[12px] text-red-600">Cancel Count</ConfirmSubmitButton>
+                  <ConfirmSubmitButton message="Cancel this stock count? This can't be undone." confirmLabel="Cancel count" className="w-full text-left text-[0.75rem] text-red-600">Cancel Count</ConfirmSubmitButton>
                 </form>
               </MenuDestructiveRow>
             </RowActionsMenu>
@@ -76,19 +76,19 @@ export default async function StockCountDetailPage({ params }: { params: Promise
       {/* KPI tiles */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Counted</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Counted</p>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(count.countedAt)}</p>
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Items</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Items</p>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{count.items.length}</p>
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Variances</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Variances</p>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{varianceLines}</p>
         </div>
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Approved</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Approved</p>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(count.approvedAt)}</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
             cell: (item) => (
               <>
                 <p className="font-semibold text-[var(--ink)]">{item.part.sku}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{item.part.name}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.part.name}</p>
               </>
             ),
           },
@@ -116,7 +116,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
           {
             key: "note",
             header: "Note",
-            className: "hidden text-[12px] text-[var(--ink-muted)] sm:table-cell",
+            className: "hidden text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",
             headerClassName: "hidden sm:table-cell",
             cell: (item) => item.note ?? "-",
           },

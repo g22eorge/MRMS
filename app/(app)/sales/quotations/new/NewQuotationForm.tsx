@@ -281,7 +281,7 @@ export function NewQuotationForm({
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.55fr)]">
         <div className="min-w-0 space-y-4">
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Date</p>
+            <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Date</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-xs font-semibold text-[var(--ink-muted)]">
                 Issue Date
@@ -295,7 +295,7 @@ export function NewQuotationForm({
           </section>
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Customer</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Customer</p>
               {(selectedSource || customerMode === "new") ? (
                 <button
                   type="button"
@@ -312,10 +312,10 @@ export function NewQuotationForm({
               <div className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-3 py-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold text-[var(--ink)]">{selectedSource.title}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{selectedSource.meta || selectedSource.detail || ""}</p>
+                    <p className="truncate text-[0.8125rem] font-bold text-[var(--ink)]">{selectedSource.title}</p>
+                    <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{selectedSource.meta || selectedSource.detail || ""}</p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{selectedSource.badge}</span>
+                  <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{selectedSource.badge}</span>
                 </div>
               </div>
             ) : customerMode === "new" ? (
@@ -351,7 +351,7 @@ export function NewQuotationForm({
                   placeholder="Address / location (optional)"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
-                <p className="px-1 text-[11px] text-[var(--ink-muted)]">A new client will be created with this quotation.</p>
+                <p className="px-1 text-[0.6875rem] text-[var(--ink-muted)]">A new client will be created with this quotation.</p>
               </div>
             ) : (
               /* Smart search — one field for existing OR new */
@@ -374,10 +374,10 @@ export function NewQuotationForm({
                       >
                         <span className="flex items-start justify-between gap-2">
                           <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{source.title}</span>
-                            <span className="block truncate text-[12px] text-[var(--ink-muted)]">{source.meta || source.detail}</span>
+                            <span className="block truncate text-[0.8125rem] font-bold text-[var(--ink)]">{source.title}</span>
+                            <span className="block truncate text-[0.75rem] text-[var(--ink-muted)]">{source.meta || source.detail}</span>
                           </span>
-                          <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{source.badge}</span>
+                          <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{source.badge}</span>
                         </span>
                       </button>
                     ))}
@@ -386,12 +386,12 @@ export function NewQuotationForm({
                       onClick={() => { setSelectedSourceKey(""); setNewClient((prev) => ({ ...prev, fullName: sourceQuery.trim() })); setCustomerMode("new"); }}
                       className="flex w-full items-center gap-2 rounded-lg border border-dashed border-[var(--accent)]/45 bg-[var(--accent)]/5 px-3 py-2 text-left transition hover:bg-[var(--accent)]/10"
                     >
-                      <span className="text-[16px] font-bold leading-none text-[var(--accent)]">+</span>
-                      <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--ink)]">Add new customer <span className="text-[var(--ink-muted)]">&ldquo;{sourceQuery.trim()}&rdquo;</span></span>
+                      <span className="text-[1rem] font-bold leading-none text-[var(--accent)]">+</span>
+                      <span className="min-w-0 truncate text-[0.8125rem] font-semibold text-[var(--ink)]">Add new customer <span className="text-[var(--ink-muted)]">&ldquo;{sourceQuery.trim()}&rdquo;</span></span>
                     </button>
                   </div>
                 ) : (
-                  <p className="px-1 text-[12px] text-[var(--ink-muted)]">Start typing to find an existing customer — or add a new one.</p>
+                  <p className="px-1 text-[0.75rem] text-[var(--ink-muted)]">Start typing to find an existing customer — or add a new one.</p>
                 )}
               </div>
             )}
@@ -399,7 +399,7 @@ export function NewQuotationForm({
 
           <section className="panel-shadow min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
               <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--accent)] hover:underline">Tax rates</Link>
             </div>
             <LineItemTotals
@@ -463,10 +463,10 @@ export function NewQuotationForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={isPending} className="btn-premium rounded-lg px-6 py-2.5 text-[13px] font-bold disabled:opacity-60">
+        <button type="submit" disabled={isPending} className="btn-premium rounded-lg px-6 py-2.5 text-[0.8125rem] font-bold disabled:opacity-60">
           {isPending ? "Creating..." : "Create Quotation"}
         </button>
-        <button type="button" onClick={() => router.back()} className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-[13px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
+        <button type="button" onClick={() => router.back()} className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
           Cancel
         </button>
       </div>

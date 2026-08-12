@@ -67,13 +67,13 @@ export function StatCards({ cards, columns }: { cards: StatCard[]; columns?: 2 |
         const body = (
           <>
             <span className={`absolute inset-y-0 left-0 w-[3px] ${rail}`} aria-hidden="true" />
-            <p className={`text-[11px] font-semibold ${card.active ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink-3)]"}`}>
+            <p className={`text-[0.6875rem] font-semibold ${card.active ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink-3)]"}`}>
               {card.label}
             </p>
-            <p className={`mt-1 truncate text-[26px] font-bold leading-none tracking-[-0.02em] tabular-nums ${value}`}>
+            <p className={`mt-1 truncate text-[1.625rem] font-bold leading-none tracking-[-0.02em] tabular-nums ${value}`}>
               {card.value}
             </p>
-            {card.sub ? <p className="mt-1 truncate text-[10.5px] text-[var(--dc-ink-3)]">{card.sub}</p> : null}
+            {card.sub ? <p className="mt-1 truncate text-[0.65625rem] text-[var(--dc-ink-3)]">{card.sub}</p> : null}
           </>
         );
 

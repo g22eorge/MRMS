@@ -256,8 +256,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   const hasFilters = Boolean(statusFilter) || Boolean(q);
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cardLabel = "text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
 
   const statusChips = [
     { key: "all", short: "All", long: `${campaigns.length} all`, count: campaigns.length, url: href({ status: null }), active: !statusFilter },
@@ -281,7 +281,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     <form action={updateContactStatus} className="flex items-center justify-end gap-1.5">
       <input type="hidden" name="id" value={cc.id} />
       <select name="status" defaultValue={cc.status} aria-label={`Status for ${(cc.lead ?? cc.client)?.fullName ?? "contact"}`}
-        className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] outline-none focus:border-[var(--accent)]/50">
+        className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.75rem] outline-none focus:border-[var(--accent)]/50">
         {CONTACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
       <button type="submit" title="Apply status"
@@ -300,8 +300,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           <div className="space-y-3 lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-[22px] font-black text-[var(--ink)]">Campaigns</h1>
-                <p className="text-[13px] text-[var(--ink-muted)]">{campaigns.length} total · {totalActive} active</p>
+                <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Campaigns</h1>
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">{campaigns.length} total · {totalActive} active</p>
               </div>
               <DisclosureTrigger
                 className={buttonClasses("primary", "md", { className: "rounded-xl font-bold" })}
@@ -318,8 +318,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 { label: "Replies", value: totalResponded },
               ] as const).map(({ label, value }) => (
                 <div key={label} className="min-w-0 px-1.5 py-3 text-center">
-                  <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
-                  <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+                  <p className="truncate text-[1.0625rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+                  <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
                 </div>
               ))}
             </div>
@@ -329,7 +329,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 <Link
                   key={key}
                   href={url}
-                  className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                  className={`rounded-full py-1.5 text-center text-[0.75rem] font-bold transition ${
                     active
                       ? "bg-[var(--accent)] text-black"
                       : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -351,7 +351,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                   name="q"
                   defaultValue={q}
                   placeholder="Campaign name..."
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
                   <Link href={href({ q: "" })} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -398,7 +398,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             <Link
               key={key}
               href={url}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 active
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -420,7 +420,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           />
           <Button type="submit" variant="secondary" size="sm">Search</Button>
           {hasFilters ? (
-            <Link href={href({ status: null, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+            <Link href={href({ status: null, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
         </form>
       </div>
@@ -494,8 +494,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         <CampaignTypeIcon type={c.type} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-bold text-[var(--ink)]">{c.name}</p>
-                        <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                        <p className="truncate text-[0.875rem] font-bold text-[var(--ink)]">{c.name}</p>
+                        <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
                           {c._count.contacts} contacts
                           {sentCount > 0 ? ` · ${sentCount} sent · ${rate}% replied` : ""}
                           {c.scheduledAt ? ` · ${formatEATDate(c.scheduledAt)}` : ""}
@@ -534,10 +534,10 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[13px] font-bold text-[var(--ink)]">{selected.name}</p>
+                      <p className="truncate text-[0.8125rem] font-bold text-[var(--ink)]">{selected.name}</p>
                       <StatusBadge tone={toneFor(STATUS_TONES, selected.status)}>{selected.status}</StatusBadge>
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--ink-muted)]">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
                       <span className="flex items-center gap-1.5">
                         <CampaignTypeIcon type={selected.type} className="h-3.5 w-3.5" />
                         {selected.type}
@@ -546,7 +546,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <span>{selected._count.contacts} contacts</span>
                       {selected.subject ? <><span className="opacity-40">·</span><span className="truncate">{selected.subject}</span></> : null}
                     </div>
-                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]/60">
+                    <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]/60">
                       Created {formatEATDate(selected.createdAt)}
                       {selected.scheduledAt ? ` · scheduled ${formatEATDateTime(selected.scheduledAt)}` : ""}
                       {selected.startedAt ? ` · started ${formatEATDate(selected.startedAt)}` : ""}
@@ -596,12 +596,12 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 />
 
                 <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message</p>
-                  <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)] [overflow-wrap:anywhere]">{selected.body}</p>
+                  <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-[0.8125rem] text-[var(--ink)] [overflow-wrap:anywhere]">{selected.body}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] p-3">
-                  <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Add contacts</span>
+                  <span className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Add contacts</span>
                   <form action={addLeadsToCampaign}>
                     <input type="hidden" name="campaignId" value={selected.id} />
                     <input type="hidden" name="source" value="all_leads" />
@@ -618,7 +618,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
                   <p className={cardLabel}>Contacts</p>
-                  <p className="text-[12px] text-[var(--ink-muted)]">
+                  <p className="text-[0.75rem] text-[var(--ink-muted)]">
                     {contacts.length} total{selectedPending > 0 ? ` · ${selectedPending} pending` : ""}
                   </p>
                 </div>
@@ -659,7 +659,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         return (
                           <div className="min-w-0">
                             <p className="truncate font-semibold text-[var(--ink)]">{person.fullName}</p>
-                            <p className="truncate text-[12px] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
+                            <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
                           </div>
                         );
                       },
@@ -673,13 +673,13 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       key: "sent",
                       header: "Sent",
                       headerClassName: "hidden xl:table-cell",
-                      className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                      className: "hidden whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                       cell: (cc) => cc.sentAt ? formatEATDate(cc.sentAt) : <span className="opacity-30">—</span>,
                     },
                     {
                       key: "replied",
                       header: "Replied",
-                      className: "whitespace-nowrap text-[12px]",
+                      className: "whitespace-nowrap text-[0.75rem]",
                       cell: (cc) => cc.repliedAt
                         ? <span className="font-semibold text-emerald-600">{formatEATDate(cc.repliedAt)}</span>
                         : <span className="text-[var(--ink-muted)]/30">—</span>,

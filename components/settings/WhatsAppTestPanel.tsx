@@ -24,7 +24,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
     <div className="panel-shadow space-y-5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
       {/* Header */}
       <div>
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
           Send Test Message
         </p>
         <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
@@ -34,7 +34,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
 
       {/* From display */}
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3">
-        <p className="mb-1 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+        <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
           From (WhatsApp Business Number)
         </p>
         <div className="flex items-center gap-2.5">
@@ -46,7 +46,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
           <div>
             <p className="text-sm font-bold text-[var(--ink)]">{from}</p>
             {verifiedName ? (
-              <p className="text-[13px] text-[var(--ink-muted)]">{verifiedName}</p>
+              <p className="text-[0.8125rem] text-[var(--ink-muted)]">{verifiedName}</p>
             ) : null}
           </div>
         </div>
@@ -54,7 +54,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
 
       {/* Template notice */}
       <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 px-3 py-2.5">
-        <p className="text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
           Sends the approved <span className="mono font-semibold text-[var(--ink)]">hello_world</span> template — the only message type Meta delivers for business-initiated conversations.
         </p>
       </div>
@@ -70,9 +70,9 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
             type="tel"
             placeholder="+256 7XX XXX XXX"
             required
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
             Use the real phone number of the WhatsApp account you want to test delivery to.
           </p>
         </div>
@@ -107,7 +107,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
                 <p className="mt-0.5 text-xs text-emerald-700">
                   From <span className="mono font-semibold">{result.from}</span> → <span className="mono font-semibold">{result.to}</span>
                 </p>
-                <p className="mt-1 mono text-[13px] text-emerald-600 break-all">
+                <p className="mt-1 mono text-[0.8125rem] text-emerald-600 break-all">
                   Message ID: {result.messageId}
                 </p>
               </div>

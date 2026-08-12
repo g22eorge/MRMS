@@ -44,7 +44,7 @@ export function AnnouncementBanner({ announcements }: { announcements: Announcem
       {visible.map((a) => (
         <div
           key={a.id}
-          className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-[13px] ${STYLES[a.level] ?? STYLES.INFO}`}
+          className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-[0.8125rem] ${STYLES[a.level] ?? STYLES.INFO}`}
         >
           <div>
             <span className="font-bold">{a.title}</span> <span className="opacity-90">{a.body}</span>

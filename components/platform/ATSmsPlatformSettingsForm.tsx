@@ -51,7 +51,7 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-5">
       <div>
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Africa&apos;s Talking (SMS)</p>
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Africa&apos;s Talking (SMS)</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Configure platform-wide SMS credentials. Values saved here override environment variables.
         </p>
@@ -65,7 +65,7 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
             <div key={f.key}>
               <div className="mb-1 flex items-center justify-between gap-2">
                 <label className="text-xs font-semibold text-[var(--ink-muted)]">{f.label}</label>
-                <span className={`text-[12px] font-semibold ${isSet ? "text-emerald-600" : "text-[var(--ink-muted)]"}`}>
+                <span className={`text-[0.75rem] font-semibold ${isSet ? "text-emerald-600" : "text-[var(--ink-muted)]"}`}>
                   {isSet ? (isInDb ? "✓ Configured (DB)" : "✓ Configured (env)") : "Not configured"}
                 </span>
               </div>
@@ -75,7 +75,7 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
                   type={f.type ?? "text"}
                   autoComplete="off"
                   placeholder={isSet ? "Leave blank to keep existing value" : f.placeholder}
-                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+                  className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
                   <form action={clearAction}>
@@ -86,7 +86,7 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
                   </form>
                 )}
               </div>
-              <p className="mt-1 text-[12px] text-[var(--ink-muted)]">{f.hint}</p>
+              <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{f.hint}</p>
             </div>
           );
         })}

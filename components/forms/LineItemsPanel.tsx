@@ -25,8 +25,8 @@ export function LineItemsPanel({
     <div className={`overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] ${className}`}>
       <div className={`flex items-center justify-between border-b border-[var(--line)] ${dense ? "px-3 py-2" : "px-5 py-3"}`}>
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
-          {subtitle ? <p className="text-[12px] text-[var(--ink-muted)]">{subtitle}</p> : null}
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
+          {subtitle ? <p className="text-[0.75rem] text-[var(--ink-muted)]">{subtitle}</p> : null}
         </div>
         <button
           type="button"

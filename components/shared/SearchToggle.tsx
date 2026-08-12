@@ -76,7 +76,7 @@ export function SearchToggle({ basePath, defaultValue, placeholder = "Search…"
         defaultValue={defaultValue}
         placeholder={placeholder}
         autoFocus
-        className="w-52 rounded-lg border border-[var(--accent)]/40 bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none ring-2 ring-[var(--accent)]/15 placeholder:text-[var(--ink-muted)] transition"
+        className="w-52 rounded-lg border border-[var(--accent)]/40 bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none ring-2 ring-[var(--accent)]/15 placeholder:text-[var(--ink-muted)] transition"
       />
       <button type="submit" aria-label="Submit search" className={iconBtn}>
         <SearchIcon />

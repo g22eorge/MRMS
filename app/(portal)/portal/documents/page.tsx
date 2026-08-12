@@ -46,18 +46,18 @@ export default async function PortalDocumentsPage() {
   );
 
   const companyName = client.organization || client.fullName;
-  const dlClass = "rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]";
+  const dlClass = "rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]";
   const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
-  const headClass = "border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]";
-  const emptyClass = "px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]";
-  const rowClass = "flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 px-4 py-2.5 text-[13px] last:border-0";
+  const headClass = "border-b border-[var(--line)] px-4 py-2.5 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]";
+  const emptyClass = "px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]";
+  const rowClass = "flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 px-4 py-2.5 text-[0.8125rem] last:border-0";
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="documents" accounts={accessibleClients} activeClientId={client.id} />
       <div>
         <h1 className="text-xl font-black text-[var(--ink)]">Documents</h1>
-        <p className="text-[13px] text-[var(--ink-muted)]">Every quotation, invoice and receipt on your account with {org.name}.</p>
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">Every quotation, invoice and receipt on your account with {org.name}.</p>
       </div>
 
       {/* Quotations */}
@@ -74,7 +74,7 @@ export default async function PortalDocumentsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
-                <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-muted)]">{q.status}</span>
+                <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[0.6875rem] font-bold text-[var(--ink-muted)]">{q.status}</span>
                 <a href={`/api/portal/quotation/${q.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
               </div>
             </div>
@@ -98,7 +98,7 @@ export default async function PortalDocumentsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(inv.totalAmount, inv.currency)}</span>
-                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${outstanding > 0 ? "bg-red-500/15 text-red-500" : "bg-emerald-500/15 text-emerald-600"}`}>
+                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${outstanding > 0 ? "bg-red-500/15 text-red-500" : "bg-emerald-500/15 text-emerald-600"}`}>
                     {outstanding > 0 ? `${formatMoney(outstanding, inv.currency)} due` : "Paid"}
                   </span>
                   <a href={`/api/portal/invoice/${inv.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
@@ -130,7 +130,7 @@ export default async function PortalDocumentsPage() {
         )}
       </section>
 
-      <p className="text-center text-[11px] text-[var(--ink-muted)]">
+      <p className="text-center text-[0.6875rem] text-[var(--ink-muted)]">
         Showing documents for {companyName} only.
       </p>
     </div>

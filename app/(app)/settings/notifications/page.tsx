@@ -27,7 +27,7 @@ export default async function NotificationSettingsPage() {
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Notifications</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Notifications</p>
           </div>
           {(canSeeOutbox || canSeeTemplates || canSeeWhatsApp) && (
             <div className="flex flex-wrap gap-1.5">

@@ -44,7 +44,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-premium rounded-lg px-3 py-1.5 text-[12px]"
+        className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]"
       >
         + New Credit Note
       </button>
@@ -60,7 +60,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
           <form action={action} className="space-y-3 p-4">
             <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
               <label className="space-y-1">
-                <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Sale</span>
+                <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Sale</span>
                 <select
                   name="saleId"
                   value={selectedSale.id}
@@ -75,7 +75,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
                 </select>
               </label>
               <label className="space-y-1">
-                <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Reason</span>
+                <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Reason</span>
                 <input
                   name="reason"
                   required
@@ -96,7 +96,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-[var(--ink)]">{item.description}</span>
-                    <span className="text-[12px] text-[var(--ink-muted)]">{money(item.lineTotal, selectedSale.currency)}</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{money(item.lineTotal, selectedSale.currency)}</span>
                   </span>
                   <input
                     name={`quantity:${item.id}`}
@@ -107,7 +107,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action }: Props) {
                     className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm"
                     aria-label={`Quantity for ${item.description}`}
                   />
-                  <span className="text-right text-[13px] font-semibold text-[var(--ink-muted)]">
+                  <span className="text-right text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                     @ {money(item.unitPrice, selectedSale.currency)}
                   </span>
                 </label>

@@ -82,11 +82,11 @@ export default async function NewQuotationPage({
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Documents</p>
-            <p className="text-[13px] font-bold text-[var(--ink)]">New Quotation</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Build a quote for products, services, leads, clients, or a repair job.</p>
-            {leadName ? <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Lead: {leadName}</p> : null}
-            {clientName ? <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Client: {clientName}</p> : null}
+            <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Documents</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Quotation</p>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Build a quote for products, services, leads, clients, or a repair job.</p>
+            {leadName ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Lead: {leadName}</p> : null}
+            {clientName ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Client: {clientName}</p> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)]">{clients.length} clients</span>

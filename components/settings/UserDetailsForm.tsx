@@ -31,7 +31,7 @@ export function UserDetailsForm({ id, name, email, phone, action }: UserDetailsF
         name="name"
         defaultValue={name}
         placeholder="Full name"
-        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <input
         required
@@ -39,21 +39,21 @@ export function UserDetailsForm({ id, name, email, phone, action }: UserDetailsF
         name="email"
         defaultValue={email}
         placeholder="Email"
-        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <input
         name="phone"
         defaultValue={phone ?? ""}
         placeholder="Phone"
-        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+        className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
       />
       <SubmitActionButton
         idleLabel="Save"
         pendingLabel="Saving…"
-        className="btn-premium rounded-lg px-4 py-1.5 text-[13px] text-white md:w-fit"
+        className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] text-white md:w-fit"
       />
-      {state.error ? <p className="text-[13px] text-red-400 md:col-span-2 xl:col-span-4">{state.error}</p> : null}
-      {state.success ? <p className="text-[13px] text-[var(--accent)] md:col-span-2 xl:col-span-4">{state.success}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-red-400 md:col-span-2 xl:col-span-4">{state.error}</p> : null}
+      {state.success ? <p className="text-[0.8125rem] text-[var(--accent)] md:col-span-2 xl:col-span-4">{state.success}</p> : null}
     </form>
   );
 }

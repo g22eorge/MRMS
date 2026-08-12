@@ -164,9 +164,9 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
           Back button is now in the sticky Header bar above, not here. */}
       <div className={`flex items-center gap-2 sm:hidden ${hideMobile ? "hidden" : ""}`}>
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <h1 className="text-[15px] font-bold tracking-tight text-[var(--ink)]">{meta.title}</h1>
+          <h1 className="text-[0.9375rem] font-bold tracking-tight text-[var(--ink)]">{meta.title}</h1>
           {subtitle ? (
-            <span className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 mono text-[12px] font-medium text-[var(--ink-muted)]">
+            <span className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 mono text-[0.75rem] font-medium text-[var(--ink-muted)]">
               {subtitle}
             </span>
           ) : null}
@@ -177,14 +177,14 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
       <section className="hidden items-center gap-3 rounded-2xl bg-[var(--dc-panel)] px-4 py-2.5 shadow-[var(--dc-shadow)] sm:flex">
         <div className="h-5 w-[3px] shrink-0 rounded-full bg-[var(--dc-accent)]" />
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2">
-          <h1 className="text-[13px] font-bold tracking-tight text-[var(--dc-ink)]">{meta.title}</h1>
+          <h1 className="text-[0.8125rem] font-bold tracking-tight text-[var(--dc-ink)]">{meta.title}</h1>
           {subtitle ? (
-            <span className="rounded border border-[var(--dc-line)] bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[12px] mono font-medium text-[var(--dc-ink-3)]">
+            <span className="rounded border border-[var(--dc-line)] bg-[var(--dc-panel-2)] px-1.5 py-0.5 text-[0.75rem] mono font-medium text-[var(--dc-ink-3)]">
               {subtitle}
             </span>
           ) : null}
           {meta.description ? (
-            <span className="text-[13px] text-[var(--dc-ink-3)]">{meta.description}</span>
+            <span className="text-[0.8125rem] text-[var(--dc-ink-3)]">{meta.description}</span>
           ) : null}
         </div>
       </section>

@@ -163,7 +163,7 @@ export default async function DocumentTemplatesPage() {
         return (
           <section key={kind} className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--line)] px-4 py-3">
-              <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
                 {KIND_LABELS[kind]}
               </p>
             </div>
@@ -190,7 +190,7 @@ export default async function DocumentTemplatesPage() {
                       <div className="flex flex-1 flex-col gap-1.5 p-3">
                         {/* Top row: number badge + status badges */}
                         <div className="flex items-center justify-between gap-1">
-                          <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-[var(--ink-muted)]">
+                          <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.75rem] font-bold tabular-nums text-[var(--ink-muted)]">
                             T-{String(t.templateNumber).padStart(2, "0")}
                           </span>
                           <div className="flex items-center gap-1">
@@ -204,17 +204,17 @@ export default async function DocumentTemplatesPage() {
                         </div>
 
                         {/* Label */}
-                        <p className="text-[13px] font-semibold leading-tight text-[var(--ink)]">
+                        <p className="text-[0.8125rem] font-semibold leading-tight text-[var(--ink)]">
                           {t.label}
                         </p>
 
                         {/* Description */}
-                        <p className="text-[12px] leading-snug text-[var(--ink-muted)]">
+                        <p className="text-[0.75rem] leading-snug text-[var(--ink-muted)]">
                           {t.description}
                         </p>
 
                         {/* Plan badge */}
-                        <span className={`mt-0.5 inline-flex w-fit items-center rounded-full px-1.5 py-0.5 text-[12px] font-semibold ${planBadgeClass(t.minPlan)}`}>
+                        <span className={`mt-0.5 inline-flex w-fit items-center rounded-full px-1.5 py-0.5 text-[0.75rem] font-semibold ${planBadgeClass(t.minPlan)}`}>
                           {planLabel(t.minPlan)}
                         </span>
                       </div>
@@ -232,7 +232,7 @@ export default async function DocumentTemplatesPage() {
                         </a>
                         {isAllowed ? (
                           isCurrent ? (
-                            <span className="text-[12px] font-semibold text-emerald-600">Active</span>
+                            <span className="text-[0.75rem] font-semibold text-emerald-600">Active</span>
                           ) : (
                             <form action={setTemplateAction} className="min-w-0 flex-1">
                               <input type="hidden" name="key"  value={t.key} />
@@ -241,7 +241,7 @@ export default async function DocumentTemplatesPage() {
                             </form>
                           )
                         ) : (
-                          <span className="truncate text-[12px] text-[var(--ink-muted)]">Needs {planLabel(t.minPlan)}</span>
+                          <span className="truncate text-[0.75rem] text-[var(--ink-muted)]">Needs {planLabel(t.minPlan)}</span>
                         )}
                       </div>
 

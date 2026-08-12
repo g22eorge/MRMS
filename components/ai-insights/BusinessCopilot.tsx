@@ -38,7 +38,7 @@ function FormattedText({ text }: { text: string }) {
 
     if (isHeader) {
       elements.push(
-        <p key={key++} className="mt-3 mb-0.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+        <p key={key++} className="mt-3 mb-0.5 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
           {trimmed.replace(/:$/, "")}
         </p>
       );
@@ -48,8 +48,8 @@ function FormattedText({ text }: { text: string }) {
     const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
     if (numMatch) {
       elements.push(
-        <div key={key++} className="flex gap-2 text-[13px] leading-6 text-[var(--ink)]">
-          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[12px] font-bold text-[var(--accent)]">
+        <div key={key++} className="flex gap-2 text-[0.8125rem] leading-6 text-[var(--ink)]">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[0.75rem] font-bold text-[var(--accent)]">
             {numMatch[1]}
           </span>
           <span>{numMatch[2]}</span>
@@ -60,7 +60,7 @@ function FormattedText({ text }: { text: string }) {
     // Bullet
     if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
       elements.push(
-        <div key={key++} className="flex gap-2 text-[13px] leading-6 text-[var(--ink)]">
+        <div key={key++} className="flex gap-2 text-[0.8125rem] leading-6 text-[var(--ink)]">
           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]/50" />
           <span>{trimmed.replace(/^[-•]\s+/, "")}</span>
         </div>
@@ -70,7 +70,7 @@ function FormattedText({ text }: { text: string }) {
     // Normal line — render **bold** inline
     const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
     elements.push(
-      <p key={key++} className="text-[13px] leading-6 text-[var(--ink)]">
+      <p key={key++} className="text-[0.8125rem] leading-6 text-[var(--ink)]">
         {parts.map((part, i) =>
           part.startsWith("**") && part.endsWith("**")
             ? <strong key={i} className="font-semibold text-[var(--ink)]">{part.slice(2, -2)}</strong>
@@ -157,11 +157,11 @@ export function BusinessCopilot() {
             </svg>
           </span>
           <div>
-            <p className="text-[13px] font-bold text-[var(--ink)]">AI Business Copilot</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">Live data · no client PII</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Business Copilot</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">Live data · no client PII</p>
           </div>
         </div>
-        <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 dark:text-slate-400">
+        <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2.5 py-0.5 text-[0.75rem] font-semibold text-slate-600 dark:text-slate-400">
           Aggregate only
         </span>
       </div>
@@ -177,11 +177,11 @@ export function BusinessCopilot() {
             {/* Bubble */}
             <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${
               msg.role === "user"
-                ? "rounded-br-sm bg-[var(--accent)] text-white text-[13px] leading-6"
+                ? "rounded-br-sm bg-[var(--accent)] text-white text-[0.8125rem] leading-6"
                 : "rounded-bl-sm border border-[var(--line)] bg-[var(--panel-strong)]"
             }`}>
               {msg.role === "user"
-                ? <p className="text-[13px] leading-6">{msg.text}</p>
+                ? <p className="text-[0.8125rem] leading-6">{msg.text}</p>
                 : <FormattedText text={msg.text} />
               }
             </div>
@@ -189,7 +189,7 @@ export function BusinessCopilot() {
             {/* Feedback row — only on assistant messages that had a question */}
             {msg.role === "assistant" && msg.question && (
               <div className="mt-1.5 flex items-center gap-1.5 px-1">
-                <p className="text-[12px] text-[var(--ink-muted)]">Was this helpful?</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">Was this helpful?</p>
                 <button
                   type="button"
                   onClick={() => rate(index, msg, "HELPFUL")}
@@ -217,7 +217,7 @@ export function BusinessCopilot() {
                   👎
                 </button>
                 {msg.feedback && (
-                  <span className={`text-[12px] font-medium ${msg.feedback === "HELPFUL" ? "text-emerald-600" : "text-amber-600"}`}>
+                  <span className={`text-[0.75rem] font-medium ${msg.feedback === "HELPFUL" ? "text-emerald-600" : "text-amber-600"}`}>
                     {msg.feedback === "HELPFUL" ? "Thanks!" : "Noted — we'll improve."}
                   </span>
                 )}
@@ -239,7 +239,7 @@ export function BusinessCopilot() {
                   />
                 ))}
               </span>
-              <span className="text-[13px] text-[var(--ink-muted)]">Analysing your business data…</span>
+              <span className="text-[0.8125rem] text-[var(--ink-muted)]">Analysing your business data…</span>
             </div>
           </div>
         )}
@@ -253,7 +253,7 @@ export function BusinessCopilot() {
             type="button"
             onClick={() => ask(q)}
             disabled={isPending}
-            className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[12px] font-medium text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] disabled:opacity-50"
+            className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.75rem] font-medium text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] disabled:opacity-50"
           >
             {q}
           </button>
@@ -271,7 +271,7 @@ export function BusinessCopilot() {
           placeholder="Ask anything about your business… (Enter to send)"
           rows={2}
           maxLength={1200}
-          className="flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-[13px] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20"
+          className="flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-[0.8125rem] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20"
         />
         <button
           type="submit"
@@ -286,7 +286,7 @@ export function BusinessCopilot() {
       </form>
 
       {error && (
-        <p className="border-t border-[var(--line)] px-4 py-2 text-[12px] text-amber-600">{error}</p>
+        <p className="border-t border-[var(--line)] px-4 py-2 text-[0.75rem] text-amber-600">{error}</p>
       )}
     </section>
   );

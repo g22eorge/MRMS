@@ -71,8 +71,8 @@ export default async function SupplierBillsPage({
         title: "Supplier Bills",
         actions: (
           <>
-            <Link href="/api/procurement/export?type=supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
-            <Link href="/inventory/supplier-bills/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Bill</Link>
+            <Link href="/api/procurement/export?type=supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
+            <Link href="/inventory/supplier-bills/new" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">New Bill</Link>
           </>
         ),
         kpis: [
@@ -93,7 +93,7 @@ export default async function SupplierBillsPage({
             cell: (bill) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{bill.billNumber}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{fmt(bill.issuedAt)}</p>
               </>
             ),
           },
@@ -114,7 +114,7 @@ export default async function SupplierBillsPage({
             key: "linked",
             header: "Linked Doc",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
             cell: (bill) => bill.grn ? bill.grn.grnNumber : bill.po ? bill.po.reference ?? `PO-${bill.po.id.slice(-6).toUpperCase()}` : "-",
           },
           {
@@ -159,21 +159,21 @@ export default async function SupplierBillsPage({
               {payable ? (
                 <RowActionsMenu label={`Record payment for ${bill.billNumber}`}>
                   <div className="w-72 p-3">
-                    <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">Record payment</p>
-                    <p className="mb-2 text-[12px] text-[var(--ink-muted)]">Balance <span className="whitespace-nowrap tabular-nums font-semibold text-[var(--ink)]">{bill.currency} {balance.toLocaleString()}</span></p>
+                    <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">Record payment</p>
+                    <p className="mb-2 text-[0.75rem] text-[var(--ink-muted)]">Balance <span className="whitespace-nowrap tabular-nums font-semibold text-[var(--ink)]">{bill.currency} {balance.toLocaleString()}</span></p>
                     <form action={createSupplierPaymentAction} className="grid gap-2 text-left">
                       <input type="hidden" name="billId" value={bill.id} />
-                      <input name="amount" type="number" min={0.01} max={balance} step={0.01} placeholder={`Amount (max ${balance.toLocaleString()})`} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                      <select name="method" defaultValue="BANK_TRANSFER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+                      <input name="amount" type="number" min={0.01} max={balance} step={0.01} placeholder={`Amount (max ${balance.toLocaleString()})`} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      <select name="method" defaultValue="BANK_TRANSFER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                         <option value="CASH">Cash</option>
                         <option value="MOBILE_MONEY">Mobile money</option>
                         <option value="BANK_TRANSFER">Bank transfer</option>
                         <option value="CARD">Card</option>
                         <option value="OTHER">Other</option>
                       </select>
-                      <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                      <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] font-semibold">Record payment</button>
+                      <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</button>
                     </form>
                   </div>
                 </RowActionsMenu>

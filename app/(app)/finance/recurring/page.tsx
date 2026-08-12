@@ -272,13 +272,13 @@ export default async function RecurringInvoicesPage({
       <div className="px-3 py-1">
         <form action={issueNowAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             Issue Invoice Now
           </button>
         </form>
         <form action={toggleRecurringAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             {rec.isActive ? "Pause" : "Resume"}
           </button>
         </form>
@@ -288,7 +288,7 @@ export default async function RecurringInvoicesPage({
           <input type="hidden" name="recurringId" value={rec.id} />
           <ConfirmSubmitButton
             message={`Delete recurring template "${rec.subject}"? This does not delete already-issued invoices.`}
-            className="w-full text-left text-[12px] text-red-600"
+            className="w-full text-left text-[0.75rem] text-red-600"
           >
             Delete Template
           </ConfirmSubmitButton>
@@ -311,15 +311,15 @@ export default async function RecurringInvoicesPage({
         ]}
         actions={
         <details className="group relative">
-          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
+          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
             + New Template
           </summary>
           <div className="absolute right-0 top-full z-20 mt-2 w-[420px] rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-            <p className="mb-3 text-[12px] font-bold text-[var(--ink)]">New Recurring Invoice</p>
+            <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">New Recurring Invoice</p>
             <form action={createRecurringAction} className="space-y-3">
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Client *</label>
-                <select name="clientId" required className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]">
+                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Client *</label>
+                <select name="clientId" required className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
                   <option value="">Select client…</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>{c.fullName}</option>
@@ -327,21 +327,21 @@ export default async function RecurringInvoicesPage({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Subject *</label>
-                <input name="subject" required placeholder="e.g. Monthly maintenance contract" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Subject *</label>
+                <input name="subject" required placeholder="e.g. Monthly maintenance contract" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Frequency</label>
-                  <select name="frequency" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]">
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Frequency</label>
+                  <select name="frequency" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
                     {FREQUENCIES.map((f) => (
                       <option key={f} value={f}>{FREQ_LABELS[f]}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Invoice Type</label>
-                  <select name="invoiceType" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]">
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Invoice Type</label>
+                  <select name="invoiceType" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
                     {INVOICE_TYPES.map((t) => (
                       <option key={t} value={t}>{TYPE_LABELS[t]}</option>
                     ))}
@@ -350,40 +350,40 @@ export default async function RecurringInvoicesPage({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Start / Next Due</label>
-                  <input name="startDate" type="date" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Start / Next Due</label>
+                  <input name="startDate" type="date" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Currency</label>
-                  <input name="currency" defaultValue={currency} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Currency</label>
+                  <input name="currency" defaultValue={currency} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
                 </div>
               </div>
               {/* Line items */}
               <div>
-                <p className="mb-1.5 text-[13px] font-semibold text-[var(--ink-muted)]">Line Items *</p>
+                <p className="mb-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Line Items *</p>
                 <div className="space-y-1.5">
-                  <div className="grid grid-cols-[1fr_60px_80px] gap-1 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+                  <div className="grid grid-cols-[1fr_60px_80px] gap-1 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
                     <span>Description</span><span className="text-right">Qty</span><span className="text-right">Price</span>
                   </div>
                   {([0, 1, 2] as const).map((i) => (
                     <div key={i} className="grid grid-cols-[1fr_60px_80px] gap-1">
-                      <input name="itemDescription" placeholder={i === 0 ? "Service description" : "Optional"} className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px]" />
-                      <input name="itemQty" type="number" min="0.01" step="0.01" defaultValue={i === 0 ? "1" : ""} placeholder="1" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] text-right" />
-                      <input name="itemPrice" type="number" min="0" step="0.01" placeholder="0.00" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] text-right" />
+                      <input name="itemDescription" placeholder={i === 0 ? "Service description" : "Optional"} className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]" />
+                      <input name="itemQty" type="number" min="0.01" step="0.01" defaultValue={i === 0 ? "1" : ""} placeholder="1" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] text-right" />
+                      <input name="itemPrice" type="number" min="0" step="0.01" placeholder="0.00" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] text-right" />
                       <input name="itemDiscount" type="hidden" defaultValue="0" />
                     </div>
                   ))}
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-[12px] text-[var(--ink)]">
+              <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
                 <input type="checkbox" name="autoIssue" className="rounded" />
                 Auto-issue invoice when due (requires scheduled job)
               </label>
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Notes</label>
-                <textarea name="notes" rows={2} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
+                <textarea name="notes" rows={2} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
               </div>
-              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold">
+              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
                 Create Template
               </button>
             </form>
@@ -395,9 +395,9 @@ export default async function RecurringInvoicesPage({
       {/* Search */}
       <form method="GET" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search subject, client…"
-          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
-        {q && <a href="/finance/recurring" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
+          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+        {q && <a href="/finance/recurring" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
       </form>
 
       {/* List */}
@@ -416,7 +416,7 @@ export default async function RecurringInvoicesPage({
                 <p className="text-[var(--ink-muted)]">
                   {rec.items.length} line{rec.items.length !== 1 ? "s" : ""}
                 </p>
-                <p className="mt-0.5 text-[12px] text-[var(--ink-muted)] md:hidden">
+                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] md:hidden">
                   {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency} · {TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType}
                 </p>
               </>
@@ -432,14 +432,14 @@ export default async function RecurringInvoicesPage({
             key: "frequency",
             header: "Frequency",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
             cell: (rec) => FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency,
           },
           {
             key: "type",
             header: "Type",
             headerClassName: "hidden md:table-cell",
-            className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+            className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
             cell: (rec) => TYPE_LABELS[rec.invoiceType] ?? rec.invoiceType,
           },
           {
@@ -461,11 +461,11 @@ export default async function RecurringInvoicesPage({
               const isDue = rec.isActive && rec.nextDueAt <= now;
               return (
                 <>
-                  <p className={`text-[12px] font-medium ${isDue ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>
+                  <p className={`text-[0.75rem] font-medium ${isDue ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>
                     {fmt(rec.nextDueAt)}
                   </p>
                   {isDue && (
-                    <p className="text-[12px] font-bold uppercase text-amber-600">Due Now</p>
+                    <p className="text-[0.75rem] font-bold uppercase text-amber-600">Due Now</p>
                   )}
                 </>
               );
@@ -491,8 +491,8 @@ export default async function RecurringInvoicesPage({
             <div className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate font-bold text-[var(--ink)]">{rec.subject}</p>
-                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{rec.client.fullName} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
-                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{rec.client.fullName} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
                   {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()} · <span className={isDue ? "font-semibold text-amber-600" : ""}>{isDue ? "Due now" : `Next ${fmt(rec.nextDueAt)}`}</span>
                 </p>
               </div>

@@ -214,7 +214,7 @@ export function SettingsPanel({
 
           {/* Profile section */}
           <details className="border-b border-[var(--line)] p-4">
-            <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <summary className="cursor-pointer text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Your Profile
             </summary>
             <ProfileForm
@@ -223,13 +223,13 @@ export function SettingsPanel({
               role={userRole}
               phone={userPhone}
               variant="compact"
-              footerHint={<span className="text-[13px] text-[var(--ink-muted)]">Manage password below</span>}
+              footerHint={<span className="text-[0.8125rem] text-[var(--ink-muted)]">Manage password below</span>}
             />
           </details>
 
           {/* Password section */}
           <details ref={passwordSectionRef} className="border-b border-[var(--line)] p-4">
-            <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <summary className="cursor-pointer text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Password
             </summary>
             <form action={passwordFormAction} className="mt-3 space-y-2">
@@ -247,14 +247,14 @@ export function SettingsPanel({
               </div>
               <div className="flex items-center justify-between gap-3">
                 <SaveBtn label="Change password" pendingLabel="Changing…" />
-                {passwordState.success ? <span className="text-[13px] text-[var(--accent)]">Updated</span> : null}
+                {passwordState.success ? <span className="text-[0.8125rem] text-[var(--accent)]">Updated</span> : null}
               </div>
             </form>
           </details>
 
           {isAdmin ? (
             <details className="border-b border-[var(--line)] p-4">
-              <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
+              <summary className="cursor-pointer text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:text-[var(--ink)]">
                 Admin password reset
               </summary>
               <form action={adminPasswordFormAction} className="mt-3 space-y-2">
@@ -279,7 +279,7 @@ export function SettingsPanel({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <SaveBtn label="Reset password" pendingLabel="Resetting…" />
-                  {adminPasswordState.success ? <span className="text-[13px] text-[var(--accent)]">Updated</span> : null}
+                  {adminPasswordState.success ? <span className="text-[0.8125rem] text-[var(--accent)]">Updated</span> : null}
                 </div>
               </form>
             </details>
@@ -288,7 +288,7 @@ export function SettingsPanel({
           {/* Quick links */}
           {quickLinks.length > 0 ? (
             <div className="border-b border-[var(--line)] p-4">
-              <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+              <p className="mb-3 text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                 {isAdmin ? "Workspace" : "Notifications"}
               </p>
               <div className="flex flex-col gap-1">
@@ -304,7 +304,7 @@ export function SettingsPanel({
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-[var(--ink)]">{link.label}</p>
-                      <p className="text-[12px] text-[var(--ink-muted)]">{link.desc}</p>
+                      <p className="text-[0.75rem] text-[var(--ink-muted)]">{link.desc}</p>
                     </div>
                     <svg viewBox="0 0 16 16" fill="currentColor" className="ml-auto h-3 w-3 shrink-0 text-[var(--ink-muted)]/50" aria-hidden="true">
                       <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L9.19 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />

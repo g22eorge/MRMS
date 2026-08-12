@@ -123,23 +123,23 @@ export default async function StockTransfersPage({
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Request Transfer</p>
+            <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Request Transfer</p>
             <form action={createStockTransferAction} className="grid gap-2 lg:grid-cols-[1fr_1fr_1.4fr_0.55fr_1fr_auto]">
-              <select name="fromLocationId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <select name="fromLocationId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">From location</option>
                 {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
               </select>
-              <select name="toLocationId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <select name="toLocationId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">To location</option>
                 {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
               </select>
-              <select name="partId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <select name="partId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">Item</option>
                 {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
               </select>
-              <input name="quantity" placeholder="Qty" inputMode="numeric" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="note" placeholder="Note" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px] font-semibold">Request</button>
+              <input name="quantity" placeholder="Qty" inputMode="numeric" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="note" placeholder="Note" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</button>
             </form>
           </div>
         </>
@@ -194,11 +194,11 @@ export default async function StockTransfersPage({
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{transfer.transferNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink-muted)]">{locationName.get(transfer.fromLocationId) ?? "From"} → {locationName.get(transfer.toLocationId) ?? "To"}</p>
-                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{transfer.items[0] ? `${transfer.items[0].part.sku} x${transfer.items[0].quantity}` : "No items"} · {fmt(transfer.createdAt)}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{transfer.items[0] ? `${transfer.items[0].part.sku} x${transfer.items[0].quantity}` : "No items"} · {fmt(transfer.createdAt)}</p>
               </div>
               <StatusBadge tone={toneFor(STATUS_TONES, transfer.status, "sky")}>{transfer.status.replaceAll("_", " ")}</StatusBadge>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderTransferActions(transfer)}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.75rem]">{renderTransferActions(transfer)}</div>
           </div>
         )}
       />

@@ -220,7 +220,7 @@ export default async function InventoryPage({
             <Link
               key={value}
               href={`/inventory?status=${value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 statusFilter === value
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -240,7 +240,7 @@ export default async function InventoryPage({
                 <Link
                   key={value}
                   href={`/inventory?stock=${value}&status=active${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                  className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                     stockFilter === value
                       ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                       : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -264,16 +264,16 @@ export default async function InventoryPage({
           />
           <Button type="submit" variant="secondary" size="sm">Search</Button>
           {q || stockFilter !== "all" || statusFilter !== "active" ? (
-            <Link href="/inventory" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+            <Link href="/inventory" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
         </form>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-[13px] text-red-500">{error}</div>
+        <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-[0.8125rem] text-red-500">{error}</div>
       ) : null}
       {created ? (
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-[13px] text-emerald-600">Item added successfully.</div>
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-[0.8125rem] text-emerald-600">Item added successfully.</div>
       ) : null}
 
 
@@ -282,15 +282,15 @@ export default async function InventoryPage({
         <DisclosurePanel>
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Item</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Item</p>
           </div>
           <form action={createPartAction} className="p-3">
             <div className="grid gap-2 sm:grid-cols-[0.8fr_1.4fr_1fr_0.7fr_0.7fr_auto]">
-              <input name="sku" placeholder="SKU *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="name" placeholder="Item name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="manufacturer" placeholder="Manufacturer" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="unitCost" placeholder="Unit cost" inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="reorderLevel" placeholder="Reorder at" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="sku" placeholder="SKU *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="name" placeholder="Item name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="manufacturer" placeholder="Manufacturer" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="unitCost" placeholder="Unit cost" inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+              <input name="reorderLevel" placeholder="Reorder at" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
               <Button type="submit" size="sm" className="px-4">Add</Button>
             </div>
           </form>
@@ -301,7 +301,7 @@ export default async function InventoryPage({
       {/* Items table */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
             Inventory Items
             <span className="ml-1.5 font-normal normal-case tracking-normal text-[var(--ink-muted)]">
               {filteredTotal}{q ? ` matching "${q}"` : ""}
@@ -342,11 +342,11 @@ export default async function InventoryPage({
                 return (
                   <Link href={`/inventory/${part.id}`} className="group flex flex-col gap-0.5">
                     <span className="font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{part.name}</span>
-                    <span className="text-[11px] mono text-[var(--ink-muted)]">{part.sku}</span>
-                    <span className="text-[11px] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
-                    {!part.isActive && <span className="text-[11px] font-semibold text-amber-600">Inactive</span>}
-                    {isOut && part.isActive && <span className="text-[11px] font-semibold text-red-600">Out of stock</span>}
-                    {isLow && !isOut && <span className="text-[11px] font-semibold text-amber-600">Low stock</span>}
+                    <span className="text-[0.6875rem] mono text-[var(--ink-muted)]">{part.sku}</span>
+                    <span className="text-[0.6875rem] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
+                    {!part.isActive && <span className="text-[0.6875rem] font-semibold text-amber-600">Inactive</span>}
+                    {isOut && part.isActive && <span className="text-[0.6875rem] font-semibold text-red-600">Out of stock</span>}
+                    {isLow && !isOut && <span className="text-[0.6875rem] font-semibold text-amber-600">Low stock</span>}
                   </Link>
                 );
               },
@@ -354,7 +354,7 @@ export default async function InventoryPage({
             {
               key: "maker",
               header: "Maker",
-              className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+              className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
               headerClassName: "hidden md:table-cell",
               cell: (part) => part.manufacturer ?? "—",
             },
@@ -362,7 +362,7 @@ export default async function InventoryPage({
               key: "unitCost",
               header: "Unit Cost",
               align: "right",
-              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
               headerClassName: "hidden lg:table-cell",
               cell: (part) => (part.unitCost != null ? formatMoney(part.unitCost) : "—"),
             },
@@ -385,7 +385,7 @@ export default async function InventoryPage({
               key: "reserved",
               header: "Reserved",
               align: "right",
-              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",
               headerClassName: "hidden sm:table-cell",
               cell: (part) => part.qtyReserved,
             },
@@ -403,7 +403,7 @@ export default async function InventoryPage({
               key: "value",
               header: "Value",
               align: "right",
-              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink)] xl:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[0.75rem] text-[var(--ink)] xl:table-cell",
               headerClassName: "hidden xl:table-cell",
               cell: (part) => formatMoney((part.unitCost ?? 0) * part.qtyOnHand),
             },
@@ -411,7 +411,7 @@ export default async function InventoryPage({
               key: "reorder",
               header: "Reorder",
               align: "right",
-              className: "hidden whitespace-nowrap tabular-nums text-[12px] text-[var(--ink-muted)] sm:table-cell",
+              className: "hidden whitespace-nowrap tabular-nums text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",
               headerClassName: "hidden sm:table-cell",
               cell: (part) => part.reorderLevel || "—",
             },
@@ -432,7 +432,7 @@ export default async function InventoryPage({
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent stock changes</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent stock changes</p>
             <Link href="/inventory/stock-counts" className="text-xs font-semibold text-[var(--accent)] hover:underline">Audit stock</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
@@ -446,7 +446,7 @@ export default async function InventoryPage({
                   <p className={`text-sm font-black tabular-nums whitespace-nowrap ${movement.type === "IN" ? "text-emerald-600" : movement.type === "OUT" ? "text-red-600" : "text-amber-600"}`}>
                     {movement.type === "IN" ? "+" : movement.type === "OUT" ? "-" : ""}{Math.abs(movement.quantity)}
                   </p>
-                  <p className="text-[11px] text-[var(--ink-muted)]">{movement.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
+                  <p className="text-[0.6875rem] text-[var(--ink-muted)]">{movement.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
                 </div>
               </Link>
             ))}
@@ -456,7 +456,7 @@ export default async function InventoryPage({
 
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Running low</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Running low</p>
             <Link href="/inventory/purchase-requests/new" className="text-xs font-semibold text-[var(--accent)] hover:underline">New request</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
@@ -470,7 +470,7 @@ export default async function InventoryPage({
                   </div>
                   <div className="shrink-0 text-right">
                     <p className={`text-sm font-black tabular-nums whitespace-nowrap ${part.qtyOnHand === 0 ? "text-red-600" : "text-amber-600"}`}>{part.qtyOnHand}</p>
-                    <p className="text-[11px] text-[var(--ink-muted)]">{gap} gap</p>
+                    <p className="text-[0.6875rem] text-[var(--ink-muted)]">{gap} gap</p>
                   </div>
                 </Link>
               );

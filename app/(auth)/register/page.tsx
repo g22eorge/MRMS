@@ -69,7 +69,7 @@ export default async function RegisterPage() {
             </div>
           </div>
 
-          <p className="relative text-[13px] text-white/60">© {new Date().getFullYear()} Duuka ProMax</p>
+          <p className="relative text-[0.8125rem] text-white/60">© {new Date().getFullYear()} Duuka ProMax</p>
         </section>
 
         {/* ── Right: register form ── */}

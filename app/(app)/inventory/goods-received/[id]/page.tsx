@@ -130,7 +130,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
           </>
         }
       />
-      <p className="text-[13px] text-[var(--ink-muted)]">
+      <p className="text-[0.8125rem] text-[var(--ink-muted)]">
         Received from <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="font-semibold text-[var(--accent)] hover:underline">{grn.supplier.name}</Link> into {locationLabel}
       </p>
 
@@ -146,8 +146,8 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
         <div className="space-y-4">
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Trail</p>
-              <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-semibold text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</span>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Trail</p>
+              <span className="rounded-md border border-[var(--line)] px-2 py-1 text-[0.6875rem] font-semibold text-[var(--ink-muted)]">{fmt(grn.receivedAt)}</span>
             </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
               <InfoRow label="Supplier">
@@ -180,7 +180,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
 
           <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Contact</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Contact</p>
               <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="text-xs font-semibold text-[var(--accent)] hover:underline">Open Supplier</Link>
             </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
@@ -223,7 +223,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
 
           {grn.note ? (
             <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Note</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Receiving Note</p>
               <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)]">{grn.note}</p>
             </section>
           ) : null}
@@ -232,8 +232,8 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
             <div>
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Received Items</p>
-              <p className="text-[13px] text-[var(--ink-muted)]">{linkedPoLines}/{grn.items.length} matched to PO lines</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Received Items</p>
+              <p className="text-[0.8125rem] text-[var(--ink-muted)]">{linkedPoLines}/{grn.items.length} matched to PO lines</p>
             </div>
             <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]">{formatMoney(total)}</span>
           </div>
@@ -250,7 +250,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                 cell: (item) => (
                   <>
                     <p className="font-semibold text-[var(--ink)]">{item.description}</p>
-                    <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
+                    <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{item.poItemId ? "PO matched" : "manual receipt line"}</p>
                   </>
                 ),
               },
@@ -295,7 +295,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
             ]}
             tableFooter={
               <tr>
-                <td colSpan={2} className="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
+                <td colSpan={2} className="px-4 py-3 text-right text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Totals</td>
                 <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{totalQty.toLocaleString()}</td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(total)}</td>
@@ -313,9 +313,9 @@ function Metric({ label, value, hint, tone }: { label: string; value: string; hi
   const color = tone === "amber" ? "text-amber-600" : tone === "green" ? "text-emerald-600" : "text-[var(--ink)]";
   return (
     <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
+      <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{label}</p>
       <p className={`mt-1 truncate text-lg font-black tabular-nums ${color}`}>{value}</p>
-      <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{hint}</p>
+      <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{hint}</p>
     </div>
   );
 }
@@ -323,7 +323,7 @@ function Metric({ label, value, hint, tone }: { label: string; value: string; hi
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[92px_1fr] gap-3 py-2 text-sm">
-      <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
+      <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{label}</p>
       <div className="min-w-0 whitespace-pre-wrap text-[var(--ink)]">{children}</div>
     </div>
   );
@@ -333,7 +333,7 @@ function ActivitySection({ title, count, action, children }: { title: string; co
   return (
     <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title} ({count})</p>
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title} ({count})</p>
         {action}
       </div>
       {children}

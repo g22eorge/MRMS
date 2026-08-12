@@ -72,7 +72,7 @@ export function ExternalTechJobView({
     <div className="min-w-0 space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="mb-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">External Work Brief</p>
+          <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">External Work Brief</p>
           <p className="mt-1 text-sm text-[var(--ink)]">Update diagnosis, required parts, and ETA only. Client identity remains hidden in this workspace.</p>
         </div>
         <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
@@ -214,7 +214,7 @@ export function ExternalTechJobView({
         <div className="flex flex-wrap gap-2">
           <button
             disabled={isPending}
-            className="btn-premium w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
+            className="btn-premium w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.8125rem] sm:w-auto sm:py-2 sm:text-sm"
           >
             {isPending ? "Saving..." : "Save"}
           </button>
@@ -224,14 +224,14 @@ export function ExternalTechJobView({
               name="nextStatus"
               value="AWAITING_APPROVAL"
               disabled={isPending}
-              className="btn-premium-success w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
+              className="btn-premium-success w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
             >
               Submit Estimate
             </button>
           ) : null}
           <a
             href={returnTo}
-            className="btn-premium-secondary inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] sm:w-auto sm:py-2 sm:text-sm"
+            className="btn-premium-secondary inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.8125rem] sm:w-auto sm:py-2 sm:text-sm"
           >
             Cancel
           </a>

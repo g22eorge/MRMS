@@ -43,7 +43,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
-const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
+const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 
 export default async function QuotationDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { user } = await getCurrentUserRole();
@@ -156,17 +156,17 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     <>
       {canSend && quotation.client?.phone && (
         <form action={sendQuotationWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
         </form>
       )}
       {canSend && quotation.client?.email && (
         <form action={sendQuotationEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
         </form>
       )}
       {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
-      <Link href={`/api/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">PDF</Link>
-      {canEdit ? <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link> : null}
+      <Link href={`/api/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">PDF</Link>
+      {canEdit ? <Link href={`/documents/quotations/${quotation.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit</Link> : null}
     </>
   );
 
@@ -216,7 +216,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
         {sent && (
           <div
-            className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${
+            className={`rounded-xl border px-4 py-3 text-[0.8125rem] font-medium ${
               sent === "failed"
                 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
                 : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
@@ -255,19 +255,19 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                           className="flex flex-1 flex-wrap items-end gap-2"
                         >
                           <input type="hidden" name="itemId" value={item.id} />
-                          <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
+                          <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
                             <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                          <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                             <input name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <label className="w-24 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
+                          <label className="w-24 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
                             <input name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
+                          <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
                             <input name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[12px] font-semibold">Save</button>
+                          <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</button>
                         </form>
                         <form
                           action={async (fd: FormData) => {
@@ -278,7 +278,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                           }}
                         >
                           <input type="hidden" name="itemId" value={item.id} />
-                          <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[12px] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                          <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
                         </form>
                       </div>
                     ))}
@@ -296,25 +296,25 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                       }}
                       className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
                     >
-                      <label className="min-w-[150px] flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
+                      <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
                         <input name="description" required placeholder="New line item" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                      <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                         <input name="quantity" type="number" min="1" step="any" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <label className="w-24 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
+                      <label className="w-24 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
                         <input name="unitPrice" type="number" min="0" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <label className="w-14 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
+                      <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
                         <input name="discount" type="number" min="0" max="100" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[12px] font-bold">Add line</button>
+                      <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add line</button>
                     </form>
                   </div>
                   <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
-                    <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
-                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
-                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
+                    <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
+                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
+                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[0.875rem]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
                   </div>
                 </>
               ) : quotation.items.length ? (
@@ -332,19 +332,19 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                     ]}
                   />
                   <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
-                    <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
-                    {quotation.discountAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">Discount</span><span className="mono text-red-500">− {formatMoney(quotation.discountAmount, currency)}</span></div>}
-                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[13px]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
-                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
+                    <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
+                    {quotation.discountAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">Discount</span><span className="mono text-red-500">− {formatMoney(quotation.discountAmount, currency)}</span></div>}
+                    {quotation.vatAmount > 0 && <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">{quotation.taxLabel ?? "Tax"}</span><span className="mono font-medium">{formatMoney(quotation.vatAmount, currency)}</span></div>}
+                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[0.875rem]"><span className="font-bold">Total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
                   </div>
                 </>
-              ) : <div className="p-4 text-[13px] text-[var(--ink-muted)]">No items.</div>}
+              ) : <div className="p-4 text-[0.8125rem] text-[var(--ink-muted)]">No items.</div>}
             </div>
 
             {quotation.notes && (
               <div className={cardClass}>
                 <div className={cardHeadClass}>Notes</div>
-                <div className="whitespace-pre-wrap p-4 text-[13px] text-[var(--ink-muted)]">{sanitizeText(quotation.notes)}</div>
+                <div className="whitespace-pre-wrap p-4 text-[0.8125rem] text-[var(--ink-muted)]">{sanitizeText(quotation.notes)}</div>
               </div>
             )}
 
@@ -373,21 +373,21 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                 <div className={cardHeadClass}>Edit quotation</div>
                 <div className="grid grid-cols-1 gap-3 p-4 min-[600px]:grid-cols-2">
                   <div>
-                    <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issue Date</p>
+                    <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issue Date</p>
                     <input name="issueDate" type="date" defaultValue={(quotation.issueDate ?? quotation.createdAt) ? new Date(quotation.issueDate ?? quotation.createdAt).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                   </div>
                   <div>
-                    <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Valid Until</p>
+                    <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Valid Until</p>
                     <input name="validUntil" type="date" defaultValue={quotation.validUntil ? new Date(quotation.validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                   </div>
                 </div>
                 <div className="px-4 pb-4">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Notes</p>
+                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Notes</p>
                   <textarea name="notes" defaultValue={quotation.notes ?? ""} rows={4} className="w-full resize-y rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
                 </div>
                 <div className="flex items-center gap-2 border-t border-[var(--line)] px-4 py-3">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold">Save changes</button>
-                  <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Cancel</Link>
+                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold">Save changes</button>
+                  <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Cancel</Link>
                 </div>
               </form>
             )}

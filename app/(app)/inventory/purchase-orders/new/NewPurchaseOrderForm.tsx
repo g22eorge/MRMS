@@ -15,8 +15,8 @@ type Supplier = { id: string; name: string };
 type Part = { id: string; name: string; sku: string; unitCost: number | null };
 type LineData = { description: string; qtyOrdered: number; unitCost: number; partId: string };
 
-const fieldClass = "mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]";
+const fieldClass = "mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+const labelClass = "block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]";
 
 export function NewPurchaseOrderForm({
   suppliers,
@@ -80,7 +80,7 @@ export function NewPurchaseOrderForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+      <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
         Pick the supplier, then list what you are ordering and the price. Save it as a draft, or issue it to the supplier straight away.
       </p>
 
@@ -109,7 +109,7 @@ export function NewPurchaseOrderForm({
         {/* Reference, order date and notes are optional — hidden until needed. */}
         <div className="border-t border-[var(--line)] px-3 py-2.5">
           <button type="button" onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails} className="flex w-full items-center justify-between gap-2 text-left">
-            <span className="text-[13px] font-semibold text-[var(--ink)]">Reference, order date &amp; notes <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
+            <span className="text-[0.8125rem] font-semibold text-[var(--ink)]">Reference, order date &amp; notes <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-[var(--ink-muted)] transition-transform ${showDetails ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <div className={showDetails ? "mt-3 grid gap-3 sm:grid-cols-2" : "hidden"}>
@@ -155,7 +155,7 @@ export function NewPurchaseOrderForm({
               key: "index",
               header: "#",
               headerClassName: "w-10",
-              className: "w-10 align-top text-[12px] font-semibold text-[var(--ink-muted)]",
+              className: "w-10 align-top text-[0.75rem] font-semibold text-[var(--ink-muted)]",
               cell: (_line, index) => index + 1,
             },
             {
@@ -168,7 +168,7 @@ export function NewPurchaseOrderForm({
                   parts={parts}
                   onChange={(partId) => onPartSelect(line.key, partId)}
                   customLabel="Custom item"
-                  className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+                  className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.8125rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
                 />
               ),
             },
@@ -210,17 +210,17 @@ export function NewPurchaseOrderForm({
             },
           ]}
           actions={(line) => (
-            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
+            <button type="button" onClick={() => removeLine(line.key)} disabled={lines.length === 1} className="rounded-md border border-[var(--line)] px-2 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:border-red-400/40 hover:text-red-600 disabled:opacity-40">
               Remove
             </button>
           )}
           tableFooter={
             <tr className="bg-[var(--panel-strong)]">
-              <td colSpan={3} className="px-3 py-2 text-[12px] font-semibold text-[var(--ink-muted)]">
+              <td colSpan={3} className="px-3 py-2 text-[0.75rem] font-semibold text-[var(--ink-muted)]">
                 Supplier: {selectedSupplier?.name ?? "Not selected"}
               </td>
               <td className="px-3 py-2 text-right font-bold tabular-nums text-[var(--ink)]">{totals.quantity}</td>
-              <td className="px-3 py-2 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td className="px-3 py-2 text-right text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
               <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{totals.subtotal.toLocaleString()}</td>
               <td />
             </tr>

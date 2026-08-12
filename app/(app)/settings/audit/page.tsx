@@ -77,7 +77,7 @@ export default async function SettingsAuditPage({
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Audit Timeline</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Audit Timeline</p>
           </div>
           <a href={exportHref} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
             ↓ Export CSV
@@ -87,7 +87,7 @@ export default async function SettingsAuditPage({
 
       <form className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]">
+          <select name="action" defaultValue={action} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]">
             <option value="">All actions</option>
             {actionOptions.map((item) => (
               <option key={item} value={item}>{item}</option>
@@ -108,7 +108,7 @@ export default async function SettingsAuditPage({
           {
             key: "when",
             header: "When",
-            className: "whitespace-nowrap align-top text-[12px] text-[var(--ink-muted)]",
+            className: "whitespace-nowrap align-top text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => fmt(event.createdAt),
           },
           {
@@ -118,14 +118,14 @@ export default async function SettingsAuditPage({
             cell: (event) => (
               <>
                 <p className="mono font-semibold text-[var(--ink)]">{event.action}</p>
-                <p className="mt-1 max-w-[240px] text-[12px] text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
+                <p className="mt-1 max-w-[240px] text-[0.75rem] text-[var(--ink-muted)]">{event.summary ?? "-"}</p>
               </>
             ),
           },
           {
             key: "actor",
             header: "Actor",
-            className: "align-top text-[12px] text-[var(--ink-muted)]",
+            className: "align-top text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => {
               const actor = event.actorUserId ? actorMap.get(event.actorUserId) : null;
               return actor ? (
@@ -149,7 +149,7 @@ export default async function SettingsAuditPage({
           {
             key: "after",
             header: "After",
-            className: "max-w-[260px] align-top mono text-[12px] text-[var(--ink-muted)]",
+            className: "max-w-[260px] align-top mono text-[0.75rem] text-[var(--ink-muted)]",
             cell: (event) => compactJson(event.afterJson),
           },
         ]}
@@ -159,11 +159,11 @@ export default async function SettingsAuditPage({
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <p className="mono truncate font-semibold text-[var(--ink)]">{event.action}</p>
-                <span className="shrink-0 whitespace-nowrap text-[12px] text-[var(--ink-muted)]">{fmt(event.createdAt)}</span>
+                <span className="shrink-0 whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]">{fmt(event.createdAt)}</span>
               </div>
-              {event.summary && <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{event.summary}</p>}
-              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{actor ? actor.name : event.actorUserId ?? "-"} · {event.entityType}</p>
-              <p className="mono mt-1 truncate text-[12px] text-[var(--ink-muted)]">{compactJson(event.afterJson)}</p>
+              {event.summary && <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{event.summary}</p>}
+              <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{actor ? actor.name : event.actorUserId ?? "-"} · {event.entityType}</p>
+              <p className="mono mt-1 truncate text-[0.75rem] text-[var(--ink-muted)]">{compactJson(event.afterJson)}</p>
             </div>
           );
         }}

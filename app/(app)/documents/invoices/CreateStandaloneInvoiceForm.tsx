@@ -195,7 +195,7 @@ export function CreateStandaloneInvoiceForm({
   return (
   <section className="overflow-hidden rounded-xl bg-[var(--panel)]">
     <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-      <h2 className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create Invoice</h2>
+      <h2 className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Create Invoice</h2>
       <button
         type="button"
         onClick={() => window.dispatchEvent(new CustomEvent("invoice-create-dialog:close"))}
@@ -233,10 +233,10 @@ export function CreateStandaloneInvoiceForm({
           <div className="divide-y divide-[var(--line)]">
             <div className="p-4">
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                <label className="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
                   <input name="issueDate" type="date" aria-label="Issue date" max={new Date().toISOString().slice(0, 10)} defaultValue={initialData?.issueDate ?? new Date().toISOString().slice(0, 10)} className="mt-0.5 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                 </label>
-                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Due date
+                <label className="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Due date
                   <input name="dueDate" type="date" aria-label="Due date" defaultValue={initialData?.dueDate ?? ""} className="mt-0.5 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                 </label>
               </div>
@@ -257,7 +257,7 @@ export function CreateStandaloneInvoiceForm({
 
             <div className="p-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Line Items</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Line Items</p>
               </div>
               <CommercialLineItemsEditor
                 items={lines}
@@ -290,7 +290,7 @@ export function CreateStandaloneInvoiceForm({
           <div className="border-t border-[var(--line)] bg-[var(--panel-strong)] p-4 min-[900px]:border-t-0">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Totals</p>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Totals</p>
                 <TaxToggleField enabled={taxEnabled} onChange={setTaxEnabled} label="Tax" />
               </div>
               {taxEnabled ? (

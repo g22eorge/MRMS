@@ -128,7 +128,7 @@ export default async function TaxRatesPage({
         <form action={toggleTaxRateAction}>
           <input type="hidden" name="taxRateId" value={rate.id} />
           <input type="hidden" name="action" value="toggle" />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             {rate.isActive ? "Deactivate" : "Activate"}
           </button>
         </form>
@@ -136,7 +136,7 @@ export default async function TaxRatesPage({
           <form action={toggleTaxRateAction}>
             <input type="hidden" name="taxRateId" value={rate.id} />
             <input type="hidden" name="action" value="setDefault" />
-            <button type="submit" className="w-full rounded py-1.5 text-left text-[12px] text-[var(--ink)] hover:text-[var(--accent)]">
+            <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
               Set as Default
             </button>
           </form>
@@ -147,7 +147,7 @@ export default async function TaxRatesPage({
           <input type="hidden" name="taxRateId" value={rate.id} />
           <ConfirmSubmitButton
             message={`Delete tax rate ${rate.code}? This cannot be undone.`}
-            className="w-full text-left text-[12px] text-red-600"
+            className="w-full text-left text-[0.75rem] text-red-600"
           >
             Delete
           </ConfirmSubmitButton>
@@ -170,41 +170,41 @@ export default async function TaxRatesPage({
         ]}
         actions={
         <details className="group relative">
-          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
+          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
             + Add Tax Rate
           </summary>
           <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-            <p className="mb-3 text-[12px] font-bold text-[var(--ink)]">New Tax Rate</p>
+            <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">New Tax Rate</p>
             <form action={createTaxRateAction} className="space-y-3">
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Name *</label>
-                <input name="name" required placeholder="e.g. Value Added Tax" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Name *</label>
+                <input name="name" required placeholder="e.g. Value Added Tax" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Code *</label>
-                  <input name="code" required placeholder="VAT" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px] uppercase" />
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Code *</label>
+                  <input name="code" required placeholder="VAT" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem] uppercase" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Rate % *</label>
-                  <input name="rate" type="number" min="0" max="100" step="0.01" required placeholder="18" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]" />
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Rate % *</label>
+                  <input name="rate" type="number" min="0" max="100" step="0.01" required placeholder="18" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[12px] text-[var(--ink)]">
+                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
                   <input type="checkbox" name="appliesToSales" defaultChecked className="rounded" />
                   Applies to sales / invoices
                 </label>
-                <label className="flex items-center gap-2 text-[12px] text-[var(--ink)]">
+                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
                   <input type="checkbox" name="appliesToPurchases" className="rounded" />
                   Applies to purchases
                 </label>
-                <label className="flex items-center gap-2 text-[12px] text-[var(--ink)]">
+                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
                   <input type="checkbox" name="isDefault" className="rounded" />
                   Set as default rate
                 </label>
               </div>
-              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold">
+              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
                 Create Tax Rate
               </button>
             </form>
@@ -216,9 +216,9 @@ export default async function TaxRatesPage({
       {/* Search */}
       <form method="GET" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search name, code…"
-          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]">Search</button>
-        {q && <a href="/finance/tax-rates" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
+          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+        {q && <a href="/finance/tax-rates" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
       </form>
 
       {/* Tax rate table */}
@@ -233,7 +233,7 @@ export default async function TaxRatesPage({
             header: "Code",
             cell: (rate) => (
               <span className="inline-flex items-center gap-2">
-                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-1 text-[12px] font-bold text-[var(--ink)]">
+                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-1 text-[0.75rem] font-bold text-[var(--ink)]">
                   {rate.code}
                 </span>
                 {rate.isDefault && <StatusBadge tone="success">Default</StatusBadge>}
@@ -295,12 +295,12 @@ export default async function TaxRatesPage({
           <div className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 truncate">
-                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-bold text-[var(--ink)]">{rate.code}</span>
+                <span className="mono rounded-md bg-[var(--panel-strong)] px-2 py-0.5 text-[0.75rem] font-bold text-[var(--ink)]">{rate.code}</span>
                 <span className="font-semibold tabular-nums text-[var(--ink)]">{rate.rate}%</span>
                 {rate.isDefault && <StatusBadge tone="success">Default</StatusBadge>}
               </p>
               <p className="mt-0.5 truncate text-[var(--ink)]">{rate.name}</p>
-              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{[rate.appliesToSales ? "Sales" : null, rate.appliesToPurchases ? "Purchases" : null].filter(Boolean).join(" · ") || "Not applied"}</p>
+              <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{[rate.appliesToSales ? "Sales" : null, rate.appliesToPurchases ? "Purchases" : null].filter(Boolean).join(" · ") || "Not applied"}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <StatusBadge tone={rate.isActive ? "success" : "neutral"}>{rate.isActive ? "Active" : "Inactive"}</StatusBadge>

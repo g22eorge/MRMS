@@ -105,8 +105,8 @@ export default async function PurchaseRequestsPage({
         description: `${total} requests`,
         actions: (
           <>
-            <Link href="/api/procurement/export?type=purchase-requests" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
-            <Link href="/inventory/purchase-requests/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Request</Link>
+            <Link href="/api/procurement/export?type=purchase-requests" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
+            <Link href="/inventory/purchase-requests/new" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">New Request</Link>
           </>
         ),
       }}
@@ -123,7 +123,7 @@ export default async function PurchaseRequestsPage({
             cell: (request) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{request.requestNumber}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{request.priority} · {fmt(request.createdAt)}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{request.priority} · {fmt(request.createdAt)}</p>
               </>
             ),
           },
@@ -166,7 +166,7 @@ export default async function PurchaseRequestsPage({
               <StatusBadge tone={toneFor(STATUS_TONES, request.status, "sky")}>{request.status}</StatusBadge>
             </div>
             {/* Actions reachable on mobile (were desktop-table-only). */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderRequestActions(request)}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.75rem]">{renderRequestActions(request)}</div>
           </div>
         )}
         actions={renderRequestActions}

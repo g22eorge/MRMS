@@ -498,7 +498,7 @@ export default async function PayoutFollowupsPage({
               key={t.key}
               href={tabHref(t.key)}
               aria-current={active ? "page" : undefined}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition ${
+              className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-[0.8125rem] font-semibold transition ${
                 active
                   ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--ink)]"
                   : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -506,7 +506,7 @@ export default async function PayoutFollowupsPage({
             >
               <span className={`inline-block h-2 w-2 rounded-full ${t.dot}`} />
               {t.label}
-              <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]">{t.count}</span>
+              <span className="rounded-full bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.6875rem] tabular-nums text-[var(--ink-muted)]">{t.count}</span>
             </Link>
           );
         })}
@@ -542,7 +542,7 @@ export default async function PayoutFollowupsPage({
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
             <p className="text-sm font-semibold text-[var(--ink)]">Invoice Collections — Outstanding</p>
-            <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)] dark:bg-[var(--accent)]/15 dark:text-[var(--accent)]">
+            <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--accent)] dark:bg-[var(--accent)]/15 dark:text-[var(--accent)]">
               {invoiceTotal}
             </span>
           </div>
@@ -560,19 +560,19 @@ export default async function PayoutFollowupsPage({
                     <Link href={`/documents/invoices/${inv.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{inv.invoiceNumber}</Link>
                     {overdueDays != null ? <StatusBadge tone="danger" className="shrink-0">{overdueDays}d overdue</StatusBadge> : <span className="text-emerald-600">On time</span>}
                   </div>
-                  <p className="text-[13px] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[13px] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
-                  <div className="mt-1 flex items-center gap-3 text-[12px]">
+                  <p className="text-[0.8125rem] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[0.8125rem] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
+                  <div className="mt-1 flex items-center gap-3 text-[0.75rem]">
                     <span className="font-semibold text-[var(--accent)] dark:text-[var(--accent)]">{formatMoneyCompact(balance, currency)} due</span>
                     <span className="text-[var(--ink-muted)]">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "No due date"}</span>
                   </div>
                   {/* Inline payment form */}
                   <form action={receiveInvoicePaymentAction} className="mt-2 flex items-center gap-2">
                     <input type="hidden" name="invoiceId" value={inv.id} />
-                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
+                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
-                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-3 text-[12px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
+                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-3 text-[0.75rem] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
                   </form>
                 </div>
               );
@@ -587,7 +587,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (inv) => <><p className="font-medium">{inv.client?.fullName ?? "—"}</p><p className="text-[12px] text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></>,
+                cell: (inv) => <><p className="font-medium">{inv.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></>,
               },
               {
                 key: "type",
@@ -603,13 +603,13 @@ export default async function PayoutFollowupsPage({
                 cell: (inv) => inv.paidAmount > 0 ? <span className="text-emerald-700 dark:text-emerald-400">{formatMoneyCompact(inv.paidAmount, currency)}</span> : <span className="text-[var(--ink-muted)]">—</span>,
               },
               { key: "balance", header: "Balance", className: "font-semibold text-[var(--accent)] dark:text-[var(--accent)] whitespace-nowrap tabular-nums", cell: (inv) => formatMoneyCompact(inv.totalAmount - inv.paidAmount, currency) },
-              { key: "due", header: "Due Date", className: "text-[12px] text-[var(--ink-muted)]", cell: (inv) => inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—" },
+              { key: "due", header: "Due Date", className: "text-[0.75rem] text-[var(--ink-muted)]", cell: (inv) => inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—" },
               {
                 key: "overdue",
                 header: "Overdue",
                 cell: (inv) => {
                   const overdueDays = daysOverdue(inv.dueDate);
-                  return overdueDays != null ? <StatusBadge tone="danger">{overdueDays}d overdue</StatusBadge> : <span className="text-[var(--ink-muted)] text-[12px]">On time</span>;
+                  return overdueDays != null ? <StatusBadge tone="danger">{overdueDays}d overdue</StatusBadge> : <span className="text-[var(--ink-muted)] text-[0.75rem]">On time</span>;
                 },
               },
             ]}
@@ -619,13 +619,13 @@ export default async function PayoutFollowupsPage({
                 <>
                   <form action={receiveInvoicePaymentAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="invoiceId" value={inv.id} />
-                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
-                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[12px] text-[var(--ink)] outline-none">
+                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
+                    <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
-                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[12px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
+                    <SubmitButton bare pendingLabel="…" className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[0.75rem] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">Collect</SubmitButton>
                   </form>
-                  <Link href={`/documents/invoices/${inv.id}`} className="h-8 inline-flex items-center rounded-lg border border-[var(--line)] px-2 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)]">View</Link>
+                  <Link href={`/documents/invoices/${inv.id}`} className="h-8 inline-flex items-center rounded-lg border border-[var(--line)] px-2 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">View</Link>
                 </>
               );
             }}
@@ -639,7 +639,7 @@ export default async function PayoutFollowupsPage({
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
             <p className="text-sm font-semibold text-[var(--ink)]">Repair Client Payments — Outstanding</p>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[12px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.75rem] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
               {clientTotal}
             </span>
           </div>
@@ -653,8 +653,8 @@ export default async function PayoutFollowupsPage({
               return (
                 <div className="px-4 py-3">
                   <div className="mb-0.5 flex items-center justify-between gap-2">
-                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
-                    <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">{formatMoneyCompact(job.clientBill ?? 0, currency)}</span>
+                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[0.8125rem] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
+                    <span className="text-[0.75rem] font-semibold text-amber-700 dark:text-amber-400">{formatMoneyCompact(job.clientBill ?? 0, currency)}</span>
                   </div>
                   <p className="font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
                   <p className="mt-0.5 text-[var(--ink-muted)]">{job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}</p>
@@ -671,7 +671,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[12px] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
               },
               { key: "assigned", header: "Assigned To", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
               {
@@ -694,7 +694,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "doneAt",
                 header: "Done At",
-                className: "text-[12px] text-[var(--ink-muted)]",
+                className: "text-[0.75rem] text-[var(--ink-muted)]",
                 cell: (job) => {
                   const doneAt = job.deliveredAt ?? job.completedAt;
                   return doneAt ? new Date(doneAt).toLocaleDateString() : "—";
@@ -714,7 +714,7 @@ export default async function PayoutFollowupsPage({
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-400" />
             <p className="text-sm font-semibold text-[var(--ink)]">Supplier Bills — Payable</p>
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-400">
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[0.75rem] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-400">
               {billTotal}
             </span>
           </div>
@@ -732,8 +732,8 @@ export default async function PayoutFollowupsPage({
                     <Link href={`/inventory/supplier-bills/${bill.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{bill.billNumber}</Link>
                     {overdueDays != null ? <StatusBadge tone="danger" className="shrink-0">{overdueDays}d overdue</StatusBadge> : <span className="text-emerald-600">On time</span>}
                   </div>
-                  <p className="text-[13px] font-medium text-[var(--ink)]">{bill.supplier.name}</p>
-                  <div className="mt-0.5 flex items-center gap-3 text-[12px]">
+                  <p className="text-[0.8125rem] font-medium text-[var(--ink)]">{bill.supplier.name}</p>
+                  <div className="mt-0.5 flex items-center gap-3 text-[0.75rem]">
                     <span className="font-semibold text-red-700 dark:text-red-400">{formatMoneyCompact(balance, currency)} due</span>
                     {bill.dueAt && <span className="text-[var(--ink-muted)]">{new Date(bill.dueAt).toLocaleDateString()}</span>}
                   </div>
@@ -771,7 +771,7 @@ export default async function PayoutFollowupsPage({
                   : <span className="text-[var(--ink-muted)]">—</span>,
               },
               { key: "balance", header: "Balance", className: "font-semibold text-red-700 dark:text-red-400 whitespace-nowrap tabular-nums", cell: (bill) => formatMoneyCompact(bill.totalAmount - bill.paidAmount, currency) },
-              { key: "due", header: "Due", className: "text-[12px] text-[var(--ink-muted)]", cell: (bill) => bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—" },
+              { key: "due", header: "Due", className: "text-[0.75rem] text-[var(--ink-muted)]", cell: (bill) => bill.dueAt ? new Date(bill.dueAt).toLocaleDateString() : "—" },
               {
                 key: "overdue",
                 header: "Overdue",
@@ -779,7 +779,7 @@ export default async function PayoutFollowupsPage({
                   const overdueDays = daysOverdue(bill.dueAt);
                   return overdueDays != null
                     ? <StatusBadge tone="danger">{overdueDays}d overdue</StatusBadge>
-                    : <span className="text-[var(--ink-muted)] text-[12px]">On time</span>;
+                    : <span className="text-[var(--ink-muted)] text-[0.75rem]">On time</span>;
                 },
               },
             ]}
@@ -798,7 +798,7 @@ export default async function PayoutFollowupsPage({
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-400" />
             <p className="text-sm font-semibold text-[var(--ink)]">External Tech Payouts — Pending</p>
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[0.75rem] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
               {techTotal}
             </span>
           </div>
@@ -815,8 +815,8 @@ export default async function PayoutFollowupsPage({
               return (
                 <div className="px-4 py-3">
                   <div className="mb-0.5 flex items-center justify-between gap-2">
-                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[13px] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
-                    <span className="text-[12px] font-semibold text-blue-700 dark:text-blue-400">{formatMoneyCompact(remaining, currency)} due</span>
+                    <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[0.8125rem] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
+                    <span className="text-[0.75rem] font-semibold text-blue-700 dark:text-blue-400">{formatMoneyCompact(remaining, currency)} due</span>
                   </div>
                   <p className="font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
                   <p className="mt-0.5 text-[var(--ink-muted)]">
@@ -829,7 +829,7 @@ export default async function PayoutFollowupsPage({
                     <ConfirmSubmitButton
                       message={`Record a payout of ${formatMoneyCompact(remaining, currency)} to this technician? This can't be undone.`}
                       confirmLabel="Mark paid"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.8125rem] font-bold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-400">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
                       Mark Paid — {formatMoneyCompact(remaining, currency)}
                     </ConfirmSubmitButton>
@@ -847,7 +847,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[12px] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
               },
               { key: "technician", header: "Technician", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
               { key: "status", header: "Status", cell: (job) => job.status },
@@ -863,7 +863,7 @@ export default async function PayoutFollowupsPage({
                   return (
                     <>
                       <p>{formatMoneyCompact(remaining, currency)}</p>
-                      {alreadyPaid > 0 ? <p className="text-[12px] font-medium text-[var(--ink-muted)]">Paid {formatMoneyCompact(alreadyPaid, currency)} / {formatMoneyCompact(payoutDue, currency)}</p> : null}
+                      {alreadyPaid > 0 ? <p className="text-[0.75rem] font-medium text-[var(--ink-muted)]">Paid {formatMoneyCompact(alreadyPaid, currency)} / {formatMoneyCompact(payoutDue, currency)}</p> : null}
                     </>
                   );
                 },
@@ -871,7 +871,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "doneAt",
                 header: "Done At",
-                className: "text-[12px] text-[var(--ink-muted)]",
+                className: "text-[0.75rem] text-[var(--ink-muted)]",
                 cell: (job) => {
                   const doneAt = job.deliveredAt ?? job.completedAt;
                   return doneAt ? new Date(doneAt).toLocaleDateString() : "—";

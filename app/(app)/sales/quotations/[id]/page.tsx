@@ -231,10 +231,10 @@ export default async function QuotationDetailPage({
     redirect(`/sales/quotations/${id}`);
   }
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const cellInput =
-    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] outline-none focus:border-[var(--accent)]/50";
-  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50";
+  const cardLabel = "text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
   const iconBtn =
     "flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
   const iconBtnDanger =
@@ -401,7 +401,7 @@ export default async function QuotationDetailPage({
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Line Items</p>
-          <p className="text-[12px] text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {quotation.items.length} {quotation.items.length === 1 ? "line" : "lines"} &middot; {formatMoney(quotation.totalAmount, currency)}
           </p>
         </div>
@@ -490,7 +490,7 @@ export default async function QuotationDetailPage({
           }
         />
 
-        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.75rem] text-[var(--ink-muted)]">
           {quotation.discountAmount > 0 ? <span>Discount <span className="font-semibold text-red-600">-{formatMoney(quotation.discountAmount, currency)}</span></span> : null}
           {quotation.vatAmount > 0 ? (
             <span>
@@ -498,7 +498,7 @@ export default async function QuotationDetailPage({
               <span className="font-semibold text-[var(--ink)]">{formatMoney(quotation.vatAmount, currency)}</span>
             </span>
           ) : null}
-          <span className="text-[13px]">Total <span className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(quotation.totalAmount, currency)}</span></span>
+          <span className="text-[0.8125rem]">Total <span className="font-bold tabular-nums text-[var(--ink)]">{formatMoney(quotation.totalAmount, currency)}</span></span>
         </div>
       </section>
 
@@ -525,8 +525,8 @@ export default async function QuotationDetailPage({
 
       {quotation.notes ? (
         <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
-          <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink)]">{quotation.notes}</p>
+          <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Notes</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-[0.8125rem] text-[var(--ink)]">{quotation.notes}</p>
         </section>
       ) : null}
     </div>

@@ -18,7 +18,7 @@ export default function PrivacyPage() {
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-base font-bold tracking-tight text-white">Duuka</span>
-            <span className="rounded bg-[#D4AF37]/15 px-1.5 py-0.5 text-[13px] font-bold text-[#D4AF37]">ProMax</span>
+            <span className="rounded bg-[#D4AF37]/15 px-1.5 py-0.5 text-[0.8125rem] font-bold text-[#D4AF37]">ProMax</span>
           </Link>
           <Link href="/register" className="text-sm text-white/50 transition-colors hover:text-white">
             Get started →
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
       {/* Content */}
       <main className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
         <div className="mb-8">
-          <p className="mb-2 text-[13px] font-bold uppercase tracking-[0.18em] text-[#D4AF37]/70">Legal</p>
+          <p className="mb-2 text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]/70">Legal</p>
           <h1 className="mb-2 text-3xl font-bold text-white">Privacy Policy</h1>
           <p className="text-sm text-white/60">Effective date: {EFFECTIVE_DATE}</p>
         </div>
@@ -205,10 +205,10 @@ export default function PrivacyPage() {
       {/* Footer */}
       <footer className="border-t border-white/8 px-4 py-6 md:px-6">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-white/60">© {new Date().getFullYear()} {COMPANY}</p>
+          <p className="text-[0.75rem] text-white/60">© {new Date().getFullYear()} {COMPANY}</p>
           <nav className="flex gap-4">
-            <Link href="/" className="text-[12px] text-white/60 transition-colors hover:text-white">Home</Link>
-            <Link href="/terms" className="text-[12px] text-white/60 transition-colors hover:text-white">Terms of Service</Link>
+            <Link href="/" className="text-[0.75rem] text-white/60 transition-colors hover:text-white">Home</Link>
+            <Link href="/terms" className="text-[0.75rem] text-white/60 transition-colors hover:text-white">Terms of Service</Link>
           </nav>
         </div>
       </footer>

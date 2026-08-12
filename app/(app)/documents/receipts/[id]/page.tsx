@@ -15,7 +15,7 @@ import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
 
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
-const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
+const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 const clientSelect = { fullName: true, phone: true, email: true, organization: true, address: true } as const;
 
 export default async function ReceiptDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -84,15 +84,15 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
     <>
       {canSend && client?.phone && (
         <form action={sendReceiptWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
         </form>
       )}
       {canSend && client?.email && (
         <form action={sendReceiptEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
         </form>
       )}
-      <Link href={`/api/payments/${payment.id}/receipt`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
+      <Link href={`/api/payments/${payment.id}/receipt`} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</Link>
     </>
   );
 
@@ -120,7 +120,7 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
       />
 
       {sent && (
-        <div className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${sent === "failed" ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"}`}>
+        <div className={`rounded-xl border px-4 py-3 text-[0.8125rem] font-medium ${sent === "failed" ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"}`}>
           {sent === "whatsapp" && "WhatsApp message queued — track delivery in the outbox."}
           {sent === "email" && "Email queued — track delivery in the outbox."}
           {sent === "failed" && "Could not send: no client phone or email on file for this receipt."}
@@ -133,25 +133,25 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
             <div className={cardHeadClass}>Payment</div>
             <div className="grid grid-cols-1 gap-4 p-4 min-[600px]:grid-cols-2">
               <div>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Amount</p>
-                <p className="mono text-[20px] font-black tabular-nums">{formatMoney(payment.amount, currency)}</p>
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Amount</p>
+                <p className="mono text-[1.25rem] font-black tabular-nums">{formatMoney(payment.amount, currency)}</p>
               </div>
               <div>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Method</p>
-                <p className="text-[13px] font-medium">{methodLabel}</p>
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Method</p>
+                <p className="text-[0.8125rem] font-medium">{methodLabel}</p>
               </div>
               <div>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Received</p>
-                <p className="text-[13px] font-medium">{formatEATDate(payment.receivedAt)} · {formatEATTime(payment.receivedAt)}</p>
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Received</p>
+                <p className="text-[0.8125rem] font-medium">{formatEATDate(payment.receivedAt)} · {formatEATTime(payment.receivedAt)}</p>
               </div>
               <div>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reference</p>
-                <p className="text-[13px] font-medium">{payment.reference || "—"}</p>
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reference</p>
+                <p className="text-[0.8125rem] font-medium">{payment.reference || "—"}</p>
               </div>
               {payment.note && (
                 <div className="min-[600px]:col-span-2">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Note</p>
-                  <p className="whitespace-pre-wrap text-[13px] text-[var(--ink-muted)]">{sanitizeText(payment.note)}</p>
+                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Note</p>
+                  <p className="whitespace-pre-wrap text-[0.8125rem] text-[var(--ink-muted)]">{sanitizeText(payment.note)}</p>
                 </div>
               )}
             </div>
@@ -162,10 +162,10 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
               <div className={cardHeadClass}>Receipt for</div>
               <div className="flex items-center justify-between gap-3 p-4">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{source.kind}</p>
-                  <p className="mono text-[14px] font-semibold">{source.label}</p>
+                  <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">{source.kind}</p>
+                  <p className="mono text-[0.875rem] font-semibold">{source.label}</p>
                 </div>
-                <Link href={source.href} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Open {source.kind.toLowerCase()} →</Link>
+                <Link href={source.href} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Open {source.kind.toLowerCase()} →</Link>
               </div>
             </div>
           )}
@@ -173,7 +173,7 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
           {isVoid && receipt?.voidReason && (
             <div className={cardClass}>
               <div className={cardHeadClass}>Void reason</div>
-              <div className="p-4 text-[13px] text-[var(--ink-muted)]">{sanitizeText(receipt.voidReason)}</div>
+              <div className="p-4 text-[0.8125rem] text-[var(--ink-muted)]">{sanitizeText(receipt.voidReason)}</div>
             </div>
           )}
         </div>

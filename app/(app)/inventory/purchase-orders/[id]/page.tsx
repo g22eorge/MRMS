@@ -103,7 +103,7 @@ export default async function PurchaseOrderDetailPage({
         status={{ label: po.status, tone: toneFor(STATUS_TONES, po.status) }}
         secondary={
           <>
-            {isOverdue ? <span className="self-center rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold text-red-600">Late</span> : null}
+            {isOverdue ? <span className="self-center rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[0.6875rem] font-semibold text-red-600">Late</span> : null}
             <RecordPreviewButton variant="button" label="Preview" pdfUrl={`/api/procurement/documents/purchase-order/${po.id}`} title={`Purchase Order ${poNumber(po)}`} />
             <Link href={`/api/procurement/documents/purchase-order/${po.id}`} target="_blank" className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Print / PDF</Link>
           </>
@@ -126,14 +126,14 @@ export default async function PurchaseOrderDetailPage({
                 <form action={setPurchaseOrderStatusAction}>
                   <input type="hidden" name="id" value={po.id} />
                   <input type="hidden" name="status" value="CANCELLED" />
-                  <button type="submit" className="w-full text-left text-[12px] text-red-600">Cancel Order</button>
+                  <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Cancel Order</button>
                 </form>
               </MenuDestructiveRow>
             ) : null}
             <MenuDestructiveRow>
               <form action={deletePurchaseOrderAction}>
                 <input type="hidden" name="id" value={po.id} />
-                <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Order</button>
+                <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Delete Order</button>
               </form>
             </MenuDestructiveRow>
           </RowActionsMenu>
@@ -150,7 +150,7 @@ export default async function PurchaseOrderDetailPage({
           ["Value", formatMoney(totalOrdered)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">{label}</p>
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">{label}</p>
             <p className="mt-1 truncate text-sm font-bold text-[var(--ink)]">{value}</p>
           </div>
         ))}
@@ -185,7 +185,7 @@ export default async function PurchaseOrderDetailPage({
             {
               key: "item",
               header: "Item",
-              className: "mono text-[12px] text-[var(--ink-muted)]",
+              className: "mono text-[0.75rem] text-[var(--ink-muted)]",
               cell: (item) => (item.part ? item.part.sku : "-"),
             },
             {
@@ -226,7 +226,7 @@ export default async function PurchaseOrderDetailPage({
           ]}
           tableFooter={
             <tr>
-              <td colSpan={6} className="px-3 py-2 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
+              <td colSpan={6} className="px-3 py-2 text-right text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Total</td>
               <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{formatMoney(totalOrdered)}</td>
             </tr>
           }
@@ -252,7 +252,7 @@ export default async function PurchaseOrderDetailPage({
           {canReceive && locations.length === 0 ? (
             <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
               <p className="text-sm font-bold text-[var(--ink)]">Receive stock</p>
-              <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">You have no stock location yet — create one here and keep going, no need to leave this page.</p>
+              <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">You have no stock location yet — create one here and keep going, no need to leave this page.</p>
               <form action={createLocationForPoAction} className="mt-2 flex flex-wrap items-end gap-2">
                 <input name="name" required placeholder="Location name (e.g. Main Store)" className="min-w-[180px] flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
                 <input name="code" placeholder="Code (optional)" className="w-32 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm uppercase outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />

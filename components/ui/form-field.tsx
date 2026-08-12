@@ -11,9 +11,9 @@ const inputBase =
   "disabled:opacity-50 disabled:cursor-not-allowed";
 
 const sizeMap = {
-  sm: { label: "text-[10px] mb-0.5", input: "h-8 px-2.5 text-[12px]" },
-  md: { label: "text-[11px] mb-1",   input: "h-9 px-3   text-[13px]" },
-  lg: { label: "text-[12px] mb-1",   input: "h-10 px-3  text-[14px]" },
+  sm: { label: "text-[0.625rem] mb-0.5", input: "h-8 px-2.5 text-[0.75rem]" },
+  md: { label: "text-[0.6875rem] mb-1",   input: "h-9 px-3   text-[0.8125rem]" },
+  lg: { label: "text-[0.75rem] mb-1",   input: "h-10 px-3  text-[0.875rem]" },
 } as const;
 
 type Size = keyof typeof sizeMap;
@@ -53,10 +53,10 @@ export function FormField({
         {...props}
       />
       {hint && !error && (
-        <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{hint}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{hint}</p>
       )}
       {error && (
-        <p className="mt-0.5 text-[11px] text-red-500">{error}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-red-500">{error}</p>
       )}
     </div>
   );
@@ -99,10 +99,10 @@ export function FormTextarea({
         {...props}
       />
       {hint && !error && (
-        <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{hint}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{hint}</p>
       )}
       {error && (
-        <p className="mt-0.5 text-[11px] text-red-500">{error}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-red-500">{error}</p>
       )}
     </div>
   );
@@ -147,10 +147,10 @@ export function FormSelect({
         {children}
       </select>
       {hint && !error && (
-        <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{hint}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{hint}</p>
       )}
       {error && (
-        <p className="mt-0.5 text-[11px] text-red-500">{error}</p>
+        <p className="mt-0.5 text-[0.6875rem] text-red-500">{error}</p>
       )}
     </div>
   );

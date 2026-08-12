@@ -39,11 +39,11 @@ export function SendAssessmentButton({
     });
   }
 
-  const cls = "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[12px] font-semibold text-emerald-600 hover:bg-emerald-500/15 disabled:opacity-50";
+  const cls = "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.75rem] font-semibold text-emerald-600 hover:bg-emerald-500/15 disabled:opacity-50";
 
   return (
     <div className="flex items-center gap-2">
-      {error ? <span className="text-[11px] text-red-600">{error}</span> : null}
+      {error ? <span className="text-[0.6875rem] text-red-600">{error}</span> : null}
       {hasPhone ? (
         <button type="button" onClick={() => run(sendAssessmentViaWhatsAppAction, startWa, "Failed to send")} disabled={pendingWa} className={cls}>
           {pendingWa ? "Sending…" : "WhatsApp"}

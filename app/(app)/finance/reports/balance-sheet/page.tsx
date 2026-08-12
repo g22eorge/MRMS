@@ -44,7 +44,7 @@ function AccountSection({
       <div className={`px-4 py-2.5 ${accentClass}`}>
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wide">{title}</p>
-          <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-bold tabular-nums ${badgeClass}`}>
+          <span className={`rounded-full px-2.5 py-0.5 text-[0.8125rem] font-bold tabular-nums ${badgeClass}`}>
             {formatMoneyCompact(total, currency)}
           </span>
         </div>
@@ -171,7 +171,7 @@ export default async function BalanceSheetPage({
         <select
           name="month"
           defaultValue={month}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>{m}</option>
@@ -180,7 +180,7 @@ export default async function BalanceSheetPage({
         <select
           name="year"
           defaultValue={year}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         >
           {[year - 2, year - 1, year, year + 1].map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -278,7 +278,7 @@ export default async function BalanceSheetPage({
                     <p className="text-xs font-bold uppercase tracking-wide text-[var(--accent)] dark:text-[var(--accent)]">
                       Equity
                     </p>
-                    <span className="rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[13px] font-bold tabular-nums text-[var(--accent)] dark:text-[var(--accent)]">
+                    <span className="rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[0.8125rem] font-bold tabular-nums text-[var(--accent)] dark:text-[var(--accent)]">
                       {formatMoneyCompact(totalEquityAndRetained, currency)}
                     </span>
                   </div>
@@ -324,7 +324,7 @@ export default async function BalanceSheetPage({
                 <p className="text-sm font-bold text-[var(--ink)]">
                   Accounting Equation: Assets = Liabilities + Equity
                 </p>
-                <p className="text-[13px] text-[var(--ink-muted)]">
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">
                   {formatMoney(totalAssets, currency)} ={" "}
                   {formatMoney(totalLiabilities, currency)} +{" "}
                   {formatMoney(totalEquityAndRetained, currency)}
@@ -344,7 +344,7 @@ export default async function BalanceSheetPage({
 
           {/* ── FINANCIAL RATIOS ─────────────────────────────────────────── */}
           <div>
-            <p className="mb-3 text-[13px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Financial Ratios</p>
+            <p className="mb-3 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Financial Ratios</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {/* Current Ratio (using total assets / total liabilities as proxy) */}
               {(() => {
@@ -356,11 +356,11 @@ export default async function BalanceSheetPage({
                   : "text-red-500";
                 return (
                   <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-                    <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Current Ratio</p>
+                    <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Current Ratio</p>
                     <p className={`mt-1 text-xl font-bold tabular-nums ${color}`}>
                       {currentRatio !== null ? currentRatio.toFixed(2) : "—"}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">Assets / Liabilities (approx.)</p>
+                    <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">Assets / Liabilities (approx.)</p>
                   </div>
                 );
               })()}
@@ -377,21 +377,21 @@ export default async function BalanceSheetPage({
                   : "text-red-500";
                 return (
                   <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-                    <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Debt-to-Equity</p>
+                    <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Debt-to-Equity</p>
                     <p className={`mt-1 text-xl font-bold tabular-nums ${color}`}>
                       {dte !== null ? dte.toFixed(2) : "—"}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">Liabilities / Equity</p>
+                    <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">Liabilities / Equity</p>
                   </div>
                 );
               })()}
               {/* Working Capital */}
               <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Working Capital</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Working Capital</p>
                 <p className={`mt-1 text-xl font-bold tabular-nums ${workingCapital >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                   {workingCapital < 0 ? "−" : ""}{formatMoneyCompact(Math.abs(workingCapital), currency)}
                 </p>
-                <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">Assets − Liabilities (approx.)</p>
+                <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">Assets − Liabilities (approx.)</p>
               </div>
             </div>
           </div>

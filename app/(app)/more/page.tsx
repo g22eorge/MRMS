@@ -48,11 +48,11 @@ function NavRow({
       className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-[var(--panel-strong)]"
     >
       {/* Text-forward executive row — no per-item icons. */}
-      <p className="min-w-0 flex-1 text-[14px] font-medium leading-snug text-[var(--ink)]">{text}</p>
+      <p className="min-w-0 flex-1 text-[0.875rem] font-medium leading-snug text-[var(--ink)]">{text}</p>
 
       {/* Badge */}
       {badge && badge > 0 ? (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-[12px] font-black text-black">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-[0.75rem] font-black text-black">
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -69,7 +69,7 @@ function NavRow({
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <p className="px-4 pb-1 pt-4 text-[13px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/60">
+    <p className="px-4 pb-1 pt-4 text-[0.8125rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/60">
       {title}
     </p>
   );
@@ -264,7 +264,7 @@ export default async function MorePage() {
       </div>
 
       {/* ── App version ──────────────────────────────────────────────── */}
-      <p className="mt-6 px-4 text-center text-[12px] text-[var(--ink-muted)]/40">
+      <p className="mt-6 px-4 text-center text-[0.75rem] text-[var(--ink-muted)]/40">
         Duuka ProMax v{APP_VERSION}
       </p>
 

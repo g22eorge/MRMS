@@ -40,21 +40,21 @@ export default async function WhatsAppSettingsPage() {
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[13px] font-semibold text-[var(--ink)]">WhatsApp Business Account</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Messages sent from this number via Meta Cloud API.</p>
+            <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">WhatsApp Business Account</p>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Messages sent from this number via Meta Cloud API.</p>
           </div>
           {health?.ok ? (
-            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[0.75rem] font-semibold text-emerald-600 dark:text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Connected
             </span>
           ) : summary.configured ? (
-            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-500/12 px-2.5 py-1 text-[12px] font-semibold text-red-600 dark:text-red-400">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-500/12 px-2.5 py-1 text-[0.75rem] font-semibold text-red-600 dark:text-red-400">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               Error
             </span>
           ) : (
-            <span className="flex shrink-0 items-center rounded-full bg-[var(--panel-strong)] px-2.5 py-1 text-[12px] font-semibold text-[var(--ink-muted)]">
+            <span className="flex shrink-0 items-center rounded-full bg-[var(--panel-strong)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)]">
               Not configured
             </span>
           )}
@@ -64,13 +64,13 @@ export default async function WhatsAppSettingsPage() {
           <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--line)]/60 sm:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label} className="bg-[var(--panel-strong)] px-3 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]/70">{s.label}</p>
-                <p className="mt-1 truncate mono text-[13px] font-semibold text-[var(--ink)]" title={s.value}>{s.value}</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]/70">{s.label}</p>
+                <p className="mt-1 truncate mono text-[0.8125rem] font-semibold text-[var(--ink)]" title={s.value}>{s.value}</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="mt-3 rounded-lg bg-amber-500/10 px-4 py-3 text-[12px] text-amber-700 dark:text-amber-400">
+          <div className="mt-3 rounded-lg bg-amber-500/10 px-4 py-3 text-[0.75rem] text-amber-700 dark:text-amber-400">
             WhatsApp is not configured. Set <code className="mono">WHATSAPP_ACCESS_TOKEN</code>,{" "}
             <code className="mono">WHATSAPP_PHONE_NUMBER_ID</code>, and{" "}
             <code className="mono">WHATSAPP_BUSINESS_NUMBER</code> in your environment.
@@ -78,7 +78,7 @@ export default async function WhatsAppSettingsPage() {
         )}
 
         {health && !health.ok && (
-          <div className="mt-3 rounded-lg bg-red-500/10 px-4 py-3 text-[12px] text-red-700 dark:text-red-400">
+          <div className="mt-3 rounded-lg bg-red-500/10 px-4 py-3 text-[0.75rem] text-red-700 dark:text-red-400">
             <span className="font-semibold">API error:</span> {health.error}
           </div>
         )}

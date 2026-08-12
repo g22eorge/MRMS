@@ -22,9 +22,9 @@ export default async function NewStockCountPage() {
     <div className="max-w-4xl space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="px-4 py-3">
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">New Stock Count</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Record physical counts and submit variances for approval.</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
+          <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Stock Count</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Record physical counts and submit variances for approval.</p>
         </div>
       </div>
       <NewStockCountForm locations={locations} parts={parts.map((part) => ({ id: part.id, sku: part.sku, name: part.name, qty: part.qtyOnHand }))} />

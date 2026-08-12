@@ -142,7 +142,7 @@ export function NewSupplierBillForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
         Enter the bill your supplier gave you: who it is from, and the items and prices. Link it to an order only if you want to.
       </p>
 
@@ -166,11 +166,11 @@ export function NewSupplierBillForm({
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Bill date
-            <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+            <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Payment due
-            <input name="dueAt" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+            <input name="dueAt" type="date" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
           </label>
         </div>
 
@@ -183,13 +183,13 @@ export function NewSupplierBillForm({
             aria-expanded={showMore}
             className="flex w-full items-center justify-between gap-2 text-left"
           >
-            <span className="text-[13px] font-semibold text-[var(--ink)]">Match to an order, tax &amp; reference <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
+            <span className="text-[0.8125rem] font-semibold text-[var(--ink)]">Match to an order, tax &amp; reference <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-[var(--ink-muted)] transition-transform ${showMore ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <div className={showMore ? "mt-3 grid gap-4 sm:grid-cols-2" : "hidden"}>
             <label className="block text-xs font-semibold text-[var(--ink-muted)]">
               Supplier invoice/reference
-              <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)]" />
+              <input name="supplierRef" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
             </label>
             <label className="block text-xs font-semibold text-[var(--ink-muted)]">
               Tax amount
@@ -219,9 +219,9 @@ export function NewSupplierBillForm({
             </label>
             <label className="block text-xs font-semibold text-[var(--ink-muted)]">
               Currency
-              <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase text-[var(--ink)]" />
+              <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] uppercase text-[var(--ink)]" />
             </label>
-            <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] sm:col-span-2" />
+            <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] sm:col-span-2" />
           </div>
         </div>
       </div>
@@ -270,18 +270,18 @@ export function NewSupplierBillForm({
               header: "Total",
               align: "right",
               headerClassName: "w-32",
-              className: "w-32 text-[12px] tabular-nums text-[var(--ink-muted)]",
+              className: "w-32 text-[0.75rem] tabular-nums text-[var(--ink-muted)]",
               cell: (line) => (line.quantity * line.unitCost).toLocaleString(),
             },
           ]}
           actions={(line) =>
             lines.length > 1 ? (
-              <button type="button" onClick={() => removeLine(line.key)} className="text-[12px] font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
+              <button type="button" onClick={() => removeLine(line.key)} className="text-[0.75rem] font-bold text-[var(--ink-muted)] hover:text-red-500">x</button>
             ) : null
           }
           tableFooter={
             <tr className="bg-[var(--accent)]/5">
-              <td colSpan={3} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Subtotal</td>
+              <td colSpan={3} className="px-3 py-2 text-right text-[0.75rem] font-semibold text-[var(--ink-muted)]">Subtotal</td>
               <td className="px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{subtotal.toLocaleString()}</td>
               <td />
             </tr>

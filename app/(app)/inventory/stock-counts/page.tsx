@@ -67,7 +67,7 @@ export default async function StockCountsPage({
         title: "Stock Counts",
         description: `${countsTotal} counts`,
         actions: (
-          <Link href="/inventory/stock-counts/new" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">New Count</Link>
+          <Link href="/inventory/stock-counts/new" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">New Count</Link>
         ),
         kpis: [
           { label: "Total Counts", value: countsTotal, sub: "all time" },
@@ -89,7 +89,7 @@ export default async function StockCountsPage({
             cell: (count) => (
               <>
                 <p className="mono font-bold text-[var(--ink)]">{count.countNumber}</p>
-                <p className="text-[12px] text-[var(--ink-muted)]">{count.createdBy.name || count.createdBy.email}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{count.createdBy.name || count.createdBy.email}</p>
               </>
             ),
           },

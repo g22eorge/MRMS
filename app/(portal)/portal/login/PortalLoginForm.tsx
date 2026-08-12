@@ -24,7 +24,7 @@ export function PortalLoginForm() {
   return (
     <form action={formAction} className="space-y-3">
       <div>
-        <label className="text-[12px] font-medium text-[var(--ink-muted)]">Email</label>
+        <label className="text-[0.75rem] font-medium text-[var(--ink-muted)]">Email</label>
         <input
           type="email"
           name="email"
@@ -35,7 +35,7 @@ export function PortalLoginForm() {
         />
       </div>
       <div>
-        <label className="text-[12px] font-medium text-[var(--ink-muted)]">Password</label>
+        <label className="text-[0.75rem] font-medium text-[var(--ink-muted)]">Password</label>
         <input
           type="password"
           name="password"
@@ -45,7 +45,7 @@ export function PortalLoginForm() {
           className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
         />
       </div>
-      {state.error ? <p className="text-[13px] text-red-500">{state.error}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-red-500">{state.error}</p> : null}
       <SubmitButton />
     </form>
   );

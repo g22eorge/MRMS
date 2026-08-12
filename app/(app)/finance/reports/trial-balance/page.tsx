@@ -102,12 +102,12 @@ export default async function TrialBalancePage({
 
       {/* ── PERIOD SELECTOR ──────────────────────────────────────────────── */}
       <form method="GET" className="no-print flex items-center gap-2">
-        <select name="month" defaultValue={month} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]">
+        <select name="month" defaultValue={month} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]">
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>{m}</option>
           ))}
         </select>
-        <select name="year" defaultValue={year} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]">
+        <select name="year" defaultValue={year} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]">
           {[year - 2, year - 1, year, year + 1].map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
@@ -150,7 +150,7 @@ export default async function TrialBalancePage({
           <div className="panel-shadow overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
-                <tr className="border-b border-[var(--line)] text-[12px] uppercase tracking-wide text-[var(--ink-muted)]">
+                <tr className="border-b border-[var(--line)] text-[0.75rem] uppercase tracking-wide text-[var(--ink-muted)]">
                   <th className="px-4 py-2.5 text-left font-bold">Account</th>
                   <th className="px-4 py-2.5 text-left font-bold">Type</th>
                   <th className="px-4 py-2.5 text-right font-bold">Debit</th>
@@ -164,7 +164,7 @@ export default async function TrialBalancePage({
                       <span className="mr-2 mono text-xs text-[var(--accent)]">{r.code}</span>
                       <span className="text-[var(--ink)]">{r.name}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-[12px] text-[var(--ink-muted)]">{r.type}</td>
+                    <td className="px-4 py-2.5 text-[0.75rem] text-[var(--ink-muted)]">{r.type}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{r.debit ? formatMoney(r.debit, currency) : "—"}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{r.credit ? formatMoney(r.credit, currency) : "—"}</td>
                   </tr>
@@ -189,7 +189,7 @@ export default async function TrialBalancePage({
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <p className="text-sm font-bold text-[var(--ink)]">Total Debits = Total Credits</p>
-                <p className="text-[13px] text-[var(--ink-muted)]">
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">
                   {formatMoney(totalDebit, currency)} = {formatMoney(totalCredit, currency)}
                 </p>
               </div>

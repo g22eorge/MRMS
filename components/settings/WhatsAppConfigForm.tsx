@@ -17,7 +17,7 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
 
   return (
     <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
-      <p className="mb-1 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+      <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
         {current ? "Update Credentials" : "Connect WhatsApp Business"}
       </p>
       <p className="mb-4 text-xs text-[var(--ink-muted)]">
@@ -42,7 +42,7 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
               required
               placeholder="+256700000000"
               defaultValue={current?.businessNumber ?? ""}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
             />
           </div>
 
@@ -56,7 +56,7 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
               required
               placeholder="1234567890"
               defaultValue={current?.phoneNumberId ?? ""}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
             />
           </div>
 
@@ -69,10 +69,10 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
               type="password"
               required={!current}
               placeholder={current ? "Enter new token to update, or leave blank to keep existing" : "EAAxxxxxxxx…"}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
             />
             {current && (
-              <p className="mt-1 text-[12px] text-[var(--ink-muted)]">Leave blank to keep the existing token.</p>
+              <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">Leave blank to keep the existing token.</p>
             )}
           </div>
 
@@ -85,7 +85,7 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
               type="text"
               placeholder="1234567890"
               defaultValue={current?.businessAccountId ?? ""}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
             />
           </div>
         </div>

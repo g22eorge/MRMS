@@ -187,7 +187,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
   }
 
   const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/25";
-  const labelCls = "mb-1 block text-[13px] font-semibold uppercase tracking-wider text-white/60";
+  const labelCls = "mb-1 block text-[0.8125rem] font-semibold uppercase tracking-wider text-white/60";
 
   return (
     <form onSubmit={submit} noValidate>
@@ -299,7 +299,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               />
               <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#D4AF37]/80" : "text-white/60"}`}>{opt.icon}</span>
               <span className="text-sm font-semibold text-white/80">{opt.label}</span>
-              <span className="text-[13px] text-white/60">{opt.desc}</span>
+              <span className="text-[0.8125rem] text-white/60">{opt.desc}</span>
             </label>
           ))}
         </div>
@@ -376,7 +376,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
             </>
           )}
         </button>
-        <p className="mt-2.5 text-center text-[13px] text-white/60">
+        <p className="mt-2.5 text-center text-[0.8125rem] text-white/60">
           We&apos;ll confirm your request and send a quote via WhatsApp or call.
         </p>
       </div>

@@ -66,7 +66,7 @@ function DRow({ label, value }: { label: string; value?: string | null }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <p className="text-[12px] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-2">{title}</p>
+      <p className="text-[0.75rem] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-2">{title}</p>
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-1">{children}</div>
     </div>
   );
@@ -189,7 +189,7 @@ function RequestDrawer({
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)] bg-[var(--panel)]">
           <div>
-            <p className="text-[13px] font-bold tracking-widest uppercase text-[var(--ink-muted)]">Repair Request</p>
+            <p className="text-[0.8125rem] font-bold tracking-widest uppercase text-[var(--ink-muted)]">Repair Request</p>
             <h2 className="text-lg font-bold text-[var(--ink)]">{req.requestNumber}</h2>
           </div>
           <div className="flex items-center gap-3">
@@ -275,48 +275,48 @@ function RequestDrawer({
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {editMode && canManageIntake ? (
             <form action={saveEdits} className="mb-6 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 panel-shadow">
-              <p className="text-[12px] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-3">Edit Request</p>
+              <p className="text-[0.75rem] font-bold tracking-widest uppercase text-[var(--ink-muted)] mb-3">Edit Request</p>
               <div className="grid grid-cols-1 gap-3">
                 <input
                   name="customerName"
                   defaultValue={req.customerName}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Customer name"
                 />
                 <input
                   name="phone"
                   defaultValue={req.phone}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Phone"
                 />
                 <input
                   name="email"
                   defaultValue={req.email ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Email"
                 />
                 <input
                   name="brand"
                   defaultValue={req.brand}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Brand"
                 />
                 <input
                   name="model"
                   defaultValue={req.model ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Model"
                 />
                 <input
                   name="serialNumber"
                   defaultValue={req.serialNumber ?? ""}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Serial / IMEI"
                 />
                 <textarea
                   name="problemDescription"
                   defaultValue={req.problemDescription}
-                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[13px]"
+                  className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[0.8125rem]"
                   placeholder="Problem description"
                   rows={4}
                 />
@@ -541,11 +541,11 @@ function MobileCard({
       <span className={`absolute inset-y-0 left-0 w-[5px] ${requestStripClass(req.requestStatus)}`} aria-hidden="true" />
       <div className="px-4 py-3 pl-6">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <span className="mono text-[12px] font-medium tracking-wide text-[var(--ink-muted)]/50">{req.requestNumber}</span>
+          <span className="mono text-[0.75rem] font-medium tracking-wide text-[var(--ink-muted)]/50">{req.requestNumber}</span>
           <StatusBadge status={req.requestStatus} />
         </div>
-        <p className="truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">{req.customerName}</p>
-        <div className="mt-1 flex items-center gap-1 text-[13px] text-[var(--ink-muted)]">
+        <p className="truncate text-[0.9375rem] font-bold leading-snug tracking-tight text-[var(--ink)]">{req.customerName}</p>
+        <div className="mt-1 flex items-center gap-1 text-[0.8125rem] text-[var(--ink-muted)]">
           <span className="truncate font-medium">{device}</span>
           <span className="shrink-0 opacity-40">·</span>
           <span className="shrink-0">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
@@ -675,7 +675,7 @@ export function IntakeClient({
         <summary className="list-none">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Intake Brief</p>
-            <span className="text-[13px] text-[var(--ink-muted)]">Expand</span>
+            <span className="text-[0.8125rem] text-[var(--ink-muted)]">Expand</span>
           </div>
         </summary>
         <p className="mt-2 border-t border-[var(--line)] pt-2 text-xs text-[var(--ink-muted)] [overflow-wrap:anywhere]">{brief}</p>
@@ -700,7 +700,7 @@ export function IntakeClient({
             >
               {tab.label}
               {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[13px] font-bold ${active ? "bg-black/10" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.8125rem] font-bold ${active ? "bg-black/10" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {count}
                 </span>
               )}
@@ -762,7 +762,7 @@ export function IntakeClient({
             cell: (req) => (
               <>
                 <div className="font-medium text-[var(--ink)]">{req.customerName}</div>
-                <div className="text-[12px] text-[var(--ink-muted)] md:hidden">{req.phone}</div>
+                <div className="text-[0.75rem] text-[var(--ink-muted)] md:hidden">{req.phone}</div>
               </>
             ),
           },
@@ -774,7 +774,7 @@ export function IntakeClient({
             cell: (req) => (
               <>
                 <div className="max-w-[16rem] truncate font-medium text-[var(--ink)]">{req.brand}{req.model && <span className="text-[var(--ink-muted)]"> {req.model}</span>}</div>
-                <div className="max-w-[16rem] truncate text-[12px] text-[var(--ink-muted)]">{req.problemDescription || (DEVICE_LABEL[req.deviceType] ?? req.deviceType)}</div>
+                <div className="max-w-[16rem] truncate text-[0.75rem] text-[var(--ink-muted)]">{req.problemDescription || (DEVICE_LABEL[req.deviceType] ?? req.deviceType)}</div>
               </>
             ),
           },
@@ -784,7 +784,7 @@ export function IntakeClient({
             headerClassName: "hidden lg:table-cell",
             className: "hidden whitespace-nowrap lg:table-cell",
             cell: (req) => (
-              <span className="text-[12px] text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
+              <span className="text-[0.75rem] text-[var(--ink-muted)]">{HANDOVER_LABEL[req.handoverMethod] ?? req.handoverMethod}</span>
             ),
           },
           {
@@ -797,7 +797,7 @@ export function IntakeClient({
             key: "date",
             header: "Date",
             headerClassName: "hidden lg:table-cell",
-            className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] lg:table-cell",
+            className: "hidden whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
             cell: (req) => fmt(req.createdAt),
           },
           {

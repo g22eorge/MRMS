@@ -137,21 +137,21 @@ export function CommercialLineItemsEditor({
                     type="button"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => { onSelectPart(item.key, p.id); setOpenComboKey(null); }}
-                    className="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] hover:bg-[var(--panel-strong)]"
+                    className="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[0.8125rem] hover:bg-[var(--panel-strong)]"
                   >
                     <span className="font-semibold text-[var(--ink)]">{p.name}</span>
                     <span className="text-[var(--ink-muted)]"> · {p.sku}{p.qtyOnHand != null ? ` (${p.qtyOnHand})` : ""}</span>
                   </button>
                 ))}
                 {q && matches.length === 0 ? (
-                  <div className="px-2.5 py-1.5 text-[12px] text-[var(--ink-muted)]">No inventory match — this stays a custom line.</div>
+                  <div className="px-2.5 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">No inventory match — this stays a custom line.</div>
                 ) : null}
                 {onCreatePart && q ? (
                   <button
                     type="button"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => { setCreatingLineKey(item.key); setOpenComboKey(null); }}
-                    className="mt-1 block w-full truncate rounded-md border border-dashed border-[var(--accent)]/45 px-2.5 py-1.5 text-left text-[13px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                    className="mt-1 block w-full truncate rounded-md border border-dashed border-[var(--accent)]/45 px-2.5 py-1.5 text-left text-[0.8125rem] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10"
                   >
                     + Create &ldquo;{item.description.trim()}&rdquo; as a new inventory part
                   </button>

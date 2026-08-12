@@ -119,17 +119,17 @@ export default async function ServiceHubPage() {
           <>
             <Link
               href="/jobs"
-              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
             >
               ← Jobs
             </Link>
             <Link
               href="/intake"
-              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+              className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
             >
               Intake
               {pendingIntake !== null && pendingIntake > 0 && (
-                <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">{pendingIntake}</span>
+                <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.625rem] font-bold text-white leading-none">{pendingIntake}</span>
               )}
             </Link>
           </>
@@ -140,7 +140,7 @@ export default async function ServiceHubPage() {
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Today&apos;s Field Visits</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Today&apos;s Field Visits</p>
             <Link href="/field" className="text-xs font-semibold text-[var(--accent)] hover:underline">All visits</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
@@ -157,7 +157,7 @@ export default async function ServiceHubPage() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-black tabular-nums text-[var(--ink)]">{formatEATTime(visit.scheduledAt)}</p>
-                  <p className="text-[11px] text-[var(--ink-muted)]">{visit.status.replace(/_/g, " ").toLowerCase()}</p>
+                  <p className="text-[0.6875rem] text-[var(--ink-muted)]">{visit.status.replace(/_/g, " ").toLowerCase()}</p>
                 </div>
               </Link>
             ))}
@@ -169,7 +169,7 @@ export default async function ServiceHubPage() {
 
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Complaints</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Open Complaints</p>
             <Link href="/complaints" className="text-xs font-semibold text-[var(--accent)] hover:underline">All complaints</Link>
           </div>
           <div className="divide-y divide-[var(--line)]">
@@ -182,8 +182,8 @@ export default async function ServiceHubPage() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">{complaint.status.replace(/_/g, " ").toLowerCase()}</p>
-                  <p className="text-[11px] text-[var(--ink-muted)]">{complaint.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">{complaint.status.replace(/_/g, " ").toLowerCase()}</p>
+                  <p className="text-[0.6875rem] text-[var(--ink-muted)]">{complaint.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
                 </div>
               </Link>
             ))}

@@ -35,7 +35,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-4">
-      <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Details</p>
+      <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Details</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field name="name" label="Supplier Name" defaultValue={supplier.name} required />
         <Field name="contactName" label="Contact Person" defaultValue={supplier.contactName ?? ""} />
@@ -48,7 +48,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="address"
           rows={2}
           defaultValue={supplier.address ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div>
@@ -57,7 +57,7 @@ export function SupplierEditForm({ supplier }: { supplier: Supplier }) {
           name="notes"
           rows={2}
           defaultValue={supplier.notes ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ function Field({
         type={type}
         required={required}
         defaultValue={defaultValue}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
       />
     </div>
   );

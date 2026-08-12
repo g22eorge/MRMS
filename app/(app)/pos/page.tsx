@@ -315,8 +315,8 @@ export default async function PosPage({
             {/* Title row + New Sale CTA */}
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-[22px] font-black text-[var(--ink)]">Sales</h1>
-                <p className="text-[13px] text-[var(--ink-muted)]">{segCountAll} total · amounts in {currency}</p>
+                <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Sales</h1>
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">{segCountAll} total · amounts in {currency}</p>
               </div>
               <form action={createSaleAction}>
                 <SubmitButton size="md" pendingLabel="Creating…" className="rounded-xl font-bold">+ New Sale</SubmitButton>
@@ -332,8 +332,8 @@ export default async function PosPage({
                 { label: "Avg", value: compactAmount(kpiAvgSale) },
               ] as const).map(({ label, value }) => (
                 <div key={label} className="min-w-0 px-1.5 py-3 text-center">
-                  <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
-                  <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+                  <p className="truncate text-[1.0625rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+                  <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
                 </div>
               ))}
             </div>
@@ -344,7 +344,7 @@ export default async function PosPage({
                 <Link
                   key={seg}
                   href={segmentHref(seg)}
-                  className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                  className={`rounded-full py-1.5 text-center text-[0.75rem] font-bold transition ${
                     segment === seg
                       ? "bg-[var(--accent)] text-black"
                       : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -366,7 +366,7 @@ export default async function PosPage({
                   name="q"
                   defaultValue={q}
                   placeholder="Sale number, client or note..."
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
                   <Link href={filterHref(segment, "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -436,7 +436,7 @@ export default async function PosPage({
             <Link
               key={seg}
               href={segmentHref(seg)}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 segment === seg
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -464,7 +464,7 @@ export default async function PosPage({
           />
           <Button type="submit" variant="secondary" size="sm">Search</Button>
           {hasSaleFilters ? (
-            <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+            <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
         </form>
       </div>
@@ -511,9 +511,9 @@ export default async function PosPage({
                     </p>
                   </Link>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <p className="text-[14px] font-black tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
+                    <p className="text-[0.875rem] font-black tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoneyCompact(s.totalAmount, cur)}</p>
                     {balance > 0 && s.status !== "VOID" ? (
-                      <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">{formatMoneyCompact(balance, cur)} due</span>
+                      <span className="text-[0.75rem] font-semibold text-amber-600 dark:text-amber-400">{formatMoneyCompact(balance, cur)} due</span>
                     ) : (
                       <StatusBadge tone={saleStatusTone(s.status)}>{s.status}</StatusBadge>
                     )}
@@ -533,7 +533,7 @@ export default async function PosPage({
                     <Link href={`/pos/${s.id}`} className="mono block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
                       {s.saleNumber}
                     </Link>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
                   </div>
                 ),
               },
@@ -549,7 +549,7 @@ export default async function PosPage({
                 key: "createdBy",
                 header: "Cashier",
                 headerClassName: "hidden xl:table-cell",
-                className: "hidden text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                className: "hidden text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                 cell: (s) => s.createdBy?.name ?? <span className="opacity-30">—</span>,
               },
               {
@@ -565,7 +565,7 @@ export default async function PosPage({
                 cell: (s) => {
                   const cur = normalizeCurrency(s.currency, "UGX");
                   const balance = Math.max(0, s.totalAmount - s.paidAmount);
-                  if (s.status === "VOID") return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
+                  if (s.status === "VOID") return <span className="text-[0.75rem] text-[var(--ink-muted)]/40">—</span>;
                   return balance > 0
                     ? <span className="font-semibold text-amber-600 dark:text-amber-400">{formatMoneyCompact(balance, cur)}</span>
                     : <span className="font-semibold text-emerald-600 dark:text-emerald-400">Cleared</span>;

@@ -320,7 +320,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <input type="hidden" name="expenseId" value={expense.id} />
               <ConfirmSubmitButton
                 message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
-                className="w-full text-left text-[12px] text-red-600"
+                className="w-full text-left text-[0.75rem] text-red-600"
               >
                 Delete
               </ConfirmSubmitButton>
@@ -372,27 +372,27 @@ export default async function ExpensesPage({ searchParams }: Props) {
             </Link>
             {canWrite && (
           <details className="group relative">
-            <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[12px]">
+            <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
               + Record Expense
             </summary>
             <div className="absolute right-0 top-full z-20 mt-2 w-96 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-              <p className="mb-3 text-[12px] font-bold text-[var(--ink)]">Record Business Expense</p>
+              <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">Record Business Expense</p>
               <form action={createExpenseAction} className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                     Description *
                   </label>
                   <input
                     name="description"
                     required
                     placeholder="What was this expense for?"
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                   />
 
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                       Amount *
                     </label>
                     <input
@@ -402,7 +402,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                       step="0.01"
                       required
                       placeholder="0.00"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                     />
                   </div>
                   {/* Currency locked to org base — hidden field */}
@@ -410,12 +410,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                       Category
                     </label>
                     <select
                       name="category"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
@@ -423,12 +423,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                       Payment Method
                     </label>
                     <select
                       name="method"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                     >
                       <option value="">— none —</option>
                       {METHODS.map((m) => (
@@ -441,28 +441,28 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     them in the DOM so they still submit) but collapse by default
                     so "rent, 500k, cash" is a three-field job. */}
                 <details className="rounded-lg border border-[var(--line)]">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-[13px] font-semibold text-[var(--ink)]">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)]">
                     More details <span className="font-normal text-[var(--ink-muted)]">— optional</span>
                   </summary>
                   <div className="space-y-3 px-3 pb-3">
                     <div>
-                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                         Date paid <span className="font-normal">(defaults to today)</span>
                       </label>
                       <input
                         name="paidAt"
                         type="date"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                       />
                     </div>
                     {suppliers.length > 0 && (
                       <div>
-                        <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                        <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                           Supplier
                         </label>
                         <select
                           name="supplierId"
-                          className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                          className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                         >
                           <option value="">— none —</option>
                           {suppliers.map((s) => (
@@ -472,26 +472,26 @@ export default async function ExpensesPage({ searchParams }: Props) {
                       </div>
                     )}
                     <div>
-                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">
+                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
                         Reference / Receipt #
                       </label>
                       <input
                         name="reference"
                         placeholder="Invoice or receipt number"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[13px] font-semibold text-[var(--ink-muted)]">Notes</label>
+                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
                       <textarea
                         name="notes"
                         rows={2}
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[12px]"
+                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
                       />
                     </div>
                   </div>
                 </details>
-                <SubmitButton bare pendingLabel="Saving…" className="btn-premium w-full rounded-lg py-2 text-[12px] font-semibold disabled:opacity-60">
+                <SubmitButton bare pendingLabel="Saving…" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold disabled:opacity-60">
                   Save Expense
                 </SubmitButton>
               </form>
@@ -547,7 +547,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
           { label: "YTD", value: "ytd" },
         ] as const).map(({ label, value }) => (
           <Link key={value} href={filterUrl({ period: value === "all" ? "" : value })}
-            className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+            className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
             {label}
           </Link>
         ))}
@@ -562,16 +562,16 @@ export default async function ExpensesPage({ searchParams }: Props) {
             name="q"
             defaultValue={q}
             placeholder="Search description, reference…"
-            className="input-base h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] sm:min-w-[180px]"
+            className="input-base h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] sm:min-w-[180px]"
           />
-          <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-medium hover:bg-[var(--panel-strong)]">
+          <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Search
           </button>
         </form>
         <div className="flex w-full min-w-0 gap-1 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
           <Link
             href={filterUrl({ category: "" })}
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-[13px] font-semibold transition sm:px-2.5 ${
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.8125rem] font-semibold transition sm:px-2.5 ${
               !catFilter
                 ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
                 : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/50"
@@ -583,7 +583,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
             <Link
               key={cat}
               href={filterUrl({ category: catFilter === cat ? "" : cat })}
-              className={`shrink-0 rounded-full border px-2 py-0.5 text-[13px] font-semibold transition sm:px-2.5 ${
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.8125rem] font-semibold transition sm:px-2.5 ${
                 catFilter === cat
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
                   : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/50"
@@ -608,7 +608,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               header: "Expense #",
               cell: (expense) => (
                 <>
-                  <p className="mono text-[12px] font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
+                  <p className="mono text-[0.75rem] font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
                   <p className="text-[var(--ink-muted)]">{fmt(expense.createdAt)}</p>
                 </>
               ),
@@ -641,21 +641,21 @@ export default async function ExpensesPage({ searchParams }: Props) {
               key: "supplier",
               header: "Supplier",
               headerClassName: "hidden md:table-cell",
-              className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+              className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
               cell: (expense) => expense.supplier?.name ?? "—",
             },
             {
               key: "method",
               header: "Method",
               headerClassName: "hidden lg:table-cell",
-              className: "hidden text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              className: "hidden text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
               cell: (expense) => (expense.method ? expense.method.replace(/_/g, " ") : "—"),
             },
             {
               key: "paid",
               header: "Paid",
               headerClassName: "hidden lg:table-cell",
-              className: "hidden text-[12px] text-[var(--ink-muted)] lg:table-cell",
+              className: "hidden text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
               cell: (expense) => fmt(expense.paidAt),
             },
             {
@@ -683,7 +683,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
-                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {fmt(expense.paidAt ?? expense.createdAt)}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {fmt(expense.paidAt ?? expense.createdAt)}</p>
                 <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -695,11 +695,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
         />
         {total > 0 && (
           <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2.5">
-            <p className="text-[13px] text-[var(--ink-muted)]">
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">
               {total} record{total !== 1 ? "s" : ""}
               {catFilter ? ` · ${CATEGORY_LABELS[catFilter]}` : ""}
             </p>
-            <p className="text-[12px] font-bold text-[var(--ink)]">
+            <p className="text-[0.75rem] font-bold text-[var(--ink)]">
               Total: {currency} {totalAmount.toLocaleString()}
             </p>
           </div>

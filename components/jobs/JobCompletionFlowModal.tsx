@@ -159,7 +159,7 @@ export function JobCompletionFlowModal({
                       : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
                 }`}
               >
-                <span className="block text-[10px] font-bold uppercase tracking-wider">Step {stepNumber}</span>
+                <span className="block text-[0.625rem] font-bold uppercase tracking-wider">Step {stepNumber}</span>
                 <span className="mt-0.5 block font-semibold">{label}</span>
               </li>
             );
@@ -277,7 +277,7 @@ export function JobCompletionFlowModal({
               >
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    <label className="mb-1 block text-[0.75rem] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
                       Amount
                     </label>
                     <input
@@ -285,17 +285,17 @@ export function JobCompletionFlowModal({
                       defaultValue={defaultPaymentAmount}
                       inputMode="decimal"
                       required
-                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    <label className="mb-1 block text-[0.75rem] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
                       Method
                     </label>
                     <select
                       name="method"
                       defaultValue="CASH"
-                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
                     >
                       {PAYMENT_METHODS.map((method) => (
                         <option key={method} value={method}>
@@ -307,13 +307,13 @@ export function JobCompletionFlowModal({
                 </div>
                 <input type="hidden" name="kind" value="BALANCE" />
                 <div>
-                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                  <label className="mb-1 block text-[0.75rem] font-medium uppercase tracking-wide text-[var(--ink-muted)]">
                     Reference / receipt #
                   </label>
                   <input
                     name="reference"
                     placeholder="Optional"
-                    className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px]"
+                    className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
                   />
                 </div>
                 <button

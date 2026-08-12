@@ -50,11 +50,11 @@ export function StatStrip({ tiles, variant = "embedded", columns }: StatStripPro
               className={`absolute inset-y-0 left-0 w-[3px] ${accent ? "bg-[var(--dc-accent)]" : "bg-[var(--dc-line)]"}`}
               aria-hidden="true"
             />
-            <p className="text-[11px] font-semibold text-[var(--dc-ink-3)]">{label}</p>
-            <p className={`mt-1 truncate text-[20px] font-bold leading-none tracking-[-0.02em] tabular-nums lg:text-[26px] ${valueClass ?? (accent ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink)]")}`}>
+            <p className="text-[0.6875rem] font-semibold text-[var(--dc-ink-3)]">{label}</p>
+            <p className={`mt-1 truncate text-[1.25rem] font-bold leading-none tracking-[-0.02em] tabular-nums lg:text-[1.625rem] ${valueClass ?? (accent ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink)]")}`}>
               {value}
             </p>
-            {sub ? <p className="mt-1 truncate text-[10.5px] text-[var(--dc-ink-3)]">{sub}</p> : null}
+            {sub ? <p className="mt-1 truncate text-[0.65625rem] text-[var(--dc-ink-3)]">{sub}</p> : null}
           </div>
         ))}
       </div>
@@ -65,11 +65,11 @@ export function StatStrip({ tiles, variant = "embedded", columns }: StatStripPro
     <div className={`grid grid-cols-2 divide-x divide-y divide-[var(--line)] ${cols} sm:divide-y-0`}>
       {tiles.map(({ label, value, sub, accent, valueClass }) => (
         <div key={label} className="px-4 py-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">{label}</p>
-          <p className={`mt-0.5 text-[15px] font-black tabular-nums leading-tight ${valueClass ?? (accent ? "text-[var(--accent)]" : "text-[var(--ink)]")}`}>
+          <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">{label}</p>
+          <p className={`mt-0.5 text-[0.9375rem] font-black tabular-nums leading-tight ${valueClass ?? (accent ? "text-[var(--accent)]" : "text-[var(--ink)]")}`}>
             {value}
           </p>
-          {sub ? <p className="text-[12px] text-[var(--ink-muted)]">{sub}</p> : null}
+          {sub ? <p className="text-[0.75rem] text-[var(--ink-muted)]">{sub}</p> : null}
         </div>
       ))}
     </div>

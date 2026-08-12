@@ -52,28 +52,28 @@ export default async function PortalRepairsPage({
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-black text-[var(--ink)]">Repairs</h1>
-        <Link href="/portal/repairs/new" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white">
+        <Link href="/portal/repairs/new" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white">
           + Submit a repair
         </Link>
       </div>
 
       {submitted ? (
-        <div className="mb-3 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-[13px] text-emerald-700 dark:text-emerald-300">
+        <div className="mb-3 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-[0.8125rem] text-emerald-700 dark:text-emerald-300">
           Request submitted — {org.name}&rsquo;s team will confirm and open your repair shortly.
         </div>
       ) : null}
 
       {pending.length > 0 ? (
         <div className="mb-3 overflow-hidden rounded-xl border border-amber-400/30 bg-amber-500/5">
-          <p className="border-b border-amber-400/20 px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Awaiting review ({pending.length})</p>
+          <p className="border-b border-amber-400/20 px-4 py-2 text-[0.6875rem] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Awaiting review ({pending.length})</p>
           <ul>
             {pending.map((r) => (
-              <li key={r.id} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
+              <li key={r.id} className="flex items-center justify-between px-4 py-2.5 text-[0.8125rem]">
                 <div>
                   <span className="mono font-semibold text-[var(--ink)]">{r.requestNumber}</span>
                   <span className="ml-2 text-[var(--ink-muted)]">{[r.brand, r.model].filter(Boolean).join(" ") || r.deviceType.replaceAll("_", " ")}</span>
                 </div>
-                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">Pending review</span>
+                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[0.6875rem] font-semibold text-amber-700 dark:text-amber-300">Pending review</span>
               </li>
             ))}
           </ul>
@@ -85,13 +85,13 @@ export default async function PortalRepairsPage({
           name="q"
           defaultValue={query}
           placeholder="Search by job number, device, or serial…"
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
         />
       </form>
 
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         {jobs.length === 0 ? (
-          <p className="px-4 py-10 text-center text-[13px] text-[var(--ink-muted)]">
+          <p className="px-4 py-10 text-center text-[0.8125rem] text-[var(--ink-muted)]">
             {query ? "No repairs match your search." : "No repairs on record yet."}
           </p>
         ) : (
@@ -100,11 +100,11 @@ export default async function PortalRepairsPage({
               <li key={job.id} className="border-b border-[var(--line)]/60 last:border-0">
                 <Link href={`/portal/repairs/${job.id}`} className="flex items-center justify-between px-4 py-3 transition hover:bg-[var(--panel-strong)]/40">
                   <div className="min-w-0">
-                    <span className="mono text-[13px] font-semibold text-[var(--ink)]">{job.jobNumber}</span>
-                    <span className="ml-2 text-[13px] text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
-                    {job.serialOrImei ? <span className="ml-2 text-[11px] text-[var(--ink-muted)]">· {job.serialOrImei}</span> : null}
+                    <span className="mono text-[0.8125rem] font-semibold text-[var(--ink)]">{job.jobNumber}</span>
+                    <span className="ml-2 text-[0.8125rem] text-[var(--ink-muted)]">{[job.brand, job.model].filter(Boolean).join(" ") || "Device"}</span>
+                    {job.serialOrImei ? <span className="ml-2 text-[0.6875rem] text-[var(--ink-muted)]">· {job.serialOrImei}</span> : null}
                   </div>
-                  <span className="shrink-0 rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ink-muted)]">
+                  <span className="shrink-0 rounded-full bg-[var(--panel-strong)] px-2.5 py-0.5 text-[0.6875rem] font-semibold text-[var(--ink-muted)]">
                     {job.status.replaceAll("_", " ")}
                   </span>
                 </Link>

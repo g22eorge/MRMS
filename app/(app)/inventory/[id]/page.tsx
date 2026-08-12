@@ -82,13 +82,13 @@ export default async function PartDetailPage({
 
       {/* ── Banners ── */}
       {saved && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-2.5 text-[13px] font-semibold text-emerald-700">
+        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-2.5 text-[0.8125rem] font-semibold text-emerald-700">
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>
           Stock updated — new entry recorded in the log.
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red-500/25 bg-red-500/8 px-4 py-2.5 text-[13px] text-red-600">
+        <div className="flex items-center gap-2.5 rounded-xl border border-red-500/25 bg-red-500/8 px-4 py-2.5 text-[0.8125rem] text-red-600">
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1Zm0 3.75a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 4.75Zm0 6.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/></svg>
           {error}
         </div>
@@ -110,7 +110,7 @@ export default async function PartDetailPage({
             <form action={togglePartActiveAction}>
               <input type="hidden" name="partId" value={part.id} />
               <input type="hidden" name="next" value={part.isActive ? "0" : "1"} />
-              <button type="submit" className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${
+              <button type="submit" className={`rounded-lg border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                 part.isActive
                   ? "border-red-400/40 text-red-600 hover:bg-red-500/8"
                   : "border-emerald-400/40 text-emerald-700 hover:bg-emerald-500/8"
@@ -121,7 +121,7 @@ export default async function PartDetailPage({
           ) : undefined
         }
       />
-      {part.manufacturer ? <p className="-mt-2 px-0.5 text-[13px] text-[var(--ink-muted)]">{part.manufacturer}</p> : null}
+      {part.manufacturer ? <p className="-mt-2 px-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{part.manufacturer}</p> : null}
 
       {/* ── KPI cards ── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -133,9 +133,9 @@ export default async function PartDetailPage({
             { label: "Stock Value",value: formatMoney(stockValue),color: "text-[var(--ink)]" },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-[var(--panel)] px-5 py-4">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">{label}</p>
-              <p className={`text-[26px] font-black tabular-nums leading-none ${color}`}>{value}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/40">UNITS</p>
+              <p className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">{label}</p>
+              <p className={`text-[1.625rem] font-black tabular-nums leading-none ${color}`}>{value}</p>
+              <p className="mt-1 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/40">UNITS</p>
             </div>
           ))}
         </div>
@@ -151,7 +151,7 @@ export default async function PartDetailPage({
           {canManage && (
             <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
               <div className="border-b border-[var(--line)] px-5 py-2.5">
-                <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">
+                <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">
                   <svg className="h-3.5 w-3.5 text-[var(--accent)]" viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1a.75.75 0 0 0-1.5 0v5.5h-5.5a.75.75 0 0 0 0 1.5h5.5v5.5a.75.75 0 0 0 1.5 0V8h5.5a.75.75 0 0 0 0-1.5h-5.5V1Z"/></svg>
                   Quick Stock Actions
                 </p>
@@ -165,18 +165,18 @@ export default async function PartDetailPage({
                     <svg className="h-6 w-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                     </svg>
-                    <span className="text-[12px] font-bold text-[var(--ink)]">Receive</span>
+                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Receive</span>
                   </summary>
                   <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
                     <form action={adjustStockAction} className="flex flex-wrap items-center gap-2">
                       <input type="hidden" name="partId" value={part.id} />
                       <input type="hidden" name="type" value="IN" />
                       <input name="quantity" inputMode="numeric" placeholder="Qty" required
-                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
+                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
                       <input name="reason" placeholder="Reference / note"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
+                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
                       <button type="submit"
-                        className="h-8 shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 text-[12px] font-bold text-emerald-700 transition hover:bg-emerald-500/20">
+                        className="h-8 shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 text-[0.75rem] font-bold text-emerald-700 transition hover:bg-emerald-500/20">
                         + Receive
                       </button>
                     </form>
@@ -188,20 +188,20 @@ export default async function PartDetailPage({
                     <svg className="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12M12 7.5V21"/>
                     </svg>
-                    <span className="text-[12px] font-bold text-[var(--ink)]">Issue / Write-off</span>
+                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Issue / Write-off</span>
                   </summary>
                   <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
                     <form action={adjustStockAction} className="flex flex-wrap items-center gap-2">
                       <input type="hidden" name="partId" value={part.id} />
                       <input type="hidden" name="type" value="OUT" />
                       <input name="quantity" inputMode="numeric" placeholder="Qty" required
-                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
+                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
                       <input name="reason" placeholder="Reason"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
+                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
                       <ConfirmSubmitButton
                         message="Write off this stock? It removes units from on-hand and can't be undone."
                         confirmLabel="Write off"
-                        className="h-8 shrink-0 rounded-lg border border-red-400/40 bg-red-500/8 px-4 text-[12px] font-bold text-red-600 transition hover:bg-red-500/15">
+                        className="h-8 shrink-0 rounded-lg border border-red-400/40 bg-red-500/8 px-4 text-[0.75rem] font-bold text-red-600 transition hover:bg-red-500/15">
                         − Issue
                       </ConfirmSubmitButton>
                     </form>
@@ -213,10 +213,10 @@ export default async function PartDetailPage({
                     <svg className="h-6 w-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
                     </svg>
-                    <span className="text-[12px] font-bold text-[var(--ink)]">Qty Correction</span>
+                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Qty Correction</span>
                   </summary>
                   <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
-                    <p className="mb-2.5 text-[11px] text-[var(--ink-muted)]">
+                    <p className="mb-2.5 text-[0.6875rem] text-[var(--ink-muted)]">
                       Enter the correct total. Currently <strong className="tabular-nums text-[var(--ink)]">{part.qtyOnHand}</strong>. No cost impact.
                     </p>
                     <form action={adjustStockAction} className="flex flex-wrap items-end gap-2">
@@ -224,14 +224,14 @@ export default async function PartDetailPage({
                       <input type="hidden" name="type" value="ADJUST" />
                       <input type="hidden" name="quantity" value="1" />
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Correct to</label>
+                        <label className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Correct to</label>
                         <input name="correctTo" inputMode="numeric" placeholder={String(part.qtyOnHand)} required
-                          className="h-8 w-24 rounded-lg border border-amber-400/60 bg-[var(--panel)] px-3 text-[13px] font-semibold outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/14" />
+                          className="h-8 w-24 rounded-lg border border-amber-400/60 bg-[var(--panel)] px-3 text-[0.8125rem] font-semibold outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/14" />
                       </div>
                       <input name="reason" placeholder="Reason (recommended)"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/12" />
+                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/12" />
                       <button type="submit"
-                        className="h-8 shrink-0 self-end rounded-lg border border-amber-400/50 bg-amber-500/10 px-4 text-[12px] font-bold text-amber-700 transition hover:bg-amber-500/20">
+                        className="h-8 shrink-0 self-end rounded-lg border border-amber-400/50 bg-amber-500/10 px-4 text-[0.75rem] font-bold text-amber-700 transition hover:bg-amber-500/20">
                         Correct
                       </button>
                     </form>
@@ -245,8 +245,8 @@ export default async function PartDetailPage({
           {/* Movement log */}
           <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Movement Log</p>
-              <p className="text-[11px] tabular-nums text-[var(--ink-muted)]">{transactions.length} entries</p>
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Movement Log</p>
+              <p className="text-[0.6875rem] tabular-nums text-[var(--ink-muted)]">{transactions.length} entries</p>
             </div>
             <DataTable
               frameless
@@ -258,7 +258,7 @@ export default async function PartDetailPage({
                 {
                   key: "date",
                   header: <>Date &amp; Time</>,
-                  className: "text-[12px] tabular-nums text-[var(--ink)] whitespace-nowrap",
+                  className: "text-[0.75rem] tabular-nums text-[var(--ink)] whitespace-nowrap",
                   cell: (txn) => (
                     <>
                       {txn.createdAt.toLocaleDateString([], { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")}
@@ -307,14 +307,14 @@ export default async function PartDetailPage({
                 {
                   key: "reference",
                   header: "Reference",
-                  className: "hidden max-w-[180px] truncate text-[12px] text-[var(--ink-muted)] sm:table-cell",
+                  className: "hidden max-w-[180px] truncate text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",
                   headerClassName: "hidden sm:table-cell",
                   cell: (txn) => txn.reason ?? <span className="text-[var(--ink-muted)]/30">—</span>,
                 },
                 {
                   key: "handler",
                   header: "Handler",
-                  className: "text-[12px] text-[var(--ink-muted)] whitespace-nowrap",
+                  className: "text-[0.75rem] text-[var(--ink-muted)] whitespace-nowrap",
                   cell: (txn) => txn.createdBy?.name ?? <span className="text-[var(--ink-muted)]/30">—</span>,
                 },
               ]}
@@ -326,7 +326,7 @@ export default async function PartDetailPage({
         <div className="space-y-4">
           <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="border-b border-[var(--line)] px-5 py-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Static Details</p>
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Static Details</p>
             </div>
 
             {canManage ? (
@@ -340,7 +340,7 @@ export default async function PartDetailPage({
                   <FormField label="Reorder Point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0"    inputMode="numeric" />
                 </FormRow>
                 <button type="submit"
-                  className="btn-premium mt-1 h-8 w-full rounded-md text-[11px] font-bold uppercase tracking-[0.16em]">
+                  className="btn-premium mt-1 h-8 w-full rounded-md text-[0.6875rem] font-bold uppercase tracking-[0.16em]">
                   Save Details
                 </button>
               </form>
@@ -354,8 +354,8 @@ export default async function PartDetailPage({
                   ["Reorder Point", String(part.reorderLevel)],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between px-5 py-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">{label}</dt>
-                    <dd className="text-[13px] font-semibold text-[var(--ink)]">{value}</dd>
+                    <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">{label}</dt>
+                    <dd className="text-[0.8125rem] font-semibold text-[var(--ink)]">{value}</dd>
                   </div>
                 ))}
               </dl>
@@ -366,8 +366,8 @@ export default async function PartDetailPage({
           {part.reservations.length > 0 && (
             <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Reserved For Jobs</p>
-                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Reserved For Jobs</p>
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.6875rem] font-bold text-amber-700">
                   {part.reservations.length}
                 </span>
               </div>
@@ -376,19 +376,19 @@ export default async function PartDetailPage({
                   <li key={res.id} className="flex items-center justify-between gap-2 px-5 py-2.5">
                     <div className="min-w-0">
                       {res.job ? (
-                        <Link href={`/jobs/${res.job.id}`} className="text-[13px] font-semibold text-[var(--accent)] hover:underline">
+                        <Link href={`/jobs/${res.job.id}`} className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">
                           {res.job.jobNumber ?? `#${res.job.id.slice(-6)}`}
                         </Link>
                       ) : (
-                        <p className="text-[13px] text-[var(--ink-muted)]">Job removed</p>
+                        <p className="text-[0.8125rem] text-[var(--ink-muted)]">Job removed</p>
                       )}
                       {res.job?.device && (
-                        <p className="truncate text-[11px] text-[var(--ink-muted)]">
+                        <p className="truncate text-[0.6875rem] text-[var(--ink-muted)]">
                           {res.job.device.brand} {res.job.device.model}
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[12px] font-bold text-amber-700">
+                    <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[0.75rem] font-bold text-amber-700">
                       ×{res.quantity}
                     </span>
                   </li>

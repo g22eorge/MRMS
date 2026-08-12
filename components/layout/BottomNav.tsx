@@ -227,13 +227,13 @@ export function BottomNav({
                 }`}>
                   {item.icon}
                   {typeof badge === "number" && badge > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-black ring-2 ring-[var(--panel)]">
+                    <span className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[0.625rem] font-bold leading-none text-black ring-2 ring-[var(--panel)]">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
                 </span>
                 {/* Label */}
-                <span className={`text-[12px] leading-none tracking-wide ${
+                <span className={`text-[0.75rem] leading-none tracking-wide ${
                   active
                     ? "font-bold text-[var(--accent)]"
                     : "font-medium text-[var(--ink-muted)]"
@@ -263,7 +263,7 @@ export function BottomNav({
                   }`}>
                     {moreIcon}
                   </span>
-                  <span className={`text-[12px] leading-none tracking-wide ${
+                  <span className={`text-[0.75rem] leading-none tracking-wide ${
                     moreActive ? "font-bold text-[var(--accent)]" : "font-medium text-[var(--ink-muted)]"
                   }`}>
                     More

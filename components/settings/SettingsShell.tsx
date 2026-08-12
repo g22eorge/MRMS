@@ -62,7 +62,7 @@ export function SettingsShell({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition ${
                 active
                   ? "bg-[var(--accent)] text-black"
                   : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
@@ -80,7 +80,7 @@ export function SettingsShell({
           <nav className="space-y-5">
             {groups.map((group) => (
               <div key={group.title} className="space-y-1.5">
-                <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+                <p className="px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
                   {group.title}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -91,7 +91,7 @@ export function SettingsShell({
                         key={item.href}
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
+                        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold transition ${
                           active
                             ? "bg-[var(--accent)] text-black"
                             : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"

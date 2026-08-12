@@ -79,7 +79,7 @@ export function UserPasswordResetForm({
           type="password"
           name="password"
           placeholder="New password (min 8)"
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
         />
         <input
           ref={confirmRef}
@@ -88,24 +88,24 @@ export function UserPasswordResetForm({
           type="password"
           name="confirm"
           placeholder="Confirm password"
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
         />
         <div className="flex items-center gap-2">
           <button
             type="button"
             disabled={isGenerating}
             onClick={() => { void generateAndCopy(); }}
-            className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px]"
+            className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.8125rem]"
             title="Generate a temp password and copy to clipboard"
           >
             {isGenerating ? "…" : "Generate"}
           </button>
-          <button className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white">Reset</button>
+          <button className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white">Reset</button>
         </div>
 
-        {state.error ? <p className="text-[13px] text-red-400 md:col-span-3">{state.error}</p> : null}
-        {state.success ? <p className="text-[13px] text-[var(--accent)] md:col-span-3">{state.success}</p> : null}
-        <p className="text-[13px] text-[var(--ink-muted)] md:col-span-3">Generate copies a temp password to clipboard — share it via WhatsApp.</p>
+        {state.error ? <p className="text-[0.8125rem] text-red-400 md:col-span-3">{state.error}</p> : null}
+        {state.success ? <p className="text-[0.8125rem] text-[var(--accent)] md:col-span-3">{state.success}</p> : null}
+        <p className="text-[0.8125rem] text-[var(--ink-muted)] md:col-span-3">Generate copies a temp password to clipboard — share it via WhatsApp.</p>
       </form>
     </>
   );

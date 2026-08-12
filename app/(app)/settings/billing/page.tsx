@@ -200,7 +200,7 @@ export default async function BillingPage({
         </div>
 
         <div className="panel-shadow flex items-center rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-          <p className="text-[13px] font-bold text-[var(--ink)]">Choose a plan</p>
+          <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Choose a plan</p>
         </div>
 
         {!isAdmin && (
@@ -270,7 +270,7 @@ export default async function BillingPage({
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-[var(--ink)]">{PLAN_LABELS[key]}</p>
                     {highlight && (
-                      <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)] uppercase tracking-wide">
+                      <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--accent)] uppercase tracking-wide">
                         Popular
                       </span>
                     )}
@@ -416,7 +416,7 @@ export default async function BillingPage({
 
       {/* Header */}
       <div className="panel-shadow flex items-center rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-        <p className="text-[13px] font-bold text-[var(--ink)]">Billing &amp; Plan</p>
+        <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Billing &amp; Plan</p>
       </div>
 
       {isAdmin ? (
@@ -509,7 +509,7 @@ export default async function BillingPage({
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Enabled modules</p>
-          <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">
+          <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--ink-muted)]">
             {enabledModuleList.length} / 10
           </span>
         </div>
@@ -521,7 +521,7 @@ export default async function BillingPage({
             </span>
           ))}
         </div>
-        <p className="text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
           Modules are selected during onboarding and can be adjusted by a platform administrator.
         </p>
       </section>
@@ -546,7 +546,7 @@ export default async function BillingPage({
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-[var(--ink)]">{PLAN_LABELS[key]}</p>
                   {isCurrent && (
-                    <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[12px] font-semibold text-[var(--accent)]">
+                    <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--accent)]">
                       Current
                     </span>
                   )}

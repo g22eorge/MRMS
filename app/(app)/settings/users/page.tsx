@@ -938,12 +938,12 @@ export default async function UsersPage({
     <Disclosure>
     <div className="space-y-3">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <p className="text-[13px] font-bold text-[var(--ink)]">User Management</p>
-        <p className="text-[13px] text-[var(--ink-muted)]">Manage team access, roles and permissions</p>
+        <p className="text-[0.8125rem] font-bold text-[var(--ink)]">User Management</p>
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">Manage team access, roles and permissions</p>
       </div>
 
       {limitError && (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-400">
+        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[0.8125rem] text-red-400">
           {limitError}
         </p>
       )}
@@ -952,21 +952,21 @@ export default async function UsersPage({
       <DisclosurePanel>
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add User</p>
-            <DisclosureButton label="✕ Close" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]" />
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add User</p>
+            <DisclosureButton label="✕ Close" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]" />
           </div>
           <InvitePanel inviteAction={inviteUser} roleOptions={roleOptions} />
           <div className="mt-3 border-t border-[var(--line)] pt-3">
-            <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Or create directly</p>
+            <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">Or create directly</p>
             <form action={createUser} className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-              <input required name="name" placeholder="Name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-              <input required type="email" name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-              <input name="phone" placeholder="Phone" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-              <input required minLength={8} type="password" name="password" placeholder="Password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
-              <select name="role" defaultValue="OPS" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+              <input required name="name" placeholder="Name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+              <input required type="email" name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+              <input name="phone" placeholder="Phone" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+              <input required minLength={8} type="password" name="password" placeholder="Password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+              <select name="role" defaultValue="OPS" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
                 {roleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-              <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white">Create</button>
+              <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white">Create</button>
             </form>
           </div>
         </section>
@@ -978,11 +978,11 @@ export default async function UsersPage({
         {/* Left: search + user list */}
         <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Users</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Users</p>
             <DisclosureButton
               label="+ Add"
               openLabel="Close"
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
             />
           </div>
           <form method="GET" className="flex gap-1 border-b border-[var(--line)] px-2 py-2">
@@ -990,10 +990,10 @@ export default async function UsersPage({
               name="q"
               defaultValue={q}
               placeholder="Search…"
-              className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             {q ? (
-              <Link href="/settings/users" className="flex items-center rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">✕</Link>
+              <Link href="/settings/users" className="flex items-center rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">✕</Link>
             ) : null}
           </form>
           <div className="divide-y divide-[var(--line)]">
@@ -1005,16 +1005,16 @@ export default async function UsersPage({
               >
                 <span className={`h-5 w-0.5 shrink-0 rounded-full transition-all ${selectedUser?.id === item.id ? "bg-[var(--accent)]" : "bg-transparent"}`} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-[var(--ink)]">{item.name}</p>
-                  <p className="truncate text-[13px] text-[var(--ink-muted)]">{roleLabel(item.role)}</p>
+                  <p className="truncate text-[0.8125rem] font-medium text-[var(--ink)]">{item.name}</p>
+                  <p className="truncate text-[0.8125rem] text-[var(--ink-muted)]">{roleLabel(item.role)}</p>
                 </div>
                 {!item.isActive && (
-                  <span className="shrink-0 rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[12px] text-[var(--ink-muted)]">Off</span>
+                  <span className="shrink-0 rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[0.75rem] text-[var(--ink-muted)]">Off</span>
                 )}
               </Link>
             ))}
             {filteredUsers.length === 0 && (
-              <p className="px-3 py-5 text-center text-[13px] text-[var(--ink-muted)]">No users found.</p>
+              <p className="px-3 py-5 text-center text-[0.8125rem] text-[var(--ink-muted)]">No users found.</p>
             )}
           </div>
         </section>
@@ -1025,11 +1025,11 @@ export default async function UsersPage({
             {/* User header */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2.5">
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{selectedUser.name}</p>
-                <p className="truncate text-[13px] text-[var(--ink-muted)]">{selectedUser.email} · {roleLabel(selectedUser.role)}</p>
+                <p className="truncate text-[0.8125rem] font-semibold text-[var(--ink)]">{selectedUser.name}</p>
+                <p className="truncate text-[0.8125rem] text-[var(--ink-muted)]">{selectedUser.email} · {roleLabel(selectedUser.role)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                <span className={`rounded-full border px-2 py-0.5 text-[12px] font-semibold ${selectedUser.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-[var(--line)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full border px-2 py-0.5 text-[0.75rem] font-semibold ${selectedUser.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-[var(--line)] text-[var(--ink-muted)]"}`}>
                   {selectedUser.isActive ? "Active" : "Inactive"}
                 </span>
                 {user.role === "ADMIN" && selectedUser.id !== user.id && (
@@ -1039,7 +1039,7 @@ export default async function UsersPage({
                         <form action={toggleUserActive}>
                           <input type="hidden" name="userId" value={selectedUser.id} />
                           <input type="hidden" name="q" value={q} />
-                          <button type="submit" className="w-full text-left text-[12px] text-red-600">Deactivate User</button>
+                          <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Deactivate User</button>
                         </form>
                       </MenuDestructiveRow>
                     ) : (
@@ -1053,7 +1053,7 @@ export default async function UsersPage({
                     )}
                   </RowActionsMenu>
                 )}
-                <span className="text-[13px] text-[var(--ink-muted)]">
+                <span className="text-[0.8125rem] text-[var(--ink-muted)]">
                   Last seen {formatDateTime(selectedUser.sessions[0]?.updatedAt ?? selectedUser.auditLogs[0]?.createdAt ?? selectedUser.updatedAt)}
                 </span>
               </div>
@@ -1065,7 +1065,7 @@ export default async function UsersPage({
                 <Link
                   key={key}
                   href={tabHref(key)}
-                  className={`px-4 py-2.5 text-[13px] font-medium transition ${tab === key ? "border-b-2 border-[var(--accent)] text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                  className={`px-4 py-2.5 text-[0.8125rem] font-medium transition ${tab === key ? "border-b-2 border-[var(--accent)] text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
                 >
                   {label}
                 </Link>
@@ -1099,23 +1099,23 @@ export default async function UsersPage({
                   />
                   {user.role === "ADMIN" ? (
                     <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-                      <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Access mode</p>
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Read-only users can view records but cannot create or change anything.</p>
+                      <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Access mode</p>
+                      <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Read-only users can view records but cannot create or change anything.</p>
                       <form action={setUserAccessMode} className="mt-2 flex flex-wrap items-center gap-2">
                         <input type="hidden" name="userId" value={selectedUser.id} />
                         <select
                           name="accessMode"
                           defaultValue={selectedUser.accessMode ?? "FULL"}
                           disabled={selectedUser.id === user.id}
-                          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60 disabled:opacity-60"
+                          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60 disabled:opacity-60"
                         >
                           <option value="FULL">Full access</option>
                           <option value="READ_ONLY">Read-only</option>
                         </select>
                         {selectedUser.id === user.id ? (
-                          <span className="text-[12px] text-[var(--ink-muted)]">You can&apos;t set yourself to read-only.</span>
+                          <span className="text-[0.75rem] text-[var(--ink-muted)]">You can&apos;t set yourself to read-only.</span>
                         ) : (
-                          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[13px] font-semibold">Update</button>
+                          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Update</button>
                         )}
                       </form>
                     </section>
@@ -1143,21 +1143,21 @@ export default async function UsersPage({
                       }
                       return (
                         <div key={entry.id} className="py-2">
-                          <p className="text-[13px] font-medium text-[var(--ink)]">{entry.action}</p>
-                          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{entry.actorUser.name} · {entry.createdAt.toLocaleString()}</p>
-                          {detail ? <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{detail}</p> : null}
+                          <p className="text-[0.8125rem] font-medium text-[var(--ink)]">{entry.action}</p>
+                          <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{entry.actorUser.name} · {entry.createdAt.toLocaleString()}</p>
+                          {detail ? <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{detail}</p> : null}
                         </div>
                       );
                     })
                   ) : (
-                    <p className="py-4 text-center text-[13px] text-[var(--ink-muted)]">No access changes recorded yet.</p>
+                    <p className="py-4 text-center text-[0.8125rem] text-[var(--ink-muted)]">No access changes recorded yet.</p>
                   )}
                 </div>
               )}
             </div>
           </section>
         ) : (
-          <div className="panel-shadow flex items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel)] p-12 text-[13px] text-[var(--ink-muted)]">
+          <div className="panel-shadow flex items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel)] p-12 text-[0.8125rem] text-[var(--ink-muted)]">
             Select a user to manage their profile and access.
           </div>
         )}

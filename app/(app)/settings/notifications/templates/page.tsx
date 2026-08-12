@@ -112,7 +112,7 @@ export default async function NotificationTemplatesPage({
   if (!supportsCommsTemplates()) {
     return (
       <section className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <p className="text-[13px] font-bold text-[var(--ink)]">Templates</p>
+        <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Templates</p>
         <p className="mt-2 text-sm text-[var(--ink-muted)]">
           Templates are not available in this runtime (older database/client). Deploy the latest schema to enable them.
         </p>
@@ -126,7 +126,7 @@ export default async function NotificationTemplatesPage({
     <div className="flex flex-wrap items-center justify-between gap-2">
       <Link
         href={COMMUNICATIONS_ROUTES.preferences}
-        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+        className="inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         My notification preferences
@@ -134,7 +134,7 @@ export default async function NotificationTemplatesPage({
       {user.role === "ADMIN" ? (
         <form action={bulkReplaceBrandName}>
           <button
-            className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+            className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
             type="submit"
             title='Replace "Eagle Info Solutions"/"Your Repair Team" with your company name'
           >
@@ -508,24 +508,24 @@ export default async function NotificationTemplatesPage({
       {topNav}
       {/* Intro + admin maintenance */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
           Use{" "}
-          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[12px] text-[var(--ink)]">{"{customerName}"}</code>{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[0.75rem] text-[var(--ink)]">{"{customerName}"}</code>{" "}
           and{" "}
-          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[12px] text-[var(--ink)]">{"{jobNumber}"}</code>{" "}
+          <code className="rounded bg-[var(--panel-strong)] px-1 py-0.5 mono text-[0.75rem] text-[var(--ink)]">{"{jobNumber}"}</code>{" "}
           as placeholders.
         </p>
         {user.role === "ADMIN" ? (
           <details className="relative">
-            <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Maintenance</summary>
+            <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Maintenance</summary>
             <div className="absolute right-0 z-10 mt-1 flex flex-wrap gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 shadow-lg">
               <form action={deduplicateTemplates}>
-                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
+                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
                   Remove duplicates
                 </button>
               </form>
               <form action={applyMetaMigration}>
-                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
+                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
                   Apply migration
                 </button>
               </form>
@@ -535,14 +535,14 @@ export default async function NotificationTemplatesPage({
       </div>
 
       {saved ? (
-        <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">Saved: {saved}</div>
+        <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-[0.8125rem] font-medium text-emerald-700 dark:text-emerald-400">Saved: {saved}</div>
       ) : null}
       {error ? (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-[13px] font-medium text-red-600 dark:text-red-400">{error}</div>
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-[0.8125rem] font-medium text-red-600 dark:text-red-400">{error}</div>
       ) : null}
 
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-[var(--ink)]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-[0.8125rem] font-semibold text-[var(--ink)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[var(--accent)]" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           New template
         </summary>
@@ -553,13 +553,13 @@ export default async function NotificationTemplatesPage({
               required
               placeholder="Template key (e.g. JOB_CREATED)"
               list="template-keys"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             <datalist id="template-keys">
               {knownKeys.map((k) => <option key={k} value={k} />)}
             </datalist>
           </div>
-          <select name="channel" defaultValue="WHATSAPP" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+          <select name="channel" defaultValue="WHATSAPP" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
             <option value="WHATSAPP">WhatsApp</option>
             <option value="EMAIL">Email</option>
           </select>
@@ -567,12 +567,12 @@ export default async function NotificationTemplatesPage({
             name="label"
             required
             placeholder="Label"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <input
             name="subject"
             placeholder="Email subject (optional)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
           />
           <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">
             <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4 rounded border border-[var(--line)]" />
@@ -582,25 +582,25 @@ export default async function NotificationTemplatesPage({
             name="body"
             required
             placeholder="Message body. Use placeholders like {customerName}"
-            className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+            className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
           />
           <input
             name="metaTemplateName"
             placeholder="Meta template name (e.g. job_created)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-3"
           />
           <input
             name="metaLanguageCode"
             placeholder="Language (e.g. en)"
             defaultValue="en"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
           />
           <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</button>
         </form>
       </details>
 
       <section>
-        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message templates</p>
+        <p className="mb-2 px-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">Message templates</p>
         {templates.length === 0 ? (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-6 py-12 text-center text-sm text-[var(--ink-muted)]">No templates yet.</div>
         ) : (
@@ -611,13 +611,13 @@ export default async function NotificationTemplatesPage({
                 <details key={t.id} className={`group/details ${ti > 0 ? "border-t border-[var(--line)]/50" : ""}`} open={false}>
                   <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[var(--panel-strong)]/40">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${t.isActive ? "bg-emerald-500" : "bg-[var(--ink-muted)]/40"}`} title={t.isActive ? "Active" : "Inactive"} />
-                    <span className="mono text-[13px] font-medium text-[var(--ink)]">{t.key}</span>
-                    <span className="text-[12px] text-[var(--ink-muted)]">{t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</span>
-                    <span className="truncate text-[13px] text-[var(--ink-muted)]">{t.label}</span>
+                    <span className="mono text-[0.8125rem] font-medium text-[var(--ink)]">{t.key}</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{t.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</span>
+                    <span className="truncate text-[0.8125rem] text-[var(--ink-muted)]">{t.label}</span>
                     {t.metaTemplateName ? (
-                      <span className="hidden shrink-0 rounded-full bg-emerald-500/12 px-2 py-0.5 mono text-[11px] text-emerald-600 dark:text-emerald-400 sm:inline">meta ✓</span>
+                      <span className="hidden shrink-0 rounded-full bg-emerald-500/12 px-2 py-0.5 mono text-[0.6875rem] text-emerald-600 dark:text-emerald-400 sm:inline">meta ✓</span>
                     ) : t.channel === "WHATSAPP" ? (
-                      <span className="hidden shrink-0 rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 sm:inline">no meta</span>
+                      <span className="hidden shrink-0 rounded-full bg-amber-500/12 px-2 py-0.5 text-[0.6875rem] font-semibold text-amber-600 dark:text-amber-400 sm:inline">no meta</span>
                     ) : null}
                     <svg className="ml-auto h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-transform group-open/details:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </summary>
@@ -625,9 +625,9 @@ export default async function NotificationTemplatesPage({
 
                   {vars.length > 0 ? (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[12px] font-bold uppercase tracking-[0.13em] text-[var(--ink-muted)]">Variables:</span>
+                      <span className="text-[0.75rem] font-bold uppercase tracking-[0.13em] text-[var(--ink-muted)]">Variables:</span>
                       {vars.map((v, i) => (
-                        <span key={v} className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[13px] mono">
+                        <span key={v} className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 text-[0.8125rem] mono">
                           <span className="text-[var(--accent)] font-bold">{`{{${i + 1}}}`}</span>
                           <span className="text-[var(--ink-muted)]">=</span>
                           <span className="text-[var(--ink)]">{v}</span>
@@ -635,7 +635,7 @@ export default async function NotificationTemplatesPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-2 text-[13px] text-[var(--ink-muted)]">No variables detected.</p>
+                    <p className="mt-2 text-[0.8125rem] text-[var(--ink-muted)]">No variables detected.</p>
                   )}
 
                   <form action={updateTemplate} className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
@@ -645,10 +645,10 @@ export default async function NotificationTemplatesPage({
                         name="key"
                         required
                         defaultValue={t.key}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                       />
                     </div>
-                    <select name="channel" defaultValue={t.channel} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
+                    <select name="channel" defaultValue={t.channel} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
                       <option value="WHATSAPP">WhatsApp</option>
                       <option value="EMAIL">Email</option>
                     </select>
@@ -656,13 +656,13 @@ export default async function NotificationTemplatesPage({
                       name="label"
                       required
                       defaultValue={t.label}
-                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                     />
                     <input
                       name="subject"
                       defaultValue={t.subject ?? ""}
                       placeholder="Email subject"
-                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
+                      className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 xl:col-span-2"
                     />
                     <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--ink-muted)]">
                       <input type="checkbox" name="isActive" defaultChecked={t.isActive} className="h-4 w-4 rounded border border-[var(--line)]" />
@@ -672,14 +672,14 @@ export default async function NotificationTemplatesPage({
                       name="body"
                       required
                       defaultValue={t.body}
-                      className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
+                      className="min-h-[120px] rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-2 xl:col-span-6"
                     />
                     {t.channel === "WHATSAPP" ? (
                       <div className="rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-3 md:col-span-2 xl:col-span-6">
-                        <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]/80">
+                        <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--accent)]/80">
                           Meta Approved Template (optional)
                         </p>
-                        <p className="mb-2 text-[13px] text-[var(--ink-muted)]">
+                        <p className="mb-2 text-[0.8125rem] text-[var(--ink-muted)]">
                           Once your template is approved in Meta Business Manager, enter its name here.
                           Variables in the <code className="mono">variables</code> array above map positionally to{" "}
                           <code className="mono">{"{{1}}"}</code>,{" "}
@@ -690,22 +690,22 @@ export default async function NotificationTemplatesPage({
                             name="metaTemplateName"
                             defaultValue={t.metaTemplateName ?? ""}
                             placeholder="Template name (e.g. repair_status_update)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                           <input
                             name="metaLanguageCode"
                             defaultValue={t.metaLanguageCode ?? "en"}
                             placeholder="Language code (e.g. en)"
-                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
+                            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
                           />
                         </div>
                         {t.metaTemplateName ? (
-                          <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
+                          <p className="mt-1.5 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-emerald-600">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                             Using template: <span className="mono">{t.metaTemplateName}</span> · lang: {t.metaLanguageCode ?? "en"}
                           </p>
                         ) : (
-                          <p className="mt-1.5 text-[13px] text-[var(--ink-muted)]">
+                          <p className="mt-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
                             Not set — messages will send as free-form text (only delivers within 24-hour customer window).
                           </p>
                         )}
@@ -719,7 +719,7 @@ export default async function NotificationTemplatesPage({
                     {user.role === "ADMIN" ? (
                       <form action={deleteTemplate} className="mt-2">
                         <input type="hidden" name="id" value={t.id} />
-                        <button type="submit" className="rounded-lg px-3 py-2 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">Delete template</button>
+                        <button type="submit" className="rounded-lg px-3 py-2 text-[0.8125rem] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">Delete template</button>
                       </form>
                     ) : null}
                   </div>
@@ -731,8 +731,8 @@ export default async function NotificationTemplatesPage({
       </section>
 
       <section id="policies">
-        <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">When to message customers</p>
-        <p className="mb-2 px-1 text-[12px] text-[var(--ink-muted)]">
+        <p className="mb-1 px-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">When to message customers</p>
+        <p className="mb-2 px-1 text-[0.75rem] text-[var(--ink-muted)]">
           For each job status, choose where the update shows (dashboard, WhatsApp, email), which message to use, and when to send follow-up reminders.
         </p>
 
@@ -753,7 +753,7 @@ export default async function NotificationTemplatesPage({
                 <input type="hidden" name="status" value={status} />
                 <div>
                   <p className="text-sm font-semibold text-[var(--ink)]">{status.replaceAll("_", " ")}</p>
-                  <p className="text-[13px] text-[var(--ink-muted)]">Template key applies to both channels.</p>
+                  <p className="text-[0.8125rem] text-[var(--ink-muted)]">Template key applies to both channels.</p>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
                   <input type="checkbox" name="dashboardEnabled" defaultChecked={p.dashboardEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
@@ -767,7 +767,7 @@ export default async function NotificationTemplatesPage({
                   <input type="checkbox" name="emailEnabled" defaultChecked={p.emailEnabled} className="h-4 w-4 rounded border border-[var(--line)]" />
                   Email
                 </label>
-                <select name="templateKey" defaultValue={p.templateKey ?? ""} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50">
+                <select name="templateKey" defaultValue={p.templateKey ?? ""} className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50">
                   <option value="">(no template)</option>
                   {templateKeys.map((k) => (
                     <option key={k} value={k}>{k}</option>
@@ -779,7 +779,7 @@ export default async function NotificationTemplatesPage({
                   placeholder="Reminder after (hrs)"
                   title="Send a reminder this many hours later"
                   inputMode="numeric"
-                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
                 />
                 <input
                   name="nudge2Hours"
@@ -787,7 +787,7 @@ export default async function NotificationTemplatesPage({
                   placeholder="2nd reminder (hrs)"
                   title="Send a second reminder this many hours later"
                   inputMode="numeric"
-                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+                  className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
                 />
                 <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save</button>
               </form>

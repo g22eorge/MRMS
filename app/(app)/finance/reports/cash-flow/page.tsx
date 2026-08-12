@@ -191,7 +191,7 @@ export default async function CashFlowPage({
       current: <span className="font-semibold tabular-nums text-emerald-700">{formatMoney(invoicePaymentsTotal, currency)}</span>,
       prior: <span className="tabular-nums text-[var(--ink-muted)]">{formatMoney(priorInvoiceTotal, currency)}</span>,
       change: (
-        <span className="text-[13px]">
+        <span className="text-[0.8125rem]">
           {changeCell(pctChange(invoicePaymentsTotal, priorInvoiceTotal), invoicePaymentsTotal >= priorInvoiceTotal)}
         </span>
       ),
@@ -202,7 +202,7 @@ export default async function CashFlowPage({
       current: <span className="font-semibold tabular-nums text-emerald-700">{formatMoney(salePaymentsTotal, currency)}</span>,
       prior: <span className="tabular-nums text-[var(--ink-muted)]">{formatMoney(priorSaleTotal, currency)}</span>,
       change: (
-        <span className="text-[13px]">
+        <span className="text-[0.8125rem]">
           {changeCell(pctChange(salePaymentsTotal, priorSaleTotal), salePaymentsTotal >= priorSaleTotal)}
         </span>
       ),
@@ -214,7 +214,7 @@ export default async function CashFlowPage({
       current: <span className="font-bold tabular-nums text-emerald-700">{formatMoney(totalInflow, currency)}</span>,
       prior: <span className="font-semibold tabular-nums text-[var(--ink-muted)]">{formatMoney(priorInflow, currency)}</span>,
       change: (
-        <span className="text-[13px] font-semibold">
+        <span className="text-[0.8125rem] font-semibold">
           {changeCell(pctChange(totalInflow, priorInflow), totalInflow >= priorInflow)}
         </span>
       ),
@@ -225,7 +225,7 @@ export default async function CashFlowPage({
       current: <span className="font-semibold tabular-nums text-red-600">({formatMoney(expensesTotal, currency)})</span>,
       prior: <span className="tabular-nums text-[var(--ink-muted)]">({formatMoney(priorExpensesTotal, currency)})</span>,
       change: (
-        <span className="text-[13px]">
+        <span className="text-[0.8125rem]">
           {changeCell(pctChange(expensesTotal, priorExpensesTotal), expensesTotal <= priorExpensesTotal)}
         </span>
       ),
@@ -235,7 +235,7 @@ export default async function CashFlowPage({
       label: <span className="block pl-4 text-sm text-[var(--ink)]">Supplier payments</span>,
       current: <span className="font-semibold tabular-nums text-red-600">({formatMoney(supplierPaymentsTotal, currency)})</span>,
       prior: <span className="tabular-nums text-[var(--ink-muted)]">({formatMoney(priorSupplierTotal, currency)})</span>,
-      change: <span className="text-[13px]">—</span>,
+      change: <span className="text-[0.8125rem]">—</span>,
     },
     {
       id: "total-outflows",
@@ -244,7 +244,7 @@ export default async function CashFlowPage({
       current: <span className="font-bold tabular-nums text-red-600">({formatMoney(totalOutflow, currency)})</span>,
       prior: <span className="font-semibold tabular-nums text-[var(--ink-muted)]">({formatMoney(priorOutflow, currency)})</span>,
       change: (
-        <span className="text-[13px] font-semibold">
+        <span className="text-[0.8125rem] font-semibold">
           {changeCell(pctChange(totalOutflow, priorOutflow), totalOutflow <= priorOutflow)}
         </span>
       ),
@@ -264,7 +264,7 @@ export default async function CashFlowPage({
         </span>
       ),
       change: (
-        <span className="text-[13px] font-bold">
+        <span className="text-[0.8125rem] font-bold">
           {changeCell(pctChange(netOperating, priorNet), netOperating >= priorNet)}
         </span>
       ),
@@ -335,43 +335,43 @@ export default async function CashFlowPage({
       {/* ── KPI Strip ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Inflow</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Inflow</p>
           <p className="mt-1 text-lg font-bold text-emerald-600">{formatMoneyCompact(totalInflow, currency)}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
             {pctChange(totalInflow, priorInflow) ? (
               <span className={totalInflow >= priorInflow ? "text-emerald-600" : "text-red-500"}>{pctChange(totalInflow, priorInflow)} vs {priorLabel}</span>
             ) : "No prior data"}
           </p>
         </div>
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Outflow</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash Outflow</p>
           <p className="mt-1 text-lg font-bold text-red-500">{formatMoneyCompact(totalOutflow, currency)}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
             {pctChange(totalOutflow, priorOutflow) ? (
               <span className={totalOutflow <= priorOutflow ? "text-emerald-600" : "text-red-500"}>{pctChange(totalOutflow, priorOutflow)} vs {priorLabel}</span>
             ) : "No prior data"}
           </p>
         </div>
         <div className={`panel-shadow rounded-xl border px-4 py-3 ${netOperating >= 0 ? "border-emerald-400/30 bg-emerald-500/10" : "border-red-400/30 bg-red-500/10"}`}>
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Cash Flow</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Cash Flow</p>
           <p className={`mt-1 text-lg font-bold ${netOperating >= 0 ? "text-emerald-700" : "text-red-600"}`}>
             {netOperating >= 0 ? "+" : ""}{formatMoneyCompact(netOperating, currency)}
           </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{operatingMarginPct}% operating margin</p>
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{operatingMarginPct}% operating margin</p>
         </div>
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Bank Activity</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Bank Activity</p>
           <p className={`mt-1 text-lg font-bold ${netBank >= 0 ? "text-emerald-600" : "text-amber-600"}`}>
             {netBank >= 0 ? "+" : ""}{formatMoneyCompact(netBank, currency)}
           </p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">{bankAccountsCount} bank account{bankAccountsCount !== 1 ? "s" : ""}</p>
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{bankAccountsCount} bank account{bankAccountsCount !== 1 ? "s" : ""}</p>
         </div>
       </div>
 
       {/* ── Statement Table ────────────────────────────────────────────────── */}
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-2.5">
-          <p className="text-[13px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+          <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
             Statement of Cash Flows — {periodLabel}
           </p>
         </div>
@@ -421,7 +421,7 @@ export default async function CashFlowPage({
       {topExpenseCategories.length > 0 && (
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-2.5">
-            <p className="text-[13px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Expense Breakdown — {periodLabel}</p>
+            <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Expense Breakdown — {periodLabel}</p>
           </div>
           <div className="divide-y divide-[var(--line)]">
             {topExpenseCategories.map(([cat, amount]) => {
@@ -431,10 +431,10 @@ export default async function CashFlowPage({
                     {EXPENSE_CATEGORY_LABELS[cat] ?? cat}
                   </span>
                   <span className="flex-1" />
-                  <span className="w-[90px] shrink-0 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">
+                  <span className="w-[90px] shrink-0 text-right text-[0.8125rem] font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">
                     {formatMoney(amount, currency)}
                   </span>
-                  <span className="w-[36px] shrink-0 text-right text-[12px] text-[var(--ink-muted)]">
+                  <span className="w-[36px] shrink-0 text-right text-[0.75rem] text-[var(--ink-muted)]">
                     {totalOutflow > 0 ? Math.round((amount / totalOutflow) * 100) : 0}%
                   </span>
                 </div>
@@ -458,7 +458,7 @@ export default async function CashFlowPage({
             : `Cash deficit: ${formatMoney(Math.abs(netOperating), currency)} more was spent than received during ${periodLabel}. Review outflows.`}
         </p>
         {priorNet !== 0 && (
-          <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
             Prior period ({priorLabel}) net: {priorNet >= 0 ? "+" : ""}{formatMoney(priorNet, currency)}
           </p>
         )}

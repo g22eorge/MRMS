@@ -434,7 +434,7 @@ export default async function ReceiptsPage({
               initialOpen={createMode}
             />
           ) : (
-            <Link href="/documents/invoices" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">
+            <Link href="/documents/invoices" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">
               Create Invoice
             </Link>
           )
@@ -481,12 +481,12 @@ export default async function ReceiptsPage({
             <article key={p.id} className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+                  <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
                     {formatEATDate(p.receivedAt)} · {formatEATTime(p.receivedAt)}
                   </p>
                   <p className="mt-1 mono text-base font-black text-[var(--ink)]">{formatMoney(p.amount, currency)}</p>
                 </div>
-                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[12px] font-semibold ${methodBadge(p.method)}`}>
+                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.75rem] font-semibold ${methodBadge(p.method)}`}>
                   {p.method.replaceAll("_", " ")}
                 </span>
               </div>
@@ -494,13 +494,13 @@ export default async function ReceiptsPage({
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
                 <div className="min-w-0">
                   {linkHref ? (
-                    <Link href={linkHref} className="block truncate text-[13px] font-semibold text-[var(--ink)]">
+                    <Link href={linkHref} className="block truncate text-[0.8125rem] font-semibold text-[var(--ink)]">
                       {label}
                     </Link>
                   ) : (
-                    <p className="truncate text-[13px] font-semibold text-[var(--ink-muted)]">{label}</p>
+                    <p className="truncate text-[0.8125rem] font-semibold text-[var(--ink-muted)]">{label}</p>
                   )}
-                  <p className="truncate text-[12px] text-[var(--ink-muted)]">{p.reference ?? "No reference"}</p>
+                  <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{p.reference ?? "No reference"}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {linkHref ? (
@@ -534,7 +534,7 @@ export default async function ReceiptsPage({
                     <MenuSection label="Edit Receipt" />
                     <form action={updateReceiptAction} className="space-y-2 p-3">
                       <input type="hidden" name="paymentId" value={p.id} />
-                      <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                      <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
                         <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       </label>
                       <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
@@ -572,7 +572,7 @@ export default async function ReceiptsPage({
               className: "text-[var(--ink-muted)]",
               cell: (p) => (
                 <>
-                  {formatEATDate(p.receivedAt)}<br /><span className="text-[12px]">{formatEATTime(p.receivedAt)}</span>
+                  {formatEATDate(p.receivedAt)}<br /><span className="text-[0.75rem]">{formatEATTime(p.receivedAt)}</span>
                 </>
               ),
             },
@@ -659,7 +659,7 @@ export default async function ReceiptsPage({
                   <MenuSection label="Edit Receipt" />
                   <form action={updateReceiptAction} className="space-y-2 p-3">
                     <input type="hidden" name="paymentId" value={p.id} />
-                    <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+                    <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
                       <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     </label>
                     <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />

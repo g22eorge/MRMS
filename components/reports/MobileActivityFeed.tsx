@@ -128,7 +128,7 @@ export async function MobileActivityFeed({ orgId }: Props) {
 
   return (
     <section className="lg:hidden">
-      <p className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+      <p className="mb-2 px-1 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
         Recent Activity
       </p>
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
@@ -136,7 +136,7 @@ export async function MobileActivityFeed({ orgId }: Props) {
           <div key={group.label}>
             {/* Section label */}
             <div className={`px-4 py-2 ${gi > 0 ? "border-t border-[var(--line)]" : ""}`}>
-              <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">
+              <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">
                 {group.label}
               </p>
             </div>
@@ -155,10 +155,10 @@ export async function MobileActivityFeed({ orgId }: Props) {
 
                   {/* Content */}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-semibold text-[var(--ink)] leading-snug">
+                    <p className="text-[0.75rem] font-semibold text-[var(--ink)] leading-snug">
                       {humanizeAction(entry.action)}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-[var(--ink-muted)] leading-snug">
+                    <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)] leading-snug">
                       {entry.job?.jobNumber ? (
                         <span className="font-medium text-[var(--accent)]">{entry.job.jobNumber}</span>
                       ) : null}
@@ -168,7 +168,7 @@ export async function MobileActivityFeed({ orgId }: Props) {
                   </div>
 
                   {/* Timestamp */}
-                  <p className="shrink-0 text-[12px] text-[var(--ink-muted)]">
+                  <p className="shrink-0 text-[0.75rem] text-[var(--ink-muted)]">
                     {timeAgo(entry.createdAt)}
                   </p>
                 </div>

@@ -151,8 +151,8 @@ export default async function LeadDetailPage({
   const quotedTotal = lead.quotations.reduce((sum, q) => sum + q.totalAmount, 0);
 
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const cardLabel = "text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
   const errorBox = "mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400";
 
   return (
@@ -248,7 +248,7 @@ export default async function LeadDetailPage({
           {/* ── Interest / Notes ── */}
           {lead.interest || lead.notes ? (
             <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-              <div className="space-y-1 px-4 py-3 text-[13px]">
+              <div className="space-y-1 px-4 py-3 text-[0.8125rem]">
                 {lead.interest ? (
                   <p className="text-[var(--ink-muted)]"><span className="font-semibold text-[var(--ink)]">Interest</span> · {lead.interest}</p>
                 ) : null}
@@ -263,7 +263,7 @@ export default async function LeadDetailPage({
           <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
               <p className={cardLabel}>Activity</p>
-              <p className="text-[12px] text-[var(--ink-muted)]">
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">
                 {lead.activities.length} entr{lead.activities.length === 1 ? "y" : "ies"}
               </p>
             </div>
@@ -291,13 +291,13 @@ export default async function LeadDetailPage({
                 {lead.activities.map((activity) => (
                   <div key={activity.id} className="px-4 py-2.5">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-[13px] font-semibold text-[var(--ink)]">
+                      <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">
                         {ACTIVITY_TYPE_LABELS[activity.type] ?? activity.type}
                         <span className="ml-1.5 font-normal text-[var(--ink-muted)]">{activity.user.name}</span>
                       </p>
-                      <p className="shrink-0 text-[12px] text-[var(--ink-muted)]/60">{formatEATDateTime(activity.createdAt)}</p>
+                      <p className="shrink-0 text-[0.75rem] text-[var(--ink-muted)]/60">{formatEATDateTime(activity.createdAt)}</p>
                     </div>
-                    {activity.note ? <p className="mt-0.5 text-[13px] text-[var(--ink-muted)] [overflow-wrap:anywhere]">{activity.note}</p> : null}
+                    {activity.note ? <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)] [overflow-wrap:anywhere]">{activity.note}</p> : null}
                   </div>
                 ))}
               </div>

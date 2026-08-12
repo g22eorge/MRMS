@@ -24,9 +24,9 @@ export default function NewSupplierPage() {
     <div className="space-y-4 max-w-lg">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="px-4 py-3">
-          <p className="text-[12px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[13px] font-bold text-[var(--ink)]">New supplier</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Add a supplier you buy stock from.</p>
+          <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
+          <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New supplier</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Add a supplier you buy stock from.</p>
         </div>
       </div>
 
@@ -40,7 +40,7 @@ export default function NewSupplierPage() {
           <textarea
             name="address"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
           />
         </div>
         <div>
@@ -48,7 +48,7 @@ export default function NewSupplierPage() {
           <textarea
             name="notes"
             rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
           />
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
@@ -75,7 +75,7 @@ function Field({ name, label, required, type = "text" }: { name: string; label: 
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
       />
     </div>
   );

@@ -326,7 +326,7 @@ export function NotificationBell() {
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute right-0 top-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--dc-accent)] px-0.5 text-[9px] font-bold leading-none text-[#1c1600] ring-2 ring-[var(--dc-side)]">
+          <span className="absolute right-0 top-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--dc-accent)] px-0.5 text-[0.5625rem] font-bold leading-none text-[#1c1600] ring-2 ring-[var(--dc-side)]">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -351,9 +351,9 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2">
             <div className="flex items-center gap-1.5">
-              <p className="text-[12px] font-semibold text-[var(--ink)]">Notifications</p>
+              <p className="text-[0.75rem] font-semibold text-[var(--ink)]">Notifications</p>
               {unreadCount > 0 && (
-                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-black">
+                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[0.625rem] font-bold leading-none text-black">
                   {unreadCount}
                 </span>
               )}
@@ -361,7 +361,7 @@ export function NotificationBell() {
             {notifications.some((n) => !n.isRead) && (
               <button
                 onClick={markAllRead}
-                className="text-[11px] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+                className="text-[0.6875rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
               >
                 Mark all read
               </button>
@@ -412,17 +412,17 @@ export function NotificationBell() {
                     {typeIcon(n.type)}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-[12px] font-semibold leading-snug text-[var(--ink)]">
+                        <p className="truncate text-[0.75rem] font-semibold leading-snug text-[var(--ink)]">
                           {n.title}
                         </p>
                         <span className="flex shrink-0 items-center gap-1.5">
-                          <span className="text-[10px] text-[var(--ink-muted)]/60">
+                          <span className="text-[0.625rem] text-[var(--ink-muted)]/60">
                             {formatDistanceToNow(new Date(n.createdAt), { addSuffix: false })}
                           </span>
                           {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
                         </span>
                       </div>
-                      <p className="line-clamp-1 text-[11px] leading-snug text-[var(--ink-muted)]">
+                      <p className="line-clamp-1 text-[0.6875rem] leading-snug text-[var(--ink-muted)]">
                         {n.message}
                       </p>
                     </div>
@@ -436,7 +436,7 @@ export function NotificationBell() {
           <div className="relative border-t border-[var(--line)]">
             <button
               onClick={() => setShowAll((v) => !v)}
-              className="block w-full px-3 py-2 text-center text-[12px] font-semibold text-[var(--accent)] transition hover:bg-[var(--panel-strong)]"
+              className="block w-full px-3 py-2 text-center text-[0.75rem] font-semibold text-[var(--accent)] transition hover:bg-[var(--panel-strong)]"
             >
               {showAll ? "Show unread only" : "View all notifications"}
             </button>

@@ -248,7 +248,7 @@ export default async function ClientDetailPage({
         eyebrow="Clients"
         title={client.fullName}
         secondary={canEdit ? (
-          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[12px]">+ New Repair</Link>
+          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem]">+ New Repair</Link>
         ) : undefined}
       />
 
@@ -278,8 +278,8 @@ export default async function ClientDetailPage({
       {statement ? (
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
-            <div className="flex items-center gap-4 text-[13px]">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
+            <div className="flex items-center gap-4 text-[0.8125rem]">
               <span className="text-[var(--ink-muted)]">Billed <span className="font-semibold text-[var(--ink)] tabular-nums">{formatMoney(statement.totals.billed, statement.currency)}</span></span>
               <span className="text-[var(--ink-muted)]">Paid <span className="font-semibold text-emerald-600 tabular-nums">{formatMoney(statement.totals.paid, statement.currency)}</span></span>
               <span className="text-[var(--ink-muted)]">Outstanding <span className={`font-black tabular-nums ${statement.totals.outstanding > 0 ? "text-red-500" : "text-emerald-600"}`}>{formatMoney(statement.totals.outstanding, statement.currency)}</span></span>
@@ -289,9 +289,9 @@ export default async function ClientDetailPage({
             <p className="text-sm text-[var(--ink-muted)]">No billed documents yet.</p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-              <table className="w-full min-w-[520px] text-[13px]">
+              <table className="w-full min-w-[520px] text-[0.8125rem]">
                 <thead>
-                  <tr className="border-b border-[var(--line)] text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">
+                  <tr className="border-b border-[var(--line)] text-[0.6875rem] uppercase tracking-wide text-[var(--ink-muted)]">
                     <th className="px-3 py-2 text-left font-bold">Document</th>
                     <th className="px-3 py-2 text-left font-bold">Date</th>
                     <th className="px-3 py-2 text-right font-bold">Billed</th>
@@ -304,7 +304,7 @@ export default async function ClientDetailPage({
                   {statement.lines.map((l) => (
                     <tr key={`${l.type}-${l.number}`} className="border-b border-[var(--line)]/60 last:border-0">
                       <td className="px-3 py-2">
-                        <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
+                        <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.625rem] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
                         <span className="mono text-[var(--ink)]">{l.number}</span>
                       </td>
                       <td className="px-3 py-2 text-[var(--ink-muted)]">{l.date.toISOString().slice(0, 10)}</td>
@@ -324,40 +324,40 @@ export default async function ClientDetailPage({
       {canEdit ? (
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <div className="mb-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
-            <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
           </div>
 
           {portalUsers.length > 0 && (
             <div className="mb-3 space-y-1.5">
               {portalUsers.map((pu) => (
-                <div key={pu.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[13px]">
+                <div key={pu.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2 text-[0.8125rem]">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <span className="font-medium text-[var(--ink)]">{pu.name}</span>
                       <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
-                      {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">revoked</span>}
+                      {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-red-500">revoked</span>}
                     </div>
                     <form action={togglePortalUserAction}>
                       <input type="hidden" name="portalUserId" value={pu.id} />
                       <input type="hidden" name="clientId" value={client.id} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
+                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
                         {pu.isActive ? "Revoke" : "Restore"}
                       </button>
                     </form>
                   </div>
                   {/* Multi-account: this login also manages these client accounts. */}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]/80">Also manages</span>
+                    <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]/80">Also manages</span>
                     {pu.linkedClients.length === 0 ? (
-                      <span className="text-[12px] text-[var(--ink-muted)]">— this account only</span>
+                      <span className="text-[0.75rem] text-[var(--ink-muted)]">— this account only</span>
                     ) : (
                       pu.linkedClients.map((l) => (
                         <form key={l.client.id} action={unlinkPortalUserFromClientAction} className="inline-flex">
                           <input type="hidden" name="portalUserId" value={pu.id} />
                           <input type="hidden" name="clientId" value={l.client.id} />
                           <input type="hidden" name="fromClientId" value={client.id} />
-                          <button type="submit" title="Remove this account" className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--ink)] hover:bg-red-500/10">
+                          <button type="submit" title="Remove this account" className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--ink)] hover:bg-red-500/10">
                             {l.client.organization ? `${l.client.organization} — ${l.client.fullName}` : l.client.fullName} <span className="text-red-500">×</span>
                           </button>
                         </form>
@@ -367,13 +367,13 @@ export default async function ClientDetailPage({
                       <form action={linkPortalUserToClientAction} className="inline-flex items-center gap-1">
                         <input type="hidden" name="portalUserId" value={pu.id} />
                         <input type="hidden" name="fromClientId" value={client.id} />
-                        <select name="clientId" defaultValue="" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[11.5px]">
+                        <select name="clientId" defaultValue="" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-1.5 py-0.5 text-[0.71875rem]">
                           <option value="" disabled>+ add account…</option>
                           {mergeCandidates.map((c) => (
                             <option key={c.id} value={c.id}>{c.organization ? `${c.organization} — ${c.fullName}` : c.fullName}</option>
                           ))}
                         </select>
-                        <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[11.5px] font-semibold text-[var(--accent)]">Add</button>
+                        <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--accent)]">Add</button>
                       </form>
                     ) : null}
                   </div>
@@ -384,15 +384,15 @@ export default async function ClientDetailPage({
 
           <form action={createPortalUserAction} className="grid gap-2 sm:grid-cols-2">
             <input type="hidden" name="clientId" value={client.id} />
-            <input name="name" required placeholder="Full name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
-            <input name="email" type="email" required placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
-            <select name="role" defaultValue="IT_OFFICER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]">
+            <input name="name" required placeholder="Full name" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
+            <input name="email" type="email" required placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
+            <select name="role" defaultValue="IT_OFFICER" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]">
               <option value="IT_OFFICER">IT Officer</option>
               <option value="ORG_ADMIN">Organization Administrator</option>
               <option value="MEMBER">Member</option>
             </select>
-            <input name="password" type="text" required minLength={8} placeholder="Temporary password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50" />
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[13px] text-white sm:col-span-2">Create portal login</button>
+            <input name="password" type="text" required minLength={8} placeholder="Temporary password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
+            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white sm:col-span-2">Create portal login</button>
           </form>
         </div>
       ) : null}
@@ -403,13 +403,13 @@ export default async function ClientDetailPage({
 
       <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Job History</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Job History</p>
           <div className="flex items-center gap-2">
             {/* Status filter chips */}
             <div className="flex items-center gap-1">
               <Link
                 href={`/clients/${id}`}
-                className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                className={`rounded-full border px-2.5 py-0.5 text-[0.8125rem] font-semibold transition ${!filters.status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
               >
                 All
               </Link>
@@ -417,7 +417,7 @@ export default async function ClientDetailPage({
                 <Link
                   key={status}
                   href={`/clients/${id}?${new URLSearchParams({ ...(filters.q ? { q: filters.q } : {}), status }).toString()}`}
-                  className={`hidden rounded-full border px-2.5 py-0.5 text-[13px] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
+                  className={`hidden rounded-full border px-2.5 py-0.5 text-[0.8125rem] font-semibold transition sm:block ${filters.status === status ? "border-[var(--accent)] bg-[var(--accent)] text-black" : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30"}`}
                 >
                   {statusOptionLabel[status]}
                 </Link>
@@ -445,13 +445,13 @@ export default async function ClientDetailPage({
                   <Link href={`/jobs/${job.id}?returnTo=/clients/${client.id}&returnLabel=Client`} className="absolute inset-0 z-0" aria-label={`Open ${job.jobNumber}`} />
                   <div className="pointer-events-none relative z-10 px-4 py-3 pl-6">
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="mono text-[12px] font-medium tracking-wide text-[var(--ink-muted)]/50">{job.jobNumber}</span>
+                      <span className="mono text-[0.75rem] font-medium tracking-wide text-[var(--ink-muted)]/50">{job.jobNumber}</span>
                       <svg viewBox="0 0 6 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-1.5 shrink-0 text-[var(--ink-muted)]/25" aria-hidden="true"><path d="M1 1l4 4-4 4"/></svg>
                     </div>
-                    <p className="text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">{device}</p>
+                    <p className="text-[0.9375rem] font-bold leading-snug tracking-tight text-[var(--ink)]">{device}</p>
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <JobStatusBadge status={job.status} />
-                      <span className="text-[13px] text-[var(--ink-muted)]">· {formatEATDate(job.receivedAt)}</span>
+                      <span className="text-[0.8125rem] text-[var(--ink-muted)]">· {formatEATDate(job.receivedAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -463,11 +463,11 @@ export default async function ClientDetailPage({
 
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--line)] px-4 py-2.5">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Client Notes</p>
-          <p className="text-[13px] text-[var(--ink-muted)]">Internal notes visible to your team only</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Client Notes</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Internal notes visible to your team only</p>
         </div>
         <form action={addClientNote} className="flex flex-col gap-2 p-4">
-          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
+          <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
           <button type="submit" disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
         </form>
 
@@ -477,12 +477,12 @@ export default async function ClientDetailPage({
           ) : null}
 
           {client.notesEntries.length === 0 ? (
-            <p className="text-[12px] text-[var(--ink-muted)]">No notes yet.</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">No notes yet.</p>
           ) : (
             client.notesEntries.map((note: ClientDetail["notesEntries"][number]) => (
               <div key={note.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
                 <p className="text-sm leading-relaxed">{note.body}</p>
-                <p className="mt-1.5 text-[12px] text-[var(--ink-muted)]">
+                <p className="mt-1.5 text-[0.75rem] text-[var(--ink-muted)]">
                   {note.author.name} · {formatEATDateTime(note.createdAt)}
                 </p>
               </div>

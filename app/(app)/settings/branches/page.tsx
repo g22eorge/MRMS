@@ -21,7 +21,7 @@ export default async function BranchesPage() {
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <p className="text-[13px] font-bold text-[var(--ink)]">Branches</p>
+        <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Branches</p>
       </div>
 
       <BranchList branches={branches} />

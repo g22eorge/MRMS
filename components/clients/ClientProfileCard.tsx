@@ -20,13 +20,13 @@ type Props = {
 };
 
 const controlClass =
-  "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
+  "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-70";
 
 function ViewRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-medium text-[var(--ink-muted)]">{label}</p>
-      <p className="mt-0.5 truncate text-[13px] text-[var(--ink)]">{value?.trim() ? value : "—"}</p>
+      <p className="mt-0.5 truncate text-[0.8125rem] text-[var(--ink)]">{value?.trim() ? value : "—"}</p>
     </div>
   );
 }
@@ -57,7 +57,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[13px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50"
+              className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50"
             >
               Edit
             </button>
@@ -90,7 +90,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
       </div>
 
       {state.error ? (
-        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-700 dark:text-red-400">
+        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[0.8125rem] text-red-700 dark:text-red-400">
           {state.error}
         </p>
       ) : null}
@@ -126,7 +126,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
           <textarea
             name="notes"
             defaultValue={client.notes ?? ""}
-            className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
+            className="min-h-24 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 disabled:opacity-70"
           />
         </label>
       </div>
@@ -139,7 +139,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
           type="button"
           onClick={() => setEditing(false)}
           disabled={pending}
-          className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 disabled:opacity-60"
+          className="rounded-lg border border-[var(--line)] px-3 py-2 text-[0.8125rem] font-medium text-[var(--ink)] transition hover:border-[var(--accent)]/50 disabled:opacity-60"
         >
           Cancel
         </button>

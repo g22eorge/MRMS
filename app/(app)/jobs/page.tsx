@@ -478,7 +478,7 @@ export default async function JobsPage({
   const hasAnyFilter = Boolean(filters.q || filters.status || filters.overdue || hasAdvancedFilters);
   const showAdv = filters.adv === "1" || hasAdvancedFilters;
 
-  const ctrlClass = "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const ctrlClass = "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none transition focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15";
 
   const preservedWithoutStatus = Object.fromEntries(
     Object.entries(preserved).filter(([key]) => key !== "status" && key !== "page"),
@@ -519,9 +519,9 @@ export default async function JobsPage({
 
         {/* Row 1: title + count */}
         <div className="flex items-center gap-2 pb-3">
-          <h2 className="text-[18px] font-black tracking-tight text-[var(--ink)]">Repairs</h2>
+          <h2 className="text-[1.125rem] font-black tracking-tight text-[var(--ink)]">Repairs</h2>
           {total > 0 && (
-            <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[13px] font-black text-black">
+            <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[0.8125rem] font-black text-black">
               {total}
             </span>
           )}
@@ -546,7 +546,7 @@ export default async function JobsPage({
               name="q"
               defaultValue={filters.q}
               placeholder={isExternalTech ? "Search job #…" : lookupByPhone ? "Name, phone or job #…" : "Search job #…"}
-              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             {filters.q ? (
               <a href={`/jobs?${new URLSearchParams(Object.fromEntries(Object.entries(filters).filter(([k]) => k !== "q") as [string,string][])).toString()}`} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50 hover:text-[var(--ink-muted)]" aria-label="Clear search">
@@ -594,7 +594,7 @@ export default async function JobsPage({
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
               {KEY_CHIPS.map(({ href, label, count, active }) => (
                 <Link key={label} href={href}
-                  className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-center text-[12px] font-bold transition ${
+                  className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-center text-[0.75rem] font-bold transition ${
                     active
                       ? "bg-[var(--accent)] text-black"
                       : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -614,9 +614,9 @@ export default async function JobsPage({
             {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
             <input type="hidden" name="adv" value="1" />
             <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[13px] font-medium text-[var(--ink-muted)]">Device</span>
+              <span className="text-[0.8125rem] font-medium text-[var(--ink-muted)]">Device</span>
               <select name="deviceType" defaultValue={filters.deviceType}
-                className="border-0 bg-transparent text-right text-[13px] font-semibold text-[var(--ink)] outline-none">
+                className="border-0 bg-transparent text-right text-[0.8125rem] font-semibold text-[var(--ink)] outline-none">
                 <option value="">All</option>
                 <option value="PHONE_ANDROID">Android</option>
                 <option value="PHONE_IPHONE">iPhone</option>
@@ -627,27 +627,27 @@ export default async function JobsPage({
               </select>
             </div>
             <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[13px] font-medium text-[var(--ink-muted)]">Path</span>
+              <span className="text-[0.8125rem] font-medium text-[var(--ink-muted)]">Path</span>
               <select name="repairPath" defaultValue={filters.repairPath}
-                className="border-0 bg-transparent text-right text-[13px] font-semibold text-[var(--ink)] outline-none">
+                className="border-0 bg-transparent text-right text-[0.8125rem] font-semibold text-[var(--ink)] outline-none">
                 <option value="">All</option>
                 <option value="IN_HOUSE">In-house</option>
                 <option value="EXTERNAL">External</option>
               </select>
             </div>
             <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[13px] font-medium text-[var(--ink-muted)]">Sort</span>
+              <span className="text-[0.8125rem] font-medium text-[var(--ink-muted)]">Sort</span>
               <select name="sort" defaultValue={sort}
-                className="border-0 bg-transparent text-right text-[13px] font-semibold text-[var(--ink)] outline-none">
+                className="border-0 bg-transparent text-right text-[0.8125rem] font-semibold text-[var(--ink)] outline-none">
                 <option value="received_desc">Newest first</option>
                 <option value="job_number_desc">Job # desc</option>
               </select>
             </div>
             {!isExternalTech && can.approveInvoices(user) ? (
               <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[13px] font-medium text-[var(--ink-muted)]">Pricing</span>
+                <span className="text-[0.8125rem] font-medium text-[var(--ink-muted)]">Pricing</span>
                 <select name="pricing" defaultValue={pricingFilter}
-                  className="border-0 bg-transparent text-right text-[13px] font-semibold text-[var(--ink)] outline-none">
+                  className="border-0 bg-transparent text-right text-[0.8125rem] font-semibold text-[var(--ink)] outline-none">
                   <option value="">All</option>
                   <option value="needs">Needs pricing</option>
                   <option value="priced">Priced</option>
@@ -656,9 +656,9 @@ export default async function JobsPage({
             ) : null}
             {/* Footer: Apply + optional Clear */}
             <div className="flex items-center gap-3 px-4 py-2.5">
-              <button type="submit" className="btn-premium rounded-xl px-5 py-1.5 text-[13px] font-semibold">Apply</button>
+              <button type="submit" className="btn-premium rounded-xl px-5 py-1.5 text-[0.8125rem] font-semibold">Apply</button>
               {hasAdvancedFilters && (
-                <Link href="/jobs?adv=1" className="text-[13px] font-medium text-[var(--ink-muted)]">Clear</Link>
+                <Link href="/jobs?adv=1" className="text-[0.8125rem] font-medium text-[var(--ink-muted)]">Clear</Link>
               )}
             </div>
           </form>
@@ -703,7 +703,7 @@ export default async function JobsPage({
                 <Link
                   key={v}
                   href={`/jobs?${params.toString()}`}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-semibold transition ${
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.8125rem] font-semibold transition ${
                     active ? "bg-[var(--panel)] text-[var(--ink)] shadow-sm" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
@@ -726,7 +726,7 @@ export default async function JobsPage({
           <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
             <Link
               href={statusChipHref("")}
-              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                 statusValue ? "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]" : "bg-[var(--accent)] text-black"
               }`}
             >
@@ -739,7 +739,7 @@ export default async function JobsPage({
                 <Link
                   key={s}
                   href={statusChipHref(s)}
-                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                     active ? "bg-[var(--accent)] text-black" : "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
@@ -751,7 +751,7 @@ export default async function JobsPage({
             <div className="mx-1 h-4 w-px shrink-0 bg-[var(--line)]" aria-hidden="true" />
             <Link
               href={overdueChipHref}
-              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                 filters.overdue === "1"
                   ? "bg-red-500/10 text-red-600"
                   : "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-red-600"
@@ -795,7 +795,7 @@ export default async function JobsPage({
               </Link>
             ) : null}
             {can.createJob(user) ? (
-              <Link href="/jobs/new" className="btn-premium hidden rounded-[10px] px-3.5 py-2 text-[13px] font-semibold sm:inline-flex">
+              <Link href="/jobs/new" className="btn-premium hidden rounded-[10px] px-3.5 py-2 text-[0.8125rem] font-semibold sm:inline-flex">
                 + New Job
               </Link>
             ) : null}
@@ -839,13 +839,13 @@ export default async function JobsPage({
             <input type="date" name="to" defaultValue={filters.to} className={ctrlClass} />
             {filters.dateField ? <input type="hidden" name="dateField" value={filters.dateField} /> : null}
             <div className="col-span-2 flex items-center gap-2 sm:col-span-3 lg:col-span-full">
-              <button type="submit" className="btn-premium rounded-lg px-3.5 py-1.5 text-[13px] font-semibold">Apply</button>
-              {hasAnyFilter ? <Link href="/jobs" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link> : null}
+              <button type="submit" className="btn-premium rounded-lg px-3.5 py-1.5 text-[0.8125rem] font-semibold">Apply</button>
+              {hasAnyFilter ? <Link href="/jobs" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link> : null}
             </div>
           </form>
         ) : null}
         {filters.dateField === "completedAt" && (filters.from || filters.to) ? (
-          <p className="border-t border-[var(--line)] bg-[var(--accent)]/10 px-3 py-1.5 text-[13px] text-[var(--accent)]">
+          <p className="border-t border-[var(--line)] bg-[var(--accent)]/10 px-3 py-1.5 text-[0.8125rem] text-[var(--accent)]">
             Date range is filtering by <strong>completion date</strong>.
           </p>
         ) : null}
@@ -869,12 +869,12 @@ export default async function JobsPage({
       ) : rows.length === 0 ? (
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] flex flex-col items-center gap-3 py-16 text-center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-[var(--ink-muted)] opacity-30" aria-hidden><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-          <p className="text-[14px] font-semibold text-[var(--ink-muted)]">No repairs found</p>
-          <p className="text-[12px] text-[var(--ink-muted)]">
+          <p className="text-[0.875rem] font-semibold text-[var(--ink-muted)]">No repairs found</p>
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {hasAnyFilter ? "Try a different status or clear filters" : "New jobs will appear here"}
           </p>
           {hasAnyFilter && (
-            <Link href="/jobs" className="mt-1 inline-flex rounded-full border border-[var(--accent)]/40 px-4 py-1.5 text-[12px] font-semibold text-[var(--accent)]">
+            <Link href="/jobs" className="mt-1 inline-flex rounded-full border border-[var(--accent)]/40 px-4 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]">
               Clear filters
             </Link>
           )}

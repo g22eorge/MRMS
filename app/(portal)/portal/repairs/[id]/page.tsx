@@ -100,32 +100,32 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
       <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="repairs" accounts={accessibleClients} activeClientId={client.id} />
 
-      <Link href="/portal/repairs" className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
+      <Link href="/portal/repairs" className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">← All repairs</Link>
 
       {/* Summary */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="mono text-lg font-black text-[var(--ink)]">{job.jobNumber}</p>
-            <p className="text-[13px] text-[var(--ink-muted)]">{device}{job.serialOrImei ? ` · ${job.serialOrImei}` : ""}</p>
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">{device}{job.serialOrImei ? ` · ${job.serialOrImei}` : ""}</p>
           </div>
-          <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-[12px] font-bold text-[var(--accent)]">
+          <span className="rounded-full bg-[var(--accent)]/15 px-3 py-1 text-[0.75rem] font-bold text-[var(--accent)]">
             {STEP_LABEL[job.status] ?? job.status.replaceAll("_", " ")}
           </span>
         </div>
-        {job.statusNote ? <p className="mt-2 rounded-lg bg-[var(--panel-strong)]/50 px-3 py-2 text-[13px] text-[var(--ink)]">{job.statusNote}</p> : null}
+        {job.statusNote ? <p className="mt-2 rounded-lg bg-[var(--panel-strong)]/50 px-3 py-2 text-[0.8125rem] text-[var(--ink)]">{job.statusNote}</p> : null}
       </div>
 
       {/* Progress */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="mb-3 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Progress</p>
+        <p className="mb-3 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Progress</p>
         <ol className="space-y-2">
           {STEPS.map((step, i) => {
             const done = i < currentStep;
             const current = i === currentStep;
             return (
-              <li key={step} className="flex items-center gap-3 text-[13px]">
-                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${done ? "bg-emerald-500 text-white" : current ? "bg-[var(--accent)] text-black" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+              <li key={step} className="flex items-center gap-3 text-[0.8125rem]">
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[0.6875rem] font-bold ${done ? "bg-emerald-500 text-white" : current ? "bg-[var(--accent)] text-black" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {done ? "✓" : i + 1}
                 </span>
                 <span className={current ? "font-semibold text-[var(--ink)]" : done ? "text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{STEP_LABEL[step]}</span>
@@ -135,10 +135,10 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
         </ol>
         {history.length > 0 ? (
           <div className="mt-3 border-t border-[var(--line)] pt-3">
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">History</p>
+            <p className="mb-1.5 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">History</p>
             <ul className="space-y-1">
               {history.map((h, i) => (
-                <li key={i} className="flex justify-between text-[12px] text-[var(--ink-muted)]">
+                <li key={i} className="flex justify-between text-[0.75rem] text-[var(--ink-muted)]">
                   <span>{STEP_LABEL[h.toStatus] ?? h.toStatus.replaceAll("_", " ")}</span>
                   <span>{fmtDate(h.changedAt)}</span>
                 </li>
@@ -152,25 +152,25 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {reports.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
-            <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white">
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+            <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold text-white">
               ↓ Download PDF
             </a>
           </div>
-          <p className="text-[13px] text-[var(--ink)]">{reports[0].summary}</p>
-          <p className="mt-1 text-[12px] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
+          <p className="text-[0.8125rem] text-[var(--ink)]">{reports[0].summary}</p>
+          <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
         </div>
       ) : null}
 
       {/* Repair photos shared by the shop */}
       {job.photos.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repair Photos ({job.photos.length})</p>
+          <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repair Photos ({job.photos.length})</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {job.photos.map((ph) => (
               <a key={ph.id} href={`/api/photos/${ph.id}`} target="_blank" rel="noopener" className="group relative block overflow-hidden rounded-lg border border-[var(--line)]">
                 <Image src={`/api/photos/${ph.id}`} alt={ph.label ?? "Repair photo"} width={300} height={200} unoptimized className="h-28 w-full object-cover transition group-hover:opacity-90" />
-                {ph.label ? <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold capitalize text-white">{ph.label}</span> : null}
+                {ph.label ? <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[0.625rem] font-semibold capitalize text-white">{ph.label}</span> : null}
               </a>
             ))}
           </div>
@@ -180,22 +180,22 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {/* Quotation */}
       {job.quotations.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Quotation</p>
+          <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Quotation</p>
           {job.quotations.map((q) => (
-            <div key={q.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 py-2 text-[13px] last:border-0">
+            <div key={q.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)]/60 py-2 text-[0.8125rem] last:border-0">
               <div>
                 <span className="mono font-semibold text-[var(--ink)]">{q.quoteNumber}</span>
-                {q.validUntil ? <span className="ml-2 text-[12px] text-[var(--ink-muted)]">valid until {fmtDate(q.validUntil)}</span> : null}
+                {q.validUntil ? <span className="ml-2 text-[0.75rem] text-[var(--ink-muted)]">valid until {fmtDate(q.validUntil)}</span> : null}
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
-                <a href={`/api/portal/quotation/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ PDF</a>
+                <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
+                <a href={`/api/portal/quotation/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ PDF</a>
                 {q.status === "SENT" ? (
                   <form action={approveQuotationAction}>
                     <input type="hidden" name="quotationId" value={q.id} />
                     <input type="hidden" name="jobId" value={job.id} />
-                    <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-emerald-700">
+                    <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1 text-[0.75rem] font-semibold text-white transition hover:bg-emerald-700">
                       Approve
                     </button>
                   </form>
@@ -210,20 +210,20 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {invoice ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
-            <a href={`/api/portal/invoice/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ Invoice</a>
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
+            <a href={`/api/portal/invoice/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ Invoice</a>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div><p className="text-[15px] font-bold tabular-nums text-[var(--ink)]">{formatMoney(invoice.totalAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Total</p></div>
-            <div><p className="text-[15px] font-bold tabular-nums text-emerald-600">{formatMoney(invoice.paidAmount, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Paid</p></div>
-            <div><p className={`text-[15px] font-bold tabular-nums ${outstanding > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(outstanding, invoice.currency)}</p><p className="text-[11px] text-[var(--ink-muted)]">Outstanding</p></div>
+            <div><p className="text-[0.9375rem] font-bold tabular-nums text-[var(--ink)]">{formatMoney(invoice.totalAmount, invoice.currency)}</p><p className="text-[0.6875rem] text-[var(--ink-muted)]">Total</p></div>
+            <div><p className="text-[0.9375rem] font-bold tabular-nums text-emerald-600">{formatMoney(invoice.paidAmount, invoice.currency)}</p><p className="text-[0.6875rem] text-[var(--ink-muted)]">Paid</p></div>
+            <div><p className={`text-[0.9375rem] font-bold tabular-nums ${outstanding > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(outstanding, invoice.currency)}</p><p className="text-[0.6875rem] text-[var(--ink-muted)]">Outstanding</p></div>
           </div>
           {invoice.payments.length > 0 ? (
             <div className="mt-3 border-t border-[var(--line)] pt-3">
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Receipts</p>
+              <p className="mb-1.5 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Receipts</p>
               <ul className="space-y-1">
                 {invoice.payments.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between text-[12px]">
+                  <li key={p.id} className="flex items-center justify-between text-[0.75rem]">
                     <span className="text-[var(--ink-muted)]">{fmtDate(p.receivedAt)} · {formatMoney(p.amount, p.currency)}</span>
                     <a href={`/api/portal/receipt/${p.id}`} target="_blank" rel="noopener" className="font-semibold text-[var(--accent)] hover:underline">↓ Receipt</a>
                   </li>
@@ -236,19 +236,19 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
 
       {/* Messages / notes */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Messages</p>
+        <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Messages</p>
         {messages.length === 0 ? (
-          <p className="mb-3 text-[13px] text-[var(--ink-muted)]">No messages yet. Ask a question or leave a note for the team.</p>
+          <p className="mb-3 text-[0.8125rem] text-[var(--ink-muted)]">No messages yet. Ask a question or leave a note for the team.</p>
         ) : (
           <ul className="mb-3 space-y-2">
             {messages.map((m) => {
               const mine = m.authorType === "CUSTOMER";
               return (
                 <li key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${mine ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[0.8125rem] ${mine ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>
                     {m.body}
                   </div>
-                  <span className="mt-0.5 text-[11px] text-[var(--ink-muted)]">
+                  <span className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">
                     {mine ? "You" : m.authorName} · {m.createdAt.toISOString().slice(0, 10)}
                   </span>
                 </li>
@@ -263,9 +263,9 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
             required
             maxLength={4000}
             placeholder="Write a message…"
-            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
+            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
           />
-          <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[13px] text-white">Send</button>
+          <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Send</button>
         </form>
       </div>
 
@@ -275,9 +275,9 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           const active = job.warrantyExpiresAt >= new Date();
           return (
             <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-              <p className="mb-1 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
-              <p className="text-[13px]">
-                <span className={`mr-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
+              <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+              <p className="text-[0.8125rem]">
+                <span className={`mr-2 rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${active ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>
                   {active ? "Active" : "Expired"}
                 </span>
                 <span className="text-[var(--ink)]">
@@ -292,12 +292,12 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       {/* Warranty claims */}
       {warranties.length > 0 ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-          <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+          <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
           {warranties.map((w) => (
-            <div key={w.id} className="text-[13px]">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${w.status === "OPEN" ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"}`}>{w.status}</span>
+            <div key={w.id} className="text-[0.8125rem]">
+              <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${w.status === "OPEN" ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"}`}>{w.status}</span>
               <span className="ml-2 text-[var(--ink)]">{w.reason}</span>
-              {w.resolution ? <p className="mt-1 text-[12px] text-[var(--ink-muted)]">{w.resolution}</p> : null}
+              {w.resolution ? <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{w.resolution}</p> : null}
             </div>
           ))}
         </div>

@@ -169,21 +169,21 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
           >
             <span className="text-base">📋</span>
             {showPicker ? "Hide standard templates" : "Use a standard template"}
-            <span className="rounded bg-[var(--accent)]/10 px-1.5 py-0.5 mono text-[12px] text-[var(--accent)]">
+            <span className="rounded bg-[var(--accent)]/10 px-1.5 py-0.5 mono text-[0.75rem] text-[var(--accent)]">
               12
             </span>
           </button>
 
           {activeTpl && (
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent)]/10 px-2.5 py-1 text-[13px] font-semibold text-[var(--accent)]">
+              <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent)]/10 px-2.5 py-1 text-[0.8125rem] font-semibold text-[var(--accent)]">
                 <span>{activeTpl.icon}</span>
                 {activeTpl.title}
               </span>
               <button
                 type="button"
                 onClick={clearTemplate}
-                className="text-[13px] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                className="text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]"
                 title="Clear template"
               >
                 ✕ clear
@@ -197,7 +197,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
           <div className="mt-4 space-y-4">
             {groups.map(({ category, templates }) => (
               <div key={category}>
-                <p className="mb-2 text-[12px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+                <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
                   {category}
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -218,7 +218,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                       </p>
                       <div className="mt-2 space-y-0.5">
                         {t.lines.map((line, i) => (
-                          <p key={i} className="flex items-start gap-1 text-[12px] leading-snug">
+                          <p key={i} className="flex items-start gap-1 text-[0.75rem] leading-snug">
                             <span
                               className={`mt-px shrink-0 rounded px-1 py-px font-bold ${
                                 line.side === "DR"
@@ -256,7 +256,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -269,7 +269,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Monthly rent — May 2025"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -281,7 +281,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="INV-001, Receipt #42…"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
         </div>
@@ -289,12 +289,12 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
         {/* Lines table */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
               Line Items — Σ Debits must equal Σ Credits
             </p>
             {hasAmounts && (
               <span
-                className={`text-[13px] font-semibold tabular-nums ${
+                className={`text-[0.8125rem] font-semibold tabular-nums ${
                   balanced ? "text-emerald-600" : "text-amber-600"
                 }`}
               >
@@ -389,7 +389,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                   <tr>
                     <td
                       colSpan={2}
-                      className="px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]"
+                      className="px-3 py-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]"
                     >
                       Totals
                     </td>
@@ -402,7 +402,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
                   </tr>
                   {!balanced && (
                     <tr>
-                      <td colSpan={4} className="px-3 pb-2 text-right text-[12px] font-semibold text-amber-600">
+                      <td colSpan={4} className="px-3 pb-2 text-right text-[0.75rem] font-semibold text-amber-600">
                         Difference: {Math.abs(totalDR - totalCR).toLocaleString()} — entry will be rejected until balanced
                       </td>
                     </tr>
@@ -412,7 +412,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
             }
           />
 
-          <p className="mt-2 flex items-start gap-1.5 text-[13px] text-[var(--ink-muted)]">
+          <p className="mt-2 flex items-start gap-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -433,7 +433,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
         </div>
 
         {serverError && (
-          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[13px] text-red-600">
+          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[0.8125rem] text-red-600">
             {serverError}
           </p>
         )}

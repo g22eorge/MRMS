@@ -58,13 +58,13 @@ export default async function DataHealPage({
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Data Heal</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Data Heal</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-semibold ${unresolved > 0 ? "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}`}>
+            <span className={`rounded-full border px-2.5 py-0.5 text-[0.8125rem] font-semibold ${unresolved > 0 ? "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}`}>
               {unresolved} unresolved
             </span>
-            <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-0.5 text-[13px] text-[var(--ink-muted)]">
+            <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
               Last: {lastHealedAt ? new Date(lastHealedAt.createdAt).toLocaleString() : "Never"}
             </span>
           </div>
@@ -125,8 +125,8 @@ export default async function DataHealPage({
           renderMobileCard={(change) => (
             <div className="px-4 py-3">
               <Link href={`/jobs/${change.id}`} className="mono font-bold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">{change.jobNumber}</Link>
-              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{change.from.brand} / {change.from.model} / {change.from.deviceType}</p>
-              <p className="mt-0.5 truncate text-[12px] text-[var(--ink)]">→ {change.to.brand} / {change.to.model} / {change.to.deviceType}</p>
+              <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{change.from.brand} / {change.from.model} / {change.from.deviceType}</p>
+              <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink)]">→ {change.to.brand} / {change.to.model} / {change.to.deviceType}</p>
             </div>
           )}
         />

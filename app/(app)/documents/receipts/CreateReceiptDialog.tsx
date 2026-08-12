@@ -32,7 +32,7 @@ export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethod
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-semibold"
+        className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold"
       >
         + Receipt
       </button>

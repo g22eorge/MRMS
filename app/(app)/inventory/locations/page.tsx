@@ -70,7 +70,7 @@ export default async function StockLocationsPage({
             <option value="">No branch</option>
             {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
           </select>
-          <label className="flex items-center gap-2 text-[12px] text-[var(--ink-muted)]">
+          <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink-muted)]">
             <input type="checkbox" name="isActive" value="1" defaultChecked={location.isActive} /> Active
           </label>
           <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</button>
@@ -78,7 +78,7 @@ export default async function StockLocationsPage({
         <form action={toggleStockLocationAction} className="mt-2 border-t border-[var(--line)] pt-2">
           <input type="hidden" name="id" value={location.id} />
           <input type="hidden" name="isActive" value={location.isActive ? "0" : "1"} />
-          <button type="submit" className="text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
+          <button type="submit" className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             {location.isActive ? "Deactivate" : "Activate"}
           </button>
         </form>
@@ -105,15 +105,15 @@ export default async function StockLocationsPage({
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
-            <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Location</p>
+            <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Location</p>
             <form action={createStockLocationAction} className="grid gap-2 md:grid-cols-[1.4fr_0.7fr_1fr_auto]">
-              <input name="name" placeholder="Location name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60" />
-              <input name="code" placeholder="Code" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] uppercase outline-none focus:border-[var(--accent)]/60" />
-              <select name="branchId" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/60">
+              <input name="name" placeholder="Location name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+              <input name="code" placeholder="Code" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] uppercase outline-none focus:border-[var(--accent)]/60" />
+              <select name="branchId" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">No branch</option>
                 {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
               </select>
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[13px] font-semibold">Create</button>
+              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Create</button>
             </form>
           </div>
         </>
@@ -180,8 +180,8 @@ export default async function StockLocationsPage({
         renderMobileCard={(location) => (
           <div className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
-              <p className="truncate font-bold text-[var(--ink)]">{location.name}{location.code ? <span className="ml-1.5 mono text-[12px] text-[var(--ink-muted)]">{location.code}</span> : null}</p>
-              <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{location.branchId ? branchName.get(location.branchId) ?? "Linked branch" : "No branch"} · {stats.get(location.id)?._sum.qtyOnHand ?? 0} on hand</p>
+              <p className="truncate font-bold text-[var(--ink)]">{location.name}{location.code ? <span className="ml-1.5 mono text-[0.75rem] text-[var(--ink-muted)]">{location.code}</span> : null}</p>
+              <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{location.branchId ? branchName.get(location.branchId) ?? "Linked branch" : "No branch"} · {stats.get(location.id)?._sum.qtyOnHand ?? 0} on hand</p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <StatusBadge tone={location.isActive ? "success" : "neutral"}>{location.isActive ? "Active" : "Inactive"}</StatusBadge>

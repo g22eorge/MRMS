@@ -34,7 +34,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
-const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
+const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 
 /* Edit handled via ?edit=1 query param */
 export const dynamic = "force-dynamic";
@@ -247,16 +247,16 @@ export default async function InvoiceDetailPage({
     <>
       {canSend && invoice.client?.phone && (
         <form action={sendInvoiceWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
         </form>
       )}
       {canSend && invoice.client?.email && (
         <form action={sendInvoiceEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
         </form>
       )}
-      <Link href={`/api/invoices/${invoice.id}/pdf`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">PDF</Link>
-      <Link href={`/documents/invoices/${invoice.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Edit</Link>
+      <Link href={`/api/invoices/${invoice.id}/pdf`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">PDF</Link>
+      <Link href={`/documents/invoices/${invoice.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit</Link>
     </>
   );
 
@@ -298,7 +298,7 @@ export default async function InvoiceDetailPage({
 
         {sent && (
           <div
-            className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${
+            className={`rounded-xl border px-4 py-3 text-[0.8125rem] font-medium ${
               sent === "failed"
                 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
                 : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
@@ -363,29 +363,29 @@ export default async function InvoiceDetailPage({
                     ]}
                   />
                   <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
-                    <div className="flex w-full max-w-xs justify-between text-[13px]">
+                    <div className="flex w-full max-w-xs justify-between text-[0.8125rem]">
                       <span className="text-[var(--ink-muted)]">Subtotal</span>
                       <span className="mono font-medium">{formatMoney(subtotal, currency)}</span>
                     </div>
-                    <div className="flex w-full max-w-xs justify-between text-[13px]">
+                    <div className="flex w-full max-w-xs justify-between text-[0.8125rem]">
                       <span className="text-[var(--ink-muted)]">Tax</span>
                       <span className="mono font-medium">{formatMoney(taxTotal, currency)}</span>
                     </div>
-                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]">
+                    <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[0.875rem]">
                       <span className="font-bold">Total</span>
                       <span className="mono font-black">{formatMoney(subtotal + taxTotal, currency)}</span>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="p-4 text-[13px] text-[var(--ink-muted)]">No items.</div>
+                <div className="p-4 text-[0.8125rem] text-[var(--ink-muted)]">No items.</div>
               )}
             </div>
 
             {invoice.notes && (
               <div className={cardClass}>
                 <div className={cardHeadClass}>Notes</div>
-                <div className="whitespace-pre-wrap p-4 text-[13px] text-[var(--ink-muted)]">{sanitizeText(invoice.notes)}</div>
+                <div className="whitespace-pre-wrap p-4 text-[0.8125rem] text-[var(--ink-muted)]">{sanitizeText(invoice.notes)}</div>
               </div>
             )}
 

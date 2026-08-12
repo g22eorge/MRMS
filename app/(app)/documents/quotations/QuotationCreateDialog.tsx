@@ -84,11 +84,11 @@ export function QuotationCreateDialog({
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="relative w-full max-w-[1300px] rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden">
           <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
-            <p className="text-[13px] font-bold text-[var(--ink)]">New Quotation</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Quotation</p>
             <button
               type="button"
               onClick={close}
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
             >
               Cancel
             </button>
@@ -118,7 +118,7 @@ export function QuotationNewButton({ className }: { className?: string }) {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new CustomEvent("quotation-create-dialog:open"))}
-      className={className ?? "btn-premium rounded-lg px-4 py-2 text-[13px] font-bold"}
+      className={className ?? "btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold"}
     >
       New Quotation
     </button>

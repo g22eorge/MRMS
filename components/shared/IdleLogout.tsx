@@ -101,8 +101,8 @@ export function IdleLogout({
   return (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4" role="alertdialog" aria-modal="true" aria-label="Inactivity warning">
       <div className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 text-center shadow-2xl">
-        <p className="text-[15px] font-bold text-[var(--ink)]">Still there?</p>
-        <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.9375rem] font-bold text-[var(--ink)]">Still there?</p>
+        <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
           You&apos;ll be signed out in <span className="font-bold text-[var(--ink)] tabular-nums">{secondsLeft}s</span> due to inactivity.
         </p>
         <button

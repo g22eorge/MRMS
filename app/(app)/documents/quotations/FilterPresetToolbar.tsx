@@ -50,7 +50,7 @@ export function FilterPresetToolbar({ currentQuery }: { currentQuery: string }) 
           if (preset) handleLoad(preset.query);
         }}
         defaultValue=""
-        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[13px]"
+        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem]"
       >
         <option value="" disabled>
           Load preset…
@@ -64,7 +64,7 @@ export function FilterPresetToolbar({ currentQuery }: { currentQuery: string }) 
       <button
         type="button"
         onClick={handleSave}
-        className="h-8 rounded-lg border border-[var(--line)] px-2 text-[13px] hover:bg-[var(--panel-strong)]"
+        className="h-8 rounded-lg border border-[var(--line)] px-2 text-[0.8125rem] hover:bg-[var(--panel-strong)]"
       >
         Save current
       </button>
@@ -72,7 +72,7 @@ export function FilterPresetToolbar({ currentQuery }: { currentQuery: string }) 
         <button
           type="button"
           onClick={handleClear}
-          className="h-8 rounded-lg border border-[var(--line)] px-2 text-[13px] hover:bg-red-500/10 hover:text-red-600"
+          className="h-8 rounded-lg border border-[var(--line)] px-2 text-[0.8125rem] hover:bg-red-500/10 hover:text-red-600"
         >
           Clear
         </button>

@@ -6,7 +6,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
  * "use client") so it works inside server-action <form>s and server pages.
  *
  * It bakes in consistent sizing/radius/typography — the per-call-site tweaking
- * (px-3 vs px-2.5, rounded-lg vs rounded-md, text-[12px] vs text-xs) is exactly
+ * (px-3 vs px-2.5, rounded-lg vs rounded-md, text-[0.75rem] vs text-xs) is exactly
  * what made buttons look inconsistent. Pick a `variant` + `size`; pass `href`
  * to render a link instead of a <button>.
  *
@@ -33,9 +33,9 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: "h-8 gap-1.5 px-3 text-[12px] rounded-lg",
-  md: "h-9 gap-2 px-4 text-[13px] rounded-lg",
-  lg: "h-11 gap-2 px-5 text-[14px] rounded-xl",
+  sm: "h-8 gap-1.5 px-3 text-[0.75rem] rounded-lg",
+  md: "h-9 gap-2 px-4 text-[0.8125rem] rounded-lg",
+  lg: "h-11 gap-2 px-5 text-[0.875rem] rounded-xl",
 };
 
 const BASE =

@@ -11,11 +11,11 @@ import { Fragment, type ReactNode } from "react";
  *
  * ── Cell typography (one scale for every table in the app) ──
  * Cells inherit the table's 13px body size — do NOT set `text-xs`/`text-sm`/
- * `text-[13px]` on cells; that is what made tables disagree page to page.
+ * `text-[0.8125rem]` on cells; that is what made tables disagree page to page.
  *   • identifiers / document numbers → `mono font-semibold` (never `mono`)
  *   • money + quantities            → `tabular-nums whitespace-nowrap`
  *                                     (`font-semibold` for the emphasis column)
- *   • secondary line inside a cell  → `text-[12px] text-[var(--ink-muted)]`
+ *   • secondary line inside a cell  → `text-[0.75rem] text-[var(--ink-muted)]`
  * Use `dense` for sub-tables inside a detail card; leave list tables default.
  */
 
@@ -185,15 +185,15 @@ export function DataTable<T>({
                 // Lead with the first column as the card's title (unless header-less).
                 if (ci === 0 && !hideHeader) {
                   return (
-                    <div key={c.key} className="text-[14px] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">
+                    <div key={c.key} className="text-[0.875rem] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">
                       {value}
                     </div>
                   );
                 }
                 return (
-                  <div key={c.key} className="flex items-start justify-between gap-3 text-[13px]">
+                  <div key={c.key} className="flex items-start justify-between gap-3 text-[0.8125rem]">
                     {c.header ? (
-                      <span className="shrink-0 pt-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-muted)]/70">
+                      <span className="shrink-0 pt-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[var(--ink-muted)]/70">
                         {c.header}
                       </span>
                     ) : null}
@@ -209,12 +209,12 @@ export function DataTable<T>({
 
       {/* Table */}
       <div className={`overflow-x-auto ${hasMobileView ? "hidden lg:block" : "block"}`}>
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-[0.8125rem]">
           {hideHeader ? null : (
             <thead>
               {/* One header treatment for every table in the app — do not
                   override per call site. */}
-              <tr className="border-b border-[var(--line)]/70 bg-[var(--panel-strong)]/60 text-[11px] uppercase tracking-[0.12em] text-[var(--ink-muted)]/70">
+              <tr className="border-b border-[var(--line)]/70 bg-[var(--panel-strong)]/60 text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]/70">
                 {columns.map((c) => (
                   <th key={c.key} className={`${cell} font-semibold ${alignClass(c.align)} ${c.headerClassName ?? ""}`}>
                     {c.header}
@@ -253,7 +253,7 @@ export function DataTable<T>({
               return (
                 <Fragment key={`s-${getRowKey(row, i)}`}>
                   <tr className="bg-[var(--panel-strong)]/50">
-                    <td colSpan={columns.length + (actions ? 1 : 0)} className={`${dense ? "px-3 py-1.5" : "px-4 py-2"} text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]`}>
+                    <td colSpan={columns.length + (actions ? 1 : 0)} className={`${dense ? "px-3 py-1.5" : "px-4 py-2"} text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]`}>
                       {section}
                     </td>
                   </tr>
@@ -263,7 +263,7 @@ export function DataTable<T>({
             })}
           </tbody>
           {tableFooter ? (
-            <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 text-[13px] font-semibold">
+            <tfoot className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 text-[0.8125rem] font-semibold">
               {tableFooter}
             </tfoot>
           ) : null}

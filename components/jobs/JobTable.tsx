@@ -25,7 +25,7 @@ function AgeBadge({ receivedAt, status }: { receivedAt: Date; status: string }) 
         ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
         : "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
   return (
-    <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold leading-tight tabular-nums ${cls}`}>
+    <span className={`rounded-md px-1.5 py-0.5 text-[0.75rem] font-semibold leading-tight tabular-nums ${cls}`}>
       {days}d
     </span>
   );
@@ -336,9 +336,9 @@ export function JobTable({
               {deviceName(job.brand, job.model) ?? (deviceLabel[job.deviceType] ?? job.deviceType)}
             </p>
             {job.issue ? (
-              <p className="max-w-[13rem] truncate text-[12px] text-[var(--ink-muted)]">{job.issue}</p>
+              <p className="max-w-[13rem] truncate text-[0.75rem] text-[var(--ink-muted)]">{job.issue}</p>
             ) : (
-              <p className="text-[12px] text-[var(--ink-muted)]">{deviceLabel[job.deviceType] ?? job.deviceType}</p>
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">{deviceLabel[job.deviceType] ?? job.deviceType}</p>
             )}
           </div>
         </div>
@@ -356,7 +356,7 @@ export function JobTable({
           cell: (job: JobRow) => (
             <div className="min-w-0">
               <p className="max-w-[13rem] truncate text-[var(--ink)]">{job.clientName ?? <span className="text-[var(--ink-muted)]">—</span>}</p>
-              {job.clientPhone ? <p className="truncate text-[12px] tabular-nums text-[var(--ink-muted)]">{job.clientPhone}</p> : null}
+              {job.clientPhone ? <p className="truncate text-[0.75rem] tabular-nums text-[var(--ink-muted)]">{job.clientPhone}</p> : null}
             </div>
           ),
         }]
@@ -370,7 +370,7 @@ export function JobTable({
           cell: (job: JobRow) =>
             job.assignedTo ? (
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[11px] font-bold text-[var(--accent)]">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[0.6875rem] font-bold text-[var(--accent)]">
                   {job.assignedTo.charAt(0).toUpperCase()}
                 </span>
                 <span className="max-w-[9rem] truncate text-[var(--ink-muted)]">{job.assignedTo}</span>
@@ -403,7 +403,7 @@ export function JobTable({
         return (
           <div className="flex flex-wrap items-center gap-1">
             {flagCfg && (
-              <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold ${flagCfg.badge}`}>
+              <span className={`rounded-md px-1.5 py-0.5 text-[0.75rem] font-semibold ${flagCfg.badge}`}>
                 {flagCfg.label}
               </span>
             )}
@@ -521,13 +521,13 @@ export function JobTable({
                 <div className="min-w-0 flex-1">
                   {/* Row 1: device name + age */}
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-[14px] font-bold text-[var(--ink)]">{name}</p>
+                    <p className="truncate text-[0.875rem] font-bold text-[var(--ink)]">{name}</p>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {costValue ? (
-                        <span className="text-[12px] font-black tabular-nums text-[var(--ink)]">{costValue}</span>
+                        <span className="text-[0.75rem] font-black tabular-nums text-[var(--ink)]">{costValue}</span>
                       ) : null}
                       {isActive ? (
-                        <span className={`text-[12px] font-bold ${ageCls}`}>
+                        <span className={`text-[0.75rem] font-bold ${ageCls}`}>
                           {job.repairTimeline ?? `${ageDays}d`}
                         </span>
                       ) : null}
@@ -536,7 +536,7 @@ export function JobTable({
 
                   {/* Row 2: meta + status badge */}
                   <div className="mt-0.5 flex items-center justify-between gap-2">
-                    <p className="truncate text-[13px] text-[var(--ink-muted)]">
+                    <p className="truncate text-[0.8125rem] text-[var(--ink-muted)]">
                       {metaParts.join(" · ")}
                       {/* Enhancement 6: show stale indicator */}
                       {showStale && (
@@ -545,7 +545,7 @@ export function JobTable({
                     </p>
                     <div className="flex shrink-0 items-center gap-1">
                       {flagCfg ? (
-                        <span className={`rounded px-1.5 py-0.5 text-[13px] font-semibold ${flagCfg.badge}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-[0.8125rem] font-semibold ${flagCfg.badge}`}>
                           {flagCfg.label}
                         </span>
                       ) : null}
@@ -561,7 +561,7 @@ export function JobTable({
                   <input type="hidden" name="jobId" value={job.id} />
                   <input type="hidden" name="toStatus" value="DIAGNOSING" />
                   <button type="submit"
-                    className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[12px] font-semibold text-sky-600 transition active:bg-sky-500/10">
+                    className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[0.75rem] font-semibold text-sky-600 transition active:bg-sky-500/10">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     Start diagnosis
                   </button>
@@ -581,12 +581,12 @@ export function JobTable({
 
       {/* Footer counts (previously the header bar / mobile footer) */}
       {jobs.length > 0 && !hasPagination ? (
-        <p className="hidden px-1 text-[13px] text-[var(--ink-muted)] lg:block">
+        <p className="hidden px-1 text-[0.8125rem] text-[var(--ink-muted)] lg:block">
           <span className="font-bold text-[var(--ink)]">{jobs.length}</span> jobs
         </p>
       ) : null}
       {jobs.length > 0 ? (
-        <p className="px-1 text-center text-[13px] text-[var(--ink-muted)] lg:hidden">
+        <p className="px-1 text-center text-[0.8125rem] text-[var(--ink-muted)] lg:hidden">
           {total != null ? `${total} repair${total !== 1 ? "s" : ""}` : `${jobs.length} shown`}
           {" · "}All caught up ✓
         </p>

@@ -55,7 +55,7 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
             <MenuDestructiveRow>
               <form action={deletePurchaseRequestAction}>
                 <input type="hidden" name="id" value={request.id} />
-                <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Request</button>
+                <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Delete Request</button>
               </form>
             </MenuDestructiveRow>
           </RowActionsMenu>
@@ -64,14 +64,14 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
       <p className="text-sm text-[var(--ink-muted)]">Requested by {request.requestedBy.name || request.requestedBy.email}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Priority</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.priority}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Needed</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(request.neededBy)}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.supplier?.name ?? "No preference"}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Estimate</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</p></div>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Priority</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.priority}</p></div>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Needed</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(request.neededBy)}</p></div>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.supplier?.name ?? "No preference"}</p></div>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Estimate</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</p></div>
       </div>
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-x-auto">
-        <div className="px-5 py-3 border-b border-[var(--line)]"><p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Items</p></div>
+        <div className="px-5 py-3 border-b border-[var(--line)]"><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Items</p></div>
         <DataTable
           frameless
           dense
@@ -83,7 +83,7 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
             {
               key: "item",
               header: "Item",
-              className: "hidden sm:table-cell text-[12px] text-[var(--ink-muted)]",
+              className: "hidden sm:table-cell text-[0.75rem] text-[var(--ink-muted)]",
               headerClassName: "hidden sm:table-cell",
               cell: (item) => (item.part ? `${item.part.sku} · ${item.part.name}` : "-"),
             },
@@ -94,11 +94,11 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
         />
       </div>
 
-      {request.reason || request.notes || request.reviewNote ? <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 text-sm text-[var(--ink)]"><p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] mb-2">Notes</p>{request.reason ? <p><strong>Reason:</strong> {request.reason}</p> : null}{request.notes ? <p className="mt-2 whitespace-pre-wrap">{request.notes}</p> : null}{request.reviewNote ? <p className="mt-2"><strong>Review:</strong> {request.reviewNote}</p> : null}</div> : null}
+      {request.reason || request.notes || request.reviewNote ? <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 text-sm text-[var(--ink)]"><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] mb-2">Notes</p>{request.reason ? <p><strong>Reason:</strong> {request.reason}</p> : null}{request.notes ? <p className="mt-2 whitespace-pre-wrap">{request.notes}</p> : null}{request.reviewNote ? <p className="mt-2"><strong>Review:</strong> {request.reviewNote}</p> : null}</div> : null}
 
       {request.convertedPo ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-700">Converted to <Link href={`/inventory/purchase-orders/${request.convertedPo.id}`} className="font-semibold underline">{request.convertedPo.reference ?? "purchase order"}</Link>.</div> : null}
 
-      {canConvert ? <form action={convertPurchaseRequestToPoAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3"><input type="hidden" name="id" value={request.id} /><p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Convert to Purchase Order</p><div className="grid gap-3 sm:grid-cols-3"><select name="supplierId" defaultValue={request.supplierId ?? ""} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"><option value="">Select supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select><input name="reference" placeholder="PO reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]" /><input name="expectedAt" type="date" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]" /></div><button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Create PO</button></form> : null}
+      {canConvert ? <form action={convertPurchaseRequestToPoAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3"><input type="hidden" name="id" value={request.id} /><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Convert to Purchase Order</p><div className="grid gap-3 sm:grid-cols-3"><select name="supplierId" defaultValue={request.supplierId ?? ""} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"><option value="">Select supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select><input name="reference" placeholder="PO reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /><input name="expectedAt" type="date" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /></div><button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Create PO</button></form> : null}
 
       {canReview ? <div className="grid gap-3 sm:grid-cols-3"><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="APPROVED" /><textarea name="reviewNote" rows={2} placeholder="Approval note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><button type="submit" className="w-full rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-700">Approve</button></form><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="REJECTED" /><textarea name="reviewNote" rows={2} placeholder="Rejection reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><button type="submit" className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-600">Reject</button></form><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="CANCELLED" /><textarea name="reviewNote" rows={2} placeholder="Cancel note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><button type="submit" className="w-full rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">Cancel</button></form></div> : null}
     </div>

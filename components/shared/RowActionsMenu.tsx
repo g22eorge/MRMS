@@ -174,7 +174,7 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
 /** Styled section header inside a RowActionsMenu */
 export function MenuSection({ label }: { label: string }) {
   return (
-    <p className="border-b border-[var(--line)] px-3 py-1.5 text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">
+    <p className="border-b border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/60">
       {label}
     </p>
   );

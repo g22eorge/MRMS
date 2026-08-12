@@ -229,9 +229,9 @@ export default async function TechnicianPayoutsPage({
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Link href={`/jobs/${job.id}?returnTo=/technicians/payouts&returnLabel=Payouts`} className="mono text-[12px] font-medium tracking-wide text-[var(--ink-muted)]">{job.jobNumber}</Link>
-                  <p className="truncate text-[15px] font-bold leading-snug tracking-tight text-[var(--ink)]">{s.device}</p>
-                  <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">
+                  <Link href={`/jobs/${job.id}?returnTo=/technicians/payouts&returnLabel=Payouts`} className="mono text-[0.75rem] font-medium tracking-wide text-[var(--ink-muted)]">{job.jobNumber}</Link>
+                  <p className="truncate text-[0.9375rem] font-bold leading-snug tracking-tight text-[var(--ink)]">{s.device}</p>
+                  <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
                     {(statusOptionLabel as Record<string, string>)[job.status] ?? job.status}
                     {job.completedAt ? ` · ${formatEATDate(job.completedAt)}` : ""}
                     {s.payout?.externalPaymentRef ? ` · Ref: ${s.payout.externalPaymentRef}` : ""}
@@ -239,9 +239,9 @@ export default async function TechnicianPayoutsPage({
                 </div>
                 <div className="shrink-0 text-right">
                   <StatusBadge tone={s.tone}>{s.label}</StatusBadge>
-                  <p className="mt-1 text-[13px] font-bold text-[var(--ink)]">{formatMoney(s.paidAmount, currency)} / {formatMoney(s.feeAmount, currency)}</p>
+                  <p className="mt-1 text-[0.8125rem] font-bold text-[var(--ink)]">{formatMoney(s.paidAmount, currency)} / {formatMoney(s.feeAmount, currency)}</p>
                   {!s.isPaid && s.paidAmount > 0 ? (
-                    <p className="text-[12px] font-semibold text-[var(--ink-muted)]">Outstanding {formatMoney(s.balance, currency)}</p>
+                    <p className="text-[0.75rem] font-semibold text-[var(--ink-muted)]">Outstanding {formatMoney(s.balance, currency)}</p>
                   ) : null}
                 </div>
               </div>

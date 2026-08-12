@@ -513,12 +513,12 @@ export default async function CreditNotesPage({
               <form action={issueRefundFromCreditNoteAction} className="space-y-2">
                 <input type="hidden" name="creditNoteId" value={cn.id} />
                 <div>
-                  <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Amount</label>
+                  <label className="mb-0.5 block text-[0.75rem] font-semibold uppercase text-[var(--ink-muted)]">Amount</label>
                   <input name="amount" type="number" step="0.01" max={outstanding} defaultValue={outstanding} className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]" />
-                  <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">Max: {formatMoney(outstanding, cn.currency)}</p>
+                  <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Max: {formatMoney(outstanding, cn.currency)}</p>
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[12px] font-semibold uppercase text-[var(--ink-muted)]">Method</label>
+                  <label className="mb-0.5 block text-[0.75rem] font-semibold uppercase text-[var(--ink-muted)]">Method</label>
                   <select name="method" className="w-full rounded border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-sm text-[var(--ink)]">
                     {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                   </select>
@@ -532,7 +532,7 @@ export default async function CreditNotesPage({
         <MenuSection label="Edit Credit Note" />
         <form action={updateCreditNoteDateAction} className="p-3">
           <input type="hidden" name="creditNoteId" value={cn.id} />
-          <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
+          <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
             <input name="issueDate" type="date" defaultValue={new Date(cn.issuedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
           </label>
           <div className="mt-2"><MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save issue date</MenuActionButton></div>
@@ -592,7 +592,7 @@ export default async function CreditNotesPage({
             <Link
               key={f}
               href={`?filter=${f}${q ? `&q=${q}` : ""}${periodFilter !== "all" ? `&period=${periodFilter}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${filter === f ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${filter === f ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
             >
               {f === "all" ? "All" : f === "pending" ? "Awaiting Return" : "Items Received"}
             </Link>
@@ -628,7 +628,7 @@ export default async function CreditNotesPage({
                 <span className="text-[var(--ink-muted)]">Issued {fmt(cn.issuedAt)}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <a href={`/api/credit-notes/${cn.id}`} target="_blank" rel="noreferrer" className="rounded border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[13px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/20">PDF</a>
+                <a href={`/api/credit-notes/${cn.id}`} target="_blank" rel="noreferrer" className="rounded border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[0.8125rem] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/20">PDF</a>
                 {creditNoteActionsMenu(cn)}
               </div>
             </div>

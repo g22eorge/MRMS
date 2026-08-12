@@ -37,7 +37,7 @@ export default async function AdminOrgsPage() {
         title="Organisation Module Access"
         description="Toggle which modules each org can access"
         actions={
-          <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+          <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.75rem] font-semibold text-amber-700 dark:text-amber-400">
             Platform Admin
           </span>
         }
@@ -54,13 +54,13 @@ export default async function AdminOrgsPage() {
               {/* Org header */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-[var(--ink)] truncate">{org.name}</p>
-                  <p className="text-[12px] text-[var(--ink-muted)]">
+                  <p className="text-[0.8125rem] font-bold text-[var(--ink)] truncate">{org.name}</p>
+                  <p className="text-[0.75rem] text-[var(--ink-muted)]">
                     {org.slug} · {org.plan} · {org._count.users} users · {org._count.jobs} jobs
                   </p>
                 </div>
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-[12px] font-semibold ${
+                  className={`rounded-full border px-2 py-0.5 text-[0.75rem] font-semibold ${
                     org.isActive
                       ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                       : "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-400"
@@ -79,7 +79,7 @@ export default async function AdminOrgsPage() {
                     return (
                       <label
                         key={mod}
-                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] font-medium transition ${
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[0.8125rem] font-medium transition ${
                           on
                             ? "border-[var(--accent)]/40 bg-[var(--accent)]/8 text-[var(--ink)]"
                             : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"

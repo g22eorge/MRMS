@@ -567,19 +567,19 @@ export default async function InvoicesPage({
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <p className="text-[13px] font-medium text-red-700">
+          <p className="text-[0.8125rem] font-medium text-red-700">
             {errorParam === "missing-fields" ? "Please fill in all required fields." : errorParam === "client-not-found" ? "Client not found." : "Something went wrong."}
           </p>
         </div>
       )}
       {remindedParam === "1" && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
-          <p className="text-[13px] font-medium text-emerald-700">Payment reminder queued via outbox.</p>
+          <p className="text-[0.8125rem] font-medium text-emerald-700">Payment reminder queued via outbox.</p>
         </div>
       )}
       {remindedBulkParam && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5">
-          <p className="text-[13px] font-medium text-emerald-700">
+          <p className="text-[0.8125rem] font-medium text-emerald-700">
             Reminders queued for {remindedBulkParam} invoice{Number(remindedBulkParam) === 1 ? "" : "s"}.
             {reminderSkippedParam ? ` Skipped ${reminderSkippedParam}.` : ""}
             {reminderFailedParam && Number(reminderFailedParam) > 0 ? ` Failed ${reminderFailedParam}.` : ""}
@@ -588,14 +588,14 @@ export default async function InvoicesPage({
       )}
       {reminderErrorParam && (
         <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
-          <p className="text-[13px] font-medium text-red-700">
+          <p className="text-[0.8125rem] font-medium text-red-700">
             {reminderErrorParam === "forbidden" ? "You do not have permission to send invoice reminders." : decodeURIComponent(reminderErrorParam)}
           </p>
         </div>
       )}
       {voidSkippedParam && Number(voidSkippedParam) > 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2.5">
-          <p className="text-[13px] font-medium text-amber-700">
+          <p className="text-[0.8125rem] font-medium text-amber-700">
             Skipped {voidSkippedParam} invoice{Number(voidSkippedParam) === 1 ? "" : "s"} with payments recorded — refund the payments first, then void.
           </p>
         </div>
@@ -632,7 +632,7 @@ export default async function InvoicesPage({
                 type="submit"
                 name="status"
                 value={s.key}
-                className={`rounded-full px-3 py-1 text-[13px] font-semibold transition ${
+                className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
                   statusFilter === s.key
                     ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
                     : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
@@ -648,7 +648,7 @@ export default async function InvoicesPage({
             name="q"
             defaultValue={q}
             placeholder="#, customer, amount…"
-            className="ml-auto h-8 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+            className="ml-auto h-8 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
           />
         </form>
       </div>
@@ -719,9 +719,9 @@ export default async function InvoicesPage({
                   </form>
                   <MenuSection label="Danger zone" />
                   {row.isPaid ? (
-                    <span className="px-3 py-1.5 text-[13px] text-[var(--ink-muted)]">Fully paid — no void</span>
+                    <span className="px-3 py-1.5 text-[0.8125rem] text-[var(--ink-muted)]">Fully paid — no void</span>
                   ) : row.isVoid ? (
-                    <span className="px-3 py-1.5 text-[13px] text-[var(--ink-muted)]">Voided</span>
+                    <span className="px-3 py-1.5 text-[0.8125rem] text-[var(--ink-muted)]">Voided</span>
 ) : (
                   <MenuActionLink href={`/documents/invoices/${row.id}`} icon="delete" tone="danger">
                     View to Void
@@ -760,12 +760,12 @@ export default async function InvoicesPage({
                         </div>
                         {actions(row)}
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem]">
                         <span className="font-medium text-[var(--ink)]">{row.client}</span>
                         <span className="font-bold tabular-nums text-[var(--ink)]">{row.amount}</span>
                         <span className="text-[var(--ink-muted)]">Bal: {row.balance}</span>
                       </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] text-[var(--ink-muted)]">
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-[0.75rem] text-[var(--ink-muted)]">
                         <span>Issued {row.issued}</span>
                         {row.due !== "—" ? <span>Due {row.due}</span> : null}
                       </div>
@@ -776,7 +776,7 @@ export default async function InvoicesPage({
             })()}
           </BulkSelectionProvider>
         ) : (
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-8 text-center text-[13px] text-[var(--ink-muted)]">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">
             No invoices found. Click <strong>+ New Invoice</strong> to create one.
           </div>
         )}

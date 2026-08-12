@@ -58,14 +58,14 @@ export function MoveJobPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-premium-secondary rounded-lg px-3.5 py-2 text-[13px] font-semibold"
+        className="btn-premium-secondary rounded-lg px-3.5 py-2 text-[0.8125rem] font-semibold"
       >
         Move account
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} size="md" ariaLabel="Move job to another account" panelClassName="p-5">
-        <p className="text-[13px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Move job to another account</p>
-        <p className="mb-3 mt-1 text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Move job to another account</p>
+        <p className="mb-3 mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
           Currently on <span className="font-semibold text-[var(--ink)]">{currentClientName}</span>. The job&rsquo;s quotations, invoice and receipts move with it.
         </p>
         <div className="relative">
@@ -73,22 +73,22 @@ export function MoveJobPanel({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setTargetId(null); }}
             placeholder="Search the account to move to (name, company or phone)…"
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
           />
           {query && !targetId ? (
             <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-lg">
               {filtered.length === 0 ? (
-                <p className="px-3 py-2 text-[12px] text-[var(--ink-muted)]">No matching account.</p>
+                <p className="px-3 py-2 text-[0.75rem] text-[var(--ink-muted)]">No matching account.</p>
               ) : (
                 filtered.map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => { setTargetId(c.id); setQuery(c.fullName); }}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-[var(--panel-strong)]"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[0.8125rem] hover:bg-[var(--panel-strong)]"
                   >
                     <span className="font-semibold text-[var(--ink)]">{c.fullName}</span>
-                    <span className="text-[12px] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
                   </button>
                 ))
               )}
@@ -96,9 +96,9 @@ export function MoveJobPanel({
           ) : null}
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-          {error ? <p className="mr-auto text-[12px] text-red-600">{error}</p> : null}
-          <button type="button" onClick={() => setOpen(false)} className="btn-premium-secondary rounded-lg px-4 py-2 text-[13px] font-medium">Cancel</button>
-          <button type="button" onClick={doMove} disabled={moving || !target} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-40">
+          {error ? <p className="mr-auto text-[0.75rem] text-red-600">{error}</p> : null}
+          <button type="button" onClick={() => setOpen(false)} className="btn-premium-secondary rounded-lg px-4 py-2 text-[0.8125rem] font-medium">Cancel</button>
+          <button type="button" onClick={doMove} disabled={moving || !target} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[0.8125rem] font-semibold text-white hover:opacity-90 disabled:opacity-40">
             {moving ? "Moving…" : target ? `Move to ${target.fullName}` : "Move job"}
           </button>
         </div>

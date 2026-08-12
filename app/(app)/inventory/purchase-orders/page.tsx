@@ -223,7 +223,7 @@ export default async function PurchaseOrdersPage({
                 </span>
               </div>
               {/* Actions reachable on mobile (were desktop-table-only). */}
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">{renderPoActions(po)}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.75rem]">{renderPoActions(po)}</div>
             </div>
           );
         }}

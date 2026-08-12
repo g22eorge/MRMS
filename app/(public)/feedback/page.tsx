@@ -145,7 +145,7 @@ export default async function FeedbackPage({
     <div className="min-h-screen bg-[var(--bg)] p-4">
       <div className="mx-auto max-w-lg space-y-4 py-8">
         <div className="text-center">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
             Eagle Info Repair
           </p>
           <h1 className="mt-1 text-xl font-black text-[var(--ink)]">Submit a Complaint</h1>
@@ -163,7 +163,7 @@ export default async function FeedbackPage({
         <form action={submitComplaintAction} className="space-y-4">
           {/* Job number lookup */}
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Your Job Reference
             </p>
             <input
@@ -171,7 +171,7 @@ export default async function FeedbackPage({
               defaultValue={ref}
               placeholder="e.g. EI-2024-0001"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] mono outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50"
             />
             {jobInfo && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10">
@@ -184,7 +184,7 @@ export default async function FeedbackPage({
 
           {/* Contact info */}
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Your Details
             </p>
             <input
@@ -192,32 +192,32 @@ export default async function FeedbackPage({
               defaultValue={jobInfo?.client.fullName ?? ""}
               placeholder="Full name *"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientPhone"
               defaultValue={jobInfo?.client.phone ?? ""}
               placeholder="Phone number *"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientEmail"
               defaultValue={jobInfo?.client.email ?? ""}
               placeholder="Email (optional)"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
           </div>
 
           {/* Complaint details */}
           <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">
               Complaint Details
             </p>
             <select
               name="category"
               defaultValue="OTHER"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -230,20 +230,20 @@ export default async function FeedbackPage({
               placeholder="Describe your complaint in detail *"
               required
               rows={4}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 resize-none"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 resize-none"
             />
             <textarea
               name="expectedResolution"
               placeholder="What resolution would you like? (optional)"
               rows={2}
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 resize-none"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 resize-none"
             />
           </div>
 
           <button className="btn-premium w-full rounded-xl py-3 text-sm font-bold">
             Submit Complaint
           </button>
-          <p className="text-center text-[12px] text-[var(--ink-muted)]">
+          <p className="text-center text-[0.75rem] text-[var(--ink-muted)]">
             You will receive a reference number. We handle complaints per ISO 10002:2018.
           </p>
         </form>

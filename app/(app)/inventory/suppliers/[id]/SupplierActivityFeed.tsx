@@ -51,7 +51,7 @@ export function SupplierActivityFeed({
   return (
     <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-        <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">History ({items.length})</p>
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">History ({items.length})</p>
         <div className="flex gap-1.5">
           <Link href={newPoHref} className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25">New PO</Link>
           <Link href={newBillHref} className="rounded-md bg-[var(--accent)]/15 px-3 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25">New Bill</Link>
@@ -67,7 +67,7 @@ export function SupplierActivityFeed({
               key={key}
               type="button"
               onClick={() => setFilter(key)}
-              className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition ${
+              className={`rounded-full border px-3 py-1 text-[0.75rem] font-semibold transition ${
                 active
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
                   : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/30 hover:text-[var(--ink)]"
@@ -87,13 +87,13 @@ export function SupplierActivityFeed({
             <Link key={item.key} href={item.href} className="flex items-center justify-between gap-3 px-4 py-2.5 transition hover:bg-[var(--panel-strong)]/40">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{item.type}</span>
-                  <span className="mono truncate text-[13px] font-semibold text-[var(--ink)]">{item.label}</span>
+                  <span className="rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">{item.type}</span>
+                  <span className="mono truncate text-[0.8125rem] font-semibold text-[var(--ink)]">{item.label}</span>
                 </div>
-                <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{item.dateLabel}{item.sub ? ` · ${item.sub}` : ""}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{item.dateLabel}{item.sub ? ` · ${item.sub}` : ""}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {item.amount ? <span className="text-[13px] font-bold tabular-nums text-[var(--ink)]">{item.amount}</span> : null}
+                {item.amount ? <span className="text-[0.8125rem] font-bold tabular-nums text-[var(--ink)]">{item.amount}</span> : null}
                 <StatusBadge tone={item.tone}>{item.status}</StatusBadge>
               </div>
             </Link>

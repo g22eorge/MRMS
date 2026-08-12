@@ -298,7 +298,7 @@ export default async function ChartOfAccountsPage() {
 
       {/* ── CREATE FORM ──────────────────────────────────────────────────── */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <summary className="cursor-pointer list-none px-4 py-2.5 text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
+        <summary className="cursor-pointer list-none px-4 py-2.5 text-[0.8125rem] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
           + Add Account
         </summary>
         <form
@@ -311,7 +311,7 @@ export default async function ChartOfAccountsPage() {
               name="code"
               required
               placeholder="e.g. 1000"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -320,7 +320,7 @@ export default async function ChartOfAccountsPage() {
               name="name"
               required
               placeholder="Cash & Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -328,7 +328,7 @@ export default async function ChartOfAccountsPage() {
             <select
               name="type"
               required
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             >
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t} value={t}>{TYPE_LABELS[t]}</option>
@@ -339,7 +339,7 @@ export default async function ChartOfAccountsPage() {
             <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Parent account</label>
             <select
               name="parentId"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             >
               <option value="">— None —</option>
               {accounts.map((a) => (
@@ -352,7 +352,7 @@ export default async function ChartOfAccountsPage() {
             <input
               name="description"
               placeholder="Optional"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div className="flex justify-end sm:col-span-3">
@@ -431,7 +431,7 @@ export default async function ChartOfAccountsPage() {
                   key: "parent",
                   header: "Parent",
                   headerClassName: "hidden md:table-cell",
-                  className: "hidden text-[12px] text-[var(--ink-muted)] md:table-cell",
+                  className: "hidden text-[0.75rem] text-[var(--ink-muted)] md:table-cell",
                   cell: (acc) => (acc.parent ? `${acc.parent.code} ${acc.parent.name}` : "—"),
                 },
                 {
@@ -479,7 +479,7 @@ export default async function ChartOfAccountsPage() {
                   header: "Status",
                   cell: (acc) =>
                     acc.isSystem ? (
-                      <span className="text-[12px] text-[var(--ink-muted)]">System</span>
+                      <span className="text-[0.75rem] text-[var(--ink-muted)]">System</span>
                     ) : (
                       <StatusBadge tone={acc.isActive ? "success" : "neutral"}>
                         {acc.isActive ? "Active" : "Inactive"}
@@ -498,15 +498,15 @@ export default async function ChartOfAccountsPage() {
                         <span className="mono font-semibold text-[var(--accent)]">{acc.code}</span>
                         <span className="ml-2 font-medium text-[var(--ink)]">{acc.name}</span>
                       </p>
-                      {acc.parent && <p className="mt-0.5 truncate text-[12px] text-[var(--ink-muted)]">{acc.parent.code} {acc.parent.name}</p>}
-                      <p className="mt-0.5 tabular-nums text-[12px] text-[var(--ink-muted)]">
+                      {acc.parent && <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{acc.parent.code} {acc.parent.name}</p>}
+                      <p className="mt-0.5 tabular-nums text-[0.75rem] text-[var(--ink-muted)]">
                         Balance {balance !== 0 ? `${balance < 0 ? "−" : ""}${formatMoneyCompact(Math.abs(balance), currency)}` : "—"}
                         {monthly !== 0 ? ` · ${monthly >= 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(monthly), currency)} this month` : ""}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       {acc.isSystem ? (
-                        <span className="text-[12px] text-[var(--ink-muted)]">System</span>
+                        <span className="text-[0.75rem] text-[var(--ink-muted)]">System</span>
                       ) : (
                         <StatusBadge tone={acc.isActive ? "success" : "neutral"}>{acc.isActive ? "Active" : "Inactive"}</StatusBadge>
                       )}

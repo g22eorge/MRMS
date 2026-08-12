@@ -52,13 +52,13 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
   const readyLines = lines.filter((line) => line.description.trim() && line.quantity > 0).length;
 
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-  const label = "mb-1 block text-[12px] font-medium text-[var(--ink-muted)]";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+  const label = "mb-1 block text-[0.75rem] font-medium text-[var(--ink-muted)]";
 
   return (
     <form onSubmit={submit} className="space-y-4">
       {/* Plain, one-line guide so a first-timer knows exactly what to do. */}
-      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[13px] text-[var(--ink-muted)]">
+      <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
         List what you need to buy, with how many. That is all we need — supplier and timing are optional.
       </p>
 
@@ -109,7 +109,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
               header: "Total",
               align: "right",
               headerClassName: "w-32",
-              className: "w-32 whitespace-nowrap text-[12px] tabular-nums text-[var(--ink-muted)]",
+              className: "w-32 whitespace-nowrap text-[0.75rem] tabular-nums text-[var(--ink-muted)]",
               cell: (line) => (line.quantity * line.estimatedUnitCost).toLocaleString(),
             },
           ]}
@@ -123,7 +123,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
           }
           tableFooter={
             <tr className="bg-[var(--accent)]/5">
-              <td colSpan={4} className="px-3 py-2 text-right text-[12px] font-semibold text-[var(--ink-muted)]">Estimated total</td>
+              <td colSpan={4} className="px-3 py-2 text-right text-[0.75rem] font-semibold text-[var(--ink-muted)]">Estimated total</td>
               <td className="whitespace-nowrap px-3 py-2 text-right font-bold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</td>
               <td />
             </tr>
@@ -139,7 +139,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
           aria-expanded={showDetails}
           className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left transition hover:bg-[var(--panel-strong)]/40"
         >
-          <span className="text-[13px] font-semibold text-[var(--ink)]">Supplier, priority &amp; timing <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
+          <span className="text-[0.8125rem] font-semibold text-[var(--ink)]">Supplier, priority &amp; timing <span className="font-normal text-[var(--ink-muted)]">— optional</span></span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-[var(--ink-muted)] transition-transform ${showDetails ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
         </button>
         {/* Fields stay mounted so values survive collapsing; only visibility toggles. */}
@@ -173,7 +173,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
       </section>
 
       {error ? (
-        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-700 dark:text-red-400">{error}</p>
+        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[0.8125rem] text-red-700 dark:text-red-400">{error}</p>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" size="sm" disabled={pending} className="px-4 font-bold">

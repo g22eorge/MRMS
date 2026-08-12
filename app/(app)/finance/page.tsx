@@ -124,8 +124,8 @@ export default async function FinancePage() {
       {/* ══ MOBILE HEADER ══ */}
       <div className="space-y-3 lg:hidden">
         <div>
-          <h1 className="text-[22px] font-black text-[var(--ink)]">Finance</h1>
-          <p className="text-[13px] text-[var(--ink-muted)]">
+          <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Finance</h1>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">
             {now.toLocaleDateString("en-UG", { month: "long", year: "numeric" })} · amounts in {currency}
           </p>
         </div>
@@ -137,8 +137,8 @@ export default async function FinancePage() {
             { label: "Owed", value: compactAmount(receivables.total) },
           ] as const).map(({ label, value }) => (
             <div key={label} className="min-w-0 px-1.5 py-3 text-center">
-              <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
-              <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+              <p className="truncate text-[1.0625rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+              <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
             </div>
           ))}
         </div>
@@ -198,8 +198,8 @@ export default async function FinancePage() {
       {revTotal > 0 && channels.length > 0 ? (
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Collection mix</p>
-            <p className="text-[12px] text-[var(--ink-muted)]">{formatMoney(revTotal, currency)} collected</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Collection mix</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatMoney(revTotal, currency)} collected</p>
           </div>
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[var(--panel-strong)]">
@@ -209,7 +209,7 @@ export default async function FinancePage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {channels.map((c) => (
-                <span key={c.label} className="flex items-center gap-1.5 text-[12px] text-[var(--ink-muted)]">
+                <span key={c.label} className="flex items-center gap-1.5 text-[0.75rem] text-[var(--ink-muted)]">
                   <span className={`h-2 w-2 rounded-full ${c.color}`} />
                   {c.label} {Math.round((c.value / revTotal) * 100)}%
                 </span>
@@ -223,7 +223,7 @@ export default async function FinancePage() {
       {hasActions && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 divide-y divide-red-500/15 overflow-hidden">
           <div className="px-4 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-red-500">Action Required</p>
+            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-red-500">Action Required</p>
           </div>
 
           {overdueCount > 0 && (
@@ -231,8 +231,8 @@ export default async function FinancePage() {
               <div className="flex items-center gap-2.5">
                 <Icon d="M12 9v4|M12 17h.01|M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" cls="text-red-500 shrink-0" />
                 <div>
-                  <p className="text-[13px] font-semibold text-red-500">{overdueCount} overdue invoice{overdueCount > 1 ? "s" : ""}</p>
-                  <p className="text-[12px] text-red-400">{formatMoney(overdueTotal, currency)} outstanding past due date</p>
+                  <p className="text-[0.8125rem] font-semibold text-red-500">{overdueCount} overdue invoice{overdueCount > 1 ? "s" : ""}</p>
+                  <p className="text-[0.75rem] text-red-400">{formatMoney(overdueTotal, currency)} outstanding past due date</p>
                 </div>
               </div>
               <Icon d="M9 18l6-6-6-6" cls="text-red-400 shrink-0" />
@@ -244,8 +244,8 @@ export default async function FinancePage() {
               <div className="flex items-center gap-2.5">
                 <Icon d="M12 2v20|M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" cls="text-amber-500 shrink-0" />
                 <div>
-                  <p className="text-[13px] font-semibold text-amber-500">{pendingPayoutCount} unpaid tech payout{pendingPayoutCount > 1 ? "s" : ""}</p>
-                  <p className="text-[12px] text-amber-400">{formatMoney(pendingPayoutTotal, currency)} owed to external technicians</p>
+                  <p className="text-[0.8125rem] font-semibold text-amber-500">{pendingPayoutCount} unpaid tech payout{pendingPayoutCount > 1 ? "s" : ""}</p>
+                  <p className="text-[0.75rem] text-amber-400">{formatMoney(pendingPayoutTotal, currency)} owed to external technicians</p>
                 </div>
               </div>
               <Icon d="M9 18l6-6-6-6" cls="text-amber-400 shrink-0" />

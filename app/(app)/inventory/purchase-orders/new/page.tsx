@@ -34,7 +34,7 @@ export default async function NewPurchaseOrderPage({
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Procurement</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Procurement</p>
             <h1 className="text-base font-bold text-[var(--ink)]">New Purchase Order</h1>
           </div>
           <p className="text-xs text-[var(--ink-muted)]">Draft or issue a supplier order.</p>

@@ -15,7 +15,7 @@ export function QuotationStages({ status, converted }: { status: string; convert
 
   if (terminal) {
     return (
-      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[12px] font-bold ${terminal.cls}`}>
+      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.75rem] font-bold ${terminal.cls}`}>
         {terminal.label}
       </span>
     );
@@ -32,7 +32,7 @@ export function QuotationStages({ status, converted }: { status: string; convert
         return (
           <li key={label} className="flex shrink-0 items-center gap-1">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-bold transition ${
                 done
                   ? "border-[var(--accent)]/40 bg-[var(--accent)]/12 text-[var(--accent)]"
                   : current
@@ -41,7 +41,7 @@ export function QuotationStages({ status, converted }: { status: string; convert
               }`}
             >
               <span
-                className={`grid h-4 w-4 place-items-center rounded-full text-[9px] font-black ${
+                className={`grid h-4 w-4 place-items-center rounded-full text-[0.5625rem] font-black ${
                   done ? "bg-[var(--accent)] text-black" : current ? "bg-black/20 text-black" : "bg-[var(--line)] text-[var(--ink-muted)]"
                 }`}
               >

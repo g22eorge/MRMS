@@ -30,7 +30,7 @@ export function PortalHeader({
   const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents") => (
     <Link
       href={href}
-      className={`rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition ${
+      className={`rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold transition ${
         active === key ? "bg-[var(--panel-strong)] text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
       }`}
     >
@@ -41,23 +41,23 @@ export function PortalHeader({
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">{orgName} · Client Portal</p>
-        <p className="text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">{orgName} · Client Portal</p>
+        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
           <span className="font-semibold text-[var(--ink)]">{userName}</span> · {company} · {ROLE_LABEL[role] ?? role}
         </p>
         {accounts.length > 1 ? (
           <form action={switchPortalClientAction} className="mt-1.5 flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Acting for</span>
+            <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Acting for</span>
             <select
               name="clientId"
               defaultValue={activeClientId}
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[12px] font-semibold text-[var(--ink)] outline-none"
+              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.75rem] font-semibold text-[var(--ink)] outline-none"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.organization ? `${a.organization} — ${a.fullName}` : a.fullName}</option>
               ))}
             </select>
-            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[12px] font-semibold text-[var(--accent)]">Switch</button>
+            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[0.75rem] font-semibold text-[var(--accent)]">Switch</button>
           </form>
         ) : null}
       </div>
@@ -66,7 +66,7 @@ export function PortalHeader({
         {link("/portal/repairs", "Repairs", "repairs")}
         {link("/portal/documents", "Documents", "documents")}
         <form action={portalLogoutAction}>
-          <button type="submit" className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">
+          <button type="submit" className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
             Sign out
           </button>
         </form>

@@ -875,12 +875,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
   // One control scale for the whole page — same language as the clients workspace.
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const fieldOnStrong =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const cellInput =
-    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[13px] outline-none focus:border-[var(--accent)]/50";
-  const cardLabel = "text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
+    "w-full min-w-0 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50";
+  const cardLabel = "text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
   const barClass = "border-b border-[var(--line)] bg-[var(--panel-strong)]/40 p-3";
   const iconBtn =
     "flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
@@ -952,7 +952,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Items</p>
-          <p className="text-[12px] text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {sale.items.length} {sale.items.length === 1 ? "line" : "lines"} &middot; {formatMoney(sale.subtotal, saleCurrency)}
           </p>
         </div>
@@ -1046,10 +1046,10 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         {isOpen ? (
           <details className="group border-t border-[var(--line)] bg-[var(--panel-strong)]/40">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 hover:bg-[var(--panel-strong)]/60 [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+              <span className="flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                 <span className="transition-transform group-open:rotate-90" aria-hidden="true">&rsaquo;</span> Adjust
               </span>
-              <span className="text-[12px] text-[var(--ink-muted)]">
+              <span className="text-[0.75rem] text-[var(--ink-muted)]">
                 {sale.discountAmount > 0 ? <>&minus;{formatMoney(sale.discountAmount, saleCurrency)} &middot; </> : null}
                 VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
               </span>
@@ -1081,7 +1081,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"
             >
               <input type="hidden" name="saleId" value={sale.id} />
-              <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</span>
+              <span className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Discount</span>
               <input
                 name="discountAmount"
                 inputMode="decimal"
@@ -1098,11 +1098,11 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             >
               <input type="hidden" name="saleId" value={sale.id} />
               <input type="hidden" name="next" value={sale.taxApplicable ? "false" : "true"} />
-              <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
+              <span className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">VAT</span>
               <SubmitButton variant="secondary" size="sm" pendingLabel="Updating…">
                 {sale.taxApplicable ? "Turn VAT off" : "Turn VAT on"}
               </SubmitButton>
-              <span className="ml-auto text-[12px] text-[var(--ink-muted)]">
+              <span className="ml-auto text-[0.75rem] text-[var(--ink-muted)]">
                 {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
               </span>
             </form>
@@ -1114,7 +1114,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Payments</p>
-          <p className="text-[12px] text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {sale.payments.length} recorded &middot;{" "}
             {balance > 0
               ? <span className="font-semibold text-amber-600 dark:text-amber-400">{formatMoney(balance, saleCurrency)} due</span>
@@ -1143,9 +1143,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           getRowKey={(p) => p.id}
           empty="No payments yet."
           columns={[
-            { key: "date", header: "Date", className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]", cell: (p) => formatEATDateTime(p.receivedAt) },
+            { key: "date", header: "Date", className: "whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]", cell: (p) => formatEATDateTime(p.receivedAt) },
             { key: "method", header: "Method", cell: (p) => p.method.replaceAll("_", " ") },
-            { key: "ref", header: "Ref", className: "text-[12px] text-[var(--ink-muted)]", cell: (p) => p.reference ?? <span className="opacity-30">&mdash;</span> },
+            { key: "ref", header: "Ref", className: "text-[0.75rem] text-[var(--ink-muted)]", cell: (p) => p.reference ?? <span className="opacity-30">&mdash;</span> },
             { key: "amount", header: "Amount", className: "whitespace-nowrap font-semibold tabular-nums", cell: (p) => formatMoney(p.amount, normalizeCurrency(p.currency, saleCurrency)) },
           ]}
         />
@@ -1159,7 +1159,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       >
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 hover:bg-[var(--panel-strong)]/30 [&::-webkit-details-marker]:hidden">
           <p className={cardLabel}>Return / Refund</p>
-          <span className="text-[12px] text-[var(--ink-muted)]">
+          <span className="text-[0.75rem] text-[var(--ink-muted)]">
             {creditNotes.length > 0 || refundedTotal > 0
               ? `${creditNotes.length} credit ${creditNotes.length === 1 ? "note" : "notes"}${refundedTotal > 0 ? ` · ${formatMoney(refundedTotal, saleCurrency)} refunded` : ""}`
               : "Issue a credit note or refund"}
@@ -1170,7 +1170,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {/* Issue credit note */}
             <form action={createCreditNoteAction} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
               <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Issue Credit Note</p>
+                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Issue Credit Note</p>
                 <input type="hidden" name="saleId" value={sale.id} />
                 <input name="reason" placeholder="Reason (optional)" className={`${fieldOnStrong} ml-auto max-w-xs`} />
                 <SubmitButton size="sm" pendingLabel="Creating…">Create</SubmitButton>
@@ -1199,12 +1199,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {/* Refund */}
             <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
               <div className="border-b border-[var(--line)] px-3 py-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                   Refund <span className="normal-case tracking-normal opacity-70">(requires a credit note)</span>
                 </p>
               </div>
               {creditNotes.length === 0 ? (
-                <p className="px-3 py-2.5 text-[13px] text-[var(--ink-muted)]">Create a credit note first.</p>
+                <p className="px-3 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">Create a credit note first.</p>
               ) : (
                 <form action={createRefundAction} className="grid gap-2 p-3 md:grid-cols-[210px_130px_170px_minmax(0,1fr)_auto]">
                   <input type="hidden" name="saleId" value={sale.id} />
@@ -1238,17 +1238,17 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {/* Credit notes */}
             <div className="overflow-hidden rounded-lg border border-[var(--line)]">
               <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Credit Notes</p>
+                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Credit Notes</p>
               </div>
               <div className="space-y-2 bg-[var(--panel)] p-3">
                 {creditNotes.length === 0 ? (
-                  <p className="text-[13px] text-[var(--ink-muted)]">No credit notes yet.</p>
+                  <p className="text-[0.8125rem] text-[var(--ink-muted)]">No credit notes yet.</p>
                 ) : creditNotes.map((cn) => (
                   <div key={cn.id} className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2">
                       <div className="min-w-0">
-                        <p className="mono text-[13px] font-bold text-[var(--ink)]">{cn.creditNoteNumber}</p>
-                        <p className="text-[12px] text-[var(--ink-muted)]">
+                        <p className="mono text-[0.8125rem] font-bold text-[var(--ink)]">{cn.creditNoteNumber}</p>
+                        <p className="text-[0.75rem] text-[var(--ink-muted)]">
                           {formatEATDateTime(cn.issuedAt)}
                           {cn.reason ? ` · ${cn.reason}` : ""}
                         </p>
@@ -1257,7 +1257,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                         <StatusBadge tone={cn.itemsReceivedBackAt ? "success" : "warning"} dot>
                           {cn.itemsReceivedBackAt ? "Stock received" : "Awaiting stock"}
                         </StatusBadge>
-                        <p className="text-[13px] font-bold tabular-nums whitespace-nowrap text-[var(--ink)]">
+                        <p className="text-[0.8125rem] font-bold tabular-nums whitespace-nowrap text-[var(--ink)]">
                           {formatMoney(cn.totalAmount, normalizeCurrency(cn.currency, saleCurrency))}
                         </p>
                       </div>
@@ -1285,7 +1285,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                         <Button type="submit" variant="secondary" size="sm">Mark items received</Button>
                       </form>
                     ) : cn.itemsReceivedBackNote ? (
-                      <p className="border-t border-[var(--line)] px-3 py-2 text-[12px] text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>
+                      <p className="border-t border-[var(--line)] px-3 py-2 text-[0.75rem] text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>
                     ) : null}
                   </div>
                 ))}
@@ -1295,7 +1295,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {/* Refunds */}
             <div className="overflow-hidden rounded-lg border border-[var(--line)]">
               <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refunds</p>
+                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Refunds</p>
               </div>
               <DataTable
                 frameless
@@ -1304,15 +1304,15 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 getRowKey={(r) => r.id}
                 empty="No refunds yet."
                 columns={[
-                  { key: "date", header: "Date", className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]", cell: (r) => formatEATDateTime(r.refundedAt) },
+                  { key: "date", header: "Date", className: "whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]", cell: (r) => formatEATDateTime(r.refundedAt) },
                   {
                     key: "creditNote",
                     header: "Credit note",
-                    className: "mono text-[12px] text-[var(--ink-muted)]",
+                    className: "mono text-[0.75rem] text-[var(--ink-muted)]",
                     cell: (r) => (r.creditNoteId ? (creditNotes.find((c) => c.id === r.creditNoteId)?.creditNoteNumber ?? "—") : "—"),
                   },
                   { key: "method", header: "Method", cell: (r) => r.method.replaceAll("_", " ") },
-                  { key: "ref", header: "Ref", className: "text-[12px] text-[var(--ink-muted)]", cell: (r) => r.reference ?? <span className="opacity-30">&mdash;</span> },
+                  { key: "ref", header: "Ref", className: "text-[0.75rem] text-[var(--ink-muted)]", cell: (r) => r.reference ?? <span className="opacity-30">&mdash;</span> },
                   { key: "amount", header: "Amount", className: "whitespace-nowrap font-semibold tabular-nums", cell: (r) => formatMoney(r.amount, normalizeCurrency(r.currency, saleCurrency)) },
                 ]}
               />

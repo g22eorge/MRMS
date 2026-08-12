@@ -37,17 +37,17 @@ export function RecordActionBar({
       <Link
         href={backHref}
         aria-label="Back"
-        className="btn-premium-secondary flex h-8 w-8 items-center justify-center rounded-lg text-[13px]"
+        className="btn-premium-secondary flex h-8 w-8 items-center justify-center rounded-lg text-[0.8125rem]"
       >
         ←
       </Link>
 
       <div className="min-w-0">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+        <p className="text-[0.65625rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
           {eyebrow}
         </p>
         <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-[16px] font-bold leading-tight">{title}</h1>
+          <h1 className="truncate text-[1rem] font-bold leading-tight">{title}</h1>
           {status ? (
             <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
           ) : null}

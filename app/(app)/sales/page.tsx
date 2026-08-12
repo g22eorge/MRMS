@@ -349,7 +349,7 @@ export default async function SalesPage({
 
   const compactAmount = (value: number) => formatMoneyCompact(value, currency).replace(`${currency} `, "");
   const field =
-    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
+    "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
 
   const statusChips: Array<{ key: string; short: string; long: string; count: number; url: string; active: boolean }> = [
     {
@@ -408,8 +408,8 @@ export default async function SalesPage({
           <div className="space-y-3 lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-[22px] font-black text-[var(--ink)]">Sales</h1>
-                <p className="text-[13px] text-[var(--ink-muted)]">
+                <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Sales</h1>
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">
                   {totalLeads} leads · {quoteCount} quotations · {currency}
                 </p>
               </div>
@@ -433,8 +433,8 @@ export default async function SalesPage({
                 { label: "Due", value: String(followupsDue) },
               ] as const).map(({ label, value }) => (
                 <div key={label} className="min-w-0 px-1.5 py-3 text-center">
-                  <p className="truncate text-[17px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
-                  <p className="mt-1 text-[11px] text-[var(--ink-muted)]">{label}</p>
+                  <p className="truncate text-[1.0625rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+                  <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
                 </div>
               ))}
             </div>
@@ -446,7 +446,7 @@ export default async function SalesPage({
                   <Link
                     key={t.key}
                     href={href({ tab: t.key, status: null, overdue: false })}
-                    className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                    className={`rounded-full py-1.5 text-center text-[0.75rem] font-bold transition ${
                       activeTab === t.key
                         ? "bg-[var(--accent)] text-black"
                         : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -465,7 +465,7 @@ export default async function SalesPage({
                   <Link
                     key={key}
                     href={url}
-                    className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+                    className={`rounded-full py-1.5 text-center text-[0.75rem] font-bold transition ${
                       active
                         ? "bg-[var(--accent)] text-black"
                         : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -490,7 +490,7 @@ export default async function SalesPage({
                   name="q"
                   defaultValue={searchQ}
                   placeholder={activeTab === "leads" ? "Name, phone or organization..." : "Quote number or name..."}
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {searchQ ? (
                   <Link href={href({ q: "" })} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -570,7 +570,7 @@ export default async function SalesPage({
             <Link
               key={t.key}
               href={href({ tab: t.key, status: null, overdue: false })}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 activeTab === t.key
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -580,7 +580,7 @@ export default async function SalesPage({
             </Link>
           ))}
           {activeTab === "quotations" && quoteCount > 0 ? (
-            <p className="ml-auto text-[12px] text-[var(--ink-muted)]">
+            <p className="ml-auto text-[0.75rem] text-[var(--ink-muted)]">
               {formatMoneyCompact(quoteTotal, currency)} quoted ·{" "}
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatMoneyCompact(acceptedTotal, currency)} accepted</span> ({acceptanceRate}%)
             </p>
@@ -596,7 +596,7 @@ export default async function SalesPage({
               <Link
                 key={key}
                 href={url}
-                className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[0.75rem] font-semibold transition-colors ${
                   active
                     ? "bg-[var(--accent)] text-black"
                     : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -620,7 +620,7 @@ export default async function SalesPage({
           />
           <Button type="submit" variant="secondary" size="sm">Search</Button>
           {(activeTab === "leads" ? hasLeadFilters : Boolean(searchQ)) ? (
-            <Link href={href({ status: null, overdue: false, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+            <Link href={href({ status: null, overdue: false, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
         </form>
       </div>
@@ -630,7 +630,7 @@ export default async function SalesPage({
         <DisclosurePanel>
         <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
           </div>
           <form action={createLeadAction} noValidate className="p-3">
             {filters.createError ? (
@@ -715,7 +715,7 @@ export default async function SalesPage({
                           <p className="font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(lead.estimatedValue, currency)}</p>
                         ) : null}
                         {isOverdue ? (
-                          <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">
+                          <span className="text-[0.75rem] font-semibold text-amber-600 dark:text-amber-400">
                             {Math.floor((now.getTime() - new Date(lead.followUpAt!).getTime()) / 86400000)}d overdue
                           </span>
                         ) : (
@@ -741,7 +741,7 @@ export default async function SalesPage({
                             <form action={advanceLeadStageAction} className="space-y-1.5">
                               <input type="hidden" name="leadId" value={lead.id} />
                               <input type="hidden" name="newStatus" value="LOST" />
-                              <select name="lostReason" aria-label="Lost reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] outline-none">
+                              <select name="lostReason" aria-label="Lost reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] outline-none">
                                 <option value="">Select reason</option>
                                 {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
                               </select>
@@ -769,7 +769,7 @@ export default async function SalesPage({
                         <Link href={`/sales/leads/${lead.id}`} className="block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
                           {lead.fullName}
                         </Link>
-                        <p className="truncate text-[12px] text-[var(--ink-muted)]">
+                        <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">
                           {lead.phone}
                           {lead.organization ? <> · {lead.organization}</> : null}
                         </p>
@@ -788,7 +788,7 @@ export default async function SalesPage({
                   key: "assignedTo",
                   header: "Assigned",
                   headerClassName: "hidden xl:table-cell",
-                  className: "hidden text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                  className: "hidden text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                   cell: (lead) => lead.assignedTo?.name ?? <span className="opacity-30">—</span>,
                 },
                 {
@@ -806,9 +806,9 @@ export default async function SalesPage({
                   className: "whitespace-nowrap",
                   cell: (lead) => {
                     const isOverdue = lead.followUpAt != null && lead.followUpAt <= now && !TERMINAL_STATUSES.includes(lead.status);
-                    if (!lead.followUpAt) return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
+                    if (!lead.followUpAt) return <span className="text-[0.75rem] text-[var(--ink-muted)]/40">—</span>;
                     return (
-                      <span className={`text-[12px] ${isOverdue ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
+                      <span className={`text-[0.75rem] ${isOverdue ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
                         {formatEATDate(lead.followUpAt)}
                       </span>
                     );
@@ -836,7 +836,7 @@ export default async function SalesPage({
                         <form action={advanceLeadStageAction} className="space-y-1.5">
                           <input type="hidden" name="leadId" value={lead.id} />
                           <input type="hidden" name="newStatus" value="LOST" />
-                          <select name="lostReason" aria-label="Lost reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[12px] outline-none">
+                          <select name="lostReason" aria-label="Lost reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] outline-none">
                             <option value="">Select reason</option>
                             {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
                           </select>
@@ -850,8 +850,8 @@ export default async function SalesPage({
             />
             {leadsShownValue > 0 ? (
               <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-4 py-2.5">
-                <span className="text-[12px] text-[var(--ink-muted)]">{leads.length} shown</span>
-                <span className="text-[12px] text-[var(--ink-muted)]">
+                <span className="text-[0.75rem] text-[var(--ink-muted)]">{leads.length} shown</span>
+                <span className="text-[0.75rem] text-[var(--ink-muted)]">
                   Pipeline on this page <span className="font-semibold text-[var(--ink)]">{formatMoney(leadsShownValue, currency)}</span>
                 </span>
               </div>
@@ -902,7 +902,7 @@ export default async function SalesPage({
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <p className="font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(q.totalAmount, q.currency)}</p>
                     {isExpired ? (
-                      <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">expired</span>
+                      <span className="text-[0.75rem] font-semibold text-amber-600 dark:text-amber-400">expired</span>
                     ) : (
                       <StatusBadge tone={toneFor(QUOTATION_STATUS_TONES, q.status)}>{q.status}</StatusBadge>
                     )}
@@ -920,7 +920,7 @@ export default async function SalesPage({
                     <Link href={`/sales/quotations/${q.id}`} className="mono block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
                       {q.quoteNumber}
                     </Link>
-                    <p className="text-[12px] text-[var(--ink-muted)]">{formatEATDate(q.createdAt)}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatEATDate(q.createdAt)}</p>
                   </div>
                 ),
               },
@@ -946,9 +946,9 @@ export default async function SalesPage({
                 className: "whitespace-nowrap",
                 cell: (q) => {
                   const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
-                  if (!q.validUntil) return <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>;
+                  if (!q.validUntil) return <span className="text-[0.75rem] text-[var(--ink-muted)]/40">—</span>;
                   return (
-                    <span className={`text-[12px] ${isExpired ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
+                    <span className={`text-[0.75rem] ${isExpired ? "font-semibold text-amber-600 dark:text-amber-400" : "text-[var(--ink-muted)]"}`}>
                       {formatEATDate(q.validUntil)}
                     </span>
                   );

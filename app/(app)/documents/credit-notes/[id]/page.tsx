@@ -17,7 +17,7 @@ import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
 
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
-const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
+const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 const clientSelect = { fullName: true, phone: true, email: true, organization: true, address: true } as const;
 
 export default async function CreditNoteDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -83,15 +83,15 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
     <>
       {canSend && client?.phone && (
         <form action={sendCreditNoteWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">WhatsApp</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
         </form>
       )}
       {canSend && client?.email && (
         <form action={sendCreditNoteEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[12px] font-medium">Email</button>
+          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
         </form>
       )}
-      <Link href={`/api/credit-notes/${creditNote.id}`} className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold">PDF</Link>
+      <Link href={`/api/credit-notes/${creditNote.id}`} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</Link>
     </>
   );
 
@@ -119,7 +119,7 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
       />
 
       {sent && (
-        <div className={`rounded-xl border px-4 py-3 text-[13px] font-medium ${sent === "failed" ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"}`}>
+        <div className={`rounded-xl border px-4 py-3 text-[0.8125rem] font-medium ${sent === "failed" ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"}`}>
           {sent === "whatsapp" && "WhatsApp message queued — track delivery in the outbox."}
           {sent === "email" && "Email queued — track delivery in the outbox."}
           {sent === "failed" && "Could not send: no client phone or email on file for this credit note."}
@@ -145,16 +145,16 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
                   ]}
                 />
                 <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
-                  <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[14px]"><span className="font-bold">Credit total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
+                  <div className="flex w-full max-w-xs justify-between border-t border-[var(--line)] pt-1 text-[0.875rem]"><span className="font-bold">Credit total</span><span className="mono font-black">{formatMoney(total, currency)}</span></div>
                 </div>
               </>
-            ) : <div className="p-4 text-[13px] text-[var(--ink-muted)]">No itemised lines.</div>}
+            ) : <div className="p-4 text-[0.8125rem] text-[var(--ink-muted)]">No itemised lines.</div>}
           </div>
 
           {creditNote.reason && (
             <div className={cardClass}>
               <div className={cardHeadClass}>Reason</div>
-              <div className="whitespace-pre-wrap p-4 text-[13px] text-[var(--ink-muted)]">{sanitizeText(creditNote.reason)}</div>
+              <div className="whitespace-pre-wrap p-4 text-[0.8125rem] text-[var(--ink-muted)]">{sanitizeText(creditNote.reason)}</div>
             </div>
           )}
 
@@ -178,7 +178,7 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
           {received && (
             <div className={cardClass}>
               <div className={cardHeadClass}>Items received back</div>
-              <div className="p-4 text-[13px]">
+              <div className="p-4 text-[0.8125rem]">
                 <p className="font-medium">{creditNote.itemsReceivedBackAt ? formatEATDate(creditNote.itemsReceivedBackAt) : "—"}{creditNote.itemsReceivedBackBy?.name ? ` · ${creditNote.itemsReceivedBackBy.name}` : ""}</p>
                 {creditNote.itemsReceivedBackNote && <p className="mt-1 whitespace-pre-wrap text-[var(--ink-muted)]">{sanitizeText(creditNote.itemsReceivedBackNote)}</p>}
               </div>

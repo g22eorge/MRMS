@@ -55,7 +55,7 @@ export function PeriodFilterChips({
         <Link
           key={key}
           href={buildHref(key)}
-          className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${
+          className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
             active === key
               ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
               : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
@@ -144,17 +144,17 @@ export function DocumentFilterBar({
           name="q"
           defaultValue={q}
           placeholder={searchPlaceholder}
-          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+          className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
         />
         <button
           type="submit"
-          className="h-8 rounded-lg border border-[var(--line)] px-3 text-[12px] font-medium hover:bg-[var(--panel-strong)]"
+          className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]"
         >
           Search
         </button>
       </form>
       {showReset && hasFilters ? (
-        <Link href={resetHref} className="text-[12px] font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]">
+        <Link href={resetHref} className="text-[0.75rem] font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]">
           Reset
         </Link>
       ) : null}

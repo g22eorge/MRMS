@@ -103,8 +103,8 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
   return (
     <section className="space-y-4">
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-        <p className="text-[13px] font-bold text-[var(--ink)]">AI Knowledge &amp; Feedback</p>
-        <p className="mt-0.5 text-[13px] text-[var(--ink-muted)]">
+        <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Knowledge &amp; Feedback</p>
+        <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
           Improve the AI guide without training on customer data. Add help articles and review feedback.
         </p>
       </div>
@@ -112,7 +112,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
       {saved && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-emerald-600" aria-hidden><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-          <p className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">AI settings saved.</p>
+          <p className="text-[0.8125rem] font-medium text-emerald-700 dark:text-emerald-400">AI settings saved.</p>
         </div>
       )}
 
@@ -131,7 +131,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
               {label}
             </label>
           ))}
-          <input name="model" defaultValue={settings?.model ?? ""} placeholder="Model override, e.g. gemini-1.5-flash" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none md:col-span-2" />
+          <input name="model" defaultValue={settings?.model ?? ""} placeholder="Model override, e.g. gemini-1.5-flash" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none md:col-span-2" />
           <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm">Save AI Settings</button>
         </div>
       </form>
@@ -145,10 +145,10 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <form action={createArticleAction} className="panel-shadow space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <p className="text-sm font-bold text-[var(--ink)]">Add Knowledge Article</p>
-          <input name="title" required placeholder="Title" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
-          <input name="module" placeholder="Module, e.g. JOBS, FINANCE, AI" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
-          <textarea name="content" required rows={8} placeholder="Clear instructions the AI can cite when answering staff questions." className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
-          <select name="scope" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] outline-none">
+          <input name="title" required placeholder="Title" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none" />
+          <input name="module" placeholder="Module, e.g. JOBS, FINANCE, AI" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none" />
+          <textarea name="content" required rows={8} placeholder="Clear instructions the AI can cite when answering staff questions." className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none" />
+          <select name="scope" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none">
             <option value="org">This workspace only</option>
             <option value="global">Global default</option>
           </select>
@@ -161,7 +161,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
             {feedback.length === 0 ? <p className="text-sm text-[var(--ink-muted)]">No AI feedback yet.</p> : null}
             {feedback.map((item) => (
               <article key={item.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-                <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                <div className="flex flex-wrap items-center gap-2 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                   <span>{item.feature}</span>
                   <span className={item.rating === "HELPFUL" ? "text-emerald-600" : "text-amber-600"}>{item.rating.replace("_", " ")}</span>
                   <span>{item.createdAt.toLocaleString()}</span>
@@ -182,12 +182,12 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-[var(--ink)]">{article.title}</p>
-                  <p className="mt-1 text-[13px] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{article.module} · {article.orgId ? "Workspace" : "Global"}</p>
+                  <p className="mt-1 text-[0.8125rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">{article.module} · {article.orgId ? "Workspace" : "Global"}</p>
                 </div>
                 <form action={toggleArticleAction}>
                   <input type="hidden" name="id" value={article.id} />
                   <input type="hidden" name="isActive" value={String(article.isActive)} />
-                  <button type="submit" className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] text-[var(--ink-muted)]">
+                  <button type="submit" className="rounded-lg border border-[var(--line)] px-2 py-1 text-[0.8125rem] text-[var(--ink-muted)]">
                     {article.isActive ? "Disable" : "Enable"}
                   </button>
                 </form>

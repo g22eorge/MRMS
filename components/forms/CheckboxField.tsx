@@ -73,7 +73,7 @@ export function CheckboxField({
   const text = description ? (
     <span className="min-w-0">
       <span className="block">{label}</span>
-      <span className="block text-[11px] font-normal text-[var(--ink-muted)]">{description}</span>
+      <span className="block text-[0.6875rem] font-normal text-[var(--ink-muted)]">{description}</span>
     </span>
   ) : (
     <span>{label}</span>

@@ -49,7 +49,7 @@ export function RecordPreviewButton({
         <button
           type="button"
           onClick={() => { setLoading(true); setOpen(true); }}
-          className="btn-premium-secondary inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold"
+          className="btn-premium-secondary inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[0.8125rem] font-semibold"
         >
           <span aria-hidden="true" className="opacity-80">{eye}</span>
           {label}

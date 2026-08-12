@@ -21,7 +21,7 @@ export function BranchList({ branches }: { branches: Branch[] }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)]">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
             Locations ({branches.length})
           </p>
           <button
@@ -50,15 +50,15 @@ export function BranchList({ branches }: { branches: Branch[] }) {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-[var(--ink)] text-sm">{b.name}</span>
                       {b.isDefault && (
-                        <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[12px] font-bold text-[var(--accent)]">DEFAULT</span>
+                        <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[0.75rem] font-bold text-[var(--accent)]">DEFAULT</span>
                       )}
                       {!b.isActive && (
-                        <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[12px] font-semibold text-[var(--ink-muted)]">INACTIVE</span>
+                        <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-0.5 text-[0.75rem] font-semibold text-[var(--ink-muted)]">INACTIVE</span>
                       )}
                     </div>
                     {b.address && <p className="mt-0.5 text-xs text-[var(--ink-muted)] truncate">{b.address}</p>}
                     {b.phone && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{b.phone}</p>}
-                    <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
+                    <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">
                       {b._count.users} user{b._count.users !== 1 ? "s" : ""} · {b._count.jobs} job{b._count.jobs !== 1 ? "s" : ""}
                     </p>
                   </div>
@@ -121,7 +121,7 @@ function BranchForm({
             name="name"
             required
             defaultValue={branch?.name ?? ""}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
           />
         </div>
         <div>
@@ -129,7 +129,7 @@ function BranchForm({
           <input
             name="phone"
             defaultValue={branch?.phone ?? ""}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
           />
         </div>
       </div>
@@ -139,7 +139,7 @@ function BranchForm({
           name="address"
           rows={2}
           defaultValue={branch?.address ?? ""}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
         />
       </div>
       <div className="flex gap-4">

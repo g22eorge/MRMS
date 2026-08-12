@@ -197,9 +197,9 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
       <div className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[13px] font-bold text-[var(--ink)]">Permission Groups</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Permission Groups</p>
           </div>
-          <Link href="/settings/users" className="btn-premium rounded-lg px-3 py-1.5 text-[12px]">Users →</Link>
+          <Link href="/settings/users" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem]">Users →</Link>
         </div>
       </div>
 
@@ -207,20 +207,20 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
         <div className="panel-shadow rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
           <Disclosure>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Groups</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Groups</p>
             <DisclosureButton
               label="+ New"
               openLabel="✕ Cancel"
-              className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1.5 text-[12px] font-semibold text-black transition hover:bg-[var(--accent)]/90"
-              openClassName="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+              className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-semibold text-black transition hover:bg-[var(--accent)]/90"
+              openClassName="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
             />
           </div>
           <DisclosurePanel>
             <div className="mt-3 border-t border-[var(--line)] pt-3">
               <form action={createGroupAction} className="space-y-2">
-                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
-                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[13px]">Create Group</button>
+                <input name="name" placeholder="Group name" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" required />
+                <input name="description" placeholder="Description (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem]">Create Group</button>
               </form>
             </div>
           </DisclosurePanel>
@@ -253,7 +253,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                     <MenuDestructiveRow>
                       <form action={deleteGroupAction}>
                         <input type="hidden" name="id" value={selected.id} />
-                        <button type="submit" className="w-full text-left text-[12px] text-red-600">Delete Group</button>
+                        <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Delete Group</button>
                       </form>
                     </MenuDestructiveRow>
                   </RowActionsMenu>
@@ -261,8 +261,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
                   <form action={updateGroupAction} className="md:col-span-2 grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="id" value={selected.id} />
-                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" required />
-                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none" placeholder="Description" />
+                    <input name="name" defaultValue={selected.name} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none" required />
+                    <input name="description" defaultValue={selected.description ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none" placeholder="Description" />
                     <div className="md:col-span-2 flex items-center justify-between gap-2">
                       <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm text-white">Save</button>
                     </div>
@@ -274,7 +274,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Members</p>
                 <form action={addMemberAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={selected.id} />
-                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px] outline-none">
+                  <select name="userId" className="min-w-[240px] rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none">
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                     ))}
@@ -296,7 +296,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                         cell: (m) => (
                           <>
                             <p className="font-medium">{m.user.name}</p>
-                            <p className="text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
+                            <p className="text-[0.75rem] text-[var(--ink-muted)]">{m.user.email}</p>
                           </>
                         ),
                       },
@@ -307,7 +307,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                           <form action={removeMemberAction}>
                             <input type="hidden" name="id" value={selected.id} />
                             <input type="hidden" name="memberId" value={m.id} />
-                            <button type="submit" className="w-full text-left text-[12px] text-red-600">Remove Member</button>
+                            <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Remove Member</button>
                           </form>
                         </MenuDestructiveRow>
                       </RowActionsMenu>
@@ -316,7 +316,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
                         <div className="min-w-0">
                           <p className="truncate font-medium text-[var(--ink)]">{m.user.name}</p>
-                          <p className="truncate text-[12px] text-[var(--ink-muted)]">{m.user.email}</p>
+                          <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{m.user.email}</p>
                         </div>
                         <div className="shrink-0">
                           <RowActionsMenu label="Member actions" size="compact">
@@ -324,7 +324,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
                               <form action={removeMemberAction}>
                                 <input type="hidden" name="id" value={selected.id} />
                                 <input type="hidden" name="memberId" value={m.id} />
-                                <button type="submit" className="w-full text-left text-[12px] text-red-600">Remove Member</button>
+                                <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Remove Member</button>
                               </form>
                             </MenuDestructiveRow>
                           </RowActionsMenu>

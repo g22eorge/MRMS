@@ -53,7 +53,7 @@ function isGoodDelivery(status: string | null | undefined) {
 
 function StatusPill({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-semibold ${STATUS_STYLES[status] ?? STATUS_STYLES.DEAD}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.75rem] font-semibold ${STATUS_STYLES[status] ?? STATUS_STYLES.DEAD}`}>
       {status}
     </span>
   );
@@ -203,7 +203,7 @@ export default async function OutboxPage({
               <ConfirmSubmitButton
                 message="Discard this message? It will be marked failed (DEAD) and won't be retried."
                 confirmLabel="Discard"
-                className="w-full text-left text-[12px] text-red-600"
+                className="w-full text-left text-[0.75rem] text-red-600"
               >
                 Discard
               </ConfirmSubmitButton>
@@ -234,7 +234,7 @@ export default async function OutboxPage({
                 key={key || "all"}
                 href={href}
                 aria-current={active ? "true" : undefined}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold transition ${
                   active
                     ? "bg-[var(--accent)] text-black shadow-sm"
                     : "text-[var(--ink-muted)] hover:bg-[var(--panel)] hover:text-[var(--ink)]"
@@ -265,19 +265,19 @@ export default async function OutboxPage({
               name="q"
               defaultValue={q}
               placeholder="Search recipient or error"
-              className="h-9 w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 text-[13px] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:w-56"
+              className="h-9 w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 text-[0.8125rem] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:w-56"
             />
           </form>
           <Link
             href={COMMUNICATIONS_ROUTES.preferences}
-            className="hidden h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[13px] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] sm:inline-flex"
+            className="hidden h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] sm:inline-flex"
           >
             Preferences
           </Link>
           <form action={retryNowAction}>
             <button
               type="submit"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[13px] font-bold text-black transition hover:brightness-105"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
@@ -298,8 +298,8 @@ export default async function OutboxPage({
           <div className="flex items-center gap-3 px-4 py-2.5">
             <StatusPill status={r.status} />
             <div className="min-w-0 flex-1">
-              <p className="truncate mono text-[13px] font-medium text-[var(--ink)]">{r.to}</p>
-              <p className="truncate text-[12px] text-[var(--ink-muted)]">
+              <p className="truncate mono text-[0.8125rem] font-medium text-[var(--ink)]">{r.to}</p>
+              <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">
                 {CHANNEL_LABEL[r.channel] ?? r.channel} · {r.type.replaceAll("_", " ").toLowerCase()}
                 {r.lastError ? <span className="text-red-600 dark:text-red-400"> · failed</span> : r.sentAt ? ` · ${fmtDate(r.sentAt)}` : ""}
               </p>

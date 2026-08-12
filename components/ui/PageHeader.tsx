@@ -28,10 +28,10 @@ export function PageHeader({ title, eyebrow, description, actions, kpis }: PageH
         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">{eyebrow}</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">{eyebrow}</p>
             ) : null}
-            <h1 className="truncate text-[15px] font-bold leading-tight text-[var(--ink)]">{title}</h1>
-            {description ? <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{description}</p> : null}
+            <h1 className="truncate text-[0.9375rem] font-bold leading-tight text-[var(--ink)]">{title}</h1>
+            {description ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{description}</p> : null}
           </div>
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
         </div>

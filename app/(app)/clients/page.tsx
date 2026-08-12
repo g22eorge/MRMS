@@ -221,12 +221,12 @@ export default async function ClientsPage({
         {/* Title row + New Client CTA */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[22px] font-black text-[var(--ink)]">Clients</h1>
-            <p className="text-[13px] text-[var(--ink-muted)]">{kpiTotal} total</p>
+            <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Clients</h1>
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">{kpiTotal} total</p>
           </div>
           {(user.role === "ADMIN" || user.role === "OPS") ? (
             <DisclosureTrigger
-              className="btn-premium rounded-xl px-4 py-2 text-[13px] font-bold"
+              className="btn-premium rounded-xl px-4 py-2 text-[0.8125rem] font-bold"
               label="+ New"
               openLabel="Close"
             />
@@ -242,8 +242,8 @@ export default async function ClientsPage({
             { label: "Orgs",    value: kpiWithOrg },
           ] as const).map(({ label, value }) => (
             <div key={label} className="flex flex-col items-center py-3">
-              <p className="text-[22px] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
-              <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{label}</p>
+              <p className="text-[1.375rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
+              <p className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
             </div>
           ))}
         </div>
@@ -257,7 +257,7 @@ export default async function ClientsPage({
             { seg: "high",   label: "Top",      count: withManyJobs },
           ] as const).map(({ seg, label, count }) => (
             <Link key={seg} href={segmentHref(seg)}
-              className={`rounded-full py-1.5 text-center text-[12px] font-bold transition ${
+              className={`rounded-full py-1.5 text-center text-[0.75rem] font-bold transition ${
                 segment === seg
                   ? "bg-[var(--accent)] text-black"
                   : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -278,7 +278,7 @@ export default async function ClientsPage({
               name="q"
               defaultValue={filters.q}
               placeholder="Name, phone, email or address..."
-              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[13px] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
+              className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
             />
             {filters.q && (
               <Link href="/clients" className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50">
@@ -315,7 +315,7 @@ export default async function ClientsPage({
             { seg: "high", label: `${withManyJobs} high activity`   },
           ] as const).map(({ seg, label }) => (
             <Link key={seg} href={segmentHref(seg)}
-              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 segment === seg
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
                   : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
@@ -326,7 +326,7 @@ export default async function ClientsPage({
         </div>
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <DisclosureTrigger
-            className="btn-premium shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-bold"
+            className="btn-premium shrink-0 rounded-lg px-4 py-2.5 text-[0.75rem] font-bold"
             label="+ New Client"
             openLabel="Close"
           />
@@ -344,9 +344,9 @@ export default async function ClientsPage({
               placeholder="Search by name, phone, email, address..."
               className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
             />
-            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-medium">Search</button>
+            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Search</button>
             {hasClientFilters ? (
-              <Link href="/clients" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] text-[var(--ink-muted)]">Reset</Link>
+              <Link href="/clients" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
             ) : null}
           </div>
         </form>
@@ -355,9 +355,9 @@ export default async function ClientsPage({
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <div className="border-t border-[var(--line)]">
             <DisclosureTrigger
-              className="flex w-full cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30"
-              label={<>Quick create client<span className="text-[13px] font-semibold text-[var(--accent)]">Show</span></>}
-              openLabel={<>Quick create client<span className="text-[13px] font-semibold text-[var(--accent)]">Hide</span></>}
+              className="flex w-full cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30"
+              label={<>Quick create client<span className="text-[0.8125rem] font-semibold text-[var(--accent)]">Show</span></>}
+              openLabel={<>Quick create client<span className="text-[0.8125rem] font-semibold text-[var(--accent)]">Hide</span></>}
             />
             <DisclosurePanel>
             <form action={createClientAction} noValidate className="px-3 pb-3">
@@ -374,7 +374,7 @@ export default async function ClientsPage({
                 <input name="address" placeholder="Address / location" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:col-span-2" />
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <button type="submit" className="btn-premium rounded-lg px-4 py-2.5 text-[13px] font-bold">
+                <button type="submit" className="btn-premium rounded-lg px-4 py-2.5 text-[0.8125rem] font-bold">
                   Create
                 </button>
                 <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">
@@ -457,7 +457,7 @@ export default async function ClientsPage({
                 cell: (client) => (
                   <div className="flex items-center gap-3">
                     <Link href={`/clients/${client.id}`} className="shrink-0">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-[13px] font-black ${
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-[0.8125rem] font-black ${
                         client._count.jobs >= 3
                           ? "bg-[var(--accent)]/15 text-[var(--accent)]"
                           : client._count.jobs > 0
@@ -471,7 +471,7 @@ export default async function ClientsPage({
                       <Link href={`/clients/${client.id}`} className="block truncate font-semibold text-[var(--ink)] transition-colors hover:text-[var(--accent)]">
                         {client.fullName}
                       </Link>
-                      <p className="truncate text-[12px] text-[var(--ink-muted)]">
+                      <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">
                         {formatPhoneDisplay(client.phone)}
                         {client.organization ? <> · <span className="opacity-80">{client.organization}</span></> : null}
                         {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
@@ -484,7 +484,7 @@ export default async function ClientsPage({
                 key: "email",
                 header: "Email",
                 headerClassName: "hidden xl:table-cell",
-                className: "hidden text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                className: "hidden text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                 cell: (client) => client.email ?? <span className="opacity-30">—</span>,
               },
               {
@@ -493,7 +493,7 @@ export default async function ClientsPage({
                 cell: (client) =>
                   client._count.jobs > 0 ? (
                     <Link href={`/jobs?client=${client.id}`}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold transition hover:opacity-80 ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.75rem] font-semibold transition hover:opacity-80 ${
                         client._count.jobs >= 3
                           ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
                           : "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
@@ -501,14 +501,14 @@ export default async function ClientsPage({
                       {client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}
                     </Link>
                   ) : (
-                    <span className="text-[12px] text-[var(--ink-muted)]/40">—</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]/40">—</span>
                   ),
               },
               {
                 key: "joined",
                 header: "Joined",
                 headerClassName: "hidden xl:table-cell",
-                className: "hidden whitespace-nowrap text-[12px] text-[var(--ink-muted)] xl:table-cell",
+                className: "hidden whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                 cell: (client) => formatEATDate(client.createdAt),
               },
             ]}

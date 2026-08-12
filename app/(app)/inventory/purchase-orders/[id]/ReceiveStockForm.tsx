@@ -42,7 +42,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
         <p className="text-xs text-[var(--ink-muted)]">Confirm what arrived</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3 p-3">
-        <label className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+        <label className="block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
           Receive into location
           <select
             value={locationId}
@@ -57,7 +57,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
             ))}
           </select>
         </label>
-        <p className="text-[12px] text-[var(--ink-muted)]">Quantities are pre-filled to receive the full outstanding order — adjust any line that arrived short, then confirm.</p>
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">Quantities are pre-filled to receive the full outstanding order — adjust any line that arrived short, then confirm.</p>
         <DataTable
           frameless
           dense

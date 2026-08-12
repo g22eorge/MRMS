@@ -237,7 +237,7 @@ export default async function BankPage({
 
       {/* ── ADD BANK ACCOUNT ─────────────────────────────────────────────── */}
       <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <summary className="cursor-pointer list-none px-4 py-2.5 text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
+        <summary className="cursor-pointer list-none px-4 py-2.5 text-[0.8125rem] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
           + Add Bank Account
         </summary>
         <form
@@ -250,7 +250,7 @@ export default async function BankPage({
               name="name"
               required
               placeholder="Main Operations"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -259,7 +259,7 @@ export default async function BankPage({
               name="bankName"
               required
               placeholder="Stanbic Bank"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -267,7 +267,7 @@ export default async function BankPage({
             <input
               name="accountNumber"
               placeholder="9030012345"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div>
@@ -278,7 +278,7 @@ export default async function BankPage({
               min="0"
               step="0.01"
               placeholder="0.00"
-              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
             />
           </div>
           <div className="flex justify-end sm:col-span-4">
@@ -325,12 +325,12 @@ export default async function BankPage({
                     {formatMoney(acc.currentBalance, currency)}
                   </p>
                   <div className="mt-1 flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--ink-muted)]">
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">
                       {acc._count.transactions} tx
                     </p>
                     {acctMonthNet !== 0 && (
                       <p
-                        className={`text-[12px] font-semibold ${acctMonthNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}
+                        className={`text-[0.75rem] font-semibold ${acctMonthNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}
                       >
                         {acctMonthNet >= 0 ? "+" : "−"}
                         {formatMoneyCompact(Math.abs(acctMonthNet), currency)} this month
@@ -373,14 +373,14 @@ export default async function BankPage({
                 {allTransactions.length > 0 && (
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-semibold text-[var(--ink)]">Checked off</p>
-                      <p className="text-[13px] text-[var(--ink-muted)]">
+                      <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">Checked off</p>
+                      <p className="text-[0.8125rem] text-[var(--ink-muted)]">
                         {allTransactions.filter((t) => t.reconciledAt).length} of{" "}
                         {allTransactions.length} checked
                       </p>
                     </div>
                     {unreconciledTx.length > 0 && (
-                      <p className="mt-1.5 text-[13px] text-amber-600 dark:text-amber-400">
+                      <p className="mt-1.5 text-[0.8125rem] text-amber-600 dark:text-amber-400">
                         {unreconciledTx.length} not checked yet ·{" "}
                         {formatMoneyCompact(Math.abs(unreconciledAmount), currency)}
                       </p>
@@ -390,7 +390,7 @@ export default async function BankPage({
 
                 {/* ── ADD TRANSACTION ─────────────────────────────────── */}
                 <details className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-                  <summary className="cursor-pointer list-none px-4 py-2.5 text-[13px] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
+                  <summary className="cursor-pointer list-none px-4 py-2.5 text-[0.8125rem] font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)]/40 group-open:border-b group-open:border-[var(--line)]">
                     + Add Transaction
                   </summary>
                   <form
@@ -405,14 +405,14 @@ export default async function BankPage({
                         type="date"
                         required
                         defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[var(--ink-muted)]">Type *</label>
                       <select
                         name="type"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       >
                         <option value="CREDIT">Credit (Money In)</option>
                         <option value="DEBIT">Debit (Money Out)</option>
@@ -424,7 +424,7 @@ export default async function BankPage({
                         name="description"
                         required
                         placeholder="Payment received..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       />
                     </div>
                     <div>
@@ -436,7 +436,7 @@ export default async function BankPage({
                         step="0.01"
                         required
                         placeholder="0.00"
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       />
                     </div>
                     <div>
@@ -444,7 +444,7 @@ export default async function BankPage({
                       <input
                         name="reference"
                         placeholder="Cheque #, transfer ref..."
-                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]"
+                        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       />
                     </div>
                     <div className="flex items-end">
@@ -467,7 +467,7 @@ export default async function BankPage({
                       const active = (sp.txperiod ?? "") === val;
                       return (
                         <a key={label} href={`/finance/bank?account=${activeAccount.id}&txperiod=${val}`}
-                          className={`rounded-full border px-2.5 py-1 text-[12px] font-semibold transition ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+                          className={`rounded-full border px-2.5 py-1 text-[0.75rem] font-semibold transition ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
                           {label}
                         </a>
                       );
@@ -493,7 +493,7 @@ export default async function BankPage({
                     {
                       key: "date",
                       header: "Date",
-                      className: "whitespace-nowrap text-[12px] text-[var(--ink-muted)]",
+                      className: "whitespace-nowrap text-[0.75rem] text-[var(--ink-muted)]",
                       cell: (tx) =>
                         new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }),
                     },
@@ -503,7 +503,7 @@ export default async function BankPage({
                       cell: (tx) => (
                         <>
                           <p className="font-medium text-[var(--ink)]">{tx.description}</p>
-                          {tx.reference && <p className="text-[12px] text-[var(--ink-muted)]">{tx.reference}</p>}
+                          {tx.reference && <p className="text-[0.75rem] text-[var(--ink-muted)]">{tx.reference}</p>}
                         </>
                       ),
                     },
@@ -531,7 +531,7 @@ export default async function BankPage({
                       cell: (tx) => {
                         const rb = balanceById.get(tx.id);
                         return (
-                          <span className={`text-[12px] font-semibold tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}>
+                          <span className={`text-[0.75rem] font-semibold tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink)]" : "text-red-600"}`}>
                             {rb !== undefined ? `${rb < 0 ? "−" : ""}${formatMoney(Math.abs(rb), currency)}` : "—"}
                           </span>
                         );
@@ -559,7 +559,7 @@ export default async function BankPage({
                   )}
                   tableFooter={
                     <tr>
-                      <td colSpan={2} className="px-4 py-2.5 text-[12px] font-bold text-[var(--ink-muted)]">
+                      <td colSpan={2} className="px-4 py-2.5 text-[0.75rem] font-bold text-[var(--ink-muted)]">
                         {transactions.length} transactions{q ? " (filtered)" : ""}
                       </td>
                       <td className="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
@@ -586,19 +586,19 @@ export default async function BankPage({
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 text-[13px] text-[var(--ink-muted)]">
+                            <div className="flex items-center gap-2 text-[0.8125rem] text-[var(--ink-muted)]">
                               <span>{new Date(tx.date).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}</span>
                               {tx.reference && <><span className="opacity-40">·</span><span>{tx.reference}</span></>}
                             </div>
                             <div className="flex items-center gap-2">
                               {rb !== undefined && (
-                                <span className={`text-[13px] tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink-muted)]" : "text-red-600"}`}>
+                                <span className={`text-[0.8125rem] tabular-nums ${(rb ?? 0) >= 0 ? "text-[var(--ink-muted)]" : "text-red-600"}`}>
                                   bal {rb < 0 ? "−" : ""}{formatMoney(Math.abs(rb), currency)}
                                 </span>
                               )}
                               <form action={reconcile}>
                                 <input type="hidden" name="id" value={tx.id} />
-                                <button type="submit" className="text-[13px] text-[var(--accent)] hover:underline">
+                                <button type="submit" className="text-[0.8125rem] text-[var(--accent)] hover:underline">
                                   {tx.reconciledAt ? "Undo" : "Mark checked"}
                                 </button>
                               </form>

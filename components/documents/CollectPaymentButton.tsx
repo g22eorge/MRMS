@@ -80,7 +80,7 @@ export function CollectPaymentButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-premium rounded-lg px-3 py-1.5 text-[12px] font-bold"
+        className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold"
       >
         Collect payment
       </button>
@@ -89,12 +89,12 @@ export function CollectPaymentButton({
         <ModalHeader title="Collect payment" subtitle={`Balance ${new Intl.NumberFormat().format(Math.max(0, Math.round(balance)))} ${currency}`} onClose={() => setOpen(false)} />
         <div className="flex flex-col gap-3 p-4">
           <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Amount ({currency})</label>
+            <label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Amount ({currency})</label>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" className={inputClass} autoFocus />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Method</label>
+              <label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Method</label>
               <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputClass}>
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>{m.replaceAll("_", " ")}</option>
@@ -102,17 +102,17 @@ export function CollectPaymentButton({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reference</label>
+              <label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Reference</label>
               <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" className={inputClass} />
             </div>
           </div>
           {isForeign && (
             <div>
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Exchange rate to {baseCurrency}</label>
+              <label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Exchange rate to {baseCurrency}</label>
               <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder={`1 ${currency} = ? ${baseCurrency}`} className={inputClass} />
             </div>
           )}
-          {error ? <p className="text-[12px] font-medium text-[var(--dc-crit,#c0503f)]">{error}</p> : null}
+          {error ? <p className="text-[0.75rem] font-medium text-[var(--dc-crit,#c0503f)]">{error}</p> : null}
           <div className="mt-1 flex gap-2">
             <button type="button" onClick={() => setOpen(false)} className="flex-1 rounded-lg border border-[var(--line)] py-2 text-sm font-medium text-[var(--ink-muted)] transition hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]">Cancel</button>
             <button type="button" onClick={submit} disabled={pending} className="flex-1 btn-premium rounded-lg py-2 text-sm font-semibold disabled:opacity-60">{pending ? "Recording…" : "Record payment"}</button>

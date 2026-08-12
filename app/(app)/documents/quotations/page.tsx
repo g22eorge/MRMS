@@ -180,7 +180,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
           title="Quotations"
           eyebrow="Documents"
           actions={
-canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 text-[13px] font-bold" />
+canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold" />
           }
           kpis={[
             { label: "Quotations", value: totalItems, sub: "all statuses" },
@@ -206,7 +206,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
                   type="submit"
                   name="status"
                   value={s.key}
-                  className={`rounded-full px-3 py-1 text-[13px] font-semibold transition ${
+                  className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
                     statusFilter === s.key
                       ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
                       : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
@@ -222,7 +222,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
               name="q"
               defaultValue={q}
               placeholder="#, customer, amount…"
-              className="ml-auto h-8 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[13px] outline-none focus:border-[var(--accent)]/50"
+              className="ml-auto h-8 w-56 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
 </form>
           </div>
@@ -292,11 +292,11 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
                 </div>
                 {actions(row)}
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem]">
                 <span className="font-medium text-[var(--ink)]">{row.client}</span>
                 <span className="font-bold tabular-nums text-[var(--ink)]">{row.amount}</span>
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-x-3 text-[12px] text-[var(--ink-muted)]">
+              <div className="mt-0.5 flex flex-wrap gap-x-3 text-[0.75rem] text-[var(--ink-muted)]">
                 <span>Created {row.created}</span>
                 {row.validUntil !== "—" ? <span>Valid until {row.validUntil}</span> : null}
               </div>

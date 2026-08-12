@@ -94,7 +94,7 @@ export function LineItemTotals({
       {total !== undefined ? (
         <div className="flex justify-between gap-3 border-t border-[var(--line)] pt-2">
           <dt className="font-semibold text-[var(--ink)]">Total</dt>
-          <dd className="text-[15px] font-black tabular-nums text-[var(--ink)]">{fmt(total)}</dd>
+          <dd className="text-[0.9375rem] font-black tabular-nums text-[var(--ink)]">{fmt(total)}</dd>
         </div>
       ) : null}
     </dl>

@@ -180,11 +180,11 @@ export function CommandPalette({ role }: { role: string }) {
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="hidden rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-muted)] sm:inline">
+          <kbd className="hidden rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--ink-muted)] sm:inline">
             Esc
           </kbd>
         </div>
-        <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
+        <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">
           Jump anywhere or run a quick action · role {role.replaceAll("_", " ").toLowerCase()}
         </p>
       </div>
@@ -209,7 +209,7 @@ export function CommandPalette({ role }: { role: string }) {
             return (
               <div key={row.type === "action" ? row.item.id : row.item.id}>
                 {showGroup ? (
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                  <p className="px-3 pb-1 pt-2 text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                     {group}
                   </p>
                 ) : null}
@@ -228,7 +228,7 @@ export function CommandPalette({ role }: { role: string }) {
                     ) : null}
                   </span>
                   {row.type === "result" ? (
-                    <span className="shrink-0 rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+                    <span className="shrink-0 rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
                       {KIND_LABELS[row.item.kind]}
                     </span>
                   ) : null}
@@ -239,7 +239,7 @@ export function CommandPalette({ role }: { role: string }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2 text-[10px] text-[var(--ink-muted)]">
+      <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-2 text-[0.625rem] text-[var(--ink-muted)]">
         <span>Use ↑ ↓ and Enter</span>
         <span className="hidden sm:inline">
           <kbd className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold">⌘</kbd>

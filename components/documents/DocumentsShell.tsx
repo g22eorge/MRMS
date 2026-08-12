@@ -39,7 +39,7 @@ export function DocumentsShell({
               key={item.key}
               href={item.href}
               aria-current={selected ? "page" : undefined}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition ${
                 selected
                   ? "bg-[var(--accent)] text-black"
                   : "text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"

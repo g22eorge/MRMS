@@ -302,7 +302,7 @@ export default async function JobDetailPage({
   const canAssess =
     Boolean(((warrantyInfo?.diagnosisNotes ?? "") + (warrantyInfo?.externalDiagnosis ?? "")).trim())
     && Boolean(((warrantyInfo?.recommendedRepair ?? "") + (warrantyInfo?.workDone ?? "")).trim());
-  const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50";
+  const ta = "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50";
 
   // ADMIN/OPS can move this job to a different client account (e.g. sort a
   // C-Care job that belongs to IMC but was booked under IHK).
@@ -325,22 +325,22 @@ export default async function JobDetailPage({
   // Client portal thread — visible to staff; two-way with the customer's portal.
   const portalPanel = portalMessages.length > 0 ? (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
-      <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Client Portal Messages</p>
+      <p className="mb-2 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Client Portal Messages</p>
       <ul className="mb-3 space-y-2">
         {portalMessages.map((m) => {
           const staff = m.authorType === "STAFF";
           return (
             <li key={m.id} className={`flex flex-col ${staff ? "items-end" : "items-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${staff ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>{m.body}</div>
-              <span className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {m.createdAt.toISOString().slice(0, 10)}</span>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[0.8125rem] ${staff ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>{m.body}</div>
+              <span className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {m.createdAt.toISOString().slice(0, 10)}</span>
             </li>
           );
         })}
       </ul>
       <form action={staffReplyRepairMessageAction} className="flex gap-2">
         <input type="hidden" name="jobId" value={id} />
-        <input name="body" required maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[13px] text-white">Reply</button>
+        <input name="body" required maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
+        <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</button>
       </form>
     </div>
   ) : null;
@@ -349,10 +349,10 @@ export default async function JobDetailPage({
   const assessmentPanel = (
     <div className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
+          <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
           <div className="flex items-center gap-2">
             {assessments.length > 0 && canAssess ? (
-              <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
+              <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
             ) : null}
             {assessments.some((r) => r.visibility !== "INTERNAL") && canAssess && (job.client?.phone || job.client?.email) ? (
               <SendAssessmentButton jobId={id} hasPhone={Boolean(job.client?.phone)} hasEmail={Boolean(job.client?.email)} />
@@ -360,35 +360,35 @@ export default async function JobDetailPage({
             {canAssess ? (
               <form action={generateAssessmentAction}>
                 <input type="hidden" name="jobId" value={id} />
-                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
+                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
               </form>
             ) : (
-              <button type="button" disabled title="Add the diagnosis and repair details first" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-muted)] opacity-60"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
+              <button type="button" disabled title="Add the diagnosis and repair details first" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] opacity-60"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
             )}
           </div>
         </div>
         {!canAssess ? (
-          <p className="text-[13px] text-[var(--ink-muted)]">Complete the <span className="font-semibold">diagnosis</span> and <span className="font-semibold">repair details</span> first (parts optional). The report can then be generated and downloaded.</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Complete the <span className="font-semibold">diagnosis</span> and <span className="font-semibold">repair details</span> first (parts optional). The report can then be generated and downloaded.</p>
         ) : assessments.length === 0 ? (
-          <p className="text-[13px] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>
         ) : (
           assessments.map((r) => {
             const visible = r.visibility !== "INTERNAL";
             return (
               <div key={r.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${visible ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{visible ? "Visible to client" : "Internal draft"}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${visible ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{visible ? "Visible to client" : "Internal draft"}</span>
                   <div className="flex gap-2">
                     <form action={publishAssessmentAction}>
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
                       <input type="hidden" name="visible" value={String(!visible)} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</button>
+                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</button>
                     </form>
                     <form action={deleteAssessmentAction}>
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
-                      <button type="submit" className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[12px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button>
+                      <button type="submit" className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[0.75rem] font-semibold text-red-500 hover:bg-red-500/10">Delete</button>
                     </form>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export default async function JobDetailPage({
                   <textarea name="findings" defaultValue={r.findings ?? ""} rows={2} placeholder="Inspection findings" className={ta} />
                   <textarea name="recommendedWork" defaultValue={r.recommendedWork ?? ""} rows={2} placeholder="Recommended / completed work" className={ta} />
                   <textarea name="riskNotes" defaultValue={r.riskNotes ?? ""} rows={2} placeholder="Notes / recommendations" className={ta} />
-                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] text-white">Save report</button>
+                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Save report</button>
                 </form>
               </div>
             );
@@ -407,17 +407,17 @@ export default async function JobDetailPage({
         )}
 
         <div className="border-t border-[var(--line)] pt-3">
-          <p className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
-          <p className="mb-2 text-[13px] text-[var(--ink-muted)]">
+          <p className="mb-1.5 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
+          <p className="mb-2 text-[0.8125rem] text-[var(--ink-muted)]">
             {warrantyInfo?.warrantyExpiresAt
               ? `Covered for ${warrantyInfo.warrantyMonths} month${warrantyInfo.warrantyMonths === 1 ? "" : "s"} — until ${warrantyInfo.warrantyExpiresAt.toISOString().slice(0, 10)}.`
               : "No warranty set."}
           </p>
           <form action={setWarrantyAction} className="flex items-center gap-2">
             <input type="hidden" name="jobId" value={id} />
-            <input name="months" type="number" min={0} max={60} defaultValue={warrantyInfo?.warrantyMonths ?? 0} className="w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[13px]" />
-            <span className="text-[13px] text-[var(--ink-muted)]">months</span>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[12px] text-white">Set warranty</button>
+            <input name="months" type="number" min={0} max={60} defaultValue={warrantyInfo?.warrantyMonths ?? 0} className="w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" />
+            <span className="text-[0.8125rem] text-[var(--ink-muted)]">months</span>
+            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</button>
           </form>
         </div>
       </div>

@@ -45,7 +45,7 @@ export function POMetaForm({ po }: { po: POData }) {
       </div>
       <div className="grid gap-3 p-3 sm:grid-cols-3">
         <div>
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Reference / PO#</label>
+          <label className="mb-1 block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Reference / PO#</label>
           <input
             name="reference"
             type="text"
@@ -54,7 +54,7 @@ export function POMetaForm({ po }: { po: POData }) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Order Date</label>
+          <label className="mb-1 block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Order Date</label>
           <input
             name="orderedAt"
             type="date"
@@ -63,7 +63,7 @@ export function POMetaForm({ po }: { po: POData }) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Expected Delivery</label>
+          <label className="mb-1 block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Expected Delivery</label>
           <input
             name="expectedAt"
             type="date"
@@ -72,7 +72,7 @@ export function POMetaForm({ po }: { po: POData }) {
           />
         </div>
         <div className="sm:col-span-3">
-        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Notes</label>
+        <label className="mb-1 block text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Notes</label>
         <textarea
           name="notes"
           rows={2}

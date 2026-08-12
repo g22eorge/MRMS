@@ -111,7 +111,7 @@ export function PhotoUploader({
               <Image src={`/api/photos/${photo.id}`} alt={photo.label ?? "job photo"} width={320} height={160} unoptimized className="h-40 w-full rounded object-cover" />
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="text-xs text-[var(--ink-muted)]">{photo.label ?? "-"}</span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[10.5px] font-bold ${isClient ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.65625rem] font-bold ${isClient ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--panel)] text-[var(--ink-muted)]"}`}>
                   {isClient ? "Client" : "Internal"}
                 </span>
               </div>
