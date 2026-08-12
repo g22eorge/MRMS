@@ -320,7 +320,13 @@ async function sendClientWhatsAppForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
-  const fallback = `Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}. - Your Repair Team`;
+  // Deep-link to the public complaint form with the job number pre-filled, so a
+  // customer can raise an issue straight from the status update — no login, no
+  // typing their reference. Only included when the public app URL is configured.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
+  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(input.jobNumber)}` : "";
+
+  const fallback = `Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}.${complaintUrl ? `\n\nNot happy with something? Let us know: ${complaintUrl}` : ""}\n\n- Your Repair Team`;
 
   const templateVars = {
     customerName: client.fullName,
@@ -329,6 +335,8 @@ async function sendClientWhatsAppForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
+    // Available to custom/policy templates as {{complaintUrl}}.
+    complaintUrl,
   };
 
   const rendered = await renderCommunicationTemplate({
@@ -515,6 +523,9 @@ async function sendClientEmailForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, "");
+  const complaintUrl = appUrl ? `${appUrl}/feedback?ref=${encodeURIComponent(input.jobNumber)}` : "";
+
   const vars = {
     customerName: client.fullName,
     jobNumber: input.jobNumber,
@@ -522,10 +533,12 @@ async function sendClientEmailForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
+    // Available to custom/policy templates as {{complaintUrl}}.
+    complaintUrl,
   };
 
   const fallbackSubject = `Update on Job #${input.jobNumber}`;
-  const fallbackBody = `Hello ${client.fullName},\n\nUpdate on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.\n\nYour Repair Team`;
+  const fallbackBody = `Hello ${client.fullName},\n\nUpdate on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.${complaintUrl ? `\n\nNot happy with something? Let us know: ${complaintUrl}` : ""}\n\nYour Repair Team`;
 
   const rendered = await renderCommunicationTemplate({
     orgId: input.orgId,
