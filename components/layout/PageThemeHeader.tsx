@@ -68,6 +68,18 @@ function pageMeta(pathname: string, role: Role) {
   if (parts[0] === "pos" && parts[1]) {
     return { title: "Sale Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "Review sale lines, payments, and receipt actions." };
   }
+  if (pathname === "/finance") return { title: "Finance Hub", description: "Cash position, collections, payouts, and financial control." };
+  if (pathname === "/sales") return { title: "Sales", description: "Leads pipeline and quotations." };
+  if (pathname === "/service") return { title: "Service Hub", description: "Field visits, technicians, and complaints." };
+
+  // Fallback: derive a readable section name from the first path segment rather
+  // than the generic "Workspace" (a nav super-group, not a page). Keeps unmapped
+  // routes — procurement, targets, field, settings sub-pages — labelled sensibly.
+  const section = parts[0];
+  if (section) {
+    const title = section.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    return { title };
+  }
   return { title: "Workspace" };
 }
 
