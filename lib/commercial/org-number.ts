@@ -60,10 +60,14 @@ export function composeOrgNumber(tag: string, inner: string, seq: number, pad = 
  * every allocation. Branding rarely changes; a short TTL is plenty.
  */
 type OrgNumberConfig = { prefix: string; pad: number };
+// The narrow slice of a Prisma client we need — satisfied by both the global
+// client and a transaction client (tx). Threading `tx` in is what keeps the read
+// on the transaction's own connection (see below).
+type NumberConfigDb = Pick<typeof prisma, "$queryRaw">;
 const numberConfigCache = new Map<string, { value: OrgNumberConfig; expires: number }>();
 const NUMBER_CONFIG_TTL_MS = 60_000;
 
-export async function getOrgNumberConfig(orgId?: string): Promise<OrgNumberConfig> {
+export async function getOrgNumberConfig(orgId?: string, db: NumberConfigDb = prisma): Promise<OrgNumberConfig> {
   const key = orgId ?? "__default__";
   const now = Date.now();
   const cached = numberConfigCache.get(key);
@@ -77,14 +81,21 @@ export async function getOrgNumberConfig(orgId?: string): Promise<OrgNumberConfi
     // document-number allocation, and on Turso/libSQL a DDL statement issued
     // while such a transaction is open can deadlock it until it times out. Both
     // columns are original, so this SELECT never needs a migration.
+    //
+    // Just as important: run the read on the caller's `db` (the transaction
+    // client when called from nextDocumentNumber). On Turso/libSQL the interactive
+    // transaction holds the single connection, so issuing this SELECT on the GLOBAL
+    // client instead would wait for a connection the open tx never releases —
+    // a deadlock that only surfaces on a cache miss (a fresh org's first payment,
+    // or any org on a cold serverless instance) and never locally (SQLite WAL).
     const rows = orgId
-      ? await prisma.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
+      ? await db.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
           SELECT "quotePrefix", "sequencePadLength"
           FROM "DocumentBrandingSettings"
           WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
           ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
           LIMIT 1`
-      : await prisma.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
+      : await db.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
           SELECT "quotePrefix", "sequencePadLength"
           FROM "DocumentBrandingSettings" WHERE id = 'singleton' LIMIT 1`;
     const row = rows?.[0];

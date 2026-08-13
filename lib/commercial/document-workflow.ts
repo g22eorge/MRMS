@@ -36,7 +36,11 @@ async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner:
 export async function nextDocumentNumber(tx: Tx, type: string, countModel: CountModel, orgId: string) {
   const year = new Date().getFullYear();
   const inner = `${type}-${year}-`;
-  const { prefix, pad } = await getOrgNumberConfig(orgId);
+  // Pass `tx` so the branding read runs on the transaction's own connection.
+  // Using the global client here deadlocks the interactive tx on Turso/libSQL
+  // (see getOrgNumberConfig) — the bug that silently hung repair/POS payments
+  // for fresh orgs and cold serverless instances.
+  const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
 
   const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
   if (!existing) {
