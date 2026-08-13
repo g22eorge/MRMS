@@ -22,7 +22,9 @@ async function requireInventoryManager() {
 async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
   const inner = `ST-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
+    // Pass `tx` — orgTagFor on the global client would deadlock this interactive
+    // transaction on Turso (same bug that hung payments; see getOrgNumberConfig).
+    orgTagFor(orgId, tx),
     tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.transferNumber)) + 1;

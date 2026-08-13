@@ -20,9 +20,16 @@ export function orgNumberTag(slug: string | null | undefined) {
   return normalized || "ORG";
 }
 
-/** Resolve the numbering tag for an org id via its slug. */
-export async function orgTagFor(orgId: string) {
-  const org = await prisma.organization.findUnique({
+/**
+ * Resolve the numbering tag for an org id via its slug.
+ *
+ * Accepts an optional client so callers INSIDE an interactive `$transaction` can
+ * pass `tx` — issuing this read on the global `prisma` client while a tx holds
+ * the connection deadlocks on Turso/libSQL (same class as getOrgNumberConfig).
+ * Out-of-transaction callers keep the default global client.
+ */
+export async function orgTagFor(orgId: string, db: Pick<typeof prisma, "organization"> = prisma) {
+  const org = await db.organization.findUnique({
     where: { id: orgId },
     select: { slug: true },
   });
