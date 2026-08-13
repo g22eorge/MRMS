@@ -351,16 +351,10 @@ export default async function ClientsPage({
           </div>
         </form>
 
-        {/* Quick create form for OPS/ADMIN — collapsed by default, toggled client-side */}
+        {/* Create-client form — revealed by the "+ New Client" CTA above (no separate quick-create reveal bar) */}
         {(user.role === "ADMIN" || user.role === "OPS") ? (
-          <div className="border-t border-[var(--line)]">
-            <DisclosureTrigger
-              className="flex w-full cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]/30"
-              label={<>Quick create client<span className="text-[0.8125rem] font-semibold text-[var(--accent)]">Show</span></>}
-              openLabel={<>Quick create client<span className="text-[0.8125rem] font-semibold text-[var(--accent)]">Hide</span></>}
-            />
-            <DisclosurePanel>
-            <form action={createClientAction} noValidate className="px-3 pb-3">
+          <DisclosurePanel>
+            <form action={createClientAction} noValidate className="border-t border-[var(--line)] px-3 pb-3 pt-3">
               {filters.createError ? (
                 <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                   {filters.createError}
@@ -382,8 +376,7 @@ export default async function ClientsPage({
                 </DisclosureClose>
               </div>
             </form>
-            </DisclosurePanel>
-          </div>
+          </DisclosurePanel>
         ) : null}
       </div>
 
