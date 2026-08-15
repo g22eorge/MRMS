@@ -47,8 +47,6 @@ export default async function NewSupplierBillPage({
     }).catch(() => []),
   ]);
 
-  if (suppliers.length === 0) redirect("/inventory/suppliers/new");
-
   return (
     <div className="max-w-5xl space-y-4">
       <div className="dc-card overflow-hidden">

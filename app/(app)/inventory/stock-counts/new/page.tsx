@@ -16,8 +16,6 @@ export default async function NewStockCountPage() {
     prisma.part.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, sku: true, name: true, qtyOnHand: true } }),
   ]);
 
-  if (locations.length === 0) redirect("/inventory/locations");
-
   return (
     <div className="max-w-4xl space-y-4">
       <div className="dc-card overflow-hidden">

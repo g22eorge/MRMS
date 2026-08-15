@@ -226,7 +226,7 @@ export default async function QuotationDetailPage({
       });
       revalidatePath("/documents/invoices");
       revalidatePath("/documents/quotations");
-      redirect(`/documents/invoices?pay=${invoice.id}`);
+      redirect(`/documents/invoices/${invoice.id}?pay=1`);
     }
     redirect(`/sales/quotations/${id}`);
   }

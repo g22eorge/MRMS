@@ -75,6 +75,22 @@ export async function createStockTransferAction(formData: FormData): Promise<voi
   redirect("/inventory/transfers?created=1");
 }
 
+// Inline location-create from the transfers page: a transfer needs two
+// locations, so when the org has fewer than two we let them add one here and
+// return to /inventory/transfers instead of bouncing off to /inventory/locations.
+export async function createLocationForTransferAction(formData: FormData): Promise<void> {
+  const { orgId } = await requireInventoryManager();
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2) redirect("/inventory/transfers?error=Enter+a+location+name");
+  try {
+    await prisma.stockLocation.create({ data: { orgId, name, isActive: true } });
+  } catch {
+    redirect("/inventory/transfers?error=Failed+to+create+location");
+  }
+  revalidatePath("/inventory/transfers");
+  redirect("/inventory/transfers?created=location");
+}
+
 export async function approveStockTransferAction(formData: FormData) {
   const { orgId, user } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();

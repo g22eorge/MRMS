@@ -14,6 +14,7 @@ import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pag
 import {
   approveStockTransferAction,
   cancelStockTransferAction,
+  createLocationForTransferAction,
   createStockTransferAction,
   dispatchStockTransferAction,
   receiveStockTransferAction,
@@ -43,7 +44,9 @@ export default async function StockTransfersPage({
   if (!can.manageInventory(user)) redirect("/inventory");
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
-  const created = String(params.created ?? "") === "1";
+  const createdFlag = String(params.created ?? "");
+  const created = createdFlag === "1";
+  const locationCreated = createdFlag === "location";
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
 
@@ -120,8 +123,22 @@ export default async function StockTransfersPage({
       filters={
         <>
           {created ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600">Transfer requested.</div> : null}
+          {locationCreated ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600">Location added. Add one more, then you can move stock between them.</div> : null}
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
+          {locations.length < 2 ? (
+            <div className="dc-card px-3 py-2.5">
+              <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add a location</p>
+              <p className="mb-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
+                A transfer moves stock between two locations, so you need at least two.
+                You have {locations.length === 0 ? "none" : "one"} — add {locations.length === 0 ? "a couple" : "one more"} to start transferring.
+              </p>
+              <form action={createLocationForTransferAction} className="flex flex-wrap gap-2">
+                <input name="name" required placeholder="e.g. Main Store, Warehouse B" className="min-w-[12rem] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add location</button>
+              </form>
+            </div>
+          ) : (
           <div className="dc-card px-3 py-2.5">
             <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Request Transfer</p>
             <form action={createStockTransferAction} className="grid gap-2 lg:grid-cols-[1fr_1fr_1.4fr_0.55fr_1fr_auto]">
@@ -142,6 +159,7 @@ export default async function StockTransfersPage({
               <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</button>
             </form>
           </div>
+          )}
         </>
       }
     >

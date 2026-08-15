@@ -44,6 +44,26 @@ export async function createStockLocationAction(formData: FormData): Promise<voi
   redirect("/inventory/locations?created=1");
 }
 
+// Inline quick-add so stock-count / transfer flows never dead-end when the org
+// has no location yet — mirrors the inline supplier-add on the PO form.
+export async function quickCreateStockLocationAction(
+  name: string,
+): Promise<{ id?: string; name?: string; error?: string }> {
+  const { orgId } = await requireInventoryManager();
+  const clean = String(name ?? "").trim();
+  if (clean.length < 2) return { error: "Enter a location name (at least 2 characters)" };
+  try {
+    const location = await prisma.stockLocation.create({
+      data: { orgId, name: clean, isActive: true },
+      select: { id: true, name: true, code: true },
+    });
+    revalidatePath("/inventory/locations");
+    return { id: location.id, name: location.name };
+  } catch {
+    return { error: "Failed to add location" };
+  }
+}
+
 export async function updateStockLocationAction(formData: FormData): Promise<void> {
   const { orgId } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();

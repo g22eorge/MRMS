@@ -8,6 +8,7 @@ import { LineItemsPanel, PartSelect, lineItemInputClass } from "@/components/for
 import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { createStockCountAction } from "../actions";
+import { quickCreateStockLocationAction } from "@/app/(app)/inventory/locations/actions";
 
 type Location = { id: string; name: string; code: string | null };
 type Part = { id: string; sku: string; name: string; qty: number };
@@ -17,6 +18,26 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [locationList, setLocationList] = useState(locations);
+  const [locationId, setLocationId] = useState(locations.length === 1 ? locations[0].id : "");
+  const [addingLocation, setAddingLocation] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+
+  function handleAddLocation() {
+    const name = newLocationName.trim();
+    if (name.length < 2) { setError("Enter a location name (at least 2 characters)"); return; }
+    setError(null);
+    startTransition(async () => {
+      const res = await quickCreateStockLocationAction(name);
+      if (res.error || !res.id) { setError(res.error ?? "Failed to add location"); return; }
+      const created = { id: res.id, name: res.name ?? name, code: null };
+      setLocationList((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setLocationId(created.id);
+      setNewLocationName("");
+      setAddingLocation(false);
+    });
+  }
+
   const { lines, addLine, removeLine, updateLine, appendToFormData } = useLineItemsState<LineData>(() => ({
     partId: "",
     systemQty: 0,
@@ -53,9 +74,21 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
       </p>
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">Location
-            <select name="locationId" required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]"><option value="">Select location</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}{location.code ? ` (${location.code})` : ""}</option>)}</select>
-          </label>
+          <div className="block text-xs font-semibold text-[var(--ink-muted)]">
+            <div className="flex items-center justify-between gap-2">
+              <span>Location</span>
+              <button type="button" onClick={() => { setAddingLocation((v) => !v); setError(null); }} className="text-[0.6875rem] font-semibold text-[var(--accent)] hover:underline">
+                {addingLocation ? "Cancel" : "+ New"}
+              </button>
+            </div>
+            <select name="locationId" required value={locationId} onChange={(e) => setLocationId(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]"><option value="">{locationList.length ? "Select location" : "No locations yet — add one"}</option>{locationList.map((location) => <option key={location.id} value={location.id}>{location.name}{location.code ? ` (${location.code})` : ""}</option>)}</select>
+            {addingLocation ? (
+              <div className="mt-2 flex gap-2">
+                <input value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddLocation(); } }} placeholder="e.g. Main Store" autoFocus className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
+                <button type="button" onClick={handleAddLocation} disabled={pending || newLocationName.trim().length < 2} className="btn-premium shrink-0 rounded-lg px-3 text-sm font-semibold disabled:opacity-50">Add</button>
+              </div>
+            ) : null}
+          </div>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">Counted at
             <input name="countedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
           </label>

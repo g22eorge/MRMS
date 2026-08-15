@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 
 import { createSupplierBillAction } from "../actions";
+import { quickCreateSupplierAction } from "@/app/(app)/inventory/purchase-orders/actions";
 
 type Supplier = { id: string; name: string };
 type PurchaseOrder = {
@@ -60,8 +61,27 @@ export function NewSupplierBillForm({
   const initialSupplierId = defaultSupplierId ?? defaultGrn?.supplierId ?? defaultPo?.supplierId ?? "";
   const initialPoId = defaultPoId ?? defaultGrn?.poId ?? "";
   const [supplierId, setSupplierId] = useState(initialSupplierId);
+  const [supplierList, setSupplierList] = useState(suppliers);
+  const [addingSupplier, setAddingSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
   const [selectedPoId, setSelectedPoId] = useState(initialPoId);
   const [selectedGrnId, setSelectedGrnId] = useState(defaultGrnId ?? "");
+
+  function handleAddSupplier() {
+    const name = newSupplierName.trim();
+    if (name.length < 2) { setError("Enter a supplier name (at least 2 characters)"); return; }
+    setError(null);
+    startTransition(async () => {
+      const res = await quickCreateSupplierAction(name);
+      if (res.error || !res.id) { setError(res.error ?? "Failed to add supplier"); return; }
+      const created = { id: res.id, name: res.name ?? name };
+      setSupplierList((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setSupplierId(created.id);
+      resetLinesForSupplier();
+      setNewSupplierName("");
+      setAddingSupplier(false);
+    });
+  }
   const { lines, addLine, removeLine, updateLine, replaceLines, appendToFormData } = useLineItemsState<LineData>(
     () => ({ description: "", quantity: 1, unitCost: 0 }),
   );
@@ -148,8 +168,13 @@ export function NewSupplierBillForm({
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-3">
-          <label className="block text-xs font-semibold text-[var(--ink-muted)]">
-            Supplier
+          <div className="block text-xs font-semibold text-[var(--ink-muted)]">
+            <div className="flex items-center justify-between gap-2">
+              <span>Supplier</span>
+              <button type="button" onClick={() => { setAddingSupplier((v) => !v); setError(null); }} className="text-[0.6875rem] font-semibold text-[var(--accent)] hover:underline">
+                {addingSupplier ? "Cancel" : "+ New"}
+              </button>
+            </div>
             <select
               name="supplierId"
               required
@@ -160,10 +185,25 @@ export function NewSupplierBillForm({
               }}
               className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)]"
             >
-              <option value="">Select supplier...</option>
-              {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+              <option value="">{supplierList.length ? "Select supplier..." : "No suppliers yet — add one"}</option>
+              {supplierList.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
             </select>
-          </label>
+            {addingSupplier ? (
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSupplier(); } }}
+                  placeholder="New supplier name"
+                  autoFocus
+                  className="mt-0 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)]"
+                />
+                <button type="button" onClick={handleAddSupplier} disabled={pending || newSupplierName.trim().length < 2} className="btn-premium shrink-0 rounded-lg px-3 text-sm font-semibold disabled:opacity-50">
+                  Add
+                </button>
+              </div>
+            ) : null}
+          </div>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Bill date
             <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
