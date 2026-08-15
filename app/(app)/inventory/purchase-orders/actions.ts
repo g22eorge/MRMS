@@ -35,6 +35,98 @@ function parseOptionalDate(raw: FormDataEntryValue | null, label: string): { dat
   return { date };
 }
 
+// ── Shared receipt logic ─────────────────────────────────────────────────────
+// The stock-in transaction (GRN + per-line base-unit stock + weighted cost +
+// PO status), shared by manual receiving and the one-click "Receive now" flow so
+// the stock/cost/UOM math lives in exactly one place.
+type ReceiptUpdate = { id: string; qtyReceived: number; partId: string | null; delta: number; description: string; unitCost: number; purchaseFactor: number };
+
+async function performReceipt(
+  orgId: string,
+  userId: string,
+  po: { id: string; supplierId: string; reference: string | null; receivedAt: Date | null },
+  locationId: string,
+  updates: ReceiptUpdate[],
+): Promise<void> {
+  const grnNumber = await generateGrnNumber(orgId);
+  let grnId = "";
+
+  await prisma.$transaction(async (tx) => {
+    const grn = await tx.goodsReceived.create({
+      data: {
+        orgId,
+        grnNumber,
+        supplierId: po.supplierId,
+        poId: po.id,
+        locationId,
+        createdById: userId,
+        items: {
+          create: updates.map((u) => ({
+            poItemId: u.id,
+            partId: u.partId,
+            description: u.description,
+            quantity: u.delta,
+            unitCost: u.unitCost,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+    grnId = grn.id;
+
+    for (const u of updates) {
+      await tx.purchaseOrderItem.update({ where: { id: u.id }, data: { qtyReceived: u.qtyReceived } });
+      if (u.partId && u.delta > 0) {
+        // Convert purchase units → base stock units; cost is per base unit.
+        const baseDelta = u.delta * u.purchaseFactor;
+        const baseUnitCost = u.purchaseFactor !== 1 ? u.unitCost / u.purchaseFactor : u.unitCost;
+        await tx.partLocationStock.upsert({
+          where: { partId_locationId: { partId: u.partId, locationId } },
+          create: { orgId, partId: u.partId, locationId, qtyOnHand: baseDelta, qtyReserved: 0 },
+          update: { qtyOnHand: { increment: baseDelta } },
+        });
+        await tx.partStockTransaction.create({
+          data: { partId: u.partId, orgId, locationId, unitCost: baseUnitCost, sourceType: "GRN", sourceId: grnId, type: "IN", quantity: baseDelta, reason: `Received via ${grnNumber}`, createdById: userId },
+        });
+        const partBefore = await tx.part.findUnique({ where: { id: u.partId }, select: { qtyOnHand: true, unitCost: true } });
+        const oldQty = partBefore?.qtyOnHand ?? 0;
+        // Part.qtyOnHand is authoritative; weighted-average cost, never overwritten
+        // with a zero/negative receipt price.
+        let nextCost = partBefore?.unitCost ?? 0;
+        if (baseUnitCost > 0) {
+          const denom = oldQty + baseDelta;
+          nextCost = denom > 0 ? (oldQty * nextCost + baseDelta * baseUnitCost) / denom : baseUnitCost;
+        }
+        await tx.part.update({ where: { id: u.partId }, data: { qtyOnHand: { increment: baseDelta }, unitCost: nextCost } });
+      }
+    }
+
+    const allItems = await tx.purchaseOrderItem.findMany({ where: { poId: po.id } });
+    const allReceived = allItems.every((i) => i.qtyReceived >= i.qtyOrdered);
+    const anyReceived = allItems.some((i) => i.qtyReceived > 0);
+    const newStatus = allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED";
+    await tx.purchaseOrder.update({ where: { id: po.id }, data: { status: newStatus as never, receivedAt: allReceived ? new Date() : po.receivedAt } });
+  });
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: userId,
+    entityType: "GoodsReceived",
+    entityId: grnId,
+    action: "GOODS_RECEIVED",
+    summary: `${grnNumber} received against PO ${po.reference ?? po.id} (${updates.length} line${updates.length === 1 ? "" : "s"})`,
+  });
+
+  revalidatePath(`/inventory/purchase-orders/${po.id}`);
+  revalidatePath("/procurement");
+  revalidatePath("/inventory/purchase-orders");
+  revalidatePath("/inventory/goods-received");
+  revalidatePath("/inventory");
+
+  const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  notifyStockReceived({ orgId, grnNumber, poReference: po.reference ?? undefined, itemCount: updates.length, actorName: actor?.name ?? actor?.email ?? "Unknown" }).catch(() => {});
+}
+
 // ── Create PO ──────────────────────────────────────────────────────────────
 
 export async function createPurchaseOrderAction(
@@ -121,6 +213,77 @@ export async function createPurchaseOrderAction(
   } catch {
     return { error: "Failed to create purchase order" };
   }
+}
+
+// ── Quick-add supplier ───────────────────────────────────────────────────────
+// Mirrors the inline stock-location create on the receive page so raising an
+// order is never a dead-end: an inventory manager can add a supplier without
+// leaving the New PO form.
+export async function quickCreateSupplierAction(
+  name: string,
+): Promise<{ id?: string; name?: string; error?: string }> {
+  const { orgId } = await requireAdmin();
+  const clean = String(name ?? "").trim();
+  if (clean.length < 2) return { error: "Enter a supplier name (at least 2 characters)" };
+  try {
+    const supplier = await prisma.supplier.create({
+      data: { orgId, name: clean, isActive: true },
+      select: { id: true, name: true },
+    });
+    revalidatePath("/inventory/suppliers");
+    return { id: supplier.id, name: supplier.name };
+  } catch {
+    return { error: "Failed to add supplier" };
+  }
+}
+
+// ── Create + receive in one action ───────────────────────────────────────────
+// The realistic small-shop flow: bought stock over the counter, stock it in now.
+// Creates the PO as ORDERED, ensures a stock location (creating a default one if
+// the org has none — mirroring the inline location-create on the receive page),
+// and receives every line in full, so buying and stocking is a single click.
+export async function createAndReceivePurchaseOrderAction(
+  formData: FormData,
+): Promise<{ id?: string; error?: string }> {
+  formData.set("issueNow", "1");
+  const created = await createPurchaseOrderAction(formData);
+  if (created.error || !created.id) return created;
+  const poId = created.id;
+
+  const { orgId, session } = await requireAdmin();
+
+  // Ensure a stock location to receive into; create a default one if none exists.
+  let location = await prisma.stockLocation.findFirst({
+    where: { orgId, isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (!location) {
+    location = await prisma.stockLocation.create({ data: { orgId, name: "Main Store", isActive: true }, select: { id: true } });
+  }
+
+  const po = await prisma.purchaseOrder.findUnique({
+    where: { id: poId },
+    include: { items: { include: { part: true } } },
+  });
+  if (!po || po.orgId !== orgId) return { id: poId, error: "Order created, but receiving failed — open it and receive from there." };
+
+  const updates: ReceiptUpdate[] = po.items
+    .filter((item) => item.qtyOrdered > item.qtyReceived)
+    .map((item) => ({
+      id: item.id,
+      qtyReceived: item.qtyOrdered,
+      partId: item.partId,
+      delta: item.qtyOrdered - item.qtyReceived,
+      description: item.description,
+      unitCost: item.unitCost,
+      purchaseFactor: item.part?.purchaseUomFactor && item.part.purchaseUomFactor > 0 ? item.part.purchaseUomFactor : 1,
+    }));
+
+  if (updates.length) {
+    await performReceipt(orgId, session.user.id, { id: po.id, supplierId: po.supplierId, reference: po.reference, receivedAt: po.receivedAt }, location.id, updates);
+  }
+  return { id: poId };
 }
 
 // ── Update PO status / meta ────────────────────────────────────────────────
@@ -275,119 +438,7 @@ export async function receiveStockAction(
   }
 
   if (!updates.length) return { error: "No changes to save" };
-  const grnNumber = await generateGrnNumber(orgId);
-  let grnId = "";
-
-  await prisma.$transaction(async (tx) => {
-    const grn = await tx.goodsReceived.create({
-      data: {
-        orgId,
-        grnNumber,
-        supplierId: po.supplierId,
-        poId,
-        locationId,
-        createdById: session.user.id,
-        items: {
-          create: updates.map((u) => ({
-            poItemId: u.id,
-            partId: u.partId,
-            description: u.description,
-            quantity: u.delta,
-            unitCost: u.unitCost,
-          })),
-        },
-      },
-      select: { id: true },
-    });
-    grnId = grn.id;
-
-    for (const u of updates) {
-      await tx.purchaseOrderItem.update({
-        where: { id: u.id },
-        data: { qtyReceived: u.qtyReceived },
-      });
-      if (u.partId && u.delta > 0) {
-        // Convert purchase units → base stock units; cost is per base unit.
-        const baseDelta = u.delta * u.purchaseFactor;
-        const baseUnitCost = u.purchaseFactor !== 1 ? u.unitCost / u.purchaseFactor : u.unitCost;
-        await tx.partLocationStock.upsert({
-          where: { partId_locationId: { partId: u.partId, locationId } },
-          create: { orgId, partId: u.partId, locationId, qtyOnHand: baseDelta, qtyReserved: 0 },
-          update: { qtyOnHand: { increment: baseDelta } },
-        });
-        await tx.partStockTransaction.create({
-          data: {
-            partId: u.partId,
-            orgId,
-            locationId,
-            unitCost: baseUnitCost,
-            sourceType: "GRN",
-            sourceId: grnId,
-            type: "IN",
-            quantity: baseDelta,
-            reason: `Received via ${grnNumber}`,
-            createdById: session.user.id,
-          },
-        });
-        const partBefore = await tx.part.findUnique({
-          where: { id: u.partId },
-          select: { qtyOnHand: true, unitCost: true },
-        });
-        const oldQty = partBefore?.qtyOnHand ?? 0;
-        // Part.qtyOnHand is authoritative: increment by the received delta rather
-        // than recomputing from SUM(PartLocationStock), which would silently wipe
-        // stock recorded via manual adjustments or POS (C2 corruption fix).
-        // Weighted-average cost; never overwrite the cost basis with a zero/
-        // negative receipt price (which would destroy valuation and margins).
-        let nextCost = partBefore?.unitCost ?? 0;
-        if (baseUnitCost > 0) {
-          const denom = oldQty + baseDelta;
-          nextCost = denom > 0 ? (oldQty * nextCost + baseDelta * baseUnitCost) / denom : baseUnitCost;
-        }
-        await tx.part.update({
-          where: { id: u.partId },
-          data: { qtyOnHand: { increment: baseDelta }, unitCost: nextCost },
-        });
-      }
-    }
-
-    // determine new PO status
-    const allItems = await tx.purchaseOrderItem.findMany({ where: { poId } });
-    const allReceived = allItems.every((i) => i.qtyReceived >= i.qtyOrdered);
-    const anyReceived = allItems.some((i) => i.qtyReceived > 0);
-    const newStatus = allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED";
-
-    await tx.purchaseOrder.update({
-      where: { id: poId },
-      data: {
-        status: newStatus as never,
-        receivedAt: allReceived ? new Date() : po.receivedAt,
-      },
-    });
-  });
-
-  await writeSystemAuditEvent({
-    orgId,
-    actorUserId: session.user.id,
-    entityType: "GoodsReceived",
-    entityId: grnId,
-    action: "GOODS_RECEIVED",
-    summary: `${grnNumber} received against PO ${po.reference ?? poId} (${updates.length} line${updates.length === 1 ? "" : "s"})`,
-  });
-
-  revalidatePath(`/inventory/purchase-orders/${poId}`);
-  revalidatePath("/procurement");
-  revalidatePath("/inventory/purchase-orders");
-  revalidatePath("/inventory/goods-received");
-  revalidatePath("/inventory");
-  const actor = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, email: true } });
-  notifyStockReceived({
-    orgId,
-    grnNumber,
-    poReference: po.reference ?? undefined,
-    itemCount: updates.length,
-    actorName: actor?.name ?? actor?.email ?? "Unknown",
-  }).catch(() => {});
+  await performReceipt(orgId, session.user.id, po, locationId, updates);
   return {};
 }
 

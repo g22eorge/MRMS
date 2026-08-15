@@ -9,7 +9,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { parseFormNumber } from "@/lib/forms/line-items";
 
-import { createPurchaseOrderAction } from "../actions";
+import { createPurchaseOrderAction, createAndReceivePurchaseOrderAction, quickCreateSupplierAction } from "../actions";
 
 type Supplier = { id: string; name: string };
 type Part = { id: string; name: string; sku: string; unitCost: number | null };
@@ -31,7 +31,25 @@ export function NewPurchaseOrderForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState(defaultSupplierId ?? "");
+  const [supplierList, setSupplierList] = useState(suppliers);
+  const [addingSupplier, setAddingSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+
+  function handleAddSupplier() {
+    const name = newSupplierName.trim();
+    if (name.length < 2) { setError("Enter a supplier name (at least 2 characters)"); return; }
+    setError(null);
+    startTransition(async () => {
+      const res = await quickCreateSupplierAction(name);
+      if (res.error || !res.id) { setError(res.error ?? "Failed to add supplier"); return; }
+      const created = { id: res.id, name: res.name ?? name };
+      setSupplierList((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setSupplierId(created.id);
+      setNewSupplierName("");
+      setAddingSupplier(false);
+    });
+  }
   const { lines, addLine, removeLine, updateLine, appendToFormData } = useLineItemsState<LineData>(() => ({
     description: "",
     qtyOrdered: 1,
@@ -39,8 +57,8 @@ export function NewPurchaseOrderForm({
     partId: "",
   }));
 
-  const selectedSupplier = suppliers.find((supplier) => supplier.id === supplierId);
-  const canSubmit = suppliers.length > 0;
+  const selectedSupplier = supplierList.find((supplier) => supplier.id === supplierId);
+  const canSubmit = supplierList.length > 0;
   const totals = useMemo(() => {
     const subtotal = lines.reduce((sum, line) => sum + line.qtyOrdered * line.unitCost, 0);
     const quantity = lines.reduce((sum, line) => sum + line.qtyOrdered, 0);
@@ -69,7 +87,10 @@ export function NewPurchaseOrderForm({
     }));
 
     startTransition(async () => {
-      const result = await createPurchaseOrderAction(fd);
+      const receiveNow = fd.get("receiveNow") === "1";
+      const result = receiveNow
+        ? await createAndReceivePurchaseOrderAction(fd)
+        : await createPurchaseOrderAction(fd);
       if (result.error) {
         setError(result.error);
         return;
@@ -81,20 +102,40 @@ export function NewPurchaseOrderForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
-        Pick the supplier, then list what you are ordering and the price. Save it as a draft, or issue it to the supplier straight away.
+        Pick or add a supplier, list what you bought and the price, then <span className="font-semibold text-[var(--ink)]">Receive now</span> to stock it in — or save a draft / send the order to the supplier instead.
       </p>
 
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]">
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className={labelClass}>
-            Supplier
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <span className={labelClass}>Supplier</span>
+              <button type="button" onClick={() => { setAddingSupplier((v) => !v); setError(null); }} className="text-[0.6875rem] font-semibold text-[var(--accent)] hover:underline">
+                {addingSupplier ? "Cancel" : "+ New"}
+              </button>
+            </div>
             <select name="supplierId" required value={supplierId} onChange={(event) => setSupplierId(event.target.value)} className={fieldClass}>
-              <option value="">{suppliers.length ? "Select supplier" : "No active suppliers"}</option>
-              {suppliers.map((supplier) => (
+              <option value="">{supplierList.length ? "Select supplier" : "No suppliers yet — add one"}</option>
+              {supplierList.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
               ))}
             </select>
-          </label>
+            {addingSupplier ? (
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSupplier(); } }}
+                  placeholder="New supplier name"
+                  autoFocus
+                  className={fieldClass}
+                />
+                <button type="button" onClick={handleAddSupplier} disabled={pending || newSupplierName.trim().length < 2} className="btn-premium shrink-0 rounded-md px-3 text-sm font-semibold disabled:opacity-50">
+                  Add
+                </button>
+              </div>
+            ) : null}
+          </div>
           <label className={labelClass}>
             Expected delivery
             <input name="expectedAt" type="date" className={fieldClass} />
@@ -128,10 +169,10 @@ export function NewPurchaseOrderForm({
           </div>
         </div>
 
-        {suppliers.length === 0 ? (
+        {supplierList.length === 0 && !addingSupplier ? (
           <div className="mx-3 mb-3 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm">
-            <span className="font-semibold text-amber-700">You need a supplier first.</span>{" "}
-            <Link href="/inventory/suppliers/new" className="font-semibold text-[var(--accent)] hover:underline">Add a supplier</Link>
+            <button type="button" onClick={() => setAddingSupplier(true)} className="font-semibold text-[var(--accent)] hover:underline">+ Add your first supplier</button>
+            <span className="text-[var(--ink-muted)]"> to raise this order — no need to leave the page.</span>
           </div>
         ) : null}
       </div>
@@ -232,16 +273,19 @@ export function NewPurchaseOrderForm({
 
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] bg-[var(--bg)]/95 py-2 backdrop-blur">
         {totals.zeroCostLines > 0 ? (
-          <span className="mr-auto text-xs text-amber-600">Add a cost to every line to issue this order. You can still save it as a draft.</span>
+          <span className="mr-auto text-xs text-amber-600">Add a cost to every line to receive or send it. You can still save a draft.</span>
         ) : null}
         <Link href="/inventory/purchase-orders" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
           Cancel
         </Link>
-        <button type="submit" disabled={pending || !canSubmit} className="btn-premium rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50">
+        <button type="submit" disabled={pending || !canSubmit} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
           {pending ? "Saving..." : "Save as draft"}
         </button>
-        <button type="submit" name="issueNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-500/15 disabled:opacity-50">
+        <button type="submit" name="issueNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
           {pending ? "Issuing..." : "Send to supplier"}
+        </button>
+        <button type="submit" name="receiveNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="btn-premium rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50" title="Create the order and stock it in immediately">
+          {pending ? "Receiving..." : "Receive now"}
         </button>
       </div>
     </form>
