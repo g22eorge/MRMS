@@ -31,7 +31,7 @@ type JobOption = {
   model: string;
   client: { fullName: string; phone: string | null; address: string | null } | null;
 };
-type PartOption = { id: string; sku: string; name: string; unitCost: number | null; qtyOnHand: number };
+type PartOption = { id: string; sku: string; name: string; unitCost: number | null; sellingPrice?: number | null; qtyOnHand: number };
 type TaxRateOption = { id: string; name: string; code: string; rate: number; isDefault: boolean };
 
 type CustomerSource = {
@@ -200,7 +200,7 @@ export function NewQuotationForm({
     updateLine(key, {
       partId,
       description: part ? part.name : "",
-      unitPrice: part?.unitCost ?? 0,
+      unitPrice: part?.sellingPrice ?? part?.unitCost ?? 0,
     });
   }
 

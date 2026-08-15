@@ -47,6 +47,7 @@ export type PartSelectOption = {
   sku: string;
   name: string;
   unitCost?: number | null;
+  sellingPrice?: number | null;
   qtyOnHand?: number;
 };
 

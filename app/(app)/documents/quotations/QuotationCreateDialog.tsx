@@ -29,7 +29,7 @@ type JobOption = {
   client: { fullName: string; phone: string | null; address: string | null } | null;
 };
 
-type PartOption = { id: string; sku: string; name: string; unitCost: number | null; qtyOnHand: number };
+type PartOption = { id: string; sku: string; name: string; unitCost: number | null; sellingPrice?: number | null; qtyOnHand: number };
 
 type TaxRateOption = { id: string; name: string; code: string; rate: number; isDefault: boolean };
 

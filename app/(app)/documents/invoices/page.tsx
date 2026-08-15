@@ -438,7 +438,7 @@ export default async function InvoicesPage({
       where: { orgId: user.orgId, isActive: true },
       orderBy: { name: "asc" },
       take: 500,
-      select: { id: true, sku: true, name: true, unitCost: true, qtyOnHand: true },
+      select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, qtyOnHand: true },
     }).catch(() => []),
     prisma.taxRate.findMany({
       where: { orgId: user.orgId, isActive: true, appliesToSales: true },

@@ -65,7 +65,7 @@ export default async function NewQuotationPage({
       where: { orgId, isActive: true },
       orderBy: [{ name: "asc" }],
       take: 500,
-      select: { id: true, sku: true, name: true, unitCost: true, qtyOnHand: true },
+      select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, qtyOnHand: true },
     }),
     prisma.taxRate.findMany({
       where: { orgId, isActive: true, appliesToSales: true },

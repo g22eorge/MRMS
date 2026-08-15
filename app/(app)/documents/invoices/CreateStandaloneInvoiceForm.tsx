@@ -18,6 +18,7 @@ type PartOption = {
   sku: string;
   name: string;
   unitCost?: number | null;
+  sellingPrice?: number | null;
   qtyOnHand?: number;
 };
 
@@ -147,7 +148,7 @@ export function CreateStandaloneInvoiceForm({
     updateLine(key, {
       partId,
       description: part ? part.name : "",
-      unitPrice: part?.unitCost ?? 0,
+      unitPrice: part?.sellingPrice ?? part?.unitCost ?? 0,
     });
   }
 

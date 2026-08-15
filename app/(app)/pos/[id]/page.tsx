@@ -425,29 +425,33 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     const partId = String(formData.get("partId") ?? "").trim() || null;
     const description = String(formData.get("description") ?? "").trim();
     const qty = Number(String(formData.get("quantity") ?? "1").trim());
-    const unitPrice = Number(String(formData.get("unitPrice") ?? "0").trim());
+    // Price is optional when a product is chosen — it defaults to the product's
+    // selling price (falling back to cost). A custom item still needs a price.
+    const priceRaw = String(formData.get("unitPrice") ?? "").trim();
+    const priceProvided = priceRaw !== "";
+    let unitPrice = priceProvided ? Number(priceRaw) : 0;
 
     if (!saleId) return;
     if (!partId && !description) posReject(saleId, "Choose a product or enter an item description.");
     if (!Number.isFinite(qty) || qty <= 0) posReject(saleId, "Enter a valid quantity.");
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) posReject(saleId, "Enter a valid unit price.");
+    if (priceProvided && (!Number.isFinite(unitPrice) || unitPrice < 0)) posReject(saleId, "Enter a valid unit price.");
+    if (!priceProvided && !partId) posReject(saleId, "Enter a unit price for a custom item.");
 
     const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
     if (!existingSale || existingSale.status !== "OPEN") posReject(saleId, "This sale is no longer open, so items can't be added.");
-
-    const lineTotal = unitPrice * qty;
 
     await prisma.$transaction(async (tx) => {
       let resolvedDescription = description;
       let resolvedPartId: string | null = null;
 
       if (partId) {
-        const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true } });
+        const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true, sellingPrice: true, unitCost: true } });
         if (!part) posReject(saleId, "That product was not found or is inactive.");
         if (part.qtyOnHand - Math.abs(qty) < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
         resolvedDescription = part.name;
+        if (!priceProvided) unitPrice = part.sellingPrice ?? part.unitCost ?? 0;
 
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - Math.abs(qty) } });
         await tx.partStockTransaction.create({
@@ -462,7 +466,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       await tx.saleItem.create({
-        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal },
+        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal: unitPrice * qty },
       });
 
       await recalcSaleTotals(tx, saleId, orgId);
@@ -970,7 +974,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             </select>
             <input name="description" placeholder="Description" className={field} />
             <input name="quantity" placeholder="Qty" defaultValue={1} inputMode="numeric" aria-label="Quantity" className={field} required />
-            <input name="unitPrice" placeholder="Price" inputMode="decimal" aria-label="Unit price" className={field} required />
+            <input name="unitPrice" placeholder="Price (auto)" inputMode="decimal" aria-label="Unit price" className={field} />
             <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}
