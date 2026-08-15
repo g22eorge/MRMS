@@ -271,10 +271,24 @@ export async function updatePartAction(formData: FormData) {
   const manufacturer = String(formData.get("manufacturer") ?? "").trim();
   const unitCostRaw = String(formData.get("unitCost") ?? "").trim();
   const reorderRaw = String(formData.get("reorderLevel") ?? "").trim();
+  const sellingRaw = String(formData.get("sellingPrice") ?? "").trim();
+  const taxRateRaw = String(formData.get("taxRate") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const baseUom = String(formData.get("baseUom") ?? "").trim();
+  const saleUom = String(formData.get("saleUom") ?? "").trim();
+  const purchaseUom = String(formData.get("purchaseUom") ?? "").trim();
+  const saleFactorRaw = String(formData.get("saleUomFactor") ?? "").trim();
+  const purchaseFactorRaw = String(formData.get("purchaseUomFactor") ?? "").trim();
+  const taxable = String(formData.get("taxable") ?? "true") !== "false";
   if (!partId || !name) redirect(`/inventory/${partId}?error=Item+name+is+required`);
 
   const unitCost = unitCostRaw ? Number(unitCostRaw) : null;
+  const sellingPrice = sellingRaw ? Number(sellingRaw) : null;
+  const taxRate = taxRateRaw ? Number(taxRateRaw) : null;
   const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
+  const saleUomFactor = saleFactorRaw && Number(saleFactorRaw) > 0 ? Number(saleFactorRaw) : null;
+  const purchaseUomFactor = purchaseFactorRaw && Number(purchaseFactorRaw) > 0 ? Number(purchaseFactorRaw) : null;
   // SKU is optional on edit — only validate/change it when a value is supplied;
   // blank keeps the item's existing (auto-generated) SKU untouched.
   if (sku) {
@@ -293,6 +307,16 @@ export async function updatePartAction(formData: FormData) {
         name,
         manufacturer: manufacturer || null,
         unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
+        sellingPrice: sellingPrice !== null && Number.isFinite(sellingPrice) ? sellingPrice : null,
+        category: category || null,
+        description: description || null,
+        taxable,
+        taxRate: taxRate !== null && Number.isFinite(taxRate) ? taxRate : null,
+        baseUom: baseUom || null,
+        saleUom: saleUom || null,
+        purchaseUom: purchaseUom || null,
+        saleUomFactor,
+        purchaseUomFactor,
         reorderLevel,
       },
     });

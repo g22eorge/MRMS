@@ -10,7 +10,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { can } from "@/lib/permissions";
 import { adjustStockAction, updatePartAction, togglePartActiveAction } from "../actions";
-import { FormField, FormRow } from "@/components/ui/form-field";
+import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
 export default async function PartDetailPage({
@@ -39,6 +39,10 @@ export default async function PartDetailPage({
         id: true, sku: true, name: true, manufacturer: true,
         unitCost: true, qtyOnHand: true, qtyReserved: true,
         reorderLevel: true, isActive: true, createdAt: true,
+        sellingPrice: true, category: true, description: true,
+        taxable: true, taxRate: true,
+        baseUom: true, saleUom: true, purchaseUom: true,
+        saleUomFactor: true, purchaseUomFactor: true,
         reservations: {
           where: { status: "RESERVED" },
           select: {
@@ -334,10 +338,29 @@ export default async function PartDetailPage({
                 <input type="hidden" name="partId" value={part.id} />
                 <FormField label="Item Name"     name="name" defaultValue={part.name} required />
                 <FormField label="Manufacturer"  name="manufacturer" defaultValue={part.manufacturer ?? ""} placeholder="Optional" />
+                <FormField label="Category"      name="category" defaultValue={part.category ?? ""} placeholder="Optional" />
                 <FormRow>
-                  <FormField label="Unit Cost"     name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
-                  <FormField label="Reorder Point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0"    inputMode="numeric" />
+                  <FormField label="Cost / base unit" name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
+                  <FormField label="Selling Price"    name="sellingPrice" defaultValue={String(part.sellingPrice ?? "")} placeholder="0.00" inputMode="decimal" />
                 </FormRow>
+                <FormRow>
+                  <FormSelect label="Taxable" name="taxable" defaultValue={part.taxable ? "true" : "false"}>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </FormSelect>
+                  <FormField label="Tax Rate %" name="taxRate" defaultValue={String(part.taxRate ?? "")} placeholder="18" inputMode="decimal" />
+                </FormRow>
+                <FormField label="Base Unit (stock is counted in)" name="baseUom" defaultValue={part.baseUom ?? ""} placeholder="e.g. piece" />
+                <FormRow>
+                  <FormField label="Sale Unit"          name="saleUom"       defaultValue={part.saleUom ?? ""} placeholder="e.g. piece" />
+                  <FormField label="Base / sale unit"   name="saleUomFactor" defaultValue={String(part.saleUomFactor ?? "")} placeholder="1" inputMode="decimal" />
+                </FormRow>
+                <FormRow>
+                  <FormField label="Purchase Unit"        name="purchaseUom"       defaultValue={part.purchaseUom ?? ""} placeholder="e.g. box" />
+                  <FormField label="Base / purchase unit" name="purchaseUomFactor" defaultValue={String(part.purchaseUomFactor ?? "")} placeholder="1" inputMode="decimal" />
+                </FormRow>
+                <FormField label="Reorder Point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0" inputMode="numeric" />
+                <FormTextarea label="Description" name="description" defaultValue={part.description ?? ""} placeholder="Optional" rows={2} />
                 <button type="submit"
                   className="btn-premium mt-1 h-8 w-full rounded-md text-[0.6875rem] font-bold uppercase tracking-[0.16em]">
                   Save Details

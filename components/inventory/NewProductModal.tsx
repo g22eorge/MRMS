@@ -69,11 +69,11 @@ export function NewProductModal({
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_0.8fr_auto] sm:items-end">
             <div>
-              <label className={label}>Cost price ({currency})</label>
+              <label className={label}>Cost / base unit ({currency})</label>
               <input name="unitCost" inputMode="decimal" placeholder="0.00" className={input} />
             </div>
             <div>
-              <label className={label}>Selling price ({currency})</label>
+              <label className={label}>Selling / sale unit ({currency})</label>
               <input name="sellingPrice" inputMode="decimal" placeholder="0.00" className={input} />
             </div>
             <div>
@@ -82,6 +82,9 @@ export function NewProductModal({
             </div>
             <Toggle name="taxable" defaultOn>Tax</Toggle>
           </div>
+          <p className="mt-1.5 text-[0.6875rem] text-[var(--ink-muted)]">
+            Cost is per <b>base</b> stock unit (e.g. per piece) — a purchase receipt updates it automatically. Selling price is per <b>sale</b> unit.
+          </p>
 
           <div className="mt-3">
             <label className={label}>Base unit — how stock is counted</label>
