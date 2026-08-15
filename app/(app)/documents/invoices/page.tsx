@@ -158,11 +158,11 @@ export default async function InvoicesPage({
     }
 
     const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
-    const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null; saleUomFactor: number | null }>();
+    const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null; saleUomFactor: number | null; unitCost: number | null }>();
     if (partIds.length) {
-      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true, saleUomFactor: true } });
+      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true, saleUomFactor: true, unitCost: true } });
       if (validParts.length !== partIds.length) redirect("/documents/invoices?error=missing-fields");
-      for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate, saleUomFactor: part.saleUomFactor });
+      for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate, saleUomFactor: part.saleUomFactor, unitCost: part.unitCost });
     }
 
     const invoiceType = INVOICE_TYPES.includes(invoiceTypeRaw as InvoiceType)
@@ -248,6 +248,7 @@ export default async function InvoicesPage({
               taxAmount: lineTaxes[index],
               lineTotal: item.lineTotal,
               saleUomFactor: item.partId ? (taxByPart.get(item.partId)?.saleUomFactor ?? 1) : null,
+              costAtSale: item.partId ? (taxByPart.get(item.partId)?.unitCost ?? null) : null,
             })),
           },
         },

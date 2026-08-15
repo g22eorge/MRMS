@@ -1009,6 +1009,8 @@ model SaleItem {
   // Base stock units per 1 sale unit, snapshot at sale time so stock reverses
   // by the same factor even if the product's saleUomFactor later changes.
   saleUomFactor Float?
+  // Product cost per base unit at sale time, snapshot for stable historical COGS.
+  costAtSale    Float?
 
   createdAt DateTime @default(now())
 
@@ -2344,6 +2346,8 @@ model InvoiceLine {
   // Base stock units per 1 sale unit, snapshot so voids restore the same base
   // amount even if the product's saleUomFactor later changes.
   saleUomFactor  Float?
+  // Product cost per base unit at issue time, snapshot for stable historical COGS.
+  costAtSale     Float?
   createdAt      DateTime @default(now())
 
   @@index([orgId, invoiceId])

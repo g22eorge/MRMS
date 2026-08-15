@@ -55,6 +55,60 @@ function yearOptions(startYear: number, endYear: number) {
   return out;
 }
 
+/**
+ * Cost of goods sold for product sales PAID in [start, end] — POS sale items
+ * plus product invoice lines. Matches the report's cash basis (revenue is
+ * counted when paid). Cost per base unit is the line's `costAtSale` snapshot,
+ * falling back to the product's live `unitCost` for lines created before the
+ * snapshot existed. Sale-unit quantities are converted to base units with the
+ * line's `saleUomFactor` (falling back to the product's).
+ *
+ * This lives in the document-computed report layer only; it never posts to the
+ * ledger, where inventory cost is already recognised via supplier payments.
+ */
+async function loadCogsForRange(orgId: string, start: Date, end?: Date): Promise<number> {
+  const paidWindow = { gte: start, ...(end ? { lte: end } : {}) };
+  const [saleItems, invoiceLines] = await Promise.all([
+    prisma.saleItem
+      .findMany({
+        where: { partId: { not: null }, sale: { orgId, status: "PAID", paidAt: paidWindow } },
+        select: { quantity: true, saleUomFactor: true, costAtSale: true, part: { select: { unitCost: true, saleUomFactor: true } } },
+      })
+      .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; part: { unitCost: number | null; saleUomFactor: number | null } | null }>),
+    prisma.invoiceLine
+      .findMany({
+        where: { orgId, sourceType: "Part", sourceId: { not: null }, invoice: { status: "PAID", paidAt: paidWindow } },
+        select: { quantity: true, saleUomFactor: true, costAtSale: true, sourceId: true },
+      })
+      .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; sourceId: string | null }>),
+  ]);
+
+  let cogs = 0;
+  for (const it of saleItems) {
+    const factor = it.saleUomFactor ?? it.part?.saleUomFactor ?? 1;
+    const cost = it.costAtSale ?? it.part?.unitCost ?? 0;
+    cogs += it.quantity * factor * cost;
+  }
+
+  // Invoice lines link to a Part by sourceId (no relation), so fetch live cost
+  // only for the older lines that lack a costAtSale snapshot.
+  const missingCostPartIds = [...new Set(invoiceLines.filter((l) => l.costAtSale == null && l.sourceId).map((l) => l.sourceId as string))];
+  const liveCostById = new Map<string, { unitCost: number | null; saleUomFactor: number | null }>();
+  if (missingCostPartIds.length) {
+    const parts = await prisma.part
+      .findMany({ where: { id: { in: missingCostPartIds }, orgId }, select: { id: true, unitCost: true, saleUomFactor: true } })
+      .catch(() => [] as Array<{ id: string; unitCost: number | null; saleUomFactor: number | null }>);
+    for (const p of parts) liveCostById.set(p.id, { unitCost: p.unitCost, saleUomFactor: p.saleUomFactor });
+  }
+  for (const l of invoiceLines) {
+    const live = l.sourceId ? liveCostById.get(l.sourceId) : undefined;
+    const factor = l.saleUomFactor ?? live?.saleUomFactor ?? 1;
+    const cost = l.costAtSale ?? live?.unitCost ?? 0;
+    cogs += l.quantity * factor * cost;
+  }
+  return cogs;
+}
+
 const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
   RECEIVED: "Received",
   DIAGNOSING: "Diagnosing",
@@ -491,8 +545,15 @@ export default async function ReportsPage({
   const totalBilledAllChannels = billedByChannel.total;
   const expensesTotal = expensesMtd.reduce((s, e) => s + e.amount, 0);
 
+  // Inventory cost of goods sold for product sales paid in each window (report
+  // layer only — the ledger recognises inventory cost via supplier payments).
+  const [cogsTotal, ytdCogsTotal] = await Promise.all([
+    loadCogsForRange(orgId, selectedRange.start, selectedRange.end),
+    loadCogsForRange(orgId, ytdStart),
+  ]);
+
   // P&L derived
-  const grossProfit = totalAllChannels - cashOutExternal;
+  const grossProfit = totalAllChannels - cashOutExternal - cogsTotal;
   const grossMarginPct = totalAllChannels > 0 ? Math.round((grossProfit / totalAllChannels) * 100) : 0;
   const netProfit = grossProfit - expensesTotal - cashOutRefunds;
 
@@ -501,7 +562,7 @@ export default async function ReportsPage({
   const ytdExpensesTotal = ytdExpensesRaw.reduce((s, e) => s + e.amount, 0);
   const ytdCashOutExternal = ytdExternalPaidJobs.reduce((s, j) => s + resolveTechCost(j.externalTechFee, j.externalTechBill), 0);
   const ytdCashOutRefunds = ytdRefundsRaw.reduce((s, r) => s + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }), 0);
-  const ytdGrossProfit = ytdRevenue - ytdCashOutExternal;
+  const ytdGrossProfit = ytdRevenue - ytdCashOutExternal - ytdCogsTotal;
   const ytdGrossMarginPct = ytdRevenue > 0 ? Math.round((ytdGrossProfit / ytdRevenue) * 100) : 0;
   const ytdNetProfit = ytdGrossProfit - ytdExpensesTotal - ytdCashOutRefunds;
 
@@ -925,6 +986,9 @@ export default async function ReportsPage({
                 { key: "revenue", label: "Total Revenue", hint: "Repairs · POS · Invoices", period: totalAllChannels, ytd: ytdRevenue, kind: "subtotal" },
                 ...(cashOutExternal > 0 || ytdCashOutExternal > 0
                   ? [{ key: "externalCost", label: "Cost of External Repairs", period: cashOutExternal, ytd: ytdCashOutExternal, kind: "negative" } as PlRow]
+                  : []),
+                ...(cogsTotal > 0 || ytdCogsTotal > 0
+                  ? [{ key: "cogs", label: "Cost of Goods Sold", hint: "Inventory cost of items sold", period: cogsTotal, ytd: ytdCogsTotal, kind: "negative" } as PlRow]
                   : []),
                 { key: "grossProfit", label: "Gross Profit", hint: `Margin: ${grossMarginPct}% period · ${ytdGrossMarginPct}% YTD`, period: grossProfit, ytd: ytdGrossProfit, kind: "subtotal" },
                 ...(expensesTotal > 0 || ytdExpensesTotal > 0

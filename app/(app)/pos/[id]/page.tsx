@@ -468,10 +468,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       // Base stock units per 1 sale unit, snapshot on the line so reversals use
       // the same factor even if the product's saleUomFactor later changes.
       let saleFactor = 1;
+      // Cost per base unit at sale time, snapshot for stable historical COGS.
+      let costAtSale: number | null = null;
       if (partId) {
         const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true, sellingPrice: true, unitCost: true, saleUomFactor: true } });
         if (!part) posReject(saleId, "That product was not found or is inactive.");
         saleFactor = part.saleUomFactor && part.saleUomFactor > 0 ? part.saleUomFactor : 1;
+        costAtSale = part.unitCost ?? null;
         const baseQty = Math.abs(qty) * saleFactor;
         if (part.qtyOnHand - baseQty < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
@@ -492,7 +495,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       await tx.saleItem.create({
-        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal: unitPrice * qty, saleUomFactor: saleFactor },
+        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal: unitPrice * qty, saleUomFactor: saleFactor, costAtSale },
       });
 
       await recalcSaleTotals(tx, saleId, orgId);
