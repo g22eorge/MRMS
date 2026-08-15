@@ -259,7 +259,7 @@ export async function receiveStockAction(
   if (!["ORDERED", "PARTIAL"].includes(po.status)) return { error: "This purchase order cannot receive stock" };
 
   // qtyReceived_<itemId> fields in formData
-  const updates: Array<{ id: string; qtyReceived: number; partId: string | null; delta: number; description: string; unitCost: number }> = [];
+  const updates: Array<{ id: string; qtyReceived: number; partId: string | null; delta: number; description: string; unitCost: number; purchaseFactor: number }> = [];
 
   for (const item of po.items) {
     const val = parseInt(formData.get(`qtyReceived_${item.id}`) as string, 10);
@@ -268,7 +268,10 @@ export async function receiveStockAction(
     if (val < item.qtyReceived) return { error: "Use adjustments or returns to reduce previously received stock" };
     const delta = val - item.qtyReceived;
     if (delta === 0) continue;
-    updates.push({ id: item.id, qtyReceived: val, partId: item.partId, delta, description: item.description, unitCost: item.unitCost });
+    // Base stock units per purchase unit (e.g. a box of 12). Received qty stays
+    // in purchase units on the PO/GRN; stock moves in base units.
+    const purchaseFactor = item.part?.purchaseUomFactor && item.part.purchaseUomFactor > 0 ? item.part.purchaseUomFactor : 1;
+    updates.push({ id: item.id, qtyReceived: val, partId: item.partId, delta, description: item.description, unitCost: item.unitCost, purchaseFactor });
   }
 
   if (!updates.length) return { error: "No changes to save" };
@@ -304,21 +307,24 @@ export async function receiveStockAction(
         data: { qtyReceived: u.qtyReceived },
       });
       if (u.partId && u.delta > 0) {
+        // Convert purchase units → base stock units; cost is per base unit.
+        const baseDelta = u.delta * u.purchaseFactor;
+        const baseUnitCost = u.purchaseFactor !== 1 ? u.unitCost / u.purchaseFactor : u.unitCost;
         await tx.partLocationStock.upsert({
           where: { partId_locationId: { partId: u.partId, locationId } },
-          create: { orgId, partId: u.partId, locationId, qtyOnHand: u.delta, qtyReserved: 0 },
-          update: { qtyOnHand: { increment: u.delta } },
+          create: { orgId, partId: u.partId, locationId, qtyOnHand: baseDelta, qtyReserved: 0 },
+          update: { qtyOnHand: { increment: baseDelta } },
         });
         await tx.partStockTransaction.create({
           data: {
             partId: u.partId,
             orgId,
             locationId,
-            unitCost: u.unitCost,
+            unitCost: baseUnitCost,
             sourceType: "GRN",
             sourceId: grnId,
             type: "IN",
-            quantity: u.delta,
+            quantity: baseDelta,
             reason: `Received via ${grnNumber}`,
             createdById: session.user.id,
           },
@@ -334,13 +340,13 @@ export async function receiveStockAction(
         // Weighted-average cost; never overwrite the cost basis with a zero/
         // negative receipt price (which would destroy valuation and margins).
         let nextCost = partBefore?.unitCost ?? 0;
-        if (u.unitCost > 0) {
-          const denom = oldQty + u.delta;
-          nextCost = denom > 0 ? (oldQty * nextCost + u.delta * u.unitCost) / denom : u.unitCost;
+        if (baseUnitCost > 0) {
+          const denom = oldQty + baseDelta;
+          nextCost = denom > 0 ? (oldQty * nextCost + baseDelta * baseUnitCost) / denom : baseUnitCost;
         }
         await tx.part.update({
           where: { id: u.partId },
-          data: { qtyOnHand: { increment: u.delta }, unitCost: nextCost },
+          data: { qtyOnHand: { increment: baseDelta }, unitCost: nextCost },
         });
       }
     }
@@ -415,13 +421,16 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
     for (const item of grn.items) {
       if (!item.partId || item.quantity <= 0) continue;
 
-      const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { qtyOnHand: true } });
+      const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { qtyOnHand: true, purchaseUomFactor: true } });
       if (!part) continue;
-      if (part.qtyOnHand - item.quantity < 0) {
+      // GRN quantity is in purchase units; stock reverses in base units.
+      const factor = part.purchaseUomFactor && part.purchaseUomFactor > 0 ? part.purchaseUomFactor : 1;
+      const baseQty = item.quantity * factor;
+      if (part.qtyOnHand - baseQty < 0) {
         return { error: "Cannot reverse — some received stock has already been sold or moved out." };
       }
 
-      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: item.quantity } } });
+      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: baseQty } } });
       const loc = await tx.partLocationStock.findUnique({
         where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
         select: { qtyOnHand: true },
@@ -429,7 +438,7 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
       if (loc) {
         await tx.partLocationStock.update({
           where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
-          data: { qtyOnHand: { decrement: Math.min(loc.qtyOnHand, item.quantity) } },
+          data: { qtyOnHand: { decrement: Math.min(loc.qtyOnHand, baseQty) } },
         });
       }
       if (item.poItemId) {
@@ -446,7 +455,7 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
           sourceType: "GRN",
           sourceId: grn.id,
           type: "OUT",
-          quantity: item.quantity,
+          quantity: baseQty,
           reason: `Reversal of ${grn.grnNumber}`,
           createdById: session.user.id,
         },
