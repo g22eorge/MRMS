@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, sendQuotationViaEmailAction, sendInvoiceViaEmailAction, sendJobCardViaEmailAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction } from "@/app/(app)/jobs/[id]/actions";
+import { markMessagesReadAction, sendManualReplyAction, sendQuotationViaWhatsAppAction, sendInvoiceViaWhatsAppAction, sendJobCardViaWhatsAppAction, sendQuotationViaEmailAction, sendInvoiceViaEmailAction, sendJobCardViaEmailAction, updateJobAction, updateOneTimeExternalAssignmentAction, recordClientPaymentAction, recordTechnicianPayoutAction, generateJobDeliveryNoteAction } from "@/app/(app)/jobs/[id]/actions";
 import { CheckboxField, LineItemTotals } from "@/components/forms";
 import { DataTable } from "@/components/ui/DataTable";
 import { JobCompletionFlowModal } from "@/components/jobs/JobCompletionFlowModal";
@@ -626,6 +626,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [isFinancialPending, startFinancialTransition] = useTransition();
   const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
+  const [isGeneratingDeliveryNote, startDeliveryNoteTransition] = useTransition();
   const [confirmClose, setConfirmClose] = useState(false);
   const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
@@ -756,6 +757,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const showJobCardAction = canGenerateJobCard;
   const showQuotationAction = canGenerateQuotation && quotationEligibleByStatus;
   const showInvoiceAction = canGenerateInvoice && invoiceEligibleByStatus;
+  // One-click delivery note: only once the invoice exists, and hidden once a
+  // note already exists (the timeline links out to it instead).
+  const invoiceGenerated = documentTimeline.some((entry) => entry.kind === "invoice");
+  const deliveryNoteExists = documentTimeline.some((entry) => entry.kind === "delivery_note");
+  const showDeliveryNoteAction = canGenerateInvoice && invoiceGenerated && !deliveryNoteExists;
   const documentHints: string[] = [];
 
   if (!showJobCardAction && !showQuotationAction && !showInvoiceAction) {
@@ -2236,6 +2242,23 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
                   Invoice PDF
                 </a>
+              ) : null}
+              {showDeliveryNoteAction ? (
+                <button
+                  type="button"
+                  disabled={isGeneratingDeliveryNote}
+                  onClick={() => {
+                    startDeliveryNoteTransition(async () => {
+                      const res = await generateJobDeliveryNoteAction(job.id);
+                      if (!res.success) { toast.error(res.error ?? "Could not create delivery note"); return; }
+                      toast.success(res.deliveryNoteNumber ? `Delivery note ${res.deliveryNoteNumber} created` : "Delivery note created");
+                      router.refresh();
+                    });
+                  }}
+                  className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+                >
+                  {isGeneratingDeliveryNote ? "Creating…" : "Generate delivery note"}
+                </button>
               ) : null}
             </div>
           </div>

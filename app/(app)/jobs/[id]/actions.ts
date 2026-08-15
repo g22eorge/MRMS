@@ -2,6 +2,7 @@
 
 import {
   CommunicationStatus,
+  DeliveryMethod,
   JobStatus,
   Prisma,
   RecommendationOption,
@@ -34,7 +35,8 @@ import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
-import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { nextAvailableInvoiceNumber, createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/document-workflow";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
@@ -1500,6 +1502,91 @@ export async function issueJobInvoiceAction(
   revalidatePath("/dashboard");
 
   return { success: true, invoiceNumber: result.invoiceNumber };
+}
+
+// One-click delivery note straight from the job: reuse the job's invoice and
+// the deliveredTo/deliveryMethod already captured at handover, so the user
+// never leaves the job for /documents/delivery-notes and re-types data the
+// system already has. Mirrors the canonical create in the delivery-notes page
+// (same numbering, dedup guard, and audit) but drops the "fully paid" gate —
+// a customer collecting on partial payment still needs a handover slip.
+export async function generateJobDeliveryNoteAction(
+  jobId: string,
+): Promise<{ success: boolean; error?: string; deliveryNoteNumber?: string }> {
+  const { user, org, orgId } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!["ADMIN", "OPS"].includes(user.role) && !can.approveInvoices({ role: user.role, permissions: user.permissions })) {
+    return { success: false, error: "Not authorised" };
+  }
+
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, orgId },
+    select: {
+      id: true,
+      jobNumber: true,
+      brand: true,
+      model: true,
+      deliveredTo: true,
+      deliveryMethod: true,
+      client: { select: { fullName: true } },
+      invoice: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          lines: { select: { description: true, quantity: true } },
+          deliveryNotes: { select: { deliveryNoteNumber: true }, take: 1 },
+        },
+      },
+    },
+  });
+  if (!job) return { success: false, error: "Job not found" };
+  if (!job.invoice) return { success: false, error: "Generate the invoice first, then the delivery note." };
+
+  // Already has one — treat as idempotent so a double-tap doesn't duplicate.
+  if (job.invoice.deliveryNotes.length > 0) {
+    return { success: true, deliveryNoteNumber: job.invoice.deliveryNotes[0].deliveryNoteNumber };
+  }
+
+  const deliveredByName = user.name?.trim() || "Front desk";
+  const receivedByName = job.deliveredTo?.trim() || job.client.fullName;
+  const items = job.invoice.lines.length > 0
+    ? job.invoice.lines.map((line) => ({
+        description: line.description,
+        quantity: Math.max(1, Math.round(Number(line.quantity) || 1)),
+      }))
+    : [{ description: `Repair handover for ${job.jobNumber} (${job.brand} ${job.model})`, quantity: 1 }];
+
+  // Double-submit guard: a delivery note for this invoice landed seconds ago.
+  const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, invoiceId: job.invoice.id });
+  if (dupDn) return { success: true };
+
+  try {
+    const noteRecord = await prisma.$transaction(async (tx) => {
+      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
+      return tx.deliveryNote.create({
+        data: {
+          orgId,
+          invoiceId: job.invoice!.id,
+          deliveryNoteNumber,
+          deliveryMethod: job.deliveryMethod as DeliveryMethod | null,
+          deliveredByName,
+          receivedByName,
+          createdById: user.id,
+          items: { create: items },
+        },
+        select: { id: true, deliveryNoteNumber: true },
+      });
+    });
+    await writeSystemAuditEvent({
+      orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: noteRecord.id,
+      action: "DELIVERY_NOTE_CREATED", summary: `${noteRecord.deliveryNoteNumber} generated from ${job.jobNumber}`,
+    });
+    revalidatePath(`/jobs/${jobId}`);
+    revalidatePath("/documents/delivery-notes");
+    return { success: true, deliveryNoteNumber: noteRecord.deliveryNoteNumber };
+  } catch {
+    return { success: false, error: "Could not create the delivery note. Please try again." };
+  }
 }
 
 export async function sendInvoiceViaWhatsAppAction(
