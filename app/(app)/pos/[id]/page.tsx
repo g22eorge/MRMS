@@ -26,7 +26,7 @@ import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/do
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
-import { computeVat } from "@/lib/commercial/vat";
+import { computeLinesVat } from "@/lib/commercial/vat";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
@@ -45,8 +45,8 @@ async function recalcSaleTotals(
   orgId: string,
   overrideTaxApplicable?: boolean,
 ) {
-  const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
-  const subtotal = itemsAgg._sum.lineTotal ?? 0;
+  const items = await tx.saleItem.findMany({ where: { saleId }, select: { partId: true, lineTotal: true } });
+  const subtotal = items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
   const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
   // VAT config: read the three fields we need on the SAME transaction connection
@@ -76,11 +76,27 @@ async function recalcSaleTotals(
   }
   const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? vatDefaultApplicable;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
-  const taxable = Math.max(0, subtotal - discountAmount);
-  const raw = computeVat(taxable, {
+  // Per-product tax: tax each line at its product's rate (exempt lines at 0),
+  // falling back to the org rate when a product has no rate. Custom lines (no
+  // linked product) stay taxable at the org rate, matching prior behaviour.
+  const partIds = [...new Set(items.map((it) => it.partId).filter((id): id is string => Boolean(id)))];
+  const taxParts = partIds.length
+    ? await tx.part.findMany({ where: { id: { in: partIds }, orgId }, select: { id: true, taxable: true, taxRate: true } })
+    : [];
+  const taxByPart = new Map(taxParts.map((p) => [p.id, p]));
+  const vatLines = items.map((it) => {
+    const part = it.partId ? taxByPart.get(it.partId) : undefined;
+    return {
+      base: it.lineTotal ?? 0,
+      taxable: part ? part.taxable : true,
+      ratePercent: part?.taxRate ?? null,
+    };
+  });
+  const raw = computeLinesVat(vatLines, {
     applicable: taxApplicable,
-    ratePercent: vatRatePercent,
+    defaultRatePercent: vatRatePercent,
     inclusive: vatInclusive,
+    discountAmount,
   });
   // Round to the currency's minor unit so zero-decimal (UGX) totals stay payable.
   const vatAmount = roundMoney(raw.vatAmount, currency);

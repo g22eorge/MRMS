@@ -37,3 +37,49 @@ export function computeVat(
   const vatAmount = base * rate;
   return { vatAmount, totalAmount: base + vatAmount };
 }
+
+/** One line's tax inputs for per-product VAT. */
+export type VatLineInput = {
+  base: number; // line gross (lineTotal), before any document-level discount
+  taxable: boolean; // does this line bear tax at all?
+  ratePercent?: number | null; // per-line rate; falls back to the org default when null
+};
+
+/**
+ * Per-line VAT: each line is taxed at its own product rate (exempt lines at 0),
+ * with a document-level discount pro-rated across lines by value share.
+ *
+ * This generalises {@link computeVat}: when every line is taxable at the same
+ * rate it returns exactly the same subtotal/vat/total as applying one rate to
+ * the whole discounted subtotal, so orgs with a single rate see no change.
+ * Pure and rounding-agnostic — callers round with their own roundMoney().
+ */
+export function computeLinesVat(
+  lines: VatLineInput[],
+  {
+    applicable,
+    defaultRatePercent,
+    inclusive,
+    discountAmount = 0,
+  }: { applicable: boolean; defaultRatePercent: number; inclusive: boolean; discountAmount?: number },
+): { subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number } {
+  const subtotal = lines.reduce((sum, line) => sum + Math.max(0, line.base), 0);
+  const discount = Math.max(0, Math.min(discountAmount, subtotal));
+
+  let vatAmount = 0;
+  for (const line of lines) {
+    const base = Math.max(0, line.base);
+    if (base <= 0) continue;
+    // Allocate the document discount to this line by its share of the subtotal.
+    const lineDiscount = subtotal > 0 ? discount * (base / subtotal) : 0;
+    const lineBase = Math.max(0, base - lineDiscount);
+    const rate = line.taxable ? (line.ratePercent ?? defaultRatePercent) : 0;
+    vatAmount += computeVat(lineBase, { applicable, ratePercent: rate, inclusive }).vatAmount;
+  }
+
+  const netBase = Math.max(0, subtotal - discount);
+  // Inclusive prices already embed tax, so the total is just the discounted
+  // gross; exclusive prices add the summed tax on top.
+  const totalAmount = inclusive ? netBase : netBase + vatAmount;
+  return { subtotal, discountAmount: discount, vatAmount, totalAmount };
+}
