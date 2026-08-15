@@ -142,7 +142,7 @@ export default async function SupplierDetailPage({
     }),
   ]);
 
-  const partLabel = new Map(parts.map((part) => [part.id, `${part.sku} · ${part.name}`]));
+  const partLabel = new Map(parts.map((part) => [part.id, part.name]));
   // Balances are per-currency — never sum UGX and USD bills into one figure.
   const balancesByCurrency = billTotals
     .map((row) => ({
@@ -292,7 +292,7 @@ export default async function SupplierDetailPage({
               <input type="hidden" name="supplierId" value={supplier.id} />
               <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">No linked item</option>
-                {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
+                {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
               </select>
               <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
@@ -331,7 +331,7 @@ export default async function SupplierDetailPage({
                       <input type="hidden" name="supplierId" value={supplier.id} />
                       <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60">
                         <option value="">No linked item</option>
-                        {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
+                        {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
                       </select>
                       <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
                       <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />

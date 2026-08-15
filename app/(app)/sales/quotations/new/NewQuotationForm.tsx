@@ -199,7 +199,7 @@ export function NewQuotationForm({
     const part = parts.find((item) => item.id === partId);
     updateLine(key, {
       partId,
-      description: part ? `${part.sku} - ${part.name}` : "",
+      description: part ? part.name : "",
       unitPrice: part?.unitCost ?? 0,
     });
   }

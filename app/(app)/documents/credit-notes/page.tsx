@@ -84,7 +84,7 @@ export default async function CreditNotesPage({
             saleId: cn.saleId,
             type: "IN",
             quantity: Math.abs(it.quantity),
-            reason: `Return (${cn.creditNoteNumber}) ${it.description || `${part.sku} ${part.name}`}`,
+            reason: `Return (${cn.creditNoteNumber}) ${it.description || part.name}`,
             createdById: user.id,
           },
         });

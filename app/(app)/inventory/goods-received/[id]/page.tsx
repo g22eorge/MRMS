@@ -259,7 +259,7 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
                 header: "Inventory Item",
                 cell: (item) =>
                   item.part ? (
-                    <Link href={`/inventory/${item.part.id}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{item.part.sku} · {item.part.name}</Link>
+                    <Link href={`/inventory/${item.part.id}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{item.part.name}</Link>
                   ) : (
                     <span className="text-[var(--ink-muted)]">Not linked</span>
                   ),

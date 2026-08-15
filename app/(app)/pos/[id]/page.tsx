@@ -447,7 +447,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         if (part.qtyOnHand - Math.abs(qty) < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
-        resolvedDescription = `${part.sku} ${part.name}`;
+        resolvedDescription = part.name;
 
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - Math.abs(qty) } });
         await tx.partStockTransaction.create({
@@ -709,7 +709,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             saleId,
             type: "IN",
             quantity: Math.abs(it.quantity),
-            reason: `Return (${creditNote.creditNoteNumber}) ${it.description || `${part.sku} ${part.name}`}`,
+            reason: `Return (${creditNote.creditNoteNumber}) ${it.description || part.name}`,
             createdById: session.user.id,
           },
         });
@@ -964,7 +964,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               <option value="">Custom item</option>
               {parts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.sku} &middot; {p.name} ({p.qtyOnHand})
+                  {p.name} ({p.qtyOnHand})
                 </option>
               ))}
             </select>

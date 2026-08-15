@@ -105,7 +105,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
             header: "Item",
             cell: (item) => (
               <>
-                <p className="font-semibold text-[var(--ink)]">{item.part.sku}</p>
+                <p className="font-semibold text-[var(--ink)]">{item.part.name}</p>
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.part.name}</p>
               </>
             ),

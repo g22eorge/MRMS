@@ -146,7 +146,7 @@ export function CreateStandaloneInvoiceForm({
     const part = partObj ?? partsList.find((item) => item.id === partId);
     updateLine(key, {
       partId,
-      description: part ? `${part.sku} · ${part.name}` : "",
+      description: part ? part.name : "",
       unitPrice: part?.unitCost ?? 0,
     });
   }

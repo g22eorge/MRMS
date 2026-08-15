@@ -79,7 +79,7 @@ export function PartSelect({
       {showCreateOption ? <option value="__new__">{createOptionLabel}</option> : null}
       {parts.map((part) => (
         <option key={part.id} value={part.id}>
-          {part.sku} · {part.name}
+          {part.name}
           {showStock && part.qtyOnHand != null ? ` (${part.qtyOnHand})` : ""}
         </option>
       ))}

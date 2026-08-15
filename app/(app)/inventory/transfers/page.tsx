@@ -135,7 +135,7 @@ export default async function StockTransfersPage({
               </select>
               <select name="partId" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
                 <option value="">Item</option>
-                {parts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name}</option>)}
+                {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
               </select>
               <input name="quantity" placeholder="Qty" inputMode="numeric" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="note" placeholder="Note" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
@@ -169,7 +169,7 @@ export default async function StockTransfersPage({
             className: "text-[var(--ink)]",
             cell: (transfer) => {
               const first = transfer.items[0];
-              return first ? `${first.part.sku} · ${first.part.name} x${first.quantity}` : "No items";
+              return first ? `${first.part.name} x${first.quantity}` : "No items";
             },
           },
           {
@@ -194,7 +194,7 @@ export default async function StockTransfersPage({
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{transfer.transferNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink-muted)]">{locationName.get(transfer.fromLocationId) ?? "From"} → {locationName.get(transfer.toLocationId) ?? "To"}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{transfer.items[0] ? `${transfer.items[0].part.sku} x${transfer.items[0].quantity}` : "No items"} · {fmt(transfer.createdAt)}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{transfer.items[0] ? `${transfer.items[0].part.name} x${transfer.items[0].quantity}` : "No items"} · {fmt(transfer.createdAt)}</p>
               </div>
               <StatusBadge tone={toneFor(STATUS_TONES, transfer.status, "sky")}>{transfer.status.replaceAll("_", " ")}</StatusBadge>
             </div>

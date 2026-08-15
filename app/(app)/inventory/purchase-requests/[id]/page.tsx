@@ -85,7 +85,7 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
               header: "Item",
               className: "hidden sm:table-cell text-[0.75rem] text-[var(--ink-muted)]",
               headerClassName: "hidden sm:table-cell",
-              cell: (item) => (item.part ? `${item.part.sku} · ${item.part.name}` : "-"),
+              cell: (item) => (item.part ? item.part.name : "-"),
             },
             { key: "qty", header: "Qty", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.quantity },
             { key: "estCost", header: "Est. Cost", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => (item.estimatedUnitCost ?? 0).toLocaleString() },

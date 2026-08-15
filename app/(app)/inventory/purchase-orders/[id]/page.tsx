@@ -186,7 +186,7 @@ export default async function PurchaseOrderDetailPage({
               key: "item",
               header: "Item",
               className: "mono text-[0.75rem] text-[var(--ink-muted)]",
-              cell: (item) => (item.part ? item.part.sku : "-"),
+              cell: (item) => (item.part ? item.part.name : "-"),
             },
             {
               key: "ordered",
