@@ -12,17 +12,45 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
 type StockTxnType = "IN" | "OUT" | "ADJUST";
 
+/**
+ * Generate a unique org-scoped SKU for items created without one — sequential
+ * SKU-#### based on the org's current max, with a short retry to absorb races
+ * (the @@unique([sku, orgId]) constraint still backstops it).
+ */
+async function generatePartSku(orgId: string): Promise<string> {
+  const rows = await prisma.part.findMany({
+    where: { orgId, sku: { startsWith: "SKU-" } },
+    select: { sku: true },
+  });
+  let max = 0;
+  for (const { sku } of rows) {
+    const m = /^SKU-(\d+)$/.exec(sku);
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  for (let i = 1; i <= 25; i += 1) {
+    const candidate = `SKU-${String(max + i).padStart(4, "0")}`;
+    const clash = await prisma.part.findFirst({ where: { orgId, sku: candidate }, select: { id: true } });
+    if (!clash) return candidate;
+  }
+  return `SKU-${String(max + 1).padStart(4, "0")}-${orgId.slice(-4)}`;
+}
+
 export async function createPartAction(formData: FormData) {
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/dashboard");
 
-  const sku = String(formData.get("sku") ?? "").trim();
+  let sku = String(formData.get("sku") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const manufacturer = String(formData.get("manufacturer") ?? "").trim();
   const unitCostRaw = String(formData.get("unitCost") ?? "").trim();
   const reorderRaw = String(formData.get("reorderLevel") ?? "").trim();
 
-  if (!sku || !name) redirect("/inventory?add=1&error=SKU+and+name+are+required#add-part");
+  // Name is required; SKU is optional — auto-generate a unique one when blank.
+  if (!name) redirect("/inventory?add=1&error=Item+name+is+required#add-part");
+  if (!sku) sku = await generatePartSku(orgId);
 
   const unitCost = unitCostRaw ? Number(unitCostRaw) : null;
   const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
