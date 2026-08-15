@@ -1,5 +1,5 @@
-import { Button, buttonClasses } from "@/components/ui/Button";
-import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
+import { Button } from "@/components/ui/Button";
+import { NewProductModal } from "@/components/inventory/NewProductModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
@@ -159,8 +159,15 @@ export default async function InventoryPage({
     q,
   });
 
+  const categoryRows = await prisma.part.findMany({
+    where: { orgId, category: { not: null } },
+    distinct: ["category"],
+    select: { category: true },
+    orderBy: { category: "asc" },
+  });
+  const categories = categoryRows.map((r) => r.category).filter((c): c is string => Boolean(c));
+
   return (
-    <Disclosure>
     <div className="space-y-4">
 
       <HubTabs items={INVENTORY_TABS} />
@@ -277,26 +284,6 @@ export default async function InventoryPage({
       ) : null}
 
 
-      {/* Add Item panel */}
-      {canManage && (
-        <DisclosurePanel>
-        <div className="dc-card overflow-hidden">
-          <div className="border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Item</p>
-          </div>
-          <form action={createPartAction} className="p-3">
-            <div className="grid gap-2 sm:grid-cols-[1.4fr_1fr_0.7fr_0.7fr_auto]">
-              <input name="name" placeholder="Item name *" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="manufacturer" placeholder="Manufacturer" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="unitCost" placeholder="Unit cost" inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <input name="reorderLevel" placeholder="Reorder at" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-              <Button type="submit" size="sm" className="px-4">Add</Button>
-            </div>
-          </form>
-        </div>
-        </DisclosurePanel>
-      )}
-
       {/* Items table */}
       <div className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
@@ -306,14 +293,7 @@ export default async function InventoryPage({
               {filteredTotal}{q ? ` matching "${q}"` : ""}
             </span>
           </p>
-          {canManage && (
-            <DisclosureButton
-              label="+ Add Item"
-              openLabel="Cancel"
-              className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}
-              openClassName={buttonClasses("ghost", "sm", { className: "px-4 font-bold" })}
-            />
-          )}
+          {canManage && <NewProductModal action={createPartAction} categories={categories} />}
         </div>
 
         <DataTable
@@ -329,7 +309,7 @@ export default async function InventoryPage({
               : statusFilter === "inactive" ? "No inactive items."
               : stockFilter === "low" ? "No items at or below reorder level."
               : stockFilter === "out" ? "No items out of stock."
-              : <>No inventory items yet.{canManage ? <> <DisclosureButton label="Add your first item." className="text-[var(--accent)] hover:underline" /></> : null}</>
+              : "No inventory items yet."
           }
           columns={[
             {
@@ -478,6 +458,5 @@ export default async function InventoryPage({
         </div>
       </div>
     </div>
-    </Disclosure>
   );
 }

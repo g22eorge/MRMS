@@ -47,13 +47,43 @@ export async function createPartAction(formData: FormData) {
   const manufacturer = String(formData.get("manufacturer") ?? "").trim();
   const unitCostRaw = String(formData.get("unitCost") ?? "").trim();
   const reorderRaw = String(formData.get("reorderLevel") ?? "").trim();
+  const sellingRaw = String(formData.get("sellingPrice") ?? "").trim();
+  const taxRateRaw = String(formData.get("taxRate") ?? "").trim();
+  const qtyRaw = String(formData.get("qtyOnHand") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const baseUom = String(formData.get("baseUom") ?? "").trim();
+  const saleUom = String(formData.get("saleUom") ?? "").trim();
+  const purchaseUom = String(formData.get("purchaseUom") ?? "").trim();
+  const taxable = String(formData.get("taxable") ?? "true") !== "false";
+  const active = String(formData.get("active") ?? "true") !== "false";
 
   // Name is required; SKU is optional — auto-generate a unique one when blank.
   if (!name) redirect("/inventory?add=1&error=Item+name+is+required#add-part");
   if (!sku) sku = await generatePartSku(orgId);
 
   const unitCost = unitCostRaw ? Number(unitCostRaw) : null;
+  const sellingPrice = sellingRaw ? Number(sellingRaw) : null;
+  const taxRate = taxRateRaw ? Number(taxRateRaw) : null;
   const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
+  const openingQty = qtyRaw ? Math.max(0, Math.floor(Number(qtyRaw))) : 0;
+
+  // Full product profile — shared by create and reactivate-existing.
+  const productFields = {
+    name,
+    manufacturer: manufacturer || null,
+    unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
+    sellingPrice: sellingPrice !== null && Number.isFinite(sellingPrice) ? sellingPrice : null,
+    category: category || null,
+    description: description || null,
+    taxable,
+    taxRate: taxRate !== null && Number.isFinite(taxRate) ? taxRate : null,
+    baseUom: baseUom || null,
+    saleUom: saleUom || null,
+    purchaseUom: purchaseUom || null,
+    reorderLevel,
+  };
+
   const existing = await prisma.part.findFirst({
     where: { orgId, sku },
     select: { id: true, isActive: true },
@@ -74,24 +104,11 @@ export async function createPartAction(formData: FormData) {
     if (existing) {
       await prisma.part.updateMany({
         where: { id: existing.id, orgId },
-        data: {
-          name,
-          manufacturer: manufacturer || null,
-          unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
-          reorderLevel,
-          isActive: true,
-        },
+        data: { ...productFields, isActive: true },
       });
     } else {
       await prisma.part.create({
-        data: {
-          orgId,
-          sku,
-          name,
-          manufacturer: manufacturer || null,
-          unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
-          reorderLevel,
-        },
+        data: { orgId, sku, ...productFields, qtyOnHand: openingQty, isActive: active },
       });
     }
   } catch (err) {

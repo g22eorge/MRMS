@@ -1018,6 +1018,14 @@ model Part {
   name         String
   manufacturer String?
   unitCost     Float?
+  sellingPrice Float?
+  category     String?
+  description  String?
+  taxable      Boolean       @default(true)
+  taxRate      Float?
+  baseUom      String?
+  saleUom      String?
+  purchaseUom  String?
   qtyOnHand    Int           @default(0)
   qtyReserved  Int           @default(0)
   reorderLevel Int           @default(0)
