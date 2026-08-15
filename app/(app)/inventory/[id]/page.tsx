@@ -97,7 +97,7 @@ export default async function PartDetailPage({
       {/* ── Header ── */}
       <RecordActionBar
         backHref="/inventory"
-        eyebrow={`Inventory · ${part.sku}`}
+        eyebrow="Inventory"
         title={part.name}
         status={
           !part.isActive ? { label: "Inactive", tone: "neutral" }
@@ -332,7 +332,6 @@ export default async function PartDetailPage({
             {canManage ? (
               <form action={updatePartAction} className="p-3 space-y-2">
                 <input type="hidden" name="partId" value={part.id} />
-                <FormField label="SKU Reference" name="sku" defaultValue={part.sku} />
                 <FormField label="Item Name"     name="name" defaultValue={part.name} required />
                 <FormField label="Manufacturer"  name="manufacturer" defaultValue={part.manufacturer ?? ""} placeholder="Optional" />
                 <FormRow>
@@ -347,7 +346,6 @@ export default async function PartDetailPage({
             ) : (
               <dl className="divide-y divide-[var(--line)]">
                 {[
-                  ["SKU Reference", part.sku],
                   ["Item Name",     part.name],
                   ["Manufacturer",  part.manufacturer ?? "—"],
                   ["Unit Cost",     part.unitCost != null ? formatMoney(part.unitCost) : "—"],

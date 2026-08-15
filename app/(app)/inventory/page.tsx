@@ -259,7 +259,7 @@ export default async function InventoryPage({
             name="q"
             defaultValue={q}
             aria-label="Search items"
-            placeholder="Search by item name, SKU or manufacturer..."
+            placeholder="Search by item name or manufacturer..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
           <Button type="submit" variant="secondary" size="sm">Search</Button>
@@ -341,7 +341,6 @@ export default async function InventoryPage({
                 return (
                   <Link href={`/inventory/${part.id}`} className="group flex flex-col gap-0.5">
                     <span className="font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{part.name}</span>
-                    <span className="text-[0.6875rem] mono text-[var(--ink-muted)]">{part.sku}</span>
                     <span className="text-[0.6875rem] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
                     {!part.isActive && <span className="text-[0.6875rem] font-semibold text-amber-600">Inactive</span>}
                     {isOut && part.isActive && <span className="text-[0.6875rem] font-semibold text-red-600">Out of stock</span>}
@@ -439,7 +438,7 @@ export default async function InventoryPage({
               <Link key={movement.id} href={`/inventory/${movement.part.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--panel-strong)]/50">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-[var(--ink)]">{movement.part.name}</p>
-                  <p className="truncate text-xs text-[var(--ink-muted)]">{movement.part.sku} · {movement.reason ?? "Stock movement"} · {movement.createdBy?.name ?? movement.createdBy?.email ?? "System"}</p>
+                  <p className="truncate text-xs text-[var(--ink-muted)]">{movement.part.name} · {movement.reason ?? "Stock movement"} · {movement.createdBy?.name ?? movement.createdBy?.email ?? "System"}</p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className={`text-sm font-black tabular-nums whitespace-nowrap ${movement.type === "IN" ? "text-emerald-600" : movement.type === "OUT" ? "text-red-600" : "text-amber-600"}`}>
@@ -465,7 +464,7 @@ export default async function InventoryPage({
                 <Link key={part.id} href={`/inventory/${part.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--panel-strong)]/50">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--ink)]">{part.name}</p>
-                    <p className="truncate text-xs text-[var(--ink-muted)]">{part.sku} · reorder at {part.reorderLevel || "not set"}</p>
+                    <p className="truncate text-xs text-[var(--ink-muted)]">reorder at {part.reorderLevel || "not set"}</p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className={`text-sm font-black tabular-nums whitespace-nowrap ${part.qtyOnHand === 0 ? "text-red-600" : "text-amber-600"}`}>{part.qtyOnHand}</p>

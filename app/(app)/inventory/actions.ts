@@ -246,21 +246,25 @@ export async function updatePartAction(formData: FormData) {
   const manufacturer = String(formData.get("manufacturer") ?? "").trim();
   const unitCostRaw = String(formData.get("unitCost") ?? "").trim();
   const reorderRaw = String(formData.get("reorderLevel") ?? "").trim();
-  if (!partId || !sku || !name) redirect(`/inventory/${partId}?error=SKU+and+name+are+required`);
+  if (!partId || !name) redirect(`/inventory/${partId}?error=Item+name+is+required`);
 
   const unitCost = unitCostRaw ? Number(unitCostRaw) : null;
   const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
-  const conflictingSku = await prisma.part.findFirst({
-    where: { orgId, sku, id: { not: partId } },
-    select: { id: true },
-  });
-  if (conflictingSku) redirect(`/inventory/${partId}?error=${encodeURIComponent("Another inventory item already uses that SKU")}`);
+  // SKU is optional on edit — only validate/change it when a value is supplied;
+  // blank keeps the item's existing (auto-generated) SKU untouched.
+  if (sku) {
+    const conflictingSku = await prisma.part.findFirst({
+      where: { orgId, sku, id: { not: partId } },
+      select: { id: true },
+    });
+    if (conflictingSku) redirect(`/inventory/${partId}?error=${encodeURIComponent("Another inventory item already uses that SKU")}`);
+  }
 
   try {
     const updated = await prisma.part.updateMany({
       where: { id: partId, orgId },
       data: {
-        sku,
+        ...(sku ? { sku } : {}),
         name,
         manufacturer: manufacturer || null,
         unitCost: unitCost !== null && Number.isFinite(unitCost) ? unitCost : null,
