@@ -480,11 +480,18 @@ export async function GET(req: NextRequest) {
       sku: p.sku,
       name: p.name,
       manufacturer: p.manufacturer ?? "",
+      category: p.category ?? "",
+      baseUom: p.baseUom ?? "",
       qtyOnHand: p.qtyOnHand,
       reorderLevel: p.reorderLevel,
       stockStatus: p.qtyOnHand <= 0 ? "OUT_OF_STOCK" : p.qtyOnHand <= p.reorderLevel ? "LOW_STOCK" : "OK",
       unitCost: p.unitCost?.toFixed(2) ?? "",
+      sellingPrice: p.sellingPrice?.toFixed(2) ?? "",
       totalValue: p.unitCost != null ? (p.qtyOnHand * p.unitCost).toFixed(2) : "",
+      saleUom: p.saleUom ?? "",
+      saleUomFactor: p.saleUomFactor ?? "",
+      purchaseUom: p.purchaseUom ?? "",
+      purchaseUomFactor: p.purchaseUomFactor ?? "",
     }));
     const csv = toCsv(rows);
     return new NextResponse(csv, {

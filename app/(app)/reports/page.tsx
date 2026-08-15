@@ -696,7 +696,12 @@ export default async function ReportsPage({
 
   // Inventory
   const lowStockItems = lowStockParts.filter((p) => p.qtyOnHand <= p.reorderLevel);
-  const totalStockValue = lowStockParts.reduce((s, p) => s + p.qtyOnHand * (p.unitCost ?? 0), 0);
+  // Value ALL active stock — the low-stock list is filtered to reorderLevel > 0,
+  // so reducing over it silently omitted every part without a reorder level.
+  const stockValueRows = await prisma.part
+    .findMany({ where: { orgId, isActive: true }, select: { qtyOnHand: true, unitCost: true } })
+    .catch(() => [] as Array<{ qtyOnHand: number; unitCost: number | null }>);
+  const totalStockValue = stockValueRows.reduce((s, p) => s + p.qtyOnHand * (p.unitCost ?? 0), 0);
   const payablesOutstanding =
     (supplierBillsAgg._sum.totalAmount ?? 0) - (supplierBillsAgg._sum.paidAmount ?? 0);
 
@@ -1371,7 +1376,7 @@ export default async function ReportsPage({
               <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Stock &amp; Payables</p>
               <div className="mt-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-[var(--ink-muted)]">Stock Value (tracked items)</p>
+                  <p className="text-sm text-[var(--ink-muted)]">Stock Value (all active items)</p>
                   <p className="text-sm font-bold text-[var(--ink)]">{formatMoneyCompact(totalStockValue, currency)}</p>
                 </div>
                 <div className="flex items-center justify-between">

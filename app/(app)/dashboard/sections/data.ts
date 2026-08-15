@@ -77,12 +77,35 @@ export async function loadSalesRevenueTrend(trendMonths: TrendMonth[], orgId?: s
   const rangeStart = trendMonths[0].start;
   const rangeEnd   = trendMonths[trendMonths.length - 1].end;
 
-  const [payments] = await Promise.all([
+  const [payments, saleItems, invoiceLines] = await Promise.all([
     prisma.payment.findMany({
       where: { orgId, kind: "PAYMENT", receivedAt: { gte: rangeStart, lte: rangeEnd } },
       select: { amount: true, currency: true, exchangeRateToBase: true, saleId: true, receivedAt: true, invoice: { select: { invoiceType: true } } },
     }),
+    // COGS inputs, bucketed by paidAt below (matches the operational report basis)
+    prisma.saleItem
+      .findMany({
+        where: { partId: { not: null }, sale: { orgId, status: "PAID", paidAt: { gte: rangeStart, lte: rangeEnd } } },
+        select: { quantity: true, saleUomFactor: true, costAtSale: true, part: { select: { unitCost: true, saleUomFactor: true } }, sale: { select: { paidAt: true } } },
+      })
+      .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; part: { unitCost: number | null; saleUomFactor: number | null } | null; sale: { paidAt: Date | null } | null }>),
+    prisma.invoiceLine
+      .findMany({
+        where: { orgId, sourceType: "Part", sourceId: { not: null }, invoice: { status: "PAID", paidAt: { gte: rangeStart, lte: rangeEnd }, invoiceType: { not: "REPAIR" } } },
+        select: { quantity: true, saleUomFactor: true, costAtSale: true, sourceId: true, invoice: { select: { paidAt: true } } },
+      })
+      .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; sourceId: string | null; invoice: { paidAt: Date | null } | null }>),
   ]);
+
+  // Live unit-cost fallback only for older invoice lines that lack a snapshot.
+  const missingCostIds = [...new Set(invoiceLines.filter((l) => l.costAtSale == null && l.sourceId).map((l) => l.sourceId as string))];
+  const liveCostById = new Map<string, { unitCost: number | null; saleUomFactor: number | null }>();
+  if (missingCostIds.length) {
+    const parts = await prisma.part
+      .findMany({ where: { id: { in: missingCostIds }, orgId }, select: { id: true, unitCost: true, saleUomFactor: true } })
+      .catch(() => [] as Array<{ id: string; unitCost: number | null; saleUomFactor: number | null }>);
+    for (const p of parts) liveCostById.set(p.id, { unitCost: p.unitCost, saleUomFactor: p.saleUomFactor });
+  }
 
   return trendMonths.map((m) => {
     let revenue = 0;
@@ -92,7 +115,21 @@ export async function loadSalesRevenueTrend(trendMonths: TrendMonth[], orgId?: s
       // sales channel = POS sales or non-repair invoices
       if (p.saleId || (p.invoice && p.invoice.invoiceType !== "REPAIR")) revenue += amt;
     }
-    return { key: m.key, revenue, margin: revenue };
+    let cogs = 0;
+    for (const it of saleItems) {
+      const paidAt = it.sale?.paidAt;
+      if (!paidAt || paidAt < m.start || paidAt > m.end) continue;
+      const factor = it.saleUomFactor ?? it.part?.saleUomFactor ?? 1;
+      cogs += it.quantity * factor * (it.costAtSale ?? it.part?.unitCost ?? 0);
+    }
+    for (const l of invoiceLines) {
+      const paidAt = l.invoice?.paidAt;
+      if (!paidAt || paidAt < m.start || paidAt > m.end) continue;
+      const live = l.sourceId ? liveCostById.get(l.sourceId) : undefined;
+      const factor = l.saleUomFactor ?? live?.saleUomFactor ?? 1;
+      cogs += l.quantity * factor * (l.costAtSale ?? live?.unitCost ?? 0);
+    }
+    return { key: m.key, revenue, margin: revenue - cogs };
   });
 }
 
