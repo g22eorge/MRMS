@@ -55,6 +55,8 @@ export async function createPartAction(formData: FormData) {
   const baseUom = String(formData.get("baseUom") ?? "").trim();
   const saleUom = String(formData.get("saleUom") ?? "").trim();
   const purchaseUom = String(formData.get("purchaseUom") ?? "").trim();
+  const saleFactorRaw = String(formData.get("saleUomFactor") ?? "").trim();
+  const purchaseFactorRaw = String(formData.get("purchaseUomFactor") ?? "").trim();
   const taxable = String(formData.get("taxable") ?? "true") !== "false";
   const active = String(formData.get("active") ?? "true") !== "false";
 
@@ -67,6 +69,10 @@ export async function createPartAction(formData: FormData) {
   const taxRate = taxRateRaw ? Number(taxRateRaw) : null;
   const reorderLevel = reorderRaw ? Math.max(0, Math.floor(Number(reorderRaw))) : 0;
   const openingQty = qtyRaw ? Math.max(0, Math.floor(Number(qtyRaw))) : 0;
+  // Conversion factors: base units per 1 sale/purchase unit. Only stored when a
+  // positive number is given; null means 1:1.
+  const saleUomFactor = saleFactorRaw && Number(saleFactorRaw) > 0 ? Number(saleFactorRaw) : null;
+  const purchaseUomFactor = purchaseFactorRaw && Number(purchaseFactorRaw) > 0 ? Number(purchaseFactorRaw) : null;
 
   // Full product profile — shared by create and reactivate-existing.
   const productFields = {
@@ -81,6 +87,8 @@ export async function createPartAction(formData: FormData) {
     baseUom: baseUom || null,
     saleUom: saleUom || null,
     purchaseUom: purchaseUom || null,
+    saleUomFactor,
+    purchaseUomFactor,
     reorderLevel,
   };
 

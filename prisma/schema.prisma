@@ -1026,6 +1026,10 @@ model Part {
   baseUom      String?
   saleUom      String?
   purchaseUom  String?
+  // Base stock units per 1 sale/purchase unit (null = 1:1). qtyOnHand is in
+  // base units; sales multiply by saleUomFactor, receipts by purchaseUomFactor.
+  saleUomFactor     Float?
+  purchaseUomFactor Float?
   qtyOnHand    Int           @default(0)
   qtyReserved  Int           @default(0)
   reorderLevel Int           @default(0)

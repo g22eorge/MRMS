@@ -83,20 +83,32 @@ export function NewProductModal({
             <Toggle name="taxable" defaultOn>Tax</Toggle>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3">
+            <label className={label}>Base unit — how stock is counted</label>
+            <input name="baseUom" placeholder="e.g. piece" className={input} />
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr] sm:items-end">
             <div>
-              <label className={label}>Base UOM</label>
-              <input name="baseUom" placeholder="Base unit…" className={input} />
+              <label className={label}>Sale unit</label>
+              <input name="saleUom" placeholder="e.g. piece" className={input} />
             </div>
             <div>
-              <label className={label}>Sale UOM</label>
-              <input name="saleUom" placeholder="Sale unit…" className={input} />
+              <label className={label}>Base units per sale unit</label>
+              <input name="saleUomFactor" inputMode="decimal" placeholder="1" className={input} />
             </div>
             <div>
-              <label className={label}>Purchase UOM</label>
-              <input name="purchaseUom" placeholder="Purchase unit…" className={input} />
+              <label className={label}>Purchase unit</label>
+              <input name="purchaseUom" placeholder="e.g. box" className={input} />
+            </div>
+            <div>
+              <label className={label}>Base units per purchase unit</label>
+              <input name="purchaseUomFactor" inputMode="decimal" placeholder="1" className={input} />
             </div>
           </div>
+          <p className="mt-1.5 text-[0.6875rem] text-[var(--ink-muted)]">
+            Leave a factor at 1 for same-unit items. Example: stock in <b>pieces</b>, buy in <b>box</b> of 12 → purchase factor 12.
+          </p>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <div>
