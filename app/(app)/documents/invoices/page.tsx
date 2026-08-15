@@ -158,11 +158,11 @@ export default async function InvoicesPage({
     }
 
     const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
-    const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null }>();
+    const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null; saleUomFactor: number | null }>();
     if (partIds.length) {
-      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true } });
+      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true, saleUomFactor: true } });
       if (validParts.length !== partIds.length) redirect("/documents/invoices?error=missing-fields");
-      for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
+      for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate, saleUomFactor: part.saleUomFactor });
     }
 
     const invoiceType = INVOICE_TYPES.includes(invoiceTypeRaw as InvoiceType)
@@ -247,6 +247,7 @@ export default async function InvoicesPage({
               discountAmount: item.discountAmount,
               taxAmount: lineTaxes[index],
               lineTotal: item.lineTotal,
+              saleUomFactor: item.partId ? (taxByPart.get(item.partId)?.saleUomFactor ?? 1) : null,
             })),
           },
         },
@@ -257,12 +258,13 @@ export default async function InvoicesPage({
       // job completion instead, so this never double-counts.
       for (const item of items) {
         if (!item.partId) continue;
-        await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: item.quantity } } });
+        const baseQty = item.quantity * (taxByPart.get(item.partId)?.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: baseQty } } });
         await tx.partStockTransaction.create({
           data: {
             partId: item.partId,
             type: "OUT",
-            quantity: item.quantity,
+            quantity: baseQty,
             reason: `Invoice ${invoiceNumber}: ${item.description}`.slice(0, 500),
             createdById: user.id,
           },

@@ -880,6 +880,9 @@ model CreditNoteItem {
   quantity    Int
   unitPrice   Float
   lineTotal   Float
+  // Base stock units per 1 sale unit, snapshot at credit-note time so the
+  // return-to-stock uses the same factor even if the product's changes later.
+  saleUomFactor Float?
 
   createdAt DateTime @default(now())
 
@@ -2338,6 +2341,9 @@ model InvoiceLine {
   discountAmount Float    @default(0)
   taxAmount      Float    @default(0)
   lineTotal      Float
+  // Base stock units per 1 sale unit, snapshot so voids restore the same base
+  // amount even if the product's saleUomFactor later changes.
+  saleUomFactor  Float?
   createdAt      DateTime @default(now())
 
   @@index([orgId, invoiceId])

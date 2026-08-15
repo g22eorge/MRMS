@@ -623,11 +623,11 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     const items = await prisma.saleItem.findMany({
       where: { saleId },
-      select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true, partId: true },
+      select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true, partId: true, saleUomFactor: true },
       orderBy: { createdAt: "asc" },
     });
 
-    const picked: Array<{ saleItemId: string; description: string; quantity: number; unitPrice: number; lineTotal: number; partId: string | null }> = [];
+    const picked: Array<{ saleItemId: string; description: string; quantity: number; unitPrice: number; lineTotal: number; partId: string | null; saleUomFactor: number | null }> = [];
     for (const it of items) {
       const raw = String(formData.get(`returnQty:${it.id}`) ?? "").trim();
       if (!raw) continue;
@@ -641,6 +641,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         unitPrice: it.unitPrice,
         lineTotal: it.unitPrice * qty,
         partId: it.partId,
+        saleUomFactor: it.saleUomFactor,
       });
     }
     if (picked.length === 0) posReject(saleId, "Select at least one item to return.");
@@ -685,6 +686,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           quantity: p.quantity,
           unitPrice: p.unitPrice,
           lineTotal: p.lineTotal,
+          saleUomFactor: p.saleUomFactor,
         })),
       });
 
@@ -726,19 +728,20 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if (!creditNote || creditNote.itemsReceivedBackAt) return;
 
     await prisma.$transaction(async (tx) => {
-      const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true } });
+      const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
 
       for (const it of items) {
         if (!it.partId) continue;
         const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, qtyOnHand: true, sku: true, name: true } });
         if (!part) continue;
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + Math.abs(it.quantity) } });
+        const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
             saleId,
             type: "IN",
-            quantity: Math.abs(it.quantity),
+            quantity: baseQty,
             reason: `Return (${creditNote.creditNoteNumber}) ${it.description || part.name}`,
             createdById: session.user.id,
           },

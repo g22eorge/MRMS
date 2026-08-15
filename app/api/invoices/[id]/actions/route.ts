@@ -125,11 +125,12 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       if (!alreadyVoid) {
         const partLines = await tx.invoiceLine.findMany({
           where: { invoiceId: invoice.id, orgId, sourceType: "Part", sourceId: { not: null } },
-          select: { sourceId: true, quantity: true, description: true },
+          select: { sourceId: true, quantity: true, description: true, saleUomFactor: true },
         });
         for (const line of partLines) {
           if (!line.sourceId) continue;
-          const qty = Math.round(line.quantity);
+          // Restore base stock units using the factor snapshot from issue time.
+          const qty = Math.round(line.quantity * (line.saleUomFactor ?? 1));
           if (qty <= 0) continue;
           const part = await tx.part.findFirst({ where: { id: line.sourceId, orgId }, select: { id: true } });
           if (!part) continue;

@@ -72,18 +72,19 @@ export default async function CreditNotesPage({
     await prisma.$transaction(async (tx) => {
       // Restore returned stock — the POS "received back" path did this but the
       // Documents path only stamped a timestamp, silently losing inventory (H5).
-      const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true } });
+      const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
       for (const it of items) {
         if (!it.partId) continue;
         const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, sku: true, name: true } });
         if (!part) continue;
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: Math.abs(it.quantity) } } });
+        const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
             saleId: cn.saleId,
             type: "IN",
-            quantity: Math.abs(it.quantity),
+            quantity: baseQty,
             reason: `Return (${cn.creditNoteNumber}) ${it.description || part.name}`,
             createdById: user.id,
           },
@@ -258,7 +259,7 @@ export default async function CreditNotesPage({
         saleNumber: true,
         items: {
           where: { id: { in: itemIds } },
-          select: { id: true, partId: true, description: true, quantity: true, unitPrice: true },
+          select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, saleUomFactor: true },
         },
       },
     });
@@ -273,6 +274,7 @@ export default async function CreditNotesPage({
           description: item.description,
           quantity,
           unitPrice: item.unitPrice,
+          saleUomFactor: item.saleUomFactor,
         };
       })
       .filter((item) => item.quantity > 0);
@@ -313,6 +315,7 @@ export default async function CreditNotesPage({
               quantity: i.quantity,
               unitPrice: i.unitPrice,
               lineTotal: i.quantity * i.unitPrice,
+              saleUomFactor: i.saleUomFactor,
             })),
           },
         },
