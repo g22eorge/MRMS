@@ -1003,6 +1003,9 @@ model SaleItem {
   quantity    Int    @default(1)
   unitPrice   Float
   lineTotal   Float
+  // Base stock units per 1 sale unit, snapshot at sale time so stock reverses
+  // by the same factor even if the product's saleUomFactor later changes.
+  saleUomFactor Float?
 
   createdAt DateTime @default(now())
 

@@ -309,7 +309,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         id: true,
         status: true,
         invoicedAt: true,
-        items: { select: { partId: true, quantity: true, description: true } },
+        items: { select: { partId: true, quantity: true, description: true, saleUomFactor: true } },
         payments: { select: { id: true }, take: 1 },
         creditNotes: { select: { id: true }, take: 1 },
         refunds: { select: { id: true }, take: 1 },
@@ -322,13 +322,14 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         if (!item.partId) continue;
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (!part) continue;
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + Math.abs(item.quantity) } });
+        const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
             saleId: sale.id,
             type: "IN",
-            quantity: Math.abs(item.quantity),
+            quantity: baseQty,
             reason: `POS sale deleted (${item.description})`,
             createdById: user.id,
           },
@@ -359,14 +360,17 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       const sale = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
       if (!sale || sale.status !== "OPEN") return;
 
-      const item = await tx.saleItem.findFirst({ where: { id: itemId, saleId }, select: { id: true, partId: true, quantity: true } });
+      const item = await tx.saleItem.findFirst({ where: { id: itemId, saleId }, select: { id: true, partId: true, quantity: true, saleUomFactor: true } });
       if (!item) return;
 
       const delta = quantity - item.quantity;
       if (item.partId && delta !== 0) {
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (!part) return;
-        const nextQty = part.qtyOnHand - delta;
+        // Move stock by the line's snapshot factor so it stays consistent with
+        // the original decrement even if the product's factor changed since.
+        const baseDelta = delta * (item.saleUomFactor ?? 1);
+        const nextQty = part.qtyOnHand - baseDelta;
         if (nextQty < 0) posReject(saleId, "Not enough stock for that quantity.");
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: nextQty } });
         await tx.partStockTransaction.create({
@@ -374,7 +378,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             partId: part.id,
             saleId,
             type: delta > 0 ? "OUT" : "IN",
-            quantity: Math.abs(delta),
+            quantity: Math.abs(baseDelta),
             reason: `POS sale item updated (${description})`,
             createdById: user.id,
           },
@@ -403,19 +407,20 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       const sale = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
       if (!sale || sale.status !== "OPEN") return;
 
-      const item = await tx.saleItem.findFirst({ where: { id: itemId, saleId }, select: { id: true, partId: true, quantity: true, description: true } });
+      const item = await tx.saleItem.findFirst({ where: { id: itemId, saleId }, select: { id: true, partId: true, quantity: true, description: true, saleUomFactor: true } });
       if (!item) return;
 
       if (item.partId) {
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (part) {
-          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + Math.abs(item.quantity) } });
+          const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
+          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
           await tx.partStockTransaction.create({
             data: {
               partId: part.id,
               saleId,
               type: "IN",
-              quantity: Math.abs(item.quantity),
+              quantity: baseQty,
               reason: `POS sale item deleted (${item.description})`,
               createdById: user.id,
             },
@@ -460,29 +465,34 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       let resolvedDescription = description;
       let resolvedPartId: string | null = null;
 
+      // Base stock units per 1 sale unit, snapshot on the line so reversals use
+      // the same factor even if the product's saleUomFactor later changes.
+      let saleFactor = 1;
       if (partId) {
-        const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true, sellingPrice: true, unitCost: true } });
+        const part = await tx.part.findFirst({ where: { id: partId, orgId, isActive: true }, select: { id: true, sku: true, name: true, qtyOnHand: true, sellingPrice: true, unitCost: true, saleUomFactor: true } });
         if (!part) posReject(saleId, "That product was not found or is inactive.");
-        if (part.qtyOnHand - Math.abs(qty) < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
+        saleFactor = part.saleUomFactor && part.saleUomFactor > 0 ? part.saleUomFactor : 1;
+        const baseQty = Math.abs(qty) * saleFactor;
+        if (part.qtyOnHand - baseQty < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
         resolvedDescription = part.name;
         if (!priceProvided) unitPrice = part.sellingPrice ?? part.unitCost ?? 0;
 
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - Math.abs(qty) } });
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
             saleId,
             type: "OUT",
-            quantity: Math.abs(qty),
+            quantity: baseQty,
             reason: `POS sale item (${resolvedDescription})`,
           },
         });
       }
 
       await tx.saleItem.create({
-        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal: unitPrice * qty },
+        data: { saleId, partId: resolvedPartId, description: resolvedDescription, quantity: qty, unitPrice, lineTotal: unitPrice * qty, saleUomFactor: saleFactor },
       });
 
       await recalcSaleTotals(tx, saleId, orgId);

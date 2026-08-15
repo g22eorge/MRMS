@@ -161,7 +161,7 @@ export default async function PosPage({
         id: true,
         status: true,
         invoicedAt: true,
-        items: { select: { partId: true, quantity: true, description: true } },
+        items: { select: { partId: true, quantity: true, description: true, saleUomFactor: true } },
         payments: { select: { id: true }, take: 1 },
         creditNotes: { select: { id: true }, take: 1 },
         refunds: { select: { id: true }, take: 1 },
@@ -174,13 +174,14 @@ export default async function PosPage({
         if (!item.partId) continue;
         const part = await tx.part.findFirst({ where: { id: item.partId }, select: { id: true, qtyOnHand: true } });
         if (!part) continue;
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + Math.abs(item.quantity) } });
+        const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
             saleId: sale.id,
             type: "IN",
-            quantity: Math.abs(item.quantity),
+            quantity: baseQty,
             reason: `POS sale deleted (${item.description})`,
             createdById: _u3.id,
           },
