@@ -164,7 +164,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   const [clients, parts, taxRates, leads, jobs, branding] = await Promise.all([
     db.client.findMany({ where: { orgId: user.orgId }, orderBy: { fullName: "asc" }, take: 300, select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } }),
-    db.part.findMany({ where: { orgId: user.orgId, isActive: true }, orderBy: { name: "asc" }, take: 500, select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, qtyOnHand: true } }),
+    db.part.findMany({ where: { orgId: user.orgId, isActive: true }, orderBy: { name: "asc" }, take: 500, select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, taxable: true, taxRate: true, qtyOnHand: true } }),
     db.taxRate.findMany({ where: { orgId: user.orgId, isActive: true, appliesToSales: true }, orderBy: [{ isDefault: "desc" }, { code: "asc" }], select: { id: true, name: true, code: true, rate: true, isDefault: true } }),
     db.lead.findMany({ where: { orgId: user.orgId, status: { notIn: ["LOST", "STALE"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, fullName: true, phone: true, organization: true, interest: true } }),
     db.job.findMany({ where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } } }),

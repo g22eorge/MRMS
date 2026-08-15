@@ -19,6 +19,8 @@ type PartOption = {
   name: string;
   unitCost?: number | null;
   sellingPrice?: number | null;
+  taxable?: boolean;
+  taxRate?: number | null;
   qtyOnHand?: number;
 };
 
@@ -154,7 +156,15 @@ export function CreateStandaloneInvoiceForm({
 
   const subtotal = lines.reduce((sum, item) => sum + commercialLineTotal(item, canOverrideDiscount), 0);
   const taxRate = taxEnabled ? Math.max(0, Number(selectedTax?.taxRate ?? 0)) : 0;
-  const taxAmount = subtotal * (taxRate / 100);
+  // Preview VAT per product so it matches what the server saves: exempt products
+  // are taxed at 0, others at their own rate, falling back to the chosen rate.
+  const taxAmount = taxEnabled
+    ? lines.reduce((sum, item) => {
+        const part = item.partId ? partsList.find((p) => p.id === item.partId) : undefined;
+        const lineRate = part ? (part.taxable === false ? 0 : part.taxRate ?? taxRate) : taxRate;
+        return sum + commercialLineTotal(item, canOverrideDiscount) * (Math.max(0, lineRate) / 100);
+      }, 0)
+    : 0;
   const totalAmount = subtotal + taxAmount;
 
   function formatAmount(value: number) {

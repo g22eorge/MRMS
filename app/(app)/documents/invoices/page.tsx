@@ -22,6 +22,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { computeVat } from "@/lib/commercial/vat";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -157,9 +158,11 @@ export default async function InvoicesPage({
     }
 
     const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
+    const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null }>();
     if (partIds.length) {
-      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true } });
+      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true } });
       if (validParts.length !== partIds.length) redirect("/documents/invoices?error=missing-fields");
+      for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
     }
 
     const invoiceType = INVOICE_TYPES.includes(invoiceTypeRaw as InvoiceType)
@@ -168,7 +171,16 @@ export default async function InvoicesPage({
     const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
     const issuedAt = issueDateRaw ? new Date(issueDateRaw) : new Date();
     const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
-    const taxAmount = roundMoney(taxRate > 0 ? subtotal * (taxRate / 100) : 0, currency);
+    // Per-product tax: each line taxed at its product's rate (exempt lines at 0),
+    // falling back to the invoice's chosen rate. The chosen rate stays the master
+    // on/off — when it's 0, nothing is taxed.
+    const lineTaxes = items.map((item) => {
+      const part = item.partId ? taxByPart.get(item.partId) : undefined;
+      const taxable = part ? part.taxable : true;
+      const rate = taxable ? (part?.taxRate ?? taxRate) : 0;
+      return roundMoney(computeVat(item.lineTotal, { applicable: taxRate > 0, ratePercent: rate, inclusive: false }).vatAmount, currency);
+    });
+    const taxAmount = roundMoney(lineTaxes.reduce((sum, tax) => sum + tax, 0), currency);
     const totalAmount = roundMoney(subtotal + taxAmount, currency);
     const invoiceSubject = sanitizeText(subject || items[0]?.description || "Invoice");
 
@@ -225,20 +237,17 @@ export default async function InvoicesPage({
           dueDate,
           notes: notes ? sanitizeText(notes) : null,
           lines: {
-            create: items.map((item) => {
-              const lineTax = roundMoney(taxAmount > 0 && subtotal > 0 ? taxAmount * (item.lineTotal / subtotal) : 0, currency);
-              return {
-                orgId,
-                sourceType: item.partId ? "Part" : "Custom",
-                sourceId: item.partId,
-                description: item.description,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                discountAmount: item.discountAmount,
-                taxAmount: lineTax,
-                lineTotal: item.lineTotal,
-              };
-            }),
+            create: items.map((item, index) => ({
+              orgId,
+              sourceType: item.partId ? "Part" : "Custom",
+              sourceId: item.partId,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              discountAmount: item.discountAmount,
+              taxAmount: lineTaxes[index],
+              lineTotal: item.lineTotal,
+            })),
           },
         },
       });
@@ -438,7 +447,7 @@ export default async function InvoicesPage({
       where: { orgId: user.orgId, isActive: true },
       orderBy: { name: "asc" },
       take: 500,
-      select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, qtyOnHand: true },
+      select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, taxable: true, taxRate: true, qtyOnHand: true },
     }).catch(() => []),
     prisma.taxRate.findMany({
       where: { orgId: user.orgId, isActive: true, appliesToSales: true },

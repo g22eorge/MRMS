@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 
+import { computeLinesVat } from "@/lib/commercial/vat";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { can } from "@/lib/permissions";
 import { normalizeCurrency, roundMoney } from "@/lib/currency";
@@ -84,17 +85,32 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
   const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
   const requestedTaxRate = Number(data.taxRate);
   const taxRate = data.taxApplicable ? Math.min(Math.max(Number.isFinite(requestedTaxRate) ? requestedTaxRate : 0, 0), 100) : 0;
-  const vatAmount = roundMoney(taxRate > 0 ? subtotal * (taxRate / 100) : 0, currency);
-  const taxLabel = vatAmount > 0 ? sanitizeText(String(data.taxLabel || "Tax")).slice(0, 32) : null;
-  const totalAmount = roundMoney(subtotal + vatAmount, currency);
+
+  // Validate quoted products and read their tax profile in the same query, so
+  // VAT is charged per product: exempt products at 0, others at their own rate,
+  // falling back to the quotation's chosen rate. The chosen rate stays the
+  // master on/off — when it's off, nothing is taxed.
   const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
+  const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null }>();
   if (partIds.length) {
     const validParts = await prisma.part.findMany({
       where: { id: { in: partIds }, orgId, isActive: true },
-      select: { id: true },
+      select: { id: true, taxable: true, taxRate: true },
     });
     if (validParts.length !== partIds.length) throw new Error("One or more quoted products are inactive or not found");
+    for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
   }
+
+  const vat = computeLinesVat(
+    items.map((item) => {
+      const part = item.partId ? taxByPart.get(item.partId) : undefined;
+      return { base: item.lineTotal, taxable: part ? part.taxable : true, ratePercent: part?.taxRate ?? null };
+    }),
+    { applicable: Boolean(data.taxApplicable), defaultRatePercent: taxRate, inclusive: false },
+  );
+  const vatAmount = roundMoney(vat.vatAmount, currency);
+  const taxLabel = vatAmount > 0 ? sanitizeText(String(data.taxLabel || "Tax")).slice(0, 32) : null;
+  const totalAmount = roundMoney(subtotal + vatAmount, currency);
 
   if (data.leadId) {
     const lead = await prisma.lead.findFirst({

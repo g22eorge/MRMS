@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { LeadSource, LeadStatus, QuotationStatus } from "@prisma/client";
 
+import { computeLinesVat } from "@/lib/commercial/vat";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -264,8 +265,8 @@ function quotationLineTotal(item: { quantity: number; unitPrice: number; discoun
 
 async function recalculateQuotationTotals(quotationId: string) {
   const [items, quotation] = await Promise.all([
-    prisma.quotationItem.findMany({ where: { quotationId } }),
-    prisma.quotation.findUnique({ where: { id: quotationId }, select: { subtotal: true, vatAmount: true, taxRate: true } }),
+    prisma.quotationItem.findMany({ where: { quotationId }, select: { lineTotal: true, partId: true } }),
+    prisma.quotation.findUnique({ where: { id: quotationId }, select: { subtotal: true, vatAmount: true, taxRate: true, orgId: true } }),
   ]);
   const subtotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
   const inferredTaxRate = quotation?.taxRate ?? (
@@ -273,7 +274,26 @@ async function recalculateQuotationTotals(quotationId: string) {
       ? (quotation.vatAmount / quotation.subtotal) * 100
       : 0
   );
-  const vatAmount = inferredTaxRate > 0 ? subtotal * (inferredTaxRate / 100) : 0;
+  // Re-sync VAT per product (exempt lines at 0, others at their own rate,
+  // falling back to the quotation's rate). The stored/inferred rate stays the
+  // master on/off, matching how the quotation was created.
+  const partIds = [...new Set(items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+  const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null }>();
+  if (partIds.length && quotation?.orgId) {
+    const parts = await prisma.part.findMany({
+      where: { id: { in: partIds }, orgId: quotation.orgId },
+      select: { id: true, taxable: true, taxRate: true },
+    });
+    for (const part of parts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
+  }
+  const vat = computeLinesVat(
+    items.map((i) => {
+      const part = i.partId ? taxByPart.get(i.partId) : undefined;
+      return { base: i.lineTotal, taxable: part ? part.taxable : true, ratePercent: part?.taxRate ?? null };
+    }),
+    { applicable: inferredTaxRate > 0, defaultRatePercent: inferredTaxRate, inclusive: false },
+  );
+  const vatAmount = vat.vatAmount;
   await prisma.quotation.update({
     where: { id: quotationId },
     data: { subtotal, vatAmount, totalAmount: subtotal + vatAmount },
