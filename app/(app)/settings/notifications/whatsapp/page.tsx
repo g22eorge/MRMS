@@ -71,9 +71,7 @@ export default async function WhatsAppSettingsPage() {
           </div>
         ) : (
           <div className="mt-3 rounded-lg bg-amber-500/10 px-4 py-3 text-[0.75rem] text-amber-700 dark:text-amber-400">
-            WhatsApp is not configured. Set <code className="mono">WHATSAPP_ACCESS_TOKEN</code>,{" "}
-            <code className="mono">WHATSAPP_PHONE_NUMBER_ID</code>, and{" "}
-            <code className="mono">WHATSAPP_BUSINESS_NUMBER</code> in your environment.
+            WhatsApp is not connected yet. Add your WhatsApp Business API credentials in the form below to start sending status updates and documents to clients.
           </div>
         )}
 
