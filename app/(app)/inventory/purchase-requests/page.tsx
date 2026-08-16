@@ -6,8 +6,6 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { HubTabs } from "@/components/shared/HubTabs";
-import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
@@ -98,7 +96,6 @@ export default async function PurchaseRequestsPage({
 
   return (
     <ListPageLayout
-      topBar={<HubTabs items={PROCUREMENT_TABS} />}
       header={{
         eyebrow: "Procurement",
         title: "Purchase Requests",

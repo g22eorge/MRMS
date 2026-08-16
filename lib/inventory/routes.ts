@@ -1,8 +1,9 @@
 import type { HubTab } from "@/components/shared/HubTabs";
 
-// Inventory (stock) hub tabs. The buying side (POs, requests, bills, GRNs) lives
-// under the Procurement hub even though those routes are physically under
-// /inventory/* — see lib/procurement/routes.ts.
+// Inventory (stock) hub tabs — the sub-nav for the stock pages, and the only
+// home for Transfers and Locations (which aren't sidebar shortcuts). The buying
+// pages (purchase orders, goods received, supplier bills) are reached straight
+// from the sidebar now; their old tab bar was removed as sidebar duplication.
 export const INVENTORY_TABS: HubTab[] = [
   { href: "/inventory", label: "Items", exact: true },
   { href: "/inventory/transfers", label: "Transfers" },

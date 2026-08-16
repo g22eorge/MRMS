@@ -6,9 +6,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { HubTabs } from "@/components/shared/HubTabs";
 import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
-import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +47,6 @@ export default async function GoodsReceivedPage({
 
   return (
     <ListPageLayout
-      topBar={<HubTabs items={PROCUREMENT_TABS} />}
       header={{
         eyebrow: "Procurement",
         title: "Goods Received",
