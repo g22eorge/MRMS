@@ -8,8 +8,10 @@ describe("PLATFORM_ROUTES", () => {
     expect(PLATFORM_ROUTES.org("org-1")).toBe("/platform/orgs/org-1");
   });
 
-  it("maps legacy admin paths for redirect stubs", () => {
-    expect(PLATFORM_ROUTES.legacyAdminHome).toBe("/platform-admin");
-    expect(PLATFORM_ROUTES.legacyAdminOrg("org-1")).toBe("/platform-admin/orgs/org-1");
+  it("no longer exposes the removed /platform-admin redirect stubs", () => {
+    // The legacy /platform-admin pages and their registry entries were deleted;
+    // /platform is the only console path. Kept as a guard against reintroduction.
+    expect("legacyAdminHome" in PLATFORM_ROUTES).toBe(false);
+    expect("legacyAdminOrg" in PLATFORM_ROUTES).toBe(false);
   });
 });
