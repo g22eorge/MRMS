@@ -186,9 +186,9 @@ export default async function InventoryPage({
         ]}
       />
 
-      {/* ── Filter panel: chips + search, same shape as every other list page ── */}
-      <div className="dc-card">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2.5">
+      {/* ── Filter panel: chips + search ── */}
+      <div className="dc-card space-y-2.5 p-3">
+        <div className="flex flex-wrap items-center gap-1.5">
           {([
             { label: `${activePartCount} active`, value: "active" },
             { label: `${inactivePartCount} inactive`, value: "inactive" },
@@ -197,10 +197,10 @@ export default async function InventoryPage({
             <Link
               key={value}
               href={`/inventory?status=${value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                 statusFilter === value
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                  : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
+                  ? "border-[var(--accent)]/50 bg-[var(--accent)]/12 text-[var(--accent)]"
+                  : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
               }`}
             >
               {label}
@@ -208,7 +208,7 @@ export default async function InventoryPage({
           ))}
           {statusFilter === "active" ? (
             <>
-              <span className="mx-1 h-5 w-px bg-[var(--line)]" aria-hidden="true" />
+              <span className="mx-1 h-4 w-px bg-[var(--line)]" aria-hidden="true" />
               {([
                 { label: `${activePartCount} all stock`, value: "all" },
                 { label: `${lowStockCount} low`, value: "low" },
@@ -217,10 +217,10 @@ export default async function InventoryPage({
                 <Link
                   key={value}
                   href={`/inventory?stock=${value}&status=active${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                  className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
                     stockFilter === value
-                      ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40"
+                      ? "border-[var(--accent)]/50 bg-[var(--accent)]/12 text-[var(--accent)]"
+                      : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
                   }`}
                 >
                   {label}
@@ -229,19 +229,24 @@ export default async function InventoryPage({
             </>
           ) : null}
         </div>
-        <form method="GET" action="/inventory" className="flex items-center gap-2 p-3">
+        <form method="GET" action="/inventory" className="flex items-center gap-2">
           <input type="hidden" name="status" value={statusFilter} />
           {stockFilter !== "all" ? <input type="hidden" name="stock" value={stockFilter} /> : null}
-          <input
-            name="q"
-            defaultValue={q}
-            aria-label="Search items"
-            placeholder="Search by item name or manufacturer..."
-            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
-          />
+          <div className="relative min-w-0 flex-1">
+            <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="9" cy="9" r="6" /><path strokeLinecap="round" d="m14 14 3.5 3.5" />
+            </svg>
+            <input
+              name="q"
+              defaultValue={q}
+              aria-label="Search items"
+              placeholder="Search by item name or manufacturer..."
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] py-1.5 pl-9 pr-3 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+            />
+          </div>
           <Button type="submit" variant="secondary" size="sm">Search</Button>
           {q || stockFilter !== "all" || statusFilter !== "active" ? (
-            <Link href="/inventory" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
+            <Link href="/inventory" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
           ) : null}
         </form>
       </div>
