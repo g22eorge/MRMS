@@ -68,6 +68,11 @@ const buildEnv = {
   ...process.env,
   DATABASE_URL: buildDatabaseUrl,
   TURSO_DATABASE_URL: "",
+  // scripts/generate-prisma-clean.mjs does `rm -rf .next` when this is "1".
+  // Off Vercel that would wipe the running dev server's cache and defeat the
+  // NEXT_DIST_DIR isolation below, so clear it for the local gate. On Vercel
+  // .next is the build output and there is no dev server, so leave it alone.
+  ...(gateDistDir ? { CLEAR_NEXT_CACHE: "" } : {}),
   ...(gateDistDir ? { NEXT_DIST_DIR: gateDistDir } : {}),
 };
 
