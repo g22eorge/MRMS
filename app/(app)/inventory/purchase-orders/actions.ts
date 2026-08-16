@@ -118,7 +118,6 @@ async function performReceipt(
   });
 
   revalidatePath(`/inventory/purchase-orders/${po.id}`);
-  revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
   revalidatePath("/inventory/goods-received");
   revalidatePath("/inventory");
@@ -207,7 +206,6 @@ export async function createPurchaseOrderAction(
       },
     });
     await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: po.id, action: "PURCHASE_ORDER_CREATED", summary: `PO ${reference ?? po.id} created${issueNow ? " (issued)" : ""}` });
-    revalidatePath("/procurement");
     revalidatePath("/inventory/purchase-orders");
     return { id: po.id };
   } catch {
@@ -356,7 +354,6 @@ export async function setPurchaseOrderStatusAction(formData: FormData): Promise<
 
   await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_STATUS_CHANGED", summary: `PO status set to ${status}` });
 
-  revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
   revalidatePath(`/inventory/purchase-orders/${id}`);
 }
@@ -390,7 +387,6 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
   await prisma.purchaseOrder.delete({ where: { id } });
   await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: id, action: "PURCHASE_ORDER_DELETED", summary: `PO ${po.reference ?? id} deleted` });
 
-  revalidatePath("/procurement");
   revalidatePath("/inventory/purchase-orders");
   revalidatePath("/inventory/goods-received");
   revalidatePath("/inventory/supplier-bills");
@@ -542,6 +538,5 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
   revalidatePath("/inventory/goods-received");
   revalidatePath(`/inventory/goods-received/${grnId}`);
   if (grn.poId) revalidatePath(`/inventory/purchase-orders/${grn.poId}`);
-  revalidatePath("/procurement");
   return {};
 }

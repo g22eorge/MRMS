@@ -39,7 +39,6 @@ const defs = [
   { href: "/inventory/purchase-orders", label: "Purchase Orders" },
   { href: "/inventory/goods-received", label: "Goods Received" },
   { href: "/inventory/supplier-bills", label: "Supplier Bills" },
-  { href: "/procurement", label: "Procurement Desk" },
 
   // Sales & POS
   { href: "/sales", label: "Sales CRM", shortLabel: "Sales" },

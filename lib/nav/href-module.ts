@@ -17,7 +17,6 @@ export const HREF_MODULE: Record<string, string> = {
   "/inventory/locations": "INVENTORY",
   "/inventory/transfers": "INVENTORY",
   "/inventory/stock-counts": "INVENTORY",
-  "/procurement": "PURCHASE_ORDERS",
   "/inventory/purchase-requests": "PURCHASE_ORDERS",
   "/inventory/purchase-orders": "PURCHASE_ORDERS",
   "/inventory/goods-received": "PURCHASE_ORDERS",

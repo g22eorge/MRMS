@@ -142,7 +142,6 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
   });
 
   revalidatePath("/inventory/supplier-bills");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/suppliers/${supplierId}`);
   return { id: bill.id };
 }
@@ -161,7 +160,6 @@ export async function cancelSupplierBillAction(formData: FormData): Promise<void
   }
 
   revalidatePath("/inventory/supplier-bills");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/supplier-bills/${id}`);
 }
 
@@ -241,7 +239,6 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   }
 
   revalidatePath("/inventory/supplier-bills");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/supplier-bills/${billId}`);
 }
 
@@ -270,6 +267,5 @@ export async function deleteSupplierPaymentAction(formData: FormData): Promise<v
   });
 
   revalidatePath("/inventory/supplier-bills");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/supplier-bills/${billId}`);
 }
