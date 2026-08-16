@@ -21,7 +21,7 @@ function allModelHrefs(role: Role, permissions: string[] = [], modules?: Set<str
 describe("sidebar model — pinned daily items", () => {
   it("pins dashboard, jobs, intake, clients, pos for ADMIN in priority order", () => {
     const { pinned } = buildSidebarModel("ADMIN", []);
-    expect(hrefs(pinned)).toEqual(["/dashboard", "/jobs", "/intake", "/clients", "/pos"]);
+    expect(hrefs(pinned)).toEqual(["/dashboard", "/jobs", "/clients", "/pos"]);
   });
 
   it("only pins items the role can actually see", () => {
@@ -45,25 +45,30 @@ describe("sidebar model — super-groups", () => {
     // must be a subsequence of the canonical order
     const canonical = [...SUPER_GROUP_ORDER];
     expect(groups).toEqual(canonical.filter((g) => groups.includes(g)));
-    expect(groups.length).toBeLessThanOrEqual(4);
+    expect(groups.length).toBeLessThanOrEqual(SUPER_GROUP_ORDER.length);
   });
 
   it("routes the documents hub + finance into the money group for ADMIN", () => {
     const { sections } = buildSidebarModel("ADMIN", []);
-    const money = sections.find((s) => s.group === "money");
-    expect(money).toBeTruthy();
-    const h = hrefs(money!.items);
+    const docs = sections.find((s) => s.group === "documents");
+    const finance = sections.find((s) => s.group === "finance");
+    expect(docs).toBeTruthy();
+    expect(finance).toBeTruthy();
+    const h = [...hrefs(docs!.items), ...hrefs(finance!.items)];
     expect(h).toContain("/documents"); // single documents hub (tabs cover leaves)
-    expect(h).toContain("/finance"); // finance hub folds into money
+    expect(h).toContain("/finance");
     expect(h).not.toContain("/documents/invoices"); // leaves are not duplicated in the sidebar
   });
 
   it("routes inventory/procurement into the stock group", () => {
     const { sections } = buildSidebarModel("ADMIN", []);
-    const stock = sections.find((s) => s.group === "stock");
+    const stock = sections.find((s) => s.group === "inventory");
+    expect(stock).toBeTruthy();
     expect(hrefs(stock!.items)).toEqual(
-      expect.arrayContaining(["/inventory", "/procurement", "/inventory/purchase-orders"]),
+      expect.arrayContaining(["/inventory", "/inventory/purchase-orders", "/inventory/supplier-bills"]),
     );
+    // the /procurement desk was removed from the sidebar
+    expect(hrefs(stock!.items)).not.toContain("/procurement");
   });
 
   it("puts settings in the workspace group (communications absorbed into settings)", () => {
@@ -128,9 +133,10 @@ describe("sidebar model — parity with role visibility", () => {
 describe("sidebar model — active group detection", () => {
   it("finds the group that owns the active href", () => {
     const model = buildSidebarModel("ADMIN", []);
-    expect(activeSuperGroup(model, "/documents")).toBe("money");
-    expect(activeSuperGroup(model, "/inventory")).toBe("stock");
-    expect(activeSuperGroup(model, "/settings")).toBe("admin");
+    expect(activeSuperGroup(model, "/documents")).toBe("documents");
+    expect(activeSuperGroup(model, "/finance")).toBe("finance");
+    expect(activeSuperGroup(model, "/inventory")).toBe("inventory");
+    expect(activeSuperGroup(model, "/settings")).toBe("workspace");
   });
 
   it("returns null for pinned or unknown paths", () => {
@@ -143,6 +149,6 @@ describe("sidebar model — active group detection", () => {
 
 describe("sidebar model — constants", () => {
   it("exposes the expected pinned hrefs", () => {
-    expect(PINNED_HREFS).toEqual(["/dashboard", "/jobs", "/intake", "/clients", "/pos"]);
+    expect(PINNED_HREFS).toEqual(["/dashboard", "/jobs", "/clients", "/pos"]);
   });
 });

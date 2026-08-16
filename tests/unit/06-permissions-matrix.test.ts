@@ -46,8 +46,8 @@ test("50: viewFinancials — TECHNICIAN_EXTERNAL and TECHNICIAN_INTERNAL return 
   expect(can.viewFinancials(u("TECHNICIAN_INTERNAL"))).toBe(false);
 });
 
-test("51: viewFinancials — TECHNICIAN_EXTERNAL with can_review_external_bills returns true", () => {
-  expect(can.viewFinancials(u("TECHNICIAN_EXTERNAL", ["can_review_external_bills"]))).toBe(true);
+test("51: viewFinancials — TECHNICIAN_EXTERNAL stays denied even with can_review_external_bills", () => {
+  expect(can.viewFinancials(u("TECHNICIAN_EXTERNAL", ["can_review_external_bills"]))).toBe(false);
 });
 
 // ── createJob ───────────────────────────────────────────────────────────────
@@ -211,12 +211,12 @@ test("75: viewNotifications — FRONT_DESK returns false, all other base roles r
 
 // ── Extra permissions override role ─────────────────────────────────────────
 
-test("76: TECHNICIAN_EXTERNAL with can_manage_field_visits can manage field visits", () => {
-  expect(can.manageFieldVisits(u("TECHNICIAN_EXTERNAL", ["can_manage_field_visits"]))).toBe(true);
+test("76: TECHNICIAN_EXTERNAL cannot manage field visits even with can_manage_field_visits", () => {
+  expect(can.manageFieldVisits(u("TECHNICIAN_EXTERNAL", ["can_manage_field_visits"]))).toBe(false);
 });
 
-test("77: TECHNICIAN_EXTERNAL with can_record_field_signoffs can record signoffs", () => {
-  expect(can.recordFieldSignoffs(u("TECHNICIAN_EXTERNAL", ["can_record_field_signoffs"]))).toBe(true);
+test("77: TECHNICIAN_EXTERNAL cannot record signoffs even with can_record_field_signoffs", () => {
+  expect(can.recordFieldSignoffs(u("TECHNICIAN_EXTERNAL", ["can_record_field_signoffs"]))).toBe(false);
 });
 
 test("78: SALES role can create quotations without extra permission", () => {

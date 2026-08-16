@@ -66,6 +66,7 @@ async function buildOrgSession(
         supportedCurrencies: true,
         plan: true,
         billingStatus: true,
+        isActive: true,
         trialEndsAt: true,
         planRenewsAt: true,
         planCancelledAt: true,
@@ -80,6 +81,7 @@ async function buildOrgSession(
     trialEndsAt: orgRow.trialEndsAt ?? null,
     planRenewsAt: orgRow.planRenewsAt ?? null,
     planCancelledAt: orgRow.planCancelledAt ?? null,
+    isActive: orgRow.isActive,
   } : null);
 
   return {

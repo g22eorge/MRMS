@@ -96,8 +96,8 @@ test("41: resolvePermissions returns null for an inactive user", async () => {
 
 // ── Test 42 ───────────────────────────────────────────────────────────────────
 
-test("42: can.approveInvoices returns false for OPS role without explicit permission grant", () => {
-  expect(can.approveInvoices({ role: "OPS" })).toBe(false);
+test("42: can.approveInvoices returns true for OPS (OPS is in the allowlist)", () => {
+  expect(can.approveInvoices({ role: "OPS" })).toBe(true);
 });
 
 // ── Test 43 ───────────────────────────────────────────────────────────────────

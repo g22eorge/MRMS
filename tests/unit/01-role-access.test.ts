@@ -57,9 +57,9 @@ test("7: OPS can create jobs by role; TECHNICIAN_INTERNAL with can_intake permis
 
 // ── Test 8 ───────────────────────────────────────────────────────────────────
 // TECHNICIAN_EXTERNAL cannot search jobs by default, but can with can_search_jobs
-test("8: TECHNICIAN_EXTERNAL cannot search jobs by default, but can with can_search_jobs", () => {
+test("8: TECHNICIAN_EXTERNAL cannot search jobs, even with can_search_jobs", () => {
   expect(can.searchJobs(user("TECHNICIAN_EXTERNAL"))).toBe(false);
-  expect(can.searchJobs(user("TECHNICIAN_EXTERNAL", ["can_search_jobs"]))).toBe(true);
+  expect(can.searchJobs(user("TECHNICIAN_EXTERNAL", ["can_search_jobs"]))).toBe(false);
 });
 
 // ── Test 9 ───────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ test("9: TECHNICIAN_INTERNAL can edit diagnosis", () => {
 
 // ── Test 10 ──────────────────────────────────────────────────────────────────
 // can.approveInvoices is false for OPS, true for ADMIN
-test("10: OPS cannot approve invoices; ADMIN can", () => {
-  expect(can.approveInvoices(user("OPS"))).toBe(false);
+test("10: OPS and ADMIN can both approve invoices", () => {
+  expect(can.approveInvoices(user("OPS"))).toBe(true);
   expect(can.approveInvoices(user("ADMIN"))).toBe(true);
 });

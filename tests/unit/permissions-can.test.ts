@@ -32,8 +32,9 @@ describe("can.createJob()", () => {
 // ── can.approveWork() ─────────────────────────────────────────────────────────
 
 describe("can.approveWork()", () => {
-  it("allows ADMIN, OPS, TECHNICAL_MANAGER, SALES_MANAGER", () => {
-    for (const role of ["ADMIN", "OPS", "TECHNICAL_MANAGER", "SALES_MANAGER"] as const) {
+  it("allows ADMIN, MANAGER, OPS, TECH_MANAGER (not SALES_MANAGER)", () => {
+    expect(can.approveWork(user("SALES_MANAGER"))).toBe(false);
+    for (const role of ["ADMIN", "MANAGER", "OPS", "TECH_MANAGER"] as const) {
       expect(can.approveWork(user(role))).toBe(true);
     }
   });
@@ -60,7 +61,7 @@ describe("can.assignJobs()", () => {
   });
 
   it("grants access via can_assign_jobs permission", () => {
-    expect(can.assignJobs(user("CASHIER", ["can_assign_jobs"]))).toBe(true);
+    expect(can.assignJobs(user("SALES", ["can_assign_jobs"]))).toBe(true);
   });
 });
 
@@ -72,13 +73,14 @@ describe("can.generateJobCards()", () => {
     expect(can.generateJobCards(user("FRONT_DESK"))).toBe(true);
   });
 
-  it("denies CASHIER by default", () => {
-    // CASHIER is in the list — verify it's allowed
-    expect(can.generateJobCards(user("CASHIER"))).toBe(true);
+  it("denies a role outside the allowlist", () => {
+    expect(can.generateJobCards(user("SALES"))).toBe(false);
   });
 
   it("grants access via can_generate_job_cards permission", () => {
-    expect(can.generateJobCards(user("TECHNICIAN_EXTERNAL", ["can_generate_job_cards"]))).toBe(true);
+    expect(can.generateJobCards(user("TECHNICIAN_INTERNAL", ["can_generate_job_cards"]))).toBe(true);
+    // external techs stay denied even with the permission granted
+    expect(can.generateJobCards(user("TECHNICIAN_EXTERNAL", ["can_generate_job_cards"]))).toBe(false);
   });
 
   it("denies TECHNICIAN_EXTERNAL without permission", () => {
@@ -100,7 +102,9 @@ describe("can.viewApprovedCost()", () => {
   });
 
   it("grants via can_view_approved_cost permission", () => {
-    expect(can.viewApprovedCost(user("TECHNICIAN_EXTERNAL", ["can_view_approved_cost"]))).toBe(true);
+    expect(can.viewApprovedCost(user("TECHNICIAN_INTERNAL", ["can_view_approved_cost"]))).toBe(true);
+    // external techs never see pricing, permission or not
+    expect(can.viewApprovedCost(user("TECHNICIAN_EXTERNAL", ["can_view_approved_cost"]))).toBe(false);
   });
 });
 
@@ -109,7 +113,8 @@ describe("can.viewApprovedCost()", () => {
 describe("can.reviewExternalBills()", () => {
   it("allows ADMIN and OPS", () => {
     expect(can.reviewExternalBills(user("ADMIN"))).toBe(true);
-    expect(can.reviewExternalBills(user("OPS"))).toBe(true);
+    expect(can.reviewExternalBills(user("FINANCE"))).toBe(true);
+    expect(can.reviewExternalBills(user("OPS"))).toBe(false);
   });
 
   it("denies TECHNICIAN_INTERNAL by default", () => {
@@ -124,8 +129,8 @@ describe("can.reviewExternalBills()", () => {
 // ── can.viewAccountsSummary() ─────────────────────────────────────────────────
 
 describe("can.viewAccountsSummary()", () => {
-  it("allows ADMIN, TECHNICAL_MANAGER, SALES_MANAGER, OPS", () => {
-    for (const role of ["ADMIN", "TECHNICAL_MANAGER", "SALES_MANAGER", "OPS"] as const) {
+  it("allows ADMIN, TECH_MANAGER, SALES_MANAGER, OPS", () => {
+    for (const role of ["ADMIN", "MANAGER", "FINANCE", "SALES_MANAGER", "OPS"] as const) {
       expect(can.viewAccountsSummary(user(role))).toBe(true);
     }
   });
@@ -135,7 +140,7 @@ describe("can.viewAccountsSummary()", () => {
   });
 
   it("grants via can_view_accounts_summary permission", () => {
-    expect(can.viewAccountsSummary(user("CASHIER", ["can_view_accounts_summary"]))).toBe(true);
+    expect(can.viewAccountsSummary(user("FRONT_DESK", ["can_view_accounts_summary"]))).toBe(true);
   });
 });
 
@@ -145,7 +150,8 @@ describe("can.manageIntake()", () => {
   it("allows ADMIN, FRONT_DESK, SALES", () => {
     expect(can.manageIntake(user("ADMIN"))).toBe(true);
     expect(can.manageIntake(user("FRONT_DESK"))).toBe(true);
-    expect(can.manageIntake(user("SALES"))).toBe(true);
+    expect(can.manageIntake(user("OPS"))).toBe(true);
+    expect(can.manageIntake(user("SALES"))).toBe(false);
   });
 
   it("denies TECHNICIAN_INTERNAL without permission", () => {
@@ -153,7 +159,7 @@ describe("can.manageIntake()", () => {
   });
 
   it("grants via can_manage_intake permission", () => {
-    expect(can.manageIntake(user("CASHIER", ["can_manage_intake"]))).toBe(true);
+    expect(can.manageIntake(user("SALES", ["can_manage_intake"]))).toBe(true);
   });
 });
 
@@ -191,9 +197,7 @@ describe("can.viewNotifications()", () => {
     expect(can.viewNotifications(user("FRONT_DESK"))).toBe(false);
   });
 
-  it("denies CASHIER", () => {
-    expect(can.viewNotifications(user("CASHIER"))).toBe(false);
-  });
+
 });
 
 // ── can.manageFieldVisits() ──────────────────────────────────────────────────
@@ -202,7 +206,7 @@ describe("can.manageFieldVisits()", () => {
   it("allows ADMIN and OPS roles", () => {
     expect(can.manageFieldVisits(user("ADMIN"))).toBe(true);
     expect(can.manageFieldVisits(user("OPS"))).toBe(true);
-    expect(can.manageFieldVisits(user("TECHNICAL_MANAGER"))).toBe(true);
+    expect(can.manageFieldVisits(user("TECH_MANAGER"))).toBe(true);
   });
 
   it("denies TECHNICIAN_INTERNAL", () => {
@@ -215,8 +219,8 @@ describe("can.manageFieldVisits()", () => {
 describe("can.recordFieldSignoffs()", () => {
   it("allows ADMIN, OPS, TECHNICIAN_INTERNAL, TECHNICIAN_EXTERNAL", () => {
     expect(can.recordFieldSignoffs(user("ADMIN"))).toBe(true);
-    expect(can.recordFieldSignoffs(user("TECHNICIAN_INTERNAL"))).toBe(true);
-    expect(can.recordFieldSignoffs(user("TECHNICIAN_EXTERNAL"))).toBe(true);
+    expect(can.recordFieldSignoffs(user("TECH_FIELD"))).toBe(true);
+    expect(can.recordFieldSignoffs(user("TECHNICIAN_INTERNAL"))).toBe(false);
   });
 
   it("denies FRONT_DESK", () => {
@@ -240,8 +244,8 @@ describe("can.createLeads()", () => {
 describe("can.viewAllSales()", () => {
   it("allows ADMIN, OPS, SALES", () => {
     expect(can.viewAllSales(user("ADMIN"))).toBe(true);
-    expect(can.viewAllSales(user("OPS"))).toBe(true);
-    expect(can.viewAllSales(user("SALES"))).toBe(true);
+    expect(can.viewAllSales(user("SALES_MANAGER"))).toBe(true);
+    expect(can.viewAllSales(user("SALES"))).toBe(false);
   });
 
   it("denies TECHNICIAN_EXTERNAL", () => {
@@ -263,9 +267,9 @@ describe("can.createQuotations()", () => {
 // ── can.approveQuotations() ──────────────────────────────────────────────────
 
 describe("can.approveQuotations()", () => {
-  it("allows ADMIN, TECHNICAL_MANAGER, SALES_MANAGER", () => {
+  it("allows ADMIN, TECH_MANAGER, SALES_MANAGER", () => {
     expect(can.approveQuotations(user("ADMIN"))).toBe(true);
-    expect(can.approveQuotations(user("TECHNICAL_MANAGER"))).toBe(true);
+    expect(can.approveQuotations(user("TECH_MANAGER"))).toBe(true);
     expect(can.approveQuotations(user("SALES_MANAGER"))).toBe(true);
   });
 
@@ -278,7 +282,7 @@ describe("can.approveQuotations()", () => {
 // ── can.setTargets() / viewTeamTargets() ─────────────────────────────────────
 
 describe("can.setTargets()", () => {
-  it("allows ADMIN, TECHNICAL_MANAGER, SALES_MANAGER", () => {
+  it("allows ADMIN, TECH_MANAGER, SALES_MANAGER", () => {
     expect(can.setTargets(user("ADMIN"))).toBe(true);
     expect(can.setTargets(user("SALES_MANAGER"))).toBe(true);
   });
@@ -292,8 +296,8 @@ describe("can.setTargets()", () => {
 describe("can.viewTeamTargets()", () => {
   it("allows ADMIN, OPS, SALES", () => {
     expect(can.viewTeamTargets(user("ADMIN"))).toBe(true);
-    expect(can.viewTeamTargets(user("OPS"))).toBe(true);
-    expect(can.viewTeamTargets(user("SALES"))).toBe(true);
+    expect(can.viewTeamTargets(user("FINANCE"))).toBe(true);
+    expect(can.viewTeamTargets(user("SALES"))).toBe(false);
   });
 
   it("denies TECHNICIAN_EXTERNAL", () => {

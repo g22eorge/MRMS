@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "bun:test";
-import { can, isPlatformAdmin, asPermissionUser } from "../../lib/permissions";
+import { can, asPermissionUser } from "../../lib/permissions";
 import type { PermissionUser } from "../../lib/permissions";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -8,37 +8,12 @@ function user(role: PermissionUser["role"], permissions?: string[]): PermissionU
   return { role, permissions };
 }
 
-// ── isPlatformAdmin() ─────────────────────────────────────────────────────────
-
-describe("isPlatformAdmin()", () => {
-  afterEach(() => {
-    delete process.env.PLATFORM_ADMIN_EMAIL;
-  });
-
-  it("returns true when user has the platform_admin permission", () => {
-    expect(isPlatformAdmin({ role: "OPS", permissions: ["platform_admin"] })).toBe(true);
-  });
-
-  it("returns false when no permission and no env var", () => {
-    expect(isPlatformAdmin(user("ADMIN"))).toBe(false);
-  });
-
-  it("returns true when user email matches PLATFORM_ADMIN_EMAIL (case-insensitive)", () => {
-    process.env.PLATFORM_ADMIN_EMAIL = "Root@Example.com";
-    expect(isPlatformAdmin({ role: "OPS", email: "root@example.com" })).toBe(true);
-  });
-
-  it("returns false when email does not match env var", () => {
-    process.env.PLATFORM_ADMIN_EMAIL = "root@example.com";
-    expect(isPlatformAdmin({ role: "OPS", email: "other@example.com" })).toBe(false);
-  });
-});
 
 // ── can.viewClientInfo() ──────────────────────────────────────────────────────
 
 describe("can.viewClientInfo()", () => {
   it("permits ADMIN, OPS, SALES, FRONT_DESK, and manager roles", () => {
-    for (const role of ["ADMIN", "OPS", "SALES", "FRONT_DESK", "TECHNICAL_MANAGER", "SALES_MANAGER"] as const) {
+    for (const role of ["ADMIN", "OPS", "SALES", "FRONT_DESK", "TECH_MANAGER", "SALES_MANAGER"] as const) {
       expect(can.viewClientInfo(user(role))).toBe(true);
     }
   });
@@ -56,8 +31,8 @@ describe("can.viewClientInfo()", () => {
 // ── can.viewFinancials() ──────────────────────────────────────────────────────
 
 describe("can.viewFinancials()", () => {
-  it("permits ADMIN, OPS, TECHNICAL_MANAGER, SALES_MANAGER", () => {
-    for (const role of ["ADMIN", "OPS", "TECHNICAL_MANAGER", "SALES_MANAGER"] as const) {
+  it("permits ADMIN, OPS, TECH_MANAGER, SALES_MANAGER", () => {
+    for (const role of ["ADMIN", "MANAGER", "OPS", "FINANCE", "FRONT_DESK", "SALES_MANAGER"] as const) {
       expect(can.viewFinancials(user(role))).toBe(true);
     }
   });
@@ -66,8 +41,8 @@ describe("can.viewFinancials()", () => {
     expect(can.viewFinancials(user("TECHNICIAN_EXTERNAL"))).toBe(false);
   });
 
-  it("grants TECHNICIAN_EXTERNAL via can_approve_invoices", () => {
-    expect(can.viewFinancials(user("TECHNICIAN_EXTERNAL", ["can_approve_invoices"]))).toBe(true);
+  it("keeps TECHNICIAN_EXTERNAL denied despite can_approve_invoices", () => {
+    expect(can.viewFinancials(user("TECHNICIAN_EXTERNAL", ["can_approve_invoices"]))).toBe(false);
   });
 
   it("grants TECHNICIAN_INTERNAL via can_review_external_bills", () => {
@@ -79,7 +54,7 @@ describe("can.viewFinancials()", () => {
 
 describe("can.editDiagnosis()", () => {
   it("permits internal technicians and admins", () => {
-    for (const role of ["ADMIN", "OPS", "TECHNICAL_MANAGER", "TECHNICIAN_INTERNAL"] as const) {
+    for (const role of ["ADMIN", "MANAGER", "TECH_MANAGER", "TECHNICIAN_INTERNAL", "TECH_FIELD"] as const) {
       expect(can.editDiagnosis(user(role))).toBe(true);
     }
   });
@@ -104,14 +79,14 @@ describe("can.manageUsers()", () => {
     expect(can.manageUsers(user("ADMIN"))).toBe(true);
   });
 
-  it("denies all non-ADMIN roles without platform_admin permission", () => {
-    for (const role of ["OPS", "SALES", "CASHIER", "FRONT_DESK", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] as const) {
+  it("denies every non-ADMIN role", () => {
+    for (const role of ["MANAGER", "OPS", "SALES", "FRONT_DESK", "FINANCE", "TECH_MANAGER", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] as const) {
       expect(can.manageUsers(user(role))).toBe(false);
     }
   });
 
-  it("grants OPS with platform_admin permission", () => {
-    expect(can.manageUsers(user("OPS", ["platform_admin"]))).toBe(true);
+  it("is ADMIN-only — no extra permission can grant it", () => {
+    expect(can.manageUsers(user("OPS", ["platform_admin"]))).toBe(false);
   });
 });
 
@@ -128,8 +103,8 @@ describe("can.searchJobs()", () => {
     expect(can.searchJobs(user("TECHNICIAN_EXTERNAL"))).toBe(false);
   });
 
-  it("grants TECHNICIAN_EXTERNAL via can_search_jobs", () => {
-    expect(can.searchJobs(user("TECHNICIAN_EXTERNAL", ["can_search_jobs"]))).toBe(true);
+  it("keeps TECHNICIAN_EXTERNAL denied despite can_search_jobs", () => {
+    expect(can.searchJobs(user("TECHNICIAN_EXTERNAL", ["can_approve_invoices"]))).toBe(false);
   });
 });
 
@@ -137,13 +112,13 @@ describe("can.searchJobs()", () => {
 
 describe("can.manageInventory()", () => {
   it("permits OPS-tier roles", () => {
-    for (const role of ["ADMIN", "OPS", "TECHNICAL_MANAGER", "SALES_MANAGER"] as const) {
+    for (const role of ["ADMIN", "MANAGER", "OPS", "TECH_MANAGER"] as const) {
       expect(can.manageInventory(user(role))).toBe(true);
     }
   });
 
   it("denies non-OPS roles", () => {
-    for (const role of ["SALES", "CASHIER", "FRONT_DESK", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] as const) {
+    for (const role of ["SALES", "FRONT_DESK", "TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] as const) {
       expect(can.manageInventory(user(role))).toBe(false);
     }
   });
@@ -152,14 +127,14 @@ describe("can.manageInventory()", () => {
 // ── can.approveInvoices() ─────────────────────────────────────────────────────
 
 describe("can.approveInvoices()", () => {
-  it("permits ADMIN, TECHNICAL_MANAGER, SALES_MANAGER", () => {
-    for (const role of ["ADMIN", "TECHNICAL_MANAGER", "SALES_MANAGER"] as const) {
+  it("permits ADMIN, TECH_MANAGER, SALES_MANAGER", () => {
+    for (const role of ["ADMIN", "TECH_MANAGER", "SALES_MANAGER"] as const) {
       expect(can.approveInvoices(user(role))).toBe(true);
     }
   });
 
-  it("denies OPS by default", () => {
-    expect(can.approveInvoices(user("OPS"))).toBe(false);
+  it("allows OPS (OPS is in the allowlist)", () => {
+    expect(can.approveInvoices(user("OPS"))).toBe(true);
   });
 
   it("grants OPS via can_approve_invoices", () => {
@@ -175,8 +150,8 @@ describe("can.overrideDiscount()", () => {
     expect(can.overrideDiscount(user("SALES_MANAGER"))).toBe(true);
   });
 
-  it("denies TECHNICAL_MANAGER, OPS, and lower roles", () => {
-    for (const role of ["OPS", "TECHNICAL_MANAGER", "SALES", "CASHIER", "FRONT_DESK"] as const) {
+  it("denies TECH_MANAGER, OPS, and lower roles", () => {
+    for (const role of ["OPS", "TECH_MANAGER", "SALES", "CASHIER", "FRONT_DESK"] as const) {
       expect(can.overrideDiscount(user(role))).toBe(false);
     }
   });

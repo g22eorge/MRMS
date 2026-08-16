@@ -12,16 +12,24 @@ export type OrgBillingSnapshot = {
   trialEndsAt: Date | null;
   planRenewsAt: Date | null;
   planCancelledAt: Date | null;
+  /** Operator kill-switch. Optional so older callers keep compiling. */
+  isActive?: boolean;
 };
 
 export type OrgAccess = {
   isSuspended: boolean;
-  reason: "TRIAL_EXPIRED" | "PAST_DUE" | "CANCELLED" | null;
+  reason: "INACTIVE" | "TRIAL_EXPIRED" | "PAST_DUE" | "CANCELLED" | null;
 };
 
 export function getOrgAccess(org: OrgBillingSnapshot | null): OrgAccess {
   if (!org) return { isSuspended: false, reason: null };
   const now = new Date();
+
+  // Operator deactivation outranks every billing state — an org switched off by
+  // the platform admin is read-only regardless of plan (yes, even ENTERPRISE).
+  // Organization.isActive existed but was consulted nowhere, so a deactivated
+  // workspace kept full read/write access.
+  if (org.isActive === false) return { isSuspended: true, reason: "INACTIVE" };
 
   const trialExpired =
     org.billingStatus === "TRIALING" &&
@@ -42,6 +50,7 @@ export function getOrgAccess(org: OrgBillingSnapshot | null): OrgAccess {
 
 export function suspensionMessage(access: OrgAccess) {
   if (!access.isSuspended) return null;
+  if (access.reason === "INACTIVE") return "This workspace has been deactivated. Contact support to reactivate it.";
   if (access.reason === "TRIAL_EXPIRED") return "Your trial has ended. This workspace is read-only until you upgrade.";
   if (access.reason === "PAST_DUE") return "Payment is overdue. This workspace is read-only until billing is restored.";
   if (access.reason === "CANCELLED") return "Subscription ended. This workspace is read-only until billing is restored.";

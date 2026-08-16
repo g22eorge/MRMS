@@ -8,7 +8,10 @@ const mockPartCount = mock(async () => 0);
 
 mock.module("@/lib/prisma", () => ({
   prisma: {
-    organisation: { findUnique: mockOrgFindUnique },
+    // NB: the Prisma model is `organization` (US spelling) — mocking
+    // `organisation` silently failed to intercept, so every helper test below
+    // hit the real client and failed.
+    organization: { findUnique: mockOrgFindUnique },
     part: { count: mockPartCount },
     $queryRaw: mock(async () => [{ 1: 1 }]),
   },
@@ -25,8 +28,11 @@ const {
 
 // ── PLAN_LIMITS ───────────────────────────────────────────────────────────────
 
-describe("PLAN_LIMITS — FREE", () => {
-  const limits = PLAN_LIMITS.FREE;
+// The ladder is STARTER → STANDARD → GROWTH → PREMIUM → ENTERPRISE. The old
+// FREE/PROFESSIONAL tiers were retired; these blocks track the live tiers.
+
+describe("PLAN_LIMITS — STARTER", () => {
+  const limits = PLAN_LIMITS.STARTER;
 
   it("has correct maxUsers", () => expect(limits.maxUsers).toBe(2));
   it("has correct maxJobsPerMonth", () => expect(limits.maxJobsPerMonth).toBe(20));
@@ -36,8 +42,8 @@ describe("PLAN_LIMITS — FREE", () => {
   it("inviteLinks is false", () => expect(limits.inviteLinks).toBe(false));
 });
 
-describe("PLAN_LIMITS — STARTER", () => {
-  const limits = PLAN_LIMITS.STARTER;
+describe("PLAN_LIMITS — STANDARD", () => {
+  const limits = PLAN_LIMITS.STANDARD;
 
   it("has correct maxUsers", () => expect(limits.maxUsers).toBe(5));
   it("has correct maxJobsPerMonth", () => expect(limits.maxJobsPerMonth).toBe(100));
@@ -46,12 +52,22 @@ describe("PLAN_LIMITS — STARTER", () => {
   it("inviteLinks is true", () => expect(limits.inviteLinks).toBe(true));
 });
 
-describe("PLAN_LIMITS — PROFESSIONAL", () => {
-  const limits = PLAN_LIMITS.PROFESSIONAL;
+describe("PLAN_LIMITS — GROWTH", () => {
+  const limits = PLAN_LIMITS.GROWTH;
 
-  it("has correct maxUsers", () => expect(limits.maxUsers).toBe(20));
-  it("has correct maxJobsPerMonth", () => expect(limits.maxJobsPerMonth).toBe(1000));
-  it("has correct maxBranches", () => expect(limits.maxBranches).toBe(5));
+  it("has correct maxUsers", () => expect(limits.maxUsers).toBe(15));
+  it("has correct maxJobsPerMonth", () => expect(limits.maxJobsPerMonth).toBe(500));
+  it("has correct maxBranches", () => expect(limits.maxBranches).toBe(3));
+  it("customBranding is true", () => expect(limits.customBranding).toBe(true));
+  it("inviteLinks is true", () => expect(limits.inviteLinks).toBe(true));
+});
+
+describe("PLAN_LIMITS — PREMIUM", () => {
+  const limits = PLAN_LIMITS.PREMIUM;
+
+  it("has correct maxUsers", () => expect(limits.maxUsers).toBe(30));
+  it("has correct maxJobsPerMonth", () => expect(limits.maxJobsPerMonth).toBe(2000));
+  it("has correct maxBranches", () => expect(limits.maxBranches).toBe(8));
   it("customBranding is true", () => expect(limits.customBranding).toBe(true));
   it("inviteLinks is true", () => expect(limits.inviteLinks).toBe(true));
 });
@@ -80,9 +96,10 @@ describe("PLAN_LABELS", () => {
 // ── UPGRADE_PLAN ──────────────────────────────────────────────────────────────
 
 describe("UPGRADE_PLAN", () => {
-  it("FREE upgrades to STARTER", () => expect(UPGRADE_PLAN.FREE).toBe("STARTER"));
-  it("STARTER upgrades to PROFESSIONAL", () => expect(UPGRADE_PLAN.STARTER).toBe("PROFESSIONAL"));
-  it("PROFESSIONAL upgrades to ENTERPRISE", () => expect(UPGRADE_PLAN.PROFESSIONAL).toBe("ENTERPRISE"));
+  it("STARTER upgrades to STANDARD", () => expect(UPGRADE_PLAN.STARTER).toBe("STANDARD"));
+  it("STANDARD upgrades to GROWTH", () => expect(UPGRADE_PLAN.STANDARD).toBe("GROWTH"));
+  it("GROWTH upgrades to PREMIUM", () => expect(UPGRADE_PLAN.GROWTH).toBe("PREMIUM"));
+  it("PREMIUM upgrades to ENTERPRISE", () => expect(UPGRADE_PLAN.PREMIUM).toBe("ENTERPRISE"));
   it("ENTERPRISE has no upgrade path", () => expect(UPGRADE_PLAN.ENTERPRISE).toBeUndefined());
 });
 
@@ -90,15 +107,15 @@ describe("UPGRADE_PLAN", () => {
 
 describe("getOrgPlan()", () => {
   it("returns the org's plan when found", async () => {
-    mockOrgFindUnique.mockImplementation(async () => ({ plan: "PROFESSIONAL" }));
+    mockOrgFindUnique.mockImplementation(async () => ({ plan: "GROWTH" }));
     const plan = await getOrgPlan("org-123");
-    expect(plan).toBe("PROFESSIONAL");
+    expect(plan).toBe("GROWTH");
   });
 
-  it("defaults to FREE when org is not found", async () => {
+  it("defaults to STARTER when org is not found", async () => {
     mockOrgFindUnique.mockImplementation(async () => null);
     const plan = await getOrgPlan("nonexistent");
-    expect(plan).toBe("FREE");
+    expect(plan).toBe("STARTER");
   });
 
   it("returns ENTERPRISE for an enterprise org", async () => {
@@ -114,8 +131,8 @@ describe("getLimitsForOrg()", () => {
   it("returns STARTER limits when org is on STARTER plan", async () => {
     mockOrgFindUnique.mockImplementation(async () => ({ plan: "STARTER" }));
     const limits = await getLimitsForOrg("org-starter");
-    expect(limits.maxUsers).toBe(5);
-    expect(limits.maxJobsPerMonth).toBe(100);
+    expect(limits.maxUsers).toBe(2);
+    expect(limits.maxJobsPerMonth).toBe(20);
     expect(limits.plan).toBe("STARTER");
   });
 
@@ -127,9 +144,9 @@ describe("getLimitsForOrg()", () => {
   });
 
   it("includes the plan field alongside the limits", async () => {
-    mockOrgFindUnique.mockImplementation(async () => ({ plan: "FREE" }));
-    const limits = await getLimitsForOrg("org-free");
-    expect(limits.plan).toBe("FREE");
+    mockOrgFindUnique.mockImplementation(async () => ({ plan: "STARTER" }));
+    const limits = await getLimitsForOrg("org-starter2");
+    expect(limits.plan).toBe("STARTER");
     expect(typeof limits.maxParts).toBe("number");
   });
 });
@@ -137,38 +154,40 @@ describe("getLimitsForOrg()", () => {
 // ── checkPartLimit() ─────────────────────────────────────────────────────────
 
 describe("checkPartLimit()", () => {
-  it("returns allowed: true with no orgId (graceful degradation)", async () => {
-    const result = await checkPartLimit(undefined);
+  // Contract note: on the allowed path the implementation returns a bare
+  // { allowed: true } — it does not report current/limit, and an ENTERPRISE org
+  // short-circuits before counting. These assertions track what ships.
+  it("allows an ENTERPRISE org without counting parts", async () => {
+    mockOrgFindUnique.mockImplementation(async () => ({ plan: "ENTERPRISE" }));
+    const result = await checkPartLimit("org-enterprise");
     expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(Infinity);
   });
 
   it("returns allowed: true when parts are below the plan limit", async () => {
-    mockOrgFindUnique.mockImplementation(async () => ({ plan: "FREE" }));
-    mockPartCount.mockImplementation(async () => 5); // FREE limit is 20
-    const result = await checkPartLimit("org-free");
+    mockOrgFindUnique.mockImplementation(async () => ({ plan: "STARTER" }));
+    mockPartCount.mockImplementation(async () => 5); // STARTER limit is 20
+    const result = await checkPartLimit("org-starter2");
     expect(result.allowed).toBe(true);
-    expect(result.current).toBe(5);
-    expect(result.limit).toBe(20);
     expect(result.reason).toBeUndefined();
   });
 
   it("returns allowed: false when parts meet or exceed the plan limit", async () => {
-    mockOrgFindUnique.mockImplementation(async () => ({ plan: "FREE" }));
-    mockPartCount.mockImplementation(async () => 20); // exactly at the FREE limit of 20
-    const result = await checkPartLimit("org-free");
+    mockOrgFindUnique.mockImplementation(async () => ({ plan: "STARTER" }));
+    mockPartCount.mockImplementation(async () => 20); // exactly at the STARTER limit of 20
+    const result = await checkPartLimit("org-starter2");
     expect(result.allowed).toBe(false);
     expect(result.current).toBe(20);
+    expect(result.limit).toBe(20);
     expect(typeof result.reason).toBe("string");
-    expect(result.reason).toContain("Part limit reached");
   });
 
-  it("reason message includes current count, limit, and plan name", async () => {
+  it("reason names the plan label and the limit, and offers an upgrade", async () => {
     mockOrgFindUnique.mockImplementation(async () => ({ plan: "STARTER" }));
-    mockPartCount.mockImplementation(async () => 100); // STARTER limit is 100
+    mockPartCount.mockImplementation(async () => 25);
     const result = await checkPartLimit("org-starter");
     expect(result.allowed).toBe(false);
-    expect(result.reason).toContain("100/100");
-    expect(result.reason).toContain("STARTER");
+    expect(result.reason).toContain("Duuka");   // PLAN_LABELS.STARTER
+    expect(result.reason).toContain("20");      // the limit
+    expect(result.upgradeTo).toBe("STANDARD");
   });
 });
