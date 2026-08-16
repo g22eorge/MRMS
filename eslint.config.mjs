@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Local commit-gate build output (scripts/vercel-build.mjs off-Vercel).
+    ".next-gate/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
