@@ -8,6 +8,9 @@ import { requireOrgSession } from "@/lib/org-context";
 
 type Tile = { label: string; href: string; icon: string; color: string; description: string };
 
+// Only the destinations that are NOT already sidebar shortcuts live here — the
+// hub complements the sidebar rather than repeating it. Stock counts, suppliers,
+// supplier bills and the procurement desk are one click away in the sidebar.
 const GROUPS: { label: string; tiles: Tile[] }[] = [
   {
     label: "Locations & Movement",
@@ -27,44 +30,11 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
         description: "Move stock between locations",
       },
       {
-        label: "Stock Counts",
-        href: "/inventory/stock-counts",
-        icon: "M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
-        color: "text-emerald-500",
-        description: "Physical inventory audits",
-      },
-    ],
-  },
-  {
-    label: "Suppliers & Procurement",
-    tiles: [
-      {
-        label: "Procurement Desk",
-        href: "/procurement",
-        icon: "M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
-        color: "text-amber-500",
-        description: "Review requests, POs, receiving, and supplier bills",
-      },
-      {
-        label: "Suppliers",
-        href: "/inventory/suppliers",
-        icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2|M23 21v-2a4 4 0 0 1-3-3.87|M16 3.13a4 4 0 0 1 0 7.75|M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0",
-        color: "text-amber-500",
-        description: "Manage your supplier directory",
-      },
-      {
         label: "Goods Received",
         href: "/inventory/goods-received",
         icon: "M5 8h14M5 8a2 2 0 1 0-4 0v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8m-4 0V6a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2",
         color: "text-teal-500",
         description: "Record incoming stock deliveries",
-      },
-      {
-        label: "Supplier Bills",
-        href: "/inventory/supplier-bills",
-        icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M16 13H8|M16 17H8",
-        color: "text-red-500",
-        description: "Track and reconcile supplier invoices",
       },
     ],
   },
@@ -91,7 +61,7 @@ export default async function StockOpsPage() {
       <PageHeader
         eyebrow="Stock &amp; Supply"
         title="Stock Operations"
-        description="Locations, suppliers, counts, and goods received"
+        description="Locations, transfers, and incoming deliveries"
         actions={<Button href="/inventory" variant="secondary" size="sm">Inventory items →</Button>}
       />
 
