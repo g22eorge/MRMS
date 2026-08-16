@@ -10,7 +10,7 @@ import { DataTable } from "@/components/ui/DataTable";
 export default async function DataHealPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string }>;
+  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string; stockMissing?: string; stockFixed?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   // runDataHeal operates ACROSS ALL orgs (it's a system maintenance job, also run
@@ -39,7 +39,7 @@ export default async function DataHealPage({
     if (!checkIsPlatformAdmin(actor.email)) return;
     const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
     redirect(
-      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,
+      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&at=${Date.now()}`,
     );
   }
 
@@ -49,7 +49,7 @@ export default async function DataHealPage({
     if (!checkIsPlatformAdmin(actor.email)) return;
     const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
     redirect(
-      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&at=${Date.now()}`,
+      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&at=${Date.now()}`,
     );
   }
 
@@ -76,6 +76,8 @@ export default async function DataHealPage({
           <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--ink)]">
             {feedback.mode === "dry" ? "Dry check complete" : "Heal run complete"}: checked {feedback.checked ?? "0"},
             fixable {feedback.fixed ?? "0"}, pending {feedback.pending ?? "0"}
+            {" · "}stock movements missing orgId {feedback.stockMissing ?? "0"}
+            {feedback.mode === "dry" ? "" : `, backfilled ${feedback.stockFixed ?? "0"}`}
             {feedback.at ? ` (run ${new Date(Number(feedback.at)).toLocaleTimeString()})` : ""}.
           </div>
         ) : null}
