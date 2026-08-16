@@ -31,7 +31,6 @@ const defs = [
 
   // Stock & supply
   { href: "/inventory", label: "Inventory" },
-  { href: "/inventory/ops", label: "Stock Hub" },
   { href: "/inventory/locations", label: "Locations" },
   { href: "/inventory/transfers", label: "Transfers" },
   { href: "/inventory/stock-counts", label: "Stock Counts" },

@@ -150,10 +150,7 @@ export default async function InventoryPage({
         title="Items"
         description="See what you have, what is running low, and what it is worth."
         actions={canManage ? (
-          <>
-            <Button href="/api/reports/export?type=inventory-stock" external variant="secondary" size="sm">Export</Button>
-            <Button href="/inventory/ops" variant="secondary" size="sm">Stock Hub →</Button>
-          </>
+          <Button href="/api/reports/export?type=inventory-stock" external variant="secondary" size="sm">Export</Button>
         ) : undefined}
         kpis={[
           {
