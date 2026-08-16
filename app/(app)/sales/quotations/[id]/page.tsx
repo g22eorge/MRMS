@@ -78,6 +78,9 @@ export default async function QuotationDetailPage({
   const canReject = can.createQuotations(user) && quotation.status === "SENT";
   const canEditDraft = can.createQuotations(user) && quotation.status === "DRAFT" && !quotation.convertedToInvoiceId;
   const canConvert = can.createInvoices(user) && quotation.status === "ACCEPTED" && !quotation.convertedToInvoiceId;
+  // One-click from SENT: accept and raise the invoice in a single step (the
+  // manual "Mark accepted" in between is redundant when you're invoicing anyway).
+  const canAcceptAndInvoice = canAccept && can.createInvoices(user) && !quotation.convertedToInvoiceId;
   const canOverrideDiscount = can.overrideDiscount(user);
   const recipientName = quotation.client?.fullName ?? quotation.lead?.fullName ?? null;
   const recipientAddress = quotation.client?.address ?? null;
@@ -230,6 +233,50 @@ export default async function QuotationDetailPage({
     }
     redirect(`/sales/quotations/${id}`);
   }
+
+  async function acceptAndInvoiceAction() {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    if (!can.approveQuotations(user) || !can.createInvoices(user)) redirect(`/sales/quotations/${id}`);
+
+    // Accept implicitly, then convert — collapses SENT → (accept) → ACCEPTED →
+    // (convert) into one click. updateQuotationStatus validates the transition.
+    try {
+      await updateQuotationStatus(id, "ACCEPTED");
+    } catch {
+      redirect(`/sales/quotations/${id}`);
+    }
+
+    const quotation = await prisma.quotation.findFirst({
+      where: {
+        id,
+        orgId,
+        status: "ACCEPTED",
+        convertedToInvoiceId: null,
+        ...(!can.viewAllSales(user) && !can.approveInvoices(user) ? { createdById: user.id } : {}),
+      },
+      select: { id: true },
+    });
+    if (!quotation) redirect(`/sales/quotations/${id}`);
+
+    const invoice = await prisma.$transaction(async (tx) => (
+      ensureInvoiceFromQuotation(tx, { orgId, quotationId: id, currency: org.baseCurrency })
+    ));
+    if (invoice) {
+      await writeSystemAuditEvent({
+        orgId,
+        actorUserId: user.id,
+        entityType: "Invoice",
+        entityId: invoice.id,
+        action: "QUOTATION_CONVERTED_TO_INVOICE",
+        summary: `Quotation accepted & converted to ${invoice.invoiceNumber}`,
+      });
+      revalidatePath("/documents/invoices");
+      revalidatePath("/documents/quotations");
+      redirect(`/documents/invoices/${invoice.id}?pay=1`);
+    }
+    redirect(`/sales/quotations/${id}`);
+  }
   const field =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const cellInput =
@@ -308,6 +355,13 @@ export default async function QuotationDetailPage({
                   </form>
                 </div>
               ) : null}
+              {canAcceptAndInvoice ? (
+                <div className="px-3 py-1.5">
+                  <form action={acceptAndInvoiceAction}>
+                    <MenuActionButton icon="invoice" tone="accent">Accept &amp; Invoice</MenuActionButton>
+                  </form>
+                </div>
+              ) : null}
               {canAccept ? (
                 <div className="px-3 py-1.5">
                   <form action={acceptAction}>
@@ -357,7 +411,14 @@ export default async function QuotationDetailPage({
             <form action={sendAction}><SubmitButton size="sm" pendingLabel="Sending…" className="font-bold">Send to client →</SubmitButton></form>
           ) : canAccept ? (
             <div className="flex items-center gap-2">
-              <form action={acceptAction}><SubmitButton size="sm" pendingLabel="Saving…" className="font-bold">Mark accepted →</SubmitButton></form>
+              {canAcceptAndInvoice ? (
+                <>
+                  <form action={acceptAndInvoiceAction}><SubmitButton size="sm" pendingLabel="Invoicing…" className="font-bold">Accept &amp; invoice →</SubmitButton></form>
+                  <form action={acceptAction}><SubmitButton variant="ghost" size="sm" pendingLabel="…">Just accept</SubmitButton></form>
+                </>
+              ) : (
+                <form action={acceptAction}><SubmitButton size="sm" pendingLabel="Saving…" className="font-bold">Mark accepted →</SubmitButton></form>
+              )}
               {canReject ? <form action={rejectAction}><SubmitButton variant="ghost" size="sm" pendingLabel="…">Reject</SubmitButton></form> : null}
             </div>
           ) : canConvert ? (

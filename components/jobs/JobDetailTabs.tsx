@@ -627,6 +627,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [isCommunicationPending, startCommunicationTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
   const [isGeneratingDeliveryNote, startDeliveryNoteTransition] = useTransition();
+  const [isSendingInvoiceDoc, startSendInvoiceDocTransition] = useTransition();
   const [confirmClose, setConfirmClose] = useState(false);
   const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
@@ -762,6 +763,19 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const invoiceGenerated = documentTimeline.some((entry) => entry.kind === "invoice");
   const deliveryNoteExists = documentTimeline.some((entry) => entry.kind === "delivery_note");
   const showDeliveryNoteAction = canGenerateInvoice && invoiceGenerated && !deliveryNoteExists;
+  // Co-locate the "send the invoice" action on the Money tab (it also lived only
+  // under Messages) so generating and sending happen from one place.
+  const canSendInvoiceDoc = canGenerateInvoice && invoiceEligibleByStatus && !isIntake;
+  function sendInvoiceFromMoney(channel: "whatsapp" | "email") {
+    startSendInvoiceDocTransition(async () => {
+      const res = channel === "whatsapp"
+        ? await sendInvoiceViaWhatsAppAction(job.id)
+        : await sendInvoiceViaEmailAction(job.id);
+      if (!res.success) { toast.error(res.error ?? "Could not send invoice"); return; }
+      toast.success(channel === "whatsapp" ? "Invoice sent on WhatsApp" : "Invoice emailed to client");
+      router.refresh();
+    });
+  }
   const documentHints: string[] = [];
 
   if (!showJobCardAction && !showQuotationAction && !showInvoiceAction) {
@@ -2242,6 +2256,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 <a href={`/api/jobs/${job.id}/invoice`} target="_blank" rel="noreferrer" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold">
                   Invoice PDF
                 </a>
+              ) : null}
+              {canSendInvoiceDoc && job.client?.phone ? (
+                <button type="button" disabled={isSendingInvoiceDoc} onClick={() => sendInvoiceFromMoney("whatsapp")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                  {isSendingInvoiceDoc ? "Sending…" : "WhatsApp invoice"}
+                </button>
+              ) : null}
+              {canSendInvoiceDoc && job.client?.email ? (
+                <button type="button" disabled={isSendingInvoiceDoc} onClick={() => sendInvoiceFromMoney("email")} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                  {isSendingInvoiceDoc ? "Sending…" : "Email invoice"}
+                </button>
               ) : null}
               {showDeliveryNoteAction ? (
                 <button
