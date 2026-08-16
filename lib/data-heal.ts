@@ -77,6 +77,44 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
     take: limit,
   });
 
+  // Stock-ledger hygiene: older PartStockTransaction rows predate the nullable
+  // orgId column (and a few write paths used to omit it), leaving movements
+  // unscoped. Derive orgId from the owning Part — the authoritative parent — so
+  // org-scoped ledger queries see a complete picture. Idempotent; safe to repeat.
+  // (Mirrors scripts/backfill-stock-txn-org.ts, but runnable in production via
+  // the admin data-heal endpoint, where the Turso env exists.)
+  // NB: runs BEFORE the no-job-candidates early return below, otherwise it would
+  // be skipped on any org whose jobs need no device-field healing.
+  let stockTxnOrgIdFixed = 0;
+  let stockTxnMissingOrgId = 0;
+  try {
+    const unscoped = await prisma.partStockTransaction.findMany({
+      where: { orgId: null },
+      select: { id: true, partId: true },
+      take: limit,
+    });
+    stockTxnMissingOrgId = unscoped.length;
+
+    if (!dryRun && unscoped.length > 0) {
+      const partOrg = new Map<string, string | null>();
+      for (const row of unscoped) {
+        if (!partOrg.has(row.partId)) {
+          const part = await prisma.part.findUnique({
+            where: { id: row.partId },
+            select: { orgId: true },
+          });
+          partOrg.set(row.partId, part?.orgId ?? null);
+        }
+        const orgId = partOrg.get(row.partId);
+        if (!orgId) continue; // orphan or org-less part — leave it for inspection
+        await prisma.partStockTransaction.update({ where: { id: row.id }, data: { orgId } });
+        stockTxnOrgIdFixed++;
+      }
+    }
+  } catch {
+    // Legacy deployments whose Prisma client predates the column: skip silently.
+  }
+
   if (candidates.length === 0) {
     return {
       ok: true,
@@ -86,6 +124,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
       pending: 0,
       auditLogsCreated,
       jobsMissingAuditLogs: dryRun ? jobsWithoutAudit.length : 0,
+      stockTxnMissingOrgId,
+      stockTxnOrgIdFixed,
       changes: [],
     };
   }
@@ -184,6 +224,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
     pending,
     auditLogsCreated,
     jobsMissingAuditLogs: dryRun ? jobsWithoutAudit.length : 0,
+    stockTxnMissingOrgId,
+    stockTxnOrgIdFixed,
     changes: changes.slice(0, 50),
   };
 }
