@@ -11,10 +11,12 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { PROCUREMENT_TABS } from "@/lib/procurement/routes";
-import { reviewPurchaseRequestAction, convertPurchaseRequestToPoAction } from "../inventory/purchase-requests/actions";
 
+// Direct buying only: create a PO, receive it, record the bill. The
+// request → approve → convert requisition stage was removed from the desk (the
+// pages still exist at /inventory/purchase-requests for anyone who wants a
+// formal approval trail, but they're out of the default flow).
 const EXPORTS = [
-  { label: "Requests", href: "/api/procurement/export?type=purchase-requests" },
   { label: "Orders", href: "/api/procurement/export?type=purchase-orders" },
   { label: "Received", href: "/api/procurement/export?type=goods-received" },
   { label: "Bills", href: "/api/procurement/export?type=supplier-bills" },
@@ -39,21 +41,14 @@ export default async function ProcurementPage() {
   inSevenDays.setDate(inSevenDays.getDate() + 7);
 
   const [
-    requestCounts,
     orderCounts,
     billCounts,
     openOrderItems,
     openBillsForValue,
-    reviewQueue,
     receivingQueue,
     billQueue,
     recentGrns,
   ] = await Promise.all([
-    prisma.purchaseRequest.groupBy({
-      by: ["status"],
-      where: { orgId },
-      _count: { _all: true },
-    }).catch(() => [] as Array<{ status: string; _count: { _all: number } }>),
     prisma.purchaseOrder.groupBy({
       by: ["status"],
       where: { orgId },
@@ -72,16 +67,6 @@ export default async function ProcurementPage() {
       where: { orgId, status: { in: ["POSTED", "PART_PAID"] } },
       select: { totalAmount: true, paidAmount: true },
     }).catch(() => [] as { totalAmount: number; paidAmount: number }[]),
-    prisma.purchaseRequest.findMany({
-      where: { orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
-      include: {
-        supplier: { select: { name: true } },
-        requestedBy: { select: { name: true, email: true } },
-        _count: { select: { items: true } },
-      },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-      take: 6,
-    }).catch(() => []),
     prisma.purchaseOrder.findMany({
       where: { orgId, status: { in: ["DRAFT", "ORDERED", "PARTIAL"] } },
       include: {
@@ -105,14 +90,11 @@ export default async function ProcurementPage() {
     }).catch(() => []),
   ]);
 
-  const requestCount = (status: string) => requestCounts.find((item) => item.status === status)?._count._all ?? 0;
   const orderCount = (status: string) => orderCounts.find((item) => item.status === status)?._count._all ?? 0;
   const billCount = (status: string) => billCounts.find((item) => item.status === status)?._count._all ?? 0;
   const openOrderValue = openOrderItems.reduce((sum, item) => sum + Math.max(0, item.qtyOrdered - item.qtyReceived) * item.unitCost, 0);
   const payableBalance = openBillsForValue.reduce((sum, bill) => sum + Math.max(0, bill.totalAmount - bill.paidAmount), 0);
 
-  const submittedRequests = requestCount("SUBMITTED");
-  const approvedRequests = requestCount("APPROVED");
   const openOrders = orderCount("DRAFT") + orderCount("ORDERED") + orderCount("PARTIAL");
   const dueOrders = receivingQueue.filter((order) => ["ORDERED", "PARTIAL"].includes(order.status) && order.expectedAt && order.expectedAt <= inSevenDays).length;
   const openBills = billCount("POSTED") + billCount("PART_PAID");
@@ -127,14 +109,11 @@ export default async function ProcurementPage() {
         description: `${formatMoney(openOrderValue)} on order · ${formatMoney(payableBalance)} still owed to suppliers`,
         actions: (
           <>
-            <Button href="/inventory/purchase-requests/new" size="sm" className="px-4 font-bold">New request</Button>
-            <Button href="/inventory/purchase-orders/new" variant="secondary" size="sm">New order</Button>
+            <Button href="/inventory/purchase-orders/new" size="sm" className="px-4 font-bold">New order</Button>
             <Button href="/inventory/supplier-bills/new" variant="secondary" size="sm">New bill</Button>
           </>
         ),
         kpis: [
-          { key: "demand", label: "To review", value: submittedRequests, sub: "requests waiting", tone: submittedRequests > 0 ? "warn" : "neutral", muted: submittedRequests === 0, href: "/inventory/purchase-requests" },
-          { key: "approved", label: "Approved", value: approvedRequests, sub: "ready to order", tone: "good", muted: approvedRequests === 0, href: "/inventory/purchase-requests" },
           { key: "ordered", label: "On order", value: openOrders, sub: "open orders", tone: "accent", muted: openOrders === 0, href: "/inventory/purchase-orders" },
           { key: "receiving", label: "To receive", value: dueOrders, sub: "arriving soon", tone: dueOrders > 0 ? "warn" : "neutral", muted: dueOrders === 0, href: "/inventory/purchase-orders" },
           { key: "payables", label: "Bills to pay", value: openBills, sub: `${dueBills} due soon`, tone: dueBills > 0 ? "crit" : "neutral", muted: openBills === 0, href: "/inventory/supplier-bills" },
@@ -155,74 +134,8 @@ export default async function ProcurementPage() {
         </div>
       }
     >
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="dc-card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Requests to review</p>
-            <Link href="/inventory/purchase-requests" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All requests</Link>
-          </div>
-          {reviewQueue.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[0.8125rem] text-[var(--ink-muted)]">No requests waiting for review.</p>
-          ) : (
-          <DataTable
-            frameless
-            dense
-            rows={reviewQueue}
-            getRowKey={(request) => request.id}
-            columns={[
-              {
-                key: "request",
-                header: "Request",
-                cell: (request) => (
-                  <>
-                    <Link href={`/inventory/purchase-requests/${request.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{request.requestNumber}</Link>
-                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{request.priority} · {request.status}</p>
-                  </>
-                ),
-              },
-              { key: "owner", header: "Owner", className: "text-[var(--ink-muted)]", cell: (request) => request.requestedBy.name ?? request.requestedBy.email },
-              { key: "supplier", header: "Supplier", className: "text-[var(--ink-muted)]", cell: (request) => request.supplier?.name ?? "No preference" },
-              { key: "items", header: "Items", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (request) => request._count.items },
-              {
-                key: "action",
-                header: "Action",
-                align: "right",
-                cell: (request) => {
-                  if (request.status === "APPROVED") {
-                    // One-click convert when a supplier is already chosen; otherwise
-                    // fall back to the detail page to pick one.
-                    return request.supplierId ? (
-                      <form action={convertPurchaseRequestToPoAction} className="inline-flex justify-end">
-                        <input type="hidden" name="id" value={request.id} />
-                        <input type="hidden" name="supplierId" value={request.supplierId} />
-                        <button type="submit" className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1.5 text-[0.75rem] font-semibold text-slate-700">Convert</button>
-                      </form>
-                    ) : (
-                      <Button href={`/inventory/purchase-requests/${request.id}`} variant="secondary" size="sm">Convert</Button>
-                    );
-                  }
-                  return (
-                    <div className="inline-flex justify-end gap-1.5">
-                      <form action={reviewPurchaseRequestAction}>
-                        <input type="hidden" name="id" value={request.id} />
-                        <input type="hidden" name="action" value="APPROVED" />
-                        <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[0.75rem] font-semibold text-emerald-700">Approve</button>
-                      </form>
-                      <form action={reviewPurchaseRequestAction}>
-                        <input type="hidden" name="id" value={request.id} />
-                        <input type="hidden" name="action" value="REJECTED" />
-                        <button type="submit" className="rounded-lg border border-red-500/25 px-2.5 py-1.5 text-[0.75rem] font-semibold text-red-600">Reject</button>
-                      </form>
-                    </div>
-                  );
-                },
-              },
-            ]}
-          />
-          )}
-        </section>
-
-        <section className="dc-card overflow-hidden">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="dc-card overflow-hidden lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Waiting to arrive</p>
             <Link href="/inventory/purchase-orders" className="text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">All orders</Link>
@@ -277,9 +190,6 @@ export default async function ProcurementPage() {
           )}
         </section>
 
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
         <section className="dc-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Supplier bills</p>
