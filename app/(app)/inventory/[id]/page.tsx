@@ -54,8 +54,6 @@ export default async function PartDetailPage({
         reorderLevel: true, isActive: true, createdAt: true,
         sellingPrice: true, category: true, description: true,
         taxable: true, taxRate: true,
-        baseUom: true, saleUom: true, purchaseUom: true,
-        saleUomFactor: true, purchaseUomFactor: true,
         reservations: {
           where: { status: "RESERVED" },
           select: {
@@ -375,18 +373,6 @@ export default async function PartDetailPage({
                       <option value="false">No</option>
                     </FormSelect>
                     <FormField label="Tax rate %" name="taxRate" defaultValue={String(part.taxRate ?? "")} placeholder="18" inputMode="decimal" />
-                  </FormRow>
-                </FieldGroup>
-
-                <FieldGroup label="Units &amp; packaging">
-                  <FormField label="Base unit — stock is counted in this" name="baseUom" defaultValue={part.baseUom ?? ""} placeholder="e.g. piece" />
-                  <FormRow>
-                    <FormField label="Sale unit"    name="saleUom"       defaultValue={part.saleUom ?? ""} placeholder="e.g. piece" />
-                    <FormField label="Base / sale"  name="saleUomFactor" defaultValue={String(part.saleUomFactor ?? "")} placeholder="1" inputMode="decimal" />
-                  </FormRow>
-                  <FormRow>
-                    <FormField label="Purchase unit"    name="purchaseUom"       defaultValue={part.purchaseUom ?? ""} placeholder="e.g. box" />
-                    <FormField label="Base / purchase"  name="purchaseUomFactor" defaultValue={String(part.purchaseUomFactor ?? "")} placeholder="1" inputMode="decimal" />
                   </FormRow>
                 </FieldGroup>
 
