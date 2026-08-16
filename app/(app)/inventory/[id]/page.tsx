@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { StatCards, type StatCard } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { formatMoney } from "@/lib/currency";
@@ -12,6 +14,17 @@ import { can } from "@/lib/permissions";
 import { adjustStockAction, updatePartAction, togglePartActiveAction } from "../actions";
 import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+
+// Subtle grouping label inside the details panel — keeps a long edit form
+// scannable without hand-rolling repeated markup.
+function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2 border-t border-[var(--line)] pt-3">
+      <p className="text-[0.625rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/60">{label}</p>
+      {children}
+    </div>
+  );
+}
 
 export default async function PartDetailPage({
   params,
@@ -68,6 +81,18 @@ export default async function PartDetailPage({
   const stockValue = (part.unitCost ?? 0) * part.qtyOnHand;
   const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
   const isOut = part.qtyOnHand === 0;
+
+  // Standard KPI band — the shared StatCards (desktop) + a compact mobile strip,
+  // instead of hand-rolled tiles (per components/ui/StatCards.tsx guidance).
+  const kpiCards: StatCard[] = [
+    { key: "onhand", label: "On Hand", value: part.qtyOnHand, tone: isOut ? "crit" : isLow ? "warn" : "neutral" },
+    { key: "reserved", label: "Reserved", value: part.qtyReserved, tone: "neutral" },
+    { key: "available", label: "Available", value: available, tone: available <= 0 ? "crit" : "good" },
+    { key: "value", label: "Stock Value", value: formatMoney(stockValue), tone: "accent" },
+  ];
+  const kpiToneText: Record<string, string> = {
+    neutral: "text-[var(--ink)]", crit: "text-[var(--dc-crit)]", warn: "text-[var(--dc-warn)]", good: "text-[var(--dc-good)]", accent: "text-[var(--dc-accent-2)]",
+  };
 
   // Running balance per row
   const txnsAsc = [...transactions].reverse();
@@ -127,26 +152,19 @@ export default async function PartDetailPage({
       />
       {part.manufacturer ? <p className="-mt-2 px-0.5 text-[0.8125rem] text-[var(--ink-muted)]">{part.manufacturer}</p> : null}
 
-      {/* ── KPI cards ── */}
-      <div className="dc-card overflow-hidden">
-        <div className="grid grid-cols-2 gap-px bg-[var(--line)] sm:grid-cols-4">
-          {[
-            { label: "On Hand",    value: part.qtyOnHand,        color: isOut ? "text-red-500" : isLow ? "text-amber-500" : "text-[var(--ink)]" },
-            { label: "Reserved",   value: part.qtyReserved,      color: "text-[var(--ink)]" },
-            { label: "Available",  value: available,             color: available <= 0 ? "text-red-500" : "text-emerald-500" },
-            { label: "Stock Value",value: formatMoney(stockValue),color: "text-[var(--ink)]" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-[var(--panel)] px-5 py-4">
-              <p className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]/70">{label}</p>
-              <p className={`text-[1.625rem] font-black tabular-nums leading-none ${color}`}>{value}</p>
-              <p className="mt-1 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]/40">UNITS</p>
-            </div>
-          ))}
-        </div>
+      {/* ── KPI band — compact strip on mobile, shared StatCards on desktop ── */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
+        {kpiCards.map((c) => (
+          <div key={c.key} className="dc-card px-4 py-3">
+            <p className="text-[0.6875rem] font-semibold text-[var(--ink-muted)]">{c.label}</p>
+            <p className={`mt-0.5 text-xl font-bold leading-none tabular-nums ${kpiToneText[c.tone ?? "neutral"]}`}>{c.value}</p>
+          </div>
+        ))}
       </div>
+      <StatCards cards={kpiCards} />
 
       {/* ── Main grid ── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
 
         {/* ── Left ── */}
         <div className="space-y-4 min-w-0">
@@ -155,7 +173,7 @@ export default async function PartDetailPage({
           {canManage && (
             <div className="dc-card overflow-hidden">
               <div className="border-b border-[var(--line)] px-5 py-2.5">
-                <p className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">
+                <p className="flex items-center gap-2 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
                   <svg className="h-3.5 w-3.5 text-[var(--accent)]" viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1a.75.75 0 0 0-1.5 0v5.5h-5.5a.75.75 0 0 0 0 1.5h5.5v5.5a.75.75 0 0 0 1.5 0V8h5.5a.75.75 0 0 0 0-1.5h-5.5V1Z"/></svg>
                   Quick Stock Actions
                 </p>
@@ -249,7 +267,7 @@ export default async function PartDetailPage({
           {/* Movement log */}
           <div className="dc-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Movement Log</p>
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Movement Log</p>
               <p className="text-[0.6875rem] tabular-nums text-[var(--ink-muted)]">{transactions.length} entries</p>
             </div>
             <DataTable
@@ -329,41 +347,56 @@ export default async function PartDetailPage({
         {/* ── Right: Static Details ── */}
         <div className="space-y-4">
           <div className="dc-card overflow-hidden">
-            <div className="border-b border-[var(--line)] px-5 py-2.5">
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Static Details</p>
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-5 py-2.5">
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Item Details</p>
+              <span className="mono text-[0.6875rem] text-[var(--ink-muted)]">{part.sku}</span>
             </div>
 
             {canManage ? (
-              <form action={updatePartAction} className="p-3 space-y-2">
+              <form action={updatePartAction} className="space-y-4 p-4">
                 <input type="hidden" name="partId" value={part.id} />
-                <FormField label="Item Name"     name="name" defaultValue={part.name} required />
-                <FormField label="Manufacturer"  name="manufacturer" defaultValue={part.manufacturer ?? ""} placeholder="Optional" />
-                <FormField label="Category"      name="category" defaultValue={part.category ?? ""} placeholder="Optional" />
-                <FormRow>
-                  <FormField label="Cost / base unit" name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
-                  <FormField label="Selling Price"    name="sellingPrice" defaultValue={String(part.sellingPrice ?? "")} placeholder="0.00" inputMode="decimal" />
-                </FormRow>
-                <FormRow>
-                  <FormSelect label="Taxable" name="taxable" defaultValue={part.taxable ? "true" : "false"}>
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                  </FormSelect>
-                  <FormField label="Tax Rate %" name="taxRate" defaultValue={String(part.taxRate ?? "")} placeholder="18" inputMode="decimal" />
-                </FormRow>
-                <FormField label="Base Unit (stock is counted in)" name="baseUom" defaultValue={part.baseUom ?? ""} placeholder="e.g. piece" />
-                <FormRow>
-                  <FormField label="Sale Unit"          name="saleUom"       defaultValue={part.saleUom ?? ""} placeholder="e.g. piece" />
-                  <FormField label="Base / sale unit"   name="saleUomFactor" defaultValue={String(part.saleUomFactor ?? "")} placeholder="1" inputMode="decimal" />
-                </FormRow>
-                <FormRow>
-                  <FormField label="Purchase Unit"        name="purchaseUom"       defaultValue={part.purchaseUom ?? ""} placeholder="e.g. box" />
-                  <FormField label="Base / purchase unit" name="purchaseUomFactor" defaultValue={String(part.purchaseUomFactor ?? "")} placeholder="1" inputMode="decimal" />
-                </FormRow>
-                <FormField label="Reorder Point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0" inputMode="numeric" />
-                <FormTextarea label="Description" name="description" defaultValue={part.description ?? ""} placeholder="Optional" rows={2} />
-                <button type="submit"
-                  className="btn-premium mt-1 h-8 w-full rounded-md text-[0.6875rem] font-bold uppercase tracking-[0.16em]">
-                  Save Details
+
+                <div className="space-y-2">
+                  <FormField label="Item name" name="name" defaultValue={part.name} required />
+                  <FormRow>
+                    <FormField label="Manufacturer" name="manufacturer" defaultValue={part.manufacturer ?? ""} placeholder="Optional" />
+                    <FormField label="Category"     name="category"     defaultValue={part.category ?? ""} placeholder="Optional" />
+                  </FormRow>
+                </div>
+
+                <FieldGroup label="Pricing &amp; tax">
+                  <FormRow>
+                    <FormField label="Cost / base unit" name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
+                    <FormField label="Selling price"    name="sellingPrice" defaultValue={String(part.sellingPrice ?? "")} placeholder="0.00" inputMode="decimal" />
+                  </FormRow>
+                  <FormRow>
+                    <FormSelect label="Taxable" name="taxable" defaultValue={part.taxable ? "true" : "false"}>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </FormSelect>
+                    <FormField label="Tax rate %" name="taxRate" defaultValue={String(part.taxRate ?? "")} placeholder="18" inputMode="decimal" />
+                  </FormRow>
+                </FieldGroup>
+
+                <FieldGroup label="Units &amp; packaging">
+                  <FormField label="Base unit — stock is counted in this" name="baseUom" defaultValue={part.baseUom ?? ""} placeholder="e.g. piece" />
+                  <FormRow>
+                    <FormField label="Sale unit"    name="saleUom"       defaultValue={part.saleUom ?? ""} placeholder="e.g. piece" />
+                    <FormField label="Base / sale"  name="saleUomFactor" defaultValue={String(part.saleUomFactor ?? "")} placeholder="1" inputMode="decimal" />
+                  </FormRow>
+                  <FormRow>
+                    <FormField label="Purchase unit"    name="purchaseUom"       defaultValue={part.purchaseUom ?? ""} placeholder="e.g. box" />
+                    <FormField label="Base / purchase"  name="purchaseUomFactor" defaultValue={String(part.purchaseUomFactor ?? "")} placeholder="1" inputMode="decimal" />
+                  </FormRow>
+                </FieldGroup>
+
+                <FieldGroup label="Stock &amp; notes">
+                  <FormField label="Reorder point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0" inputMode="numeric" />
+                  <FormTextarea label="Description" name="description" defaultValue={part.description ?? ""} placeholder="Optional" rows={2} />
+                </FieldGroup>
+
+                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2 text-sm font-semibold">
+                  Save details
                 </button>
               </form>
             ) : (
@@ -387,7 +420,7 @@ export default async function PartDetailPage({
           {part.reservations.length > 0 && (
             <div className="dc-card overflow-hidden">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-2.5">
-                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]/70">Reserved For Jobs</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Reserved For Jobs</p>
                 <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.6875rem] font-bold text-amber-700">
                   {part.reservations.length}
                 </span>
