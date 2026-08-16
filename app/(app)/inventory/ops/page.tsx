@@ -95,23 +95,6 @@ export default async function StockOpsPage() {
         actions={<Button href="/inventory" variant="secondary" size="sm">Inventory items →</Button>}
       />
 
-      {/* Quick links back to daily items */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { label: "Procurement Desk", href: "/procurement" },
-          { label: "Purchase Requests", href: "/inventory/purchase-requests" },
-          { label: "Purchase Orders",  href: "/inventory/purchase-orders"  },
-        ].map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] hover:bg-[var(--panel-strong)]"
-          >
-            {l.label}
-          </Link>
-        ))}
-      </div>
-
       {/* Grouped tiles */}
       <div className="space-y-5">
         {GROUPS.map((group) => (

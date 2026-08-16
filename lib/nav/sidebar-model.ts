@@ -38,10 +38,15 @@ export const NAV: readonly NavItem[] = [
   { href: "/intake", label: routeLabel("/intake"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL", "SALES_MANAGER"] },
   { href: "/service", label: routeLabel("/service"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK"] },
 
-  // Inventory & Supply — the two hubs only. Purchase requests, purchase orders
-  // and the stock ops hub are reached from inside these pages (they link to each
-  // other), so they no longer clutter the sidebar as separate top-level rows.
+  // Inventory & Supply — two hubs plus the four daily-driver shortcuts the owner
+  // keeps close (purchase orders, stock counts, suppliers, supplier bills). The
+  // rest (locations, transfers, purchase requests, goods received, the stock-ops
+  // hub) are reached from inside these pages, so they stay out of the sidebar.
   { href: "/inventory", label: routeLabel("/inventory"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "TECHNICIAN_INTERNAL"] },
+  { href: "/inventory/purchase-orders", label: routeLabel("/inventory/purchase-orders"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
+  { href: "/inventory/stock-counts", label: routeLabel("/inventory/stock-counts"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
+  { href: "/inventory/suppliers", label: routeLabel("/inventory/suppliers"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
+  { href: "/inventory/supplier-bills", label: routeLabel("/inventory/supplier-bills"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
   { href: "/procurement", label: routeLabel("/procurement"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
 
   // Customers
