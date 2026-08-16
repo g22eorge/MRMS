@@ -89,6 +89,12 @@ export async function AdminDashboard({
     { label: "Intake queue", sub: "Pending front desk", count: intakePendingCount, sev: "info", href: "/intake" },
   ] as const;
   const needsOpen = needs.reduce((s, n) => s + n.count, 0);
+  // Rows with nothing to do sink to the bottom (stable sort keeps the
+  // severity order above), so the eye lands on real work first instead of a
+  // wall of zeros. The top row then carries a "Start here" cue — on a busy
+  // morning "49 open" alone gives a new user no idea where to begin.
+  const needsSorted = [...needs].sort((a, b) => (a.count === 0 ? 1 : 0) - (b.count === 0 ? 1 : 0));
+  const startHereLabel = needsSorted.find((n) => n.count > 0)?.label ?? null;
   const sevMark: Record<string, string> = { crit: "bg-[var(--dc-crit)]", warn: "bg-[var(--dc-warn)]", info: "bg-[var(--dc-line)]" };
   const sevTone = (sev: string, count: number) =>
     count === 0 ? "text-[var(--dc-ink-3)]" : sev === "crit" ? "text-[var(--dc-crit)]" : sev === "warn" ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]";
@@ -223,13 +229,15 @@ export async function AdminDashboard({
           </div>
         </section>
 
-        {/* ── Repair pipeline: one quiet line ── */}
+        {/* ── Repair pipeline: one quiet line ──
+            The note was "% conversion", which reads as a sales metric; it is
+            actually completed ÷ received for the month (see admin-data.ts). */}
         <section>
           <SectionHead
             title="Repair pipeline"
             href="/jobs"
             hrefLabel={`${routeLabel("/jobs")} →`}
-            note={conversionRate > 0 ? <span className="text-[0.6875rem] text-[var(--dc-ink-3)]">· {conversionRate}% conversion</span> : undefined}
+            note={conversionRate > 0 ? <span className="text-[0.6875rem] text-[var(--dc-ink-3)]">· {conversionRate}% completed this month</span> : undefined}
           />
           <Card className="grid grid-cols-8 gap-1 p-2">
             {statusData.map((s) => {
@@ -256,12 +264,23 @@ export async function AdminDashboard({
               note={<span className={`text-[0.65625rem] font-semibold ${needsOpen > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-good)]"}`}>{needsOpen > 0 ? `${needsOpen} open` : "all clear"}</span>}
             />
             <div className="space-y-0.5">
-              {needs.map((n) => (
-                <Link key={n.label} href={n.href} className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-[var(--dc-panel-2)]">
-                  <span className={`h-9 w-[3px] shrink-0 rounded-full ${sevMark[n.sev]}`} />
+              {needsSorted.map((n) => (
+                <Link
+                  key={n.label}
+                  href={n.href}
+                  className={`flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-[var(--dc-panel-2)] ${n.count === 0 ? "opacity-45" : ""}`}
+                >
+                  <span className={`h-9 w-[3px] shrink-0 rounded-full ${n.count === 0 ? "bg-[var(--dc-line)]" : sevMark[n.sev]}`} />
                   <div className="min-w-0">
-                    <p className="text-[0.8125rem] text-[var(--dc-ink)]">{n.label}</p>
-                    <p className="text-[0.6875rem] text-[var(--dc-ink-3)]">{n.sub}</p>
+                    <p className="flex items-center gap-1.5 text-[0.8125rem] text-[var(--dc-ink)]">
+                      {n.label}
+                      {n.label === startHereLabel ? (
+                        <span className="rounded-full bg-[var(--dc-accent)]/15 px-1.5 py-px text-[0.625rem] font-semibold uppercase tracking-[0.04em] text-[var(--dc-accent-2)]">
+                          Start here
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-[0.6875rem] text-[var(--dc-ink-3)]">{n.count === 0 ? "Nothing pending" : n.sub}</p>
                   </div>
                   <p className={`ml-auto text-[0.9375rem] font-bold tabular-nums ${sevTone(n.sev, n.count)}`}>{n.count}</p>
                 </Link>
