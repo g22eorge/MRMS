@@ -56,10 +56,19 @@ if (process.env.TURSO_DATABASE_URL) {
 // when serving the deployed app.
 const realDatabaseUrl = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "";
 const buildDatabaseUrl = "file:./dev.db";
+
+// On Vercel the build must output to .next (what Vercel serves). Off Vercel —
+// i.e. the local commit gate — build into a separate dir so `next build` never
+// cleans the running dev server's .next mid-session. Honor an explicit
+// NEXT_DIST_DIR if the caller set one.
+const gateDistDir = process.env.VERCEL ? undefined : (process.env.NEXT_DIST_DIR || ".next-gate");
+if (gateDistDir) console.log(`[vercel-build] local build → ${gateDistDir} (dev server's .next left untouched)`);
+
 const buildEnv = {
   ...process.env,
   DATABASE_URL: buildDatabaseUrl,
   TURSO_DATABASE_URL: "",
+  ...(gateDistDir ? { NEXT_DIST_DIR: gateDistDir } : {}),
 };
 
 process.env.DATABASE_URL    = buildDatabaseUrl;  // always valid for SQLite provider

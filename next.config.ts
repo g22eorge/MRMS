@@ -38,6 +38,11 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Build output dir. Defaults to .next (what `next dev` and Vercel use). The
+  // local commit gate (scripts/vercel-build.mjs, off-Vercel) sets NEXT_DIST_DIR
+  // to a separate dir so `next build` never cleans the running dev server's
+  // .next out from under it. Vercel leaves it unset → .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   turbopack: { root: process.cwd() },
   async redirects() {
     // Communications is absorbed into Settings → Communications; the real pages
