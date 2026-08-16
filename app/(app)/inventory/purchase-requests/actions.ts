@@ -96,7 +96,6 @@ export async function createPurchaseRequestAction(formData: FormData): Promise<{
   }).catch(() => {});
 
   revalidatePath("/inventory/purchase-requests");
-  revalidatePath("/procurement");
   return { id: request.id };
 }
 
@@ -137,7 +136,6 @@ export async function reviewPurchaseRequestAction(formData: FormData): Promise<v
   }
 
   revalidatePath("/inventory/purchase-requests");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/purchase-requests/${id}`);
 }
 
@@ -156,7 +154,6 @@ export async function deletePurchaseRequestAction(formData: FormData): Promise<v
   await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseRequest", entityId: id, action: "PURCHASE_REQUEST_DELETED", summary: `${request.requestNumber} deleted` });
 
   revalidatePath("/inventory/purchase-requests");
-  revalidatePath("/procurement");
   if (request.convertedPoId) revalidatePath(`/inventory/purchase-orders/${request.convertedPoId}`);
   redirect("/inventory/purchase-requests");
 }
@@ -212,7 +209,6 @@ export async function convertPurchaseRequestToPoAction(formData: FormData): Prom
   });
 
   revalidatePath("/inventory/purchase-requests");
-  revalidatePath("/procurement");
   revalidatePath(`/inventory/purchase-requests/${id}`);
   revalidatePath("/inventory/purchase-orders");
   redirect(`/inventory/purchase-orders/${po.id}`);
