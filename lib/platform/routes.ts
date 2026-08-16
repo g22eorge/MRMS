@@ -7,9 +7,6 @@ export const PLATFORM_ROUTES = {
   audit: "/platform/audit",
   settings: "/platform/settings",
   org: (orgId: string) => `/platform/orgs/${orgId}`,
-  /** Legacy stubs — redirect to canonical `/platform` tree. */
-  legacyAdminHome: "/platform-admin",
-  legacyAdminOrg: (orgId: string) => `/platform-admin/orgs/${orgId}`,
 } as const;
 
 export const PLATFORM_ADMIN_PERMISSION = "platform_admin";
