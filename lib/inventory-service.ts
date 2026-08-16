@@ -130,6 +130,7 @@ export async function receiveStock(params: {
     await tx.partStockTransaction.create({
       data: {
         partId,
+        orgId: ctx.orgId,
         type: "IN",
         quantity,
         reason: null,
@@ -198,6 +199,7 @@ export async function issueStock(params: {
     await tx.partStockTransaction.create({
       data: {
         partId,
+        orgId: ctx.orgId,
         type: "OUT",
         quantity,
         reason: null,
@@ -348,6 +350,7 @@ export async function consumeReservation(params: {
     await tx.partStockTransaction.create({
       data: {
         partId: reservation.partId,
+        orgId: ctx.orgId,
         type: "OUT",
         quantity: reservation.quantity,
         reason: "REPAIR_CONSUME",
@@ -493,6 +496,7 @@ export async function applyAdjustment(params: {
     await tx.partStockTransaction.create({
       data: {
         partId,
+        orgId: ctx.orgId,
         type: "ADJUST",
         quantity: variance,
         reason: `STOCK_COUNT: system=${systemQuantity} counted=${countedQuantity}`,

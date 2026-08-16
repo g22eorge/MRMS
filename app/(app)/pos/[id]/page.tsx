@@ -327,6 +327,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId,
             saleId: sale.id,
             type: "IN",
             quantity: baseQty,
@@ -376,6 +377,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId,
             saleId,
             type: delta > 0 ? "OUT" : "IN",
             quantity: Math.abs(baseDelta),
@@ -418,6 +420,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           await tx.partStockTransaction.create({
             data: {
               partId: part.id,
+              orgId,
               saleId,
               type: "IN",
               quantity: baseQty,
@@ -486,6 +489,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId,
             saleId,
             type: "OUT",
             quantity: baseQty,
@@ -742,6 +746,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId,
             saleId,
             type: "IN",
             quantity: baseQty,

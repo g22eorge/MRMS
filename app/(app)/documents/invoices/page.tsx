@@ -264,6 +264,7 @@ export default async function InvoicesPage({
         await tx.partStockTransaction.create({
           data: {
             partId: item.partId,
+            orgId,
             type: "OUT",
             quantity: baseQty,
             reason: `Invoice ${invoiceNumber}: ${item.description}`.slice(0, 500),

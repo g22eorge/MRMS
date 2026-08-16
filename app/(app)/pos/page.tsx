@@ -179,6 +179,7 @@ export default async function PosPage({
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId: _orgId3,
             saleId: sale.id,
             type: "IN",
             quantity: baseQty,

@@ -58,6 +58,7 @@ export async function consumeRepairPartsForJob(params: {
       await tx.partStockTransaction.create({
         data: {
           partId: part.id,
+          orgId,
           jobId,
           type: "OUT",
           quantity: item.quantity,
