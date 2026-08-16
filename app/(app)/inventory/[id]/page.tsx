@@ -13,7 +13,7 @@ import { requireModule, OrgModule } from "@/lib/module-access";
 import { can } from "@/lib/permissions";
 import { adjustStockAction, updatePartAction, togglePartActiveAction } from "../actions";
 import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
-import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { StockAdjustModal } from "@/components/inventory/StockAdjustModal";
 
 // Subtle grouping label inside the details panel — keeps a long edit form
 // scannable without hand-rolling repeated markup.
@@ -44,6 +44,8 @@ export default async function PartDetailPage({
   const error = typeof sp.error === "string" ? sp.error : null;
   const saved = sp.saved === "1";
   const canManage = can.manageInventory(user);
+  // Read-first: details show as a clean summary; ?edit=1 opens the edit form.
+  const editMode = canManage && sp.edit === "1";
 
   const [part, transactions] = await Promise.all([
     prisma.part.findFirst({
@@ -132,19 +134,27 @@ export default async function PartDetailPage({
               : isLow ? { label: "Low Stock", tone: "warning" }
                 : { label: "Active Stock", tone: "success" }
         }
+        primary={canManage ? <StockAdjustModal partId={part.id} currentQty={part.qtyOnHand} action={adjustStockAction} /> : undefined}
         secondary={
           canManage ? (
-            <form action={togglePartActiveAction}>
-              <input type="hidden" name="partId" value={part.id} />
-              <input type="hidden" name="next" value={part.isActive ? "0" : "1"} />
-              <button type="submit" className={`rounded-lg border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
-                part.isActive
-                  ? "border-red-400/40 text-red-600 hover:bg-red-500/8"
-                  : "border-emerald-400/40 text-emerald-700 hover:bg-emerald-500/8"
-              }`}>
-                {part.isActive ? "Deactivate" : "Reactivate"}
-              </button>
-            </form>
+            <div className="flex items-center gap-2">
+              {!editMode ? (
+                <Link href={`/inventory/${part.id}?edit=1`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">
+                  Edit
+                </Link>
+              ) : null}
+              <form action={togglePartActiveAction}>
+                <input type="hidden" name="partId" value={part.id} />
+                <input type="hidden" name="next" value={part.isActive ? "0" : "1"} />
+                <button type="submit" className={`rounded-lg border px-3 py-1.5 text-[0.75rem] font-semibold transition ${
+                  part.isActive
+                    ? "border-red-400/40 text-red-600 hover:bg-red-500/8"
+                    : "border-emerald-400/40 text-emerald-700 hover:bg-emerald-500/8"
+                }`}>
+                  {part.isActive ? "Deactivate" : "Reactivate"}
+                </button>
+              </form>
+            </div>
           ) : undefined
         }
       />
@@ -166,101 +176,6 @@ export default async function PartDetailPage({
 
         {/* ── Left ── */}
         <div className="space-y-4 min-w-0">
-
-          {/* Quick stock actions */}
-          {canManage && (
-            <div className="dc-card overflow-hidden">
-              <div className="border-b border-[var(--line)] px-5 py-2.5">
-                <p className="flex items-center gap-2 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">
-                  <svg className="h-3.5 w-3.5 text-[var(--accent)]" viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1a.75.75 0 0 0-1.5 0v5.5h-5.5a.75.75 0 0 0 0 1.5h5.5v5.5a.75.75 0 0 0 1.5 0V8h5.5a.75.75 0 0 0 0-1.5h-5.5V1Z"/></svg>
-                  Quick Stock Actions
-                </p>
-              </div>
-
-              {/* 3 action cards */}
-              <div className="grid grid-cols-3 gap-px bg-[var(--line)]">
-
-                <details className="group bg-[var(--panel)]">
-                  <summary className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 px-4 py-5 text-center transition hover:bg-[var(--panel-strong)]/60 list-none">
-                    <svg className="h-6 w-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                    </svg>
-                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Receive</span>
-                  </summary>
-                  <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
-                    <form action={adjustStockAction} className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="partId" value={part.id} />
-                      <input type="hidden" name="type" value="IN" />
-                      <input name="quantity" inputMode="numeric" placeholder="Qty" required
-                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
-                      <input name="reason" placeholder="Reference / note"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/12" />
-                      <button type="submit"
-                        className="h-8 shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 text-[0.75rem] font-bold text-emerald-700 transition hover:bg-emerald-500/20">
-                        + Receive
-                      </button>
-                    </form>
-                  </div>
-                </details>
-
-                <details className="group bg-[var(--panel)]">
-                  <summary className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 px-4 py-5 text-center transition hover:bg-[var(--panel-strong)]/60 list-none">
-                    <svg className="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12M12 7.5V21"/>
-                    </svg>
-                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Issue / Write-off</span>
-                  </summary>
-                  <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
-                    <form action={adjustStockAction} className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="partId" value={part.id} />
-                      <input type="hidden" name="type" value="OUT" />
-                      <input name="quantity" inputMode="numeric" placeholder="Qty" required
-                        className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
-                      <input name="reason" placeholder="Reason"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-red-400/50 focus:ring-2 focus:ring-red-500/12" />
-                      <ConfirmSubmitButton
-                        message="Write off this stock? It removes units from on-hand and can't be undone."
-                        confirmLabel="Write off"
-                        className="h-8 shrink-0 rounded-lg border border-red-400/40 bg-red-500/8 px-4 text-[0.75rem] font-bold text-red-600 transition hover:bg-red-500/15">
-                        − Issue
-                      </ConfirmSubmitButton>
-                    </form>
-                  </div>
-                </details>
-
-                <details className="group bg-[var(--panel)]">
-                  <summary className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 px-4 py-5 text-center transition hover:bg-[var(--panel-strong)]/60 list-none">
-                    <svg className="h-6 w-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
-                    </svg>
-                    <span className="text-[0.75rem] font-bold text-[var(--ink)]">Qty Correction</span>
-                  </summary>
-                  <div className="border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-3">
-                    <p className="mb-2.5 text-[0.6875rem] text-[var(--ink-muted)]">
-                      Enter the correct total. Currently <strong className="tabular-nums text-[var(--ink)]">{part.qtyOnHand}</strong>. No cost impact.
-                    </p>
-                    <form action={adjustStockAction} className="flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="partId" value={part.id} />
-                      <input type="hidden" name="type" value="ADJUST" />
-                      <input type="hidden" name="quantity" value="1" />
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Correct to</label>
-                        <input name="correctTo" inputMode="numeric" placeholder={String(part.qtyOnHand)} required
-                          className="h-8 w-24 rounded-lg border border-amber-400/60 bg-[var(--panel)] px-3 text-[0.8125rem] font-semibold outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/14" />
-                      </div>
-                      <input name="reason" placeholder="Reason (recommended)"
-                        className="h-8 min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-[0.8125rem] outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/12" />
-                      <button type="submit"
-                        className="h-8 shrink-0 self-end rounded-lg border border-amber-400/50 bg-amber-500/10 px-4 text-[0.75rem] font-bold text-amber-700 transition hover:bg-amber-500/20">
-                        Correct
-                      </button>
-                    </form>
-                  </div>
-                </details>
-
-              </div>
-            </div>
-          )}
 
           {/* Movement log */}
           <div className="dc-card overflow-hidden">
@@ -350,7 +265,7 @@ export default async function PartDetailPage({
               <span className="mono text-[0.6875rem] text-[var(--ink-muted)]">{part.sku}</span>
             </div>
 
-            {canManage ? (
+            {editMode ? (
               <form action={updatePartAction} className="space-y-4 p-4">
                 <input type="hidden" name="partId" value={part.id} />
 
@@ -364,8 +279,8 @@ export default async function PartDetailPage({
 
                 <FieldGroup label="Pricing &amp; tax">
                   <FormRow>
-                    <FormField label="Cost / base unit" name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
-                    <FormField label="Selling price"    name="sellingPrice" defaultValue={String(part.sellingPrice ?? "")} placeholder="0.00" inputMode="decimal" />
+                    <FormField label="Cost / unit"   name="unitCost"     defaultValue={String(part.unitCost ?? "")} placeholder="0.00" inputMode="decimal" />
+                    <FormField label="Selling price" name="sellingPrice" defaultValue={String(part.sellingPrice ?? "")} placeholder="0.00" inputMode="decimal" />
                   </FormRow>
                   <FormRow>
                     <FormSelect label="Taxable" name="taxable" defaultValue={part.taxable ? "true" : "false"}>
@@ -381,24 +296,35 @@ export default async function PartDetailPage({
                   <FormTextarea label="Description" name="description" defaultValue={part.description ?? ""} placeholder="Optional" rows={2} />
                 </FieldGroup>
 
-                <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2 text-sm font-semibold">
-                  Save details
-                </button>
+                <div className="flex gap-2 pt-1">
+                  <button type="submit" className="btn-premium flex-1 rounded-lg px-4 py-2 text-sm font-semibold">Save details</button>
+                  <Link href={`/inventory/${part.id}`} className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Cancel</Link>
+                </div>
               </form>
             ) : (
-              <dl className="divide-y divide-[var(--line)]">
-                {[
-                  ["Item Name",     part.name],
-                  ["Manufacturer",  part.manufacturer ?? "—"],
-                  ["Unit Cost",     part.unitCost != null ? formatMoney(part.unitCost) : "—"],
-                  ["Reorder Point", String(part.reorderLevel)],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between px-5 py-2.5">
-                    <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">{label}</dt>
-                    <dd className="text-[0.8125rem] font-semibold text-[var(--ink)]">{value}</dd>
+              <>
+                <dl className="divide-y divide-[var(--line)]">
+                  {[
+                    ["Manufacturer",  part.manufacturer || "—"],
+                    ["Category",      part.category || "—"],
+                    ["Cost / unit",   part.unitCost != null ? formatMoney(part.unitCost) : "—"],
+                    ["Selling price", part.sellingPrice != null ? formatMoney(part.sellingPrice) : "—"],
+                    ["Tax",           part.taxable ? `${part.taxRate ?? 0}% VAT` : "Not taxable"],
+                    ["Reorder point", String(part.reorderLevel)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                      <dt className="text-[0.75rem] text-[var(--ink-muted)]">{label}</dt>
+                      <dd className="text-right text-[0.8125rem] font-semibold text-[var(--ink)]">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {part.description ? (
+                  <div className="border-t border-[var(--line)] px-5 py-3">
+                    <p className="mb-1 text-[0.75rem] text-[var(--ink-muted)]">Description</p>
+                    <p className="text-[0.8125rem] text-[var(--ink)]">{part.description}</p>
                   </div>
-                ))}
-              </dl>
+                ) : null}
+              </>
             )}
           </div>
 
