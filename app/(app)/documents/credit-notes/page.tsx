@@ -82,6 +82,7 @@ export default async function CreditNotesPage({
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
+            orgId,
             saleId: cn.saleId,
             type: "IN",
             quantity: baseQty,
@@ -448,7 +449,7 @@ export default async function CreditNotesPage({
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
         await tx.partStockTransaction.create({
-          data: { partId: part.id, saleId, type: "IN", quantity: baseQty, reason: `Return (${creditNoteNumber}) ${it.description || part.name}`, createdById: user.id },
+          data: { partId: part.id, orgId, saleId, type: "IN", quantity: baseQty, reason: `Return (${creditNoteNumber}) ${it.description || part.name}`, createdById: user.id },
         });
       }
 

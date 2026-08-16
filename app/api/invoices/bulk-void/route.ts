@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         if (!part) continue;
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: qty } } });
         await tx.partStockTransaction.create({
-          data: { partId: part.id, type: "IN", quantity: qty, reason: `Invoice ${inv.invoiceNumber} voided: ${line.description}`.slice(0, 500), createdById: user.id },
+          data: { partId: part.id, orgId, type: "IN", quantity: qty, reason: `Invoice ${inv.invoiceNumber} voided: ${line.description}`.slice(0, 500), createdById: user.id },
         });
       }
     });
