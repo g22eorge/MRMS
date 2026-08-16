@@ -35,7 +35,9 @@ const brandingSchema = z.object({
   companyName: z.string().min(2).max(120),
   companyTagline: z.string().max(120).optional(),
   companyAddressLine1: z.string().min(3).max(180),
-  companyAddressLine2: z.string().min(3).max(180),
+  // Optional in reality — plenty of businesses have a single-line address, and
+  // requiring 3+ chars here blocked the whole form with no visible reason.
+  companyAddressLine2: z.string().max(180),
   companyContacts: z.string().min(3).max(180),
   companyEmail: z.string().email().optional(),
   companyWebsite: z.string().max(200).optional(),
@@ -240,7 +242,22 @@ export default async function BrandingPage({
     });
 
     if (!parsed.success) {
-      redirect("/settings/branding?error=Invalid+branding+input");
+      // Name the offending fields. This used to redirect with a flat
+      // "Invalid branding input", which left no way to tell what to fix.
+      const labels: Record<string, string> = {
+        companyName: "Business name", companyTagline: "Tagline",
+        companyAddressLine1: "Address line 1", companyAddressLine2: "Address line 2",
+        companyContacts: "Phone / contacts", companyEmail: "Email", companyWebsite: "Website",
+        documentTitle: "Document title", quotePrefix: "Quote prefix", quoteFormat: "Quote format",
+        quoteValidityDays: "Quote validity (days)", sequencePadLength: "Number padding",
+        vatRatePercent: "VAT rate", vatLabel: "VAT label",
+        termsText: "Terms text", footerText: "Footer text",
+      };
+      const detail = parsed.error.issues
+        .slice(0, 3)
+        .map((i) => `${labels[String(i.path[0])] ?? String(i.path[0])}: ${i.message}`)
+        .join("; ");
+      redirect(`/settings/branding?error=${encodeURIComponent(detail || "Invalid branding input")}`);
     }
 
     const bankAccounts = parsePaymentAccounts(parsed.data.paymentAccounts);
