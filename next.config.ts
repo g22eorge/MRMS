@@ -44,6 +44,14 @@ const nextConfig: NextConfig = {
   // .next out from under it. Vercel leaves it unset → .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   turbopack: { root: process.cwd() },
+  experimental: {
+    // Turbopack's on-disk dev cache (.next/dev/cache/turbopack/*.sst) is what
+    // corrupts when the .next dir is disturbed mid-session, surfacing as
+    // "ENOENT ... build-manifest.json" or SST-file panics on pages that recompile.
+    // Run the dev server on an in-memory cache only — no disk cache to go stale.
+    // Dev-only (name says ForDev); production `next build` is unaffected.
+    turbopackFileSystemCacheForDev: false,
+  },
   async redirects() {
     // Communications is absorbed into Settings → Communications; the real pages
     // live under /settings/notifications/*. The /communications/* routes are
