@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { getCurrentUserRole } from "@/lib/session";
 
+import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { getOnboardingStatus } from "@/lib/onboarding-checklist";
 import { AdminDashboard } from "./sections/AdminDashboard";
 import { ExternalTechDashboard } from "./sections/ExternalTechDashboard";
 import { FinanceDashboard } from "./sections/FinanceDashboard";
@@ -90,5 +92,15 @@ export default async function DashboardPage({
     }
   })();
 
-  return <div className="calm-scope">{content}</div>;
+  // First-run guidance. Derived from real data and self-retiring (all steps done,
+  // or org older than 30 days), so it never needs dismissing and costs an
+  // established workspace nothing.
+  const onboarding = orgId ? await getOnboardingStatus(orgId).catch(() => null) : null;
+
+  return (
+    <div className="calm-scope">
+      {onboarding ? <OnboardingChecklist status={onboarding} /> : null}
+      {content}
+    </div>
+  );
 }
