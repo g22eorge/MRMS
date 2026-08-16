@@ -50,8 +50,11 @@ const brandingSchema = z.object({
   vatRatePercent: z.coerce.number().min(0).max(100),
   vatInclusive: z.enum(["true", "false"]),
   vatLabel: z.string().min(2).max(30),
-  termsText: z.string().min(10).max(2000),
-  footerText: z.string().min(6).max(180),
+  // Both are free-text document decoration, not business-critical data, and a
+  // blank footer is already the system default. Leaving them empty is a valid
+  // choice — don't block saving the rest of the branding over it.
+  termsText: z.string().max(2000),
+  footerText: z.string().max(180),
   paymentAccounts: z.string().max(4000).optional().default(""),
   signatureCompanyLabel: z.string().min(2).max(120),
   signatureClientLabel: z.string().min(2).max(120),
