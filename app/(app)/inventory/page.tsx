@@ -31,16 +31,6 @@ type InventoryRow = {
   isActive: boolean;
 };
 
-type MovementRow = {
-  id: string;
-  type: string;
-  quantity: number;
-  reason: string | null;
-  createdAt: Date;
-  part: { id: string; sku: string; name: string };
-  createdBy: { name: string | null; email: string } | null;
-};
-
 export default async function InventoryPage({
   searchParams,
 }: {
@@ -90,7 +80,7 @@ export default async function InventoryPage({
     isActive: Boolean(r.isActive),
   });
 
-  const [kpiRows, lowStockTopRaw, filteredCountRows, partStatusCounts, locationCount, recentMovements] = await Promise.all([
+  const [kpiRows, filteredCountRows, partStatusCounts, locationCount] = await Promise.all([
     prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT
         SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN 1 ELSE 0 END) AS "lowStock",
@@ -105,27 +95,11 @@ export default async function InventoryPage({
         COALESCE(SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN ("reorderLevel" - "qtyOnHand") * COALESCE("unitCost", 0) ELSE 0 END), 0) AS "workingCapitalAtRisk"
       FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = 1
     `.catch(() => [] as Array<Record<string, unknown>>),
-    prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT id, sku, name, manufacturer, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
-      FROM "Part"
-      WHERE "orgId" = ${orgId} AND "isActive" = 1 AND "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0
-      ORDER BY ("reorderLevel" - "qtyOnHand") DESC
-      LIMIT 6
-    `.catch(() => [] as Array<Record<string, unknown>>),
     prisma.$queryRaw<Array<{ c: number | bigint }>>`SELECT COUNT(*) AS c FROM "Part" ${rowWhere}`.catch(() => [{ c: 0 }]),
     prisma.part
       .groupBy({ by: ["isActive"], where: { orgId }, _count: { _all: true } })
       .catch(() => [] as Array<{ isActive: boolean; _count: { _all: number } }>),
     prisma.stockLocation.count({ where: { orgId, isActive: true } }).catch(() => 0),
-    prisma.partStockTransaction.findMany({
-      where: { part: { orgId } },
-      include: {
-        part: { select: { id: true, sku: true, name: true } },
-        createdBy: { select: { name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }).catch(() => [] as MovementRow[]),
   ]);
 
   const kpi = kpiRows[0] ?? {};
@@ -138,7 +112,6 @@ export default async function InventoryPage({
   const totalAvailable = num(kpi.totalAvailable);
   const stockAccuracyRisk = num(kpi.noCostItems) + num(kpi.noReorderItems) + num(kpi.overReserved);
   const workingCapitalAtRisk = num(kpi.workingCapitalAtRisk);
-  const lowStockTop = lowStockTopRaw.map(coerceRow);
 
   const activePartCount = partStatusCounts.find((r) => r.isActive)?._count._all ?? 0;
   const inactivePartCount = partStatusCounts.find((r) => !r.isActive)?._count._all ?? 0;
@@ -406,57 +379,6 @@ export default async function InventoryPage({
         unit="items"
         hrefForPage={hrefForPage}
       />
-
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
-        <div className="dc-card overflow-hidden">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Recent stock changes</p>
-            <Link href="/inventory/stock-counts" className="text-xs font-semibold text-[var(--accent)] hover:underline">Audit stock</Link>
-          </div>
-          <div className="divide-y divide-[var(--line)]">
-            {recentMovements.map((movement) => (
-              <Link key={movement.id} href={`/inventory/${movement.part.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--panel-strong)]/50">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--ink)]">{movement.part.name}</p>
-                  <p className="truncate text-xs text-[var(--ink-muted)]">{movement.part.name} · {movement.reason ?? "Stock movement"} · {movement.createdBy?.name ?? movement.createdBy?.email ?? "System"}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className={`text-sm font-black tabular-nums whitespace-nowrap ${movement.type === "IN" ? "text-emerald-600" : movement.type === "OUT" ? "text-red-600" : "text-amber-600"}`}>
-                    {movement.type === "IN" ? "+" : movement.type === "OUT" ? "-" : ""}{Math.abs(movement.quantity)}
-                  </p>
-                  <p className="text-[0.6875rem] text-[var(--ink-muted)]">{movement.createdAt.toLocaleDateString("en-UG", { day: "numeric", month: "short" })}</p>
-                </div>
-              </Link>
-            ))}
-            {recentMovements.length === 0 ? <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No stock movements recorded yet.</p> : null}
-          </div>
-        </div>
-
-        <div className="dc-card overflow-hidden">
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Running low</p>
-            <Link href="/inventory/purchase-requests/new" className="text-xs font-semibold text-[var(--accent)] hover:underline">New request</Link>
-          </div>
-          <div className="divide-y divide-[var(--line)]">
-            {lowStockTop.map((part) => {
-              const gap = Math.max(0, part.reorderLevel - part.qtyOnHand);
-              return (
-                <Link key={part.id} href={`/inventory/${part.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--panel-strong)]/50">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--ink)]">{part.name}</p>
-                    <p className="truncate text-xs text-[var(--ink-muted)]">reorder at {part.reorderLevel || "not set"}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className={`text-sm font-black tabular-nums whitespace-nowrap ${part.qtyOnHand === 0 ? "text-red-600" : "text-amber-600"}`}>{part.qtyOnHand}</p>
-                    <p className="text-[0.6875rem] text-[var(--ink-muted)]">{gap} gap</p>
-                  </div>
-                </Link>
-              );
-            })}
-            {lowStockCount === 0 ? <p className="px-4 py-8 text-center text-sm text-[var(--ink-muted)]">No replenishment exceptions.</p> : null}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
