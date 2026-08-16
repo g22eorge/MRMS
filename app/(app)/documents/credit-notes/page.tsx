@@ -344,6 +344,156 @@ export default async function CreditNotesPage({
     redirect("/documents/credit-notes");
   }
 
+  // One-click "Return & refund now": the common case where a customer brings an
+  // item back, you put it on the shelf, and you hand the money over — previously
+  // three separate submits (create CN → mark received → issue refund). This runs
+  // all three in a single transaction: create the credit note, restock the
+  // returned items, and issue the FULL refund. The granular actions above stay
+  // for partial/staged returns (return now, refund later, etc.).
+  async function returnAndRefundAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    if (!["ADMIN", "OPS", "MANAGER"].includes(user.role)) return;
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
+
+    const saleId = String(formData.get("saleId") ?? "").trim();
+    const reason = String(formData.get("reason") ?? "").trim();
+    const itemIds = formData.getAll("itemId").map((value) => String(value)).filter(Boolean);
+    const methodRaw = String(formData.get("method") ?? "CASH").trim();
+    const reference = String(formData.get("reference") ?? "").trim();
+    if (!saleId || !reason || !itemIds.length) return;
+
+    const sale = await prisma.sale.findFirst({
+      where: { id: saleId, orgId },
+      select: {
+        id: true,
+        currency: true,
+        saleNumber: true,
+        items: {
+          where: { id: { in: itemIds } },
+          select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, saleUomFactor: true },
+        },
+      },
+    });
+    if (!sale || sale.items.length === 0) return;
+
+    const items = sale.items
+      .map((item) => {
+        const requestedQuantity = Number(String(formData.get(`quantity:${item.id}`) ?? item.quantity).trim());
+        const quantity = Math.max(1, Math.min(item.quantity, Math.floor(Number.isFinite(requestedQuantity) ? requestedQuantity : item.quantity)));
+        return { partId: item.partId, description: item.description, quantity, unitPrice: item.unitPrice, saleUomFactor: item.saleUomFactor };
+      })
+      .filter((item) => item.quantity > 0);
+    if (!items.length) return;
+
+    const totalAmount = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    if (totalAmount <= 0) return;
+
+    // Same cumulative-return cap as createCreditNoteAction.
+    const saleTotal = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { totalAmount: true } });
+    const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
+    if (saleTotal && (priorCredited._sum.totalAmount ?? 0) + totalAmount > saleTotal.totalAmount) return;
+
+    // FX handling mirrors issueRefundFromCreditNoteAction — a foreign refund must
+    // carry a rate so the ledger posts the base value, not the document amount.
+    const refundCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
+    const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
+    const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
+    if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) return;
+
+    const method = parsePaymentMethod(methodRaw, "CASH");
+
+    // Double-submit guard: an identical credit note for this sale landed seconds ago.
+    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, saleId, totalAmount });
+    if (dupCn) { revalidatePath("/documents/credit-notes"); redirect("/documents/credit-notes"); }
+
+    await ensureMoneySchema();
+    let creditNoteNumber = "";
+    let creditNoteId = "";
+    let refundId = "";
+    await prisma.$transaction(async (tx) => {
+      creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
+      const cn = await tx.creditNote.create({
+        data: {
+          orgId,
+          saleId,
+          creditNoteNumber,
+          currency: sale.currency,
+          totalAmount,
+          reason,
+          createdById: user.id,
+          // Items come straight back onto the shelf in this flow.
+          itemsReceivedBackAt: new Date(),
+          itemsReceivedBackById: user.id,
+          items: {
+            create: items.map((i) => ({
+              partId: i.partId,
+              description: i.description,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              lineTotal: i.quantity * i.unitPrice,
+              saleUomFactor: i.saleUomFactor,
+            })),
+          },
+        },
+        select: { id: true },
+      });
+      creditNoteId = cn.id;
+
+      // Restock the returned units (mirror markItemsReceivedAction).
+      for (const it of items) {
+        if (!it.partId) continue;
+        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, name: true } });
+        if (!part) continue;
+        const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
+        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
+        await tx.partStockTransaction.create({
+          data: { partId: part.id, saleId, type: "IN", quantity: baseQty, reason: `Return (${creditNoteNumber}) ${it.description || part.name}`, createdById: user.id },
+        });
+      }
+
+      // Full refund of the credited amount (mirror issueRefundFromCreditNoteAction).
+      const refund = await tx.refund.create({
+        data: {
+          orgId,
+          saleId,
+          creditNoteId,
+          currency: sale.currency,
+          exchangeRateToBase,
+          amount: totalAmount,
+          method,
+          reference: reference || null,
+          createdById: user.id,
+          refundedAt: new Date(),
+        },
+        select: { id: true },
+      });
+      refundId = refund.id;
+
+      // Recompute the sale's paid/return state once, after both writes land.
+      await syncSalePaymentState(tx, { orgId, saleId });
+
+      const baseRefund = refundCurrency === org.baseCurrency
+        ? totalAmount
+        : toBaseAmount({ amount: totalAmount, currency: refundCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase });
+      await postRefund(tx, {
+        orgId,
+        userId: user.id,
+        amount: baseRefund,
+        reference: `refund:${refund.id}`,
+        description: `Refund from credit note ${creditNoteNumber}`,
+      });
+    });
+
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "CreditNote", entityId: creditNoteId, action: "CREDIT_NOTE_CREATED", summary: `Credit note ${creditNoteNumber} for sale ${sale.saleNumber} — returned & refunded (${formatMoney(totalAmount, sale.currency)})` });
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Refund", entityId: refundId, action: "REFUND_CREATED", summary: `Refund ${formatMoney(totalAmount, sale.currency)} from credit note ${creditNoteNumber}` });
+    notifyCreditNoteIssued({ orgId, creditNoteNumber, clientName: `Sale ${sale.saleNumber}`, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
+    notifyRefundIssued({ orgId, creditNoteNumber, clientName: `CN ${creditNoteNumber}`, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
+    revalidatePath("/documents/credit-notes");
+    revalidatePath("/documents/refunds");
+    redirect("/documents/credit-notes");
+  }
+
   async function updateCreditNoteDateAction(formData: FormData) {
     "use server";
     const { user, orgId } = await requireOrgSession();
@@ -569,7 +719,13 @@ export default async function CreditNotesPage({
               <StatusBadge tone="warning">{pendingReturn} awaiting return</StatusBadge>
             )}
             {["ADMIN", "OPS", "MANAGER"].includes(user.role) && (
-              <CreateCreditNoteDialog eligibleSales={eligibleSales} action={createCreditNoteAction} />
+              <CreateCreditNoteDialog
+                eligibleSales={eligibleSales}
+                action={createCreditNoteAction}
+                returnAndRefundAction={returnAndRefundAction}
+                baseCurrency={org.baseCurrency}
+                paymentMethods={PAYMENT_METHODS.map((m) => ({ value: m, label: formatPaymentMethodLabel(m) }))}
+              />
             )}
           </>
         }
