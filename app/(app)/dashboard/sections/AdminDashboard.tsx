@@ -24,7 +24,7 @@ export async function AdminDashboard({
   const data = await loadAdminDashboardData(orgId);
   const {
     currency, orgName, enabledModules, today, recentJobs,
-    receivedToday, completedToday, receivedYesterday, completedYesterday,
+    receivedToday, completedToday,
     intakePendingCount, cashTodayValue, cashYesterdayValue, salesTodayValue,
     expensesTodayValue,
     revenueTodayValue,
@@ -72,19 +72,9 @@ export async function AdminDashboard({
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const dateLine = `${DOW[today.getDay()]}, ${today.getDate()} ${MON[today.getMonth()]}${orgName ? ` · ${orgName}` : ""}`;
 
-  const jobsInDelta = receivedToday - receivedYesterday;
-  const completedDelta = completedToday - completedYesterday;
-  const cashDeltaPct = cashYesterdayValue > 0 ? Math.round((cashTodayValue - cashYesterdayValue) / cashYesterdayValue * 100) : null;
-  const deltaTone = (d: number) => (d > 0 ? "text-[var(--dc-good)]" : d < 0 ? "text-[var(--dc-crit)]" : "text-[var(--dc-ink-3)]");
-  // A readable "vs yesterday" line: an arrow + magnitude when it moved, plain "Same as yesterday" when flat.
-  const vsYesterday = (d: number, magnitude: React.ReactNode) =>
-    d === 0 ? (
-      <span className="text-[var(--dc-ink-3)]">Same as yesterday</span>
-    ) : (
-      <>
-        <span className={deltaTone(d)}>{d > 0 ? "▲" : "▼"} {magnitude}</span> vs yesterday
-      </>
-    );
+  // Jobs actually in play — same definition the mobile home screen uses, so the
+  // two dashboards can never disagree about what "Active" means.
+  const activeJobsCount = (statusCount.get("RECEIVED") ?? 0) + inRepairCount + awaitingApprovalCount;
 
   const canCreateJob = can.createJob(permissionUser) && enabledModules.has("JOBS");
 
@@ -187,15 +177,42 @@ export async function AdminDashboard({
           ) : null}
         </div>
 
-        {/* ── Today: four numbers that matter ── */}
+        {/* ── Today: ONE hero number + three live counts ──────────────
+            Mirrors the mobile home screen. The old four-equal-KPI row read
+            "0 · 0 · 0" first thing in the morning while the pipeline below
+            showed dozens of jobs, so the app looked empty; leading with
+            revenue-today and pairing it with Active/Due/Ready removes that
+            contradiction and gives one obvious "how am I doing?" figure. */}
         <section>
           <SectionHead title="Today" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-4">
+            <Link href="/documents/receipts" className="dc-card dc-lift block px-6 py-5">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">Revenue today</p>
+              <p className="mt-2 text-[2.5rem] font-bold leading-none tracking-[-0.03em] tabular-nums text-[var(--dc-accent-2)]">
+                {formatMoneyCompact(revenueTodayValue, currency)}
+              </p>
+              <p className="mt-2.5 text-[0.71875rem] text-[var(--dc-ink-3)]">
+                Repairs {formatMoneyCompact(cashTodayValue, currency)} · Products {formatMoneyCompact(salesTodayValue, currency)}
+                {expensesTodayValue > 0 ? <> · <span className="text-[var(--dc-crit)]">{formatMoneyCompact(expensesTodayValue, currency)} out</span></> : null}
+              </p>
+            </Link>
+
             {([
-              { k: "Jobs in", v: String(receivedToday), href: "/jobs?status=RECEIVED", tone: "text-[var(--dc-ink)]", foot: vsYesterday(jobsInDelta, Math.abs(jobsInDelta)) },
-              { k: "Completed", v: String(completedToday), href: "/jobs?status=COMPLETED", tone: "text-[var(--dc-ink)]", foot: vsYesterday(completedDelta, Math.abs(completedDelta)) },
-              { k: "Cash received", v: formatMoneyCompact(cashTodayValue, currency), href: "/documents/receipts", tone: "text-[var(--dc-accent-2)]", foot: <><span className="text-[var(--dc-crit)]">{formatMoneyCompact(expensesTodayValue, currency)} out</span> · net {formatMoneyCompact(cashTodayValue - expensesTodayValue, currency)}</> },
-              { k: "Balances due", v: formatMoneyCompact(outstandingValue, currency), href: "/documents/invoices?status=ISSUED", tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", foot: `${completedUnpaidCount} completed & unpaid` },
+              {
+                k: "Active", v: String(activeJobsCount), href: "/jobs",
+                tone: activeJobsCount > 0 ? "text-sky-400" : "text-[var(--dc-ink-3)]",
+                foot: `${receivedToday} in · ${completedToday} done today`,
+              },
+              {
+                k: "Due", v: formatMoneyCompact(outstandingValue, currency), href: "/documents/invoices?status=ISSUED",
+                tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink-3)]",
+                foot: `${completedUnpaidCount} completed & unpaid`,
+              },
+              {
+                k: "Ready", v: String(readyForPickupCount), href: "/jobs?status=READY_FOR_PICKUP",
+                tone: readyForPickupCount > 0 ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink-3)]",
+                foot: "awaiting pickup",
+              },
             ] as const).map((kpi) => (
               <Link key={kpi.k} href={kpi.href} className="dc-card dc-lift block px-5 py-[18px]">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">{kpi.k}</p>
