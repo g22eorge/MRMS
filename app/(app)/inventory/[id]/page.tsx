@@ -240,6 +240,14 @@ export default async function PartDetailPage({
                   cell: (txn) => txn.balance,
                 },
                 {
+                  key: "cost",
+                  header: "Unit cost",
+                  align: "right",
+                  className: "hidden whitespace-nowrap tabular-nums text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",
+                  headerClassName: "hidden sm:table-cell",
+                  cell: (txn) => txn.unitCost != null ? formatMoney(txn.unitCost) : <span className="text-[var(--ink-muted)]/30">—</span>,
+                },
+                {
                   key: "reference",
                   header: "Reference",
                   className: "hidden max-w-[180px] truncate text-[0.75rem] text-[var(--ink-muted)] sm:table-cell",

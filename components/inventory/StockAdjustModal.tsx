@@ -85,6 +85,15 @@ export function StockAdjustModal({ partId, currentQty, action }: Props) {
               </label>
             )}
 
+            {type === "IN" ? (
+              <label className="block">
+                <span className="mb-1 block text-[0.75rem] font-semibold text-[var(--ink-muted)]">
+                  Unit cost <span className="font-normal text-[var(--ink-muted)]/60">— optional, updates average cost</span>
+                </span>
+                <input name="unitCost" inputMode="decimal" placeholder="Leave blank to keep current" className={inputCls} />
+              </label>
+            ) : null}
+
             <label className="block">
               <span className="mb-1 block text-[0.75rem] font-semibold text-[var(--ink-muted)]">{reasonLabel}</span>
               <input name="reason" placeholder={reasonPlaceholder} className={inputCls} />

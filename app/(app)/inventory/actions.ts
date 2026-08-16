@@ -124,6 +124,9 @@ export async function adjustStockAction(formData: FormData) {
   const type = String(formData.get("type") ?? "").trim().toUpperCase() as StockTxnType;
   const qty = Math.floor(Number(String(formData.get("quantity") ?? "0").trim()));
   const reason = String(formData.get("reason") ?? "").trim();
+  // Optional receipt price on a Receive → blends into the weighted-average cost.
+  const receiptCostRaw = String(formData.get("unitCost") ?? "").trim();
+  const receiptCost = receiptCostRaw ? Number(receiptCostRaw) : null;
 
   if (!partId) redirect("/inventory?error=Item+is+required");
   if (!(["IN", "OUT", "ADJUST"] as const).includes(type))
@@ -147,7 +150,7 @@ export async function adjustStockAction(formData: FormData) {
     auditDelta = await prisma.$transaction(async (tx) => {
       const part = await tx.part.findFirst({
         where: { id: partId, orgId },
-        select: { id: true, qtyOnHand: true },
+        select: { id: true, qtyOnHand: true, unitCost: true },
       });
       if (!part) throw new Error("Inventory item not found");
 
@@ -169,9 +172,21 @@ export async function adjustStockAction(formData: FormData) {
           throw new Error(`Cannot remove ${Math.abs(qty)} — only ${part.qtyOnHand} on hand`);
       }
 
+      // Weighted-average cost — only on a Receive that carries a positive price.
+      // (oldQty·oldCost + newQty·newPrice) / totalQty. Mirrors the PO/GRN receive.
+      const applyCost = type === "IN" && receiptCost != null && receiptCost > 0;
+      let nextCost: number | null = null;
+      if (applyCost) {
+        const denom = part.qtyOnHand + delta;
+        nextCost = denom > 0 ? (part.qtyOnHand * (part.unitCost ?? 0) + delta * receiptCost!) / denom : receiptCost!;
+      }
+
       await tx.part.update({
         where: { id: part.id },
-        data: { qtyOnHand: { increment: delta } },
+        data: {
+          qtyOnHand: { increment: delta },
+          ...(nextCost != null ? { unitCost: nextCost } : {}),
+        },
       });
       await tx.partStockTransaction.create({
         data: {
@@ -182,6 +197,7 @@ export async function adjustStockAction(formData: FormData) {
           quantity: logQty,
           reason: logReason,
           createdById: session.user.id,
+          ...(applyCost ? { unitCost: receiptCost } : {}),
         },
       });
 
