@@ -45,6 +45,8 @@ import { InvoiceNewButton } from "./InvoiceNewButton";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
@@ -92,9 +94,8 @@ export default async function InvoicesPage({
 
   async function createStandaloneInvoiceAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
-    const orgId = user.orgId;
-    if (!orgId) redirect("/dashboard");
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(orgId);
     if (!can.createInvoices(user)) redirect("/dashboard");
 
@@ -294,9 +295,9 @@ export default async function InvoicesPage({
   // which were never real routes (they 404'd).
   async function sendInvoiceRowShareAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
-    const orgId = user.orgId;
-    if (!orgId) return;
+    const { user, orgId, org } = await requireOrgSession();
+    // Sending an invoice is how the org gets paid, so it follows the payment rule.
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) return;
     const invoiceId = String(formData.get("invoiceId") ?? "").trim();
     const channel = String(formData.get("channel") ?? "") === "email" ? "email" : "whatsapp";

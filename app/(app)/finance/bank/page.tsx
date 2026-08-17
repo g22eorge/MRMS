@@ -17,6 +17,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +48,8 @@ export default async function BankPage({
 
   async function createBankAccount(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const name = fd.get("name") as string;
     const bankName = fd.get("bankName") as string;
@@ -61,7 +64,8 @@ export default async function BankPage({
 
   async function addTransaction(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const bankAccountId = fd.get("bankAccountId") as string;
     const date = fd.get("date") as string;
@@ -86,7 +90,8 @@ export default async function BankPage({
 
   async function reconcile(fd: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    const { user, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const id = fd.get("id") as string;
     if (!user.orgId) return;
     // Verify org ownership before toggling — otherwise any staff could reconcile
@@ -102,7 +107,8 @@ export default async function BankPage({
 
   async function deleteBankAccount(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
     await db.bankAccount.delete({ where: { id } });

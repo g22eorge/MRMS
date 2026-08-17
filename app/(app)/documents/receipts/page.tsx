@@ -9,6 +9,7 @@ import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
@@ -52,6 +53,8 @@ export default async function ReceiptsPage({
   async function createReceiptAction(_prev: null, formData: FormData): Promise<null> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
+    // Payment capture stays available while suspended (canRecordPaymentsWhenSuspended).
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
     const db = orgDb(orgId);
     const baseCurrency = org.baseCurrency;
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
@@ -117,6 +120,7 @@ export default async function ReceiptsPage({
   async function updateReceiptAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(orgId);
     const baseCurrency = org.baseCurrency;
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
@@ -204,6 +208,7 @@ export default async function ReceiptsPage({
   async function deleteReceiptAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const baseCurrency = org.baseCurrency;
     if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
     await ensureMoneySchema();
@@ -253,7 +258,8 @@ export default async function ReceiptsPage({
 
   async function shareReceiptWhatsAppAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) return;
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
@@ -264,7 +270,8 @@ export default async function ReceiptsPage({
 
   async function shareReceiptEmailAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) return;
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();

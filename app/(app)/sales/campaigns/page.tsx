@@ -19,6 +19,8 @@ import { StatCards } from "@/components/ui/StatCards";
 import { StatStrip } from "@/components/ui/StatStrip";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
@@ -97,9 +99,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function createCampaign(fd: FormData) {
     "use server";
-    const { user: _user } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
-    // (org write check removed — single-tenant)
     const name = fd.get("name") as string;
     const type = fd.get("type") as CampaignType;
     const subject = (fd.get("subject") as string) || null;
@@ -117,9 +119,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function updateStatus(fd: FormData) {
     "use server";
-    const { user: _user } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
-    // (org write check removed — single-tenant)
     const id = fd.get("id") as string;
     const status = fd.get("status") as CampaignStatus;
     const campaign = await db.campaign.findFirst({ where: { id} });
@@ -133,9 +135,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function deleteCampaign(fd: FormData) {
     "use server";
-    const { user: _user } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
-    // (org write check removed — single-tenant)
     const id = fd.get("id") as string;
     await db.campaign.delete({ where: { id } });
     revalidatePath("/sales/campaigns");
@@ -143,9 +145,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function addLeadsToCampaign(fd: FormData) {
     "use server";
-    const { user: _user } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
-    // (org write check removed — single-tenant)
     const campaignId = fd.get("campaignId") as string;
     const source = fd.get("source") as "all_leads" | "all_clients";
     const campaign = await db.campaign.findFirst({ where: { id: campaignId} });
@@ -182,7 +184,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   async function updateContactStatus(fd: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    const { user, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!user.orgId) return;
     const id = fd.get("id") as string;
     const status = fd.get("status") as CampaignContactStatus;
