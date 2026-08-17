@@ -27,6 +27,8 @@
 .DS_Store
 *.pem
 .claude/worktrees/
+# local-only skill (other .claude/skills/* stay tracked)
+.claude/skills/agent-browser/
 
 # debug
 npm-debug.log*
