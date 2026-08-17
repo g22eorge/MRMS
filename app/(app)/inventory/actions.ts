@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { can } from "@/lib/permissions";
 import { checkPartLimit } from "@/lib/plan-limits";
 import { notifyStockAlert } from "@/lib/notifications";
@@ -39,7 +40,8 @@ async function generatePartSku(orgId: string): Promise<string> {
 }
 
 export async function createPartAction(formData: FormData) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageInventory(user)) redirect("/dashboard");
 
   let sku = String(formData.get("sku") ?? "").trim();
@@ -117,7 +119,8 @@ export async function createPartAction(formData: FormData) {
 }
 
 export async function adjustStockAction(formData: FormData) {
-  const { session, user, orgId } = await requireOrgSession();
+  const { session, user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageInventory(user)) redirect("/dashboard");
 
   const partId = String(formData.get("partId") ?? "").trim();
@@ -250,7 +253,8 @@ export async function adjustStockAction(formData: FormData) {
 }
 
 export async function togglePartActiveAction(formData: FormData) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageInventory(user)) redirect("/dashboard");
 
   const partId = String(formData.get("partId") ?? "").trim();
@@ -264,7 +268,8 @@ export async function togglePartActiveAction(formData: FormData) {
 }
 
 export async function updatePartAction(formData: FormData) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageInventory(user)) redirect("/dashboard");
 
   const partId = String(formData.get("partId") ?? "").trim();
