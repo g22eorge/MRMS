@@ -497,7 +497,8 @@ export default async function CreditNotesPage({
 
   async function updateCreditNoteDateAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
     const id = String(formData.get("creditNoteId") ?? "").trim();
     const issueDateRaw = String(formData.get("issueDate") ?? "").trim();
@@ -509,7 +510,8 @@ export default async function CreditNotesPage({
 
   async function deleteCreditNoteAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (user.role !== "ADMIN") return;
 
     const id = String(formData.get("id") ?? "").trim();

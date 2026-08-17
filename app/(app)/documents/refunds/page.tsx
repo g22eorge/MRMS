@@ -190,6 +190,7 @@ export default async function RefundsPage({
   async function deleteRefundAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (user.role !== "ADMIN") return;
 
     const refundId = String(formData.get("refundId") ?? "").trim();

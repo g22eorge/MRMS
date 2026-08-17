@@ -445,8 +445,9 @@ export default async function UsersPage({
   async function updateUserDetails(state: UserDetailsState, formData: FormData): Promise<UserDetailsState> {
     "use server";
 
-    const { session, user: actor, orgId: actorOrgId } = await requireOrgSession();
+    const { session, user: actor, orgId: actorOrgId, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return { error: "Not authorized" };
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
 
     const parsed = updateUserDetailsSchema.safeParse({
       id: String(formData.get("id") ?? "").trim(),
@@ -512,8 +513,9 @@ export default async function UsersPage({
   async function resetUserPassword(state: UserPasswordResetState, formData: FormData): Promise<UserPasswordResetState> {
     "use server";
 
-    const { session, user: actor, orgId: actorOrgId } = await requireOrgSession();
+    const { session, user: actor, orgId: actorOrgId, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return { error: "Not authorized" };
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
 
     const parsed = resetPasswordSchema.safeParse({
       userId: String(formData.get("userId") ?? "").trim(),
@@ -569,8 +571,9 @@ export default async function UsersPage({
   async function saveAccessChanges(formData: FormData) {
     "use server";
 
-    const { session, user: actor, orgId: actorOrgId } = await requireOrgSession();
+    const { session, user: actor, orgId: actorOrgId, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return;
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
 
     const targetUserId = String(formData.get("userId") ?? "").trim();
     const q = String(formData.get("q") ?? "").trim();
@@ -694,8 +697,9 @@ export default async function UsersPage({
 
   async function toggleUserActive(formData: FormData) {
     "use server";
-    const { user: actor, orgId: actorOrgId, session } = await requireOrgSession();
+    const { user: actor, orgId: actorOrgId, session, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return;
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const targetId = String(formData.get("userId") ?? "").trim();
     const q = String(formData.get("q") ?? "").trim();
     if (!targetId || targetId === session.user.id) return; // can't deactivate yourself
@@ -723,8 +727,9 @@ export default async function UsersPage({
   async function inviteUser(_prev: InviteState, formData: FormData): Promise<InviteState> {
     "use server";
 
-    const { user: actor, orgId: actorOrgId } = await requireOrgSession();
+    const { user: actor, orgId: actorOrgId, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return { error: "Only admins can invite users." };
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
 
     const rl = await rateLimit.invite(actorOrgId);
     if (!rl.allowed) return { error: "Too many invites sent recently. Please wait before generating more." };
@@ -770,8 +775,9 @@ export default async function UsersPage({
   async function createUser(formData: FormData) {
     "use server";
 
-    const { user: actor, orgId: actorOrgId } = await requireOrgSession();
+    const { user: actor, orgId: actorOrgId, org } = await requireOrgSession();
     if (actor.role !== "ADMIN") return;
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
 
     const parsed = createUserSchema.safeParse({
       name: String(formData.get("name") ?? "").trim(),
