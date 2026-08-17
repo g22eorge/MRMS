@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { notifyFieldVisitCompleted } from "@/lib/notifications";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 
 const scheduleVisitSchema = z.object({
   jobId: z.string().optional(),
@@ -34,7 +35,8 @@ export async function scheduleVisit(data: {
   contactPhone?: string;
   notes?: string;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageFieldVisits(user)) {
     throw new Error("Unauthorized");
   }
@@ -83,7 +85,8 @@ export async function updateVisitStatus(
   status: FieldVisitStatus,
   extra?: { outcomeNotes?: string; signoffName?: string },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
   const isManager = can.manageFieldVisits(user);
   const isFieldTech = can.recordFieldSignoffs(user);
@@ -139,7 +142,8 @@ export async function recordSignoff(
   visitId: string,
   data: { signoffName: string; outcomeNotes?: string },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.recordFieldSignoffs(user)) {
     throw new Error("Unauthorized");
   }

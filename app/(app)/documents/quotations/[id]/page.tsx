@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
@@ -134,7 +135,8 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
   async function deleteQuotationAction() {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
     await prisma.quotation.deleteMany({ where: { id, orgId: actorOrg } });
     revalidatePath("/documents/quotations");
@@ -352,7 +354,8 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
               <form
                 action={async (fd: FormData) => {
                   "use server";
-                  const { user: actor, orgId: actorOrg } = await requireOrgSession();
+                  const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+                  assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
                   if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
                   const issueDateRaw = String(fd.get("issueDate") ?? "").trim();
                   const validUntilRaw = String(fd.get("validUntil") ?? "").trim();

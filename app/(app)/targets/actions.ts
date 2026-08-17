@@ -7,6 +7,7 @@ import { TargetEntityType, TargetMetric, TargetPeriod } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 
 const setTargetSchema = z.object({
   entityType: z.nativeEnum(TargetEntityType),
@@ -31,7 +32,8 @@ export async function setTarget(data: {
   targetValue: number;
   notes?: string;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.setTargets(user)) {
     throw new Error("Unauthorized");
   }
@@ -102,7 +104,8 @@ export async function setTarget(data: {
 }
 
 export async function updateTargetActual(targetId: string, actualValue: number) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.setTargets(user)) {
     throw new Error("Unauthorized");
   }
@@ -120,7 +123,8 @@ export async function updateTargetActual(targetId: string, actualValue: number) 
 }
 
 export async function deleteTarget(targetId: string) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.setTargets(user)) {
     throw new Error("Unauthorized");
   }

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 
 const editSchema = z.object({
@@ -18,7 +19,8 @@ const editSchema = z.object({
 });
 
 export async function updateJobEditAction(formData: FormData) {
-  const { user: currentUser, orgId } = await requireOrgSession();
+  const { user: currentUser, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
   if (currentUser.role === "TECHNICIAN_EXTERNAL" || currentUser.role === "FRONT_DESK") {
     return { error: "Forbidden" };
   }

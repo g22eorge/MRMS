@@ -15,6 +15,7 @@ import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
 
 type SearchParams = {
@@ -405,7 +406,8 @@ export default async function JobsPage({
 
   async function deleteJobAction(formData: FormData) {
     "use server";
-    const { user, orgId: deleteOrgId } = await requireOrgSession();
+    const { user, orgId: deleteOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (user.role !== "ADMIN") redirect("/dashboard");
     const id = String(formData.get("id") ?? "");
     if (!id) return;
@@ -416,7 +418,8 @@ export default async function JobsPage({
   // Quick-advance action: tap button on card → advance to DIAGNOSING without opening job
   async function quickAdvanceAction(formData: FormData) {
     "use server";
-    const { session: quickSession, user: u, orgId: qOrgId } = await requireOrgSession();
+    const { session: quickSession, user: u, orgId: qOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: u.role, userAccessMode: u.accessMode, kind: "GENERAL" });
     if (!can.editDiagnosis(u)) return;
     const jobId = String(formData.get("jobId") ?? "").trim();
     const toStatus = String(formData.get("toStatus") ?? "").trim() as JobStatus;

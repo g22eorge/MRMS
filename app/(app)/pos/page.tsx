@@ -12,6 +12,7 @@ import { orgDb } from "@/lib/db";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
@@ -112,7 +113,8 @@ export default async function PosPage({
 
   async function createSaleAction(_formData: FormData) {
     "use server";
-    const { user: _u2, orgId: _orgId2 } = await requireOrgSession();
+    const { user: _u2, orgId: _orgId2, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: _u2.role, userAccessMode: _u2.accessMode, kind: "GENERAL" });
     const db = orgDb(_orgId2);
     if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK"].includes(_u2.role))) redirect("/dashboard");
 
@@ -148,7 +150,8 @@ export default async function PosPage({
 
   async function deleteSaleAction(formData: FormData) {
     "use server";
-    const { user: _u3, orgId: _orgId3 } = await requireOrgSession();
+    const { user: _u3, orgId: _orgId3, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: _u3.role, userAccessMode: _u3.accessMode, kind: "GENERAL" });
     const db = orgDb(_orgId3);
     if (_u3.role !== "ADMIN") redirect("/dashboard");
 

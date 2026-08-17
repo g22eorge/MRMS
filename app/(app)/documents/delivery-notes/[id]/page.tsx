@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -53,7 +54,8 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
 
   async function addDeliveryItem(fd: FormData) {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
     const target = await prisma.deliveryNote.findFirst({ where: { id, orgId: actorOrg }, select: { id: true } });
     if (!target) return;
@@ -67,7 +69,8 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
 
   async function updateDeliveryItem(fd: FormData) {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
     const itemId = String(fd.get("itemId") ?? "").trim();
     const owned = await prisma.deliveryNoteItem.findFirst({ where: { id: itemId, deliveryNote: { id, orgId: actorOrg } }, select: { id: true } });
@@ -81,7 +84,8 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
 
   async function removeDeliveryItem(fd: FormData) {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
     const itemId = String(fd.get("itemId") ?? "").trim();
     const owned = await prisma.deliveryNoteItem.findFirst({ where: { id: itemId, deliveryNote: { id, orgId: actorOrg } }, select: { id: true } });

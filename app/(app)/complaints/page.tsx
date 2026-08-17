@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import type { ComplaintStatus } from "@prisma/client";
 import {
@@ -50,7 +51,8 @@ export default async function ComplaintsPage({
 
   async function updateStatusAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!(ALLOWED_ROLES as readonly string[]).includes(user.role)) return;
 
     const id = String(formData.get("id") ?? "");

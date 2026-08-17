@@ -4,6 +4,7 @@ import { z } from "zod";
 import { JobStatus, OutboundMessageChannel, OutboundMessageType, Prisma } from "@prisma/client";
 
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { prisma } from "@/lib/prisma";
 import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
@@ -63,7 +64,8 @@ export default async function NotificationTemplatesPage({
   async function bulkReplaceBrandName() {
     "use server";
 
-    const { user: actor, orgId: replaceOrgId } = await requireOrgSession();
+    const { user: actor, orgId: replaceOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (actor.role !== "ADMIN") redirect("/dashboard");
 
     const branding = await prisma.documentBrandingSettings
@@ -149,7 +151,8 @@ export default async function NotificationTemplatesPage({
 
   async function createTemplate(formData: FormData) {
     "use server";
-    const { user: actor, orgId: createOrgId } = await requireOrgSession();
+    const { user: actor, orgId: createOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
 
     const parsed = templateSchema.safeParse({
@@ -198,7 +201,8 @@ export default async function NotificationTemplatesPage({
 
   async function updateTemplate(formData: FormData) {
     "use server";
-    const { user: actor, orgId: updateOrgId } = await requireOrgSession();
+    const { user: actor, orgId: updateOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
 
     const parsed = templateSchema.safeParse({
@@ -321,7 +325,8 @@ export default async function NotificationTemplatesPage({
 
   async function deleteTemplate(formData: FormData) {
     "use server";
-    const { user: actor, orgId: deleteOrgId } = await requireOrgSession();
+    const { user: actor, orgId: deleteOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (actor.role !== "ADMIN") redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
     if (!id) redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Missing+template+id`);
@@ -333,7 +338,8 @@ export default async function NotificationTemplatesPage({
 
   async function deduplicateTemplates() {
     "use server";
-    const { user: actor, orgId: dedupeOrgId } = await requireOrgSession();
+    const { user: actor, orgId: dedupeOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (actor.role !== "ADMIN") redirect("/dashboard");
 
     const all = await prisma.communicationTemplate.findMany({
@@ -363,7 +369,8 @@ export default async function NotificationTemplatesPage({
 
   async function upsertPolicy(formData: FormData) {
     "use server";
-    const { user: actor, orgId: policyOrgId } = await requireOrgSession();
+    const { user: actor, orgId: policyOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
 
     const parsed = policySchema.safeParse({

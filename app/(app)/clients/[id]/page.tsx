@@ -16,6 +16,7 @@ import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
@@ -163,7 +164,8 @@ export default async function ClientDetailPage({
 
   async function updateClient(_prev: UpdateClientState, formData: FormData): Promise<UpdateClientState> {
     "use server";
-    const { user: currentUser, orgId: updateOrgId } = await requireOrgSession();
+    const { user: currentUser, orgId: updateOrgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
     if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) {
       return { ok: false, error: "You do not have permission to edit clients." };
     }
@@ -206,7 +208,8 @@ export default async function ClientDetailPage({
 
   async function addClientNote(formData: FormData) {
     "use server";
-    const { session, user: currentUser } = await requireOrgSession();
+    const { session, user: currentUser, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
     if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) {
       return;
     }

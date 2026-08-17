@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyLeadStatus, notifyQuotationStatus } from "@/lib/notifications";
 import { createQuotationRecord, type CreateQuotationInput } from "@/lib/sales/quotation-service";
 
@@ -51,7 +52,8 @@ export async function createLead(data: {
   estimatedValue?: number;
   followUpAt?: string;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createLeads(user)) {
     throw new Error("Unauthorized");
   }
@@ -96,7 +98,8 @@ export async function createLead(data: {
 }
 
 export async function updateLeadStatus(leadId: string, status: LeadStatus, note?: string, lostReason?: string) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createLeads(user)) {
     throw new Error("Unauthorized");
   }
@@ -160,7 +163,8 @@ export async function updateLeadDetails(
     assignedToId?: string;
   },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createLeads(user)) {
     throw new Error("Unauthorized");
   }
@@ -232,7 +236,8 @@ export async function addLeadActivity(
   leadId: string,
   activity: { type: string; note: string },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createLeads(user)) {
     throw new Error("Unauthorized");
   }
@@ -321,7 +326,8 @@ export async function createQuotation(data: CreateQuotationInput) {
 }
 
 export async function updateQuotationStatus(quotationId: string, status: QuotationStatus) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
   if (status === "SENT") {
     if (!can.createQuotations(user)) throw new Error("Unauthorized");
@@ -410,7 +416,8 @@ export async function addQuotationItem(
   quotationId: string,
   item: { description: string; quantity: number; unitPrice: number; discount: number },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   await assertEditableQuotation(quotationId, orgId, user);
@@ -437,7 +444,8 @@ export async function updateQuotationDetails(
   quotationId: string,
   data: { issueDate?: string; validUntil?: string; notes?: string },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   await assertEditableQuotation(quotationId, orgId, user);
@@ -459,7 +467,8 @@ export async function updateQuotationItem(
   itemId: string,
   item: { description: string; quantity: number; unitPrice: number; discount: number },
 ) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   const existing = await prisma.quotationItem.findFirst({
@@ -488,7 +497,8 @@ export async function updateQuotationItem(
 }
 
 export async function removeQuotationItem(itemId: string) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   const item = await prisma.quotationItem.findFirst({
@@ -505,7 +515,8 @@ export async function removeQuotationItem(itemId: string) {
 }
 
 export async function deleteQuotation(quotationId: string) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.createQuotations(user)) throw new Error("Unauthorized");
 
   await assertEditableQuotation(quotationId, orgId, user);

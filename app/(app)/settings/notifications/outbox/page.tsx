@@ -9,6 +9,7 @@ import { Prisma, OutboundMessageChannel, OutboundMessageStatus, OutboundMessageT
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsOutbox } from "@/lib/communications/revalidate";
 import { deliverOutboundMessageForOrg, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
@@ -171,7 +172,8 @@ export default async function OutboxPage({
 
   async function markDeadAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!(user.role === "ADMIN" || user.role === "OPS")) redirect("/dashboard");
     const id = String(formData.get("id") ?? "");
     if (!id) return;

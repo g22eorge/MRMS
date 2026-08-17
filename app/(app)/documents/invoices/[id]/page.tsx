@@ -12,6 +12,7 @@ import type { BadgeTone } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { shareInvoiceDocument } from "@/lib/notifications/share-document";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
@@ -171,7 +172,8 @@ export default async function InvoiceDetailPage({
   }
   async function sendInvoiceEmailAction() {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     if (!(can.viewFinancials(actor) || ["ADMIN", "OPS", "FRONT_DESK"].includes(actor.role))) return;
     const ok = await shareInvoiceDocument({ orgId: actorOrg, invoiceId: id, channel: "email" });
     redirect(`/documents/invoices/${id}?sent=${ok ? "email" : "failed"}`);

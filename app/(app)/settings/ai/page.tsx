@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { ensureDefaultAiKnowledge } from "@/lib/ai-knowledge";
 import { createTextEmbedding } from "@/lib/ai-governance";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 async function createArticleAction(formData: FormData) {
   "use server";
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageUsers(user)) redirect("/dashboard");
 
   const title = String(formData.get("title") ?? "").trim();
@@ -27,7 +29,8 @@ async function createArticleAction(formData: FormData) {
 
 async function saveSettingsAction(formData: FormData) {
   "use server";
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageUsers(user)) redirect("/dashboard");
 
   await prisma.aiOrgSettings.upsert({
@@ -56,7 +59,8 @@ async function saveSettingsAction(formData: FormData) {
 
 async function toggleArticleAction(formData: FormData) {
   "use server";
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   if (!can.manageUsers(user)) redirect("/dashboard");
 
   const id = String(formData.get("id") ?? "");
