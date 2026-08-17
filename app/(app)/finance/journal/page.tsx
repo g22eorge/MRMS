@@ -20,6 +20,8 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -71,8 +73,9 @@ export default async function JournalPage({
   // ── Server actions ────────────────────────────────────────────────────────
   async function createEntry(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const db = orgDb(_u.orgId);
 
     const description = (fd.get("description") as string)?.trim();
@@ -131,8 +134,9 @@ export default async function JournalPage({
 
   async function postEntry(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
     const entry = await _db.journalEntry.findFirst({ where: { id, status: "DRAFT" } });
@@ -151,8 +155,9 @@ export default async function JournalPage({
 
   async function voidEntry(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
     const entry = await _db.journalEntry.findFirst({ where: { id, status: "POSTED" } });
@@ -163,8 +168,9 @@ export default async function JournalPage({
 
   async function deleteEntry(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
     const entry = await _db.journalEntry.findFirst({ where: { id, status: "DRAFT" } });

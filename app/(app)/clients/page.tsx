@@ -17,6 +17,8 @@ import { orgDb } from "@/lib/db";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { formatEATDate } from "@/lib/date-eat";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 import {
   formatPhoneDisplay,
   normalizePhoneForStorage,
@@ -125,7 +127,8 @@ export default async function ClientsPage({
   async function createClientAction(formData: FormData) {
     "use server";
 
-    const { user: currentUser } = await getCurrentUserRole();
+    const { user: currentUser, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
     if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) return;
 
     const parsed = createClientSchema.safeParse({
@@ -175,7 +178,8 @@ export default async function ClientsPage({
   async function deleteClientAction(formData: FormData) {
     "use server";
 
-    const { user: currentUser } = await getCurrentUserRole();
+    const { user: currentUser, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     if (currentUser.role !== "ADMIN") return;
 

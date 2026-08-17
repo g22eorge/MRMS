@@ -22,6 +22,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
 
@@ -195,9 +197,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   async function createExpenseAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
-    if (!user.orgId) redirect("/dashboard");
-    const orgId = user.orgId;
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(orgId);
     if (!can.viewFinancials(user)) redirect("/dashboard");
 
@@ -282,9 +283,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   async function deleteExpenseAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    const { user, org } = await requireOrgSession();
     const db = orgDb(user.orgId);
     if (!["ADMIN"].includes(user.role)) redirect("/dashboard");
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const expenseId = String(formData.get("expenseId") ?? "").trim();
     if (!expenseId) return;

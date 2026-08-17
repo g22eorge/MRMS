@@ -27,6 +27,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatEATDate } from "@/lib/date-eat";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
@@ -113,8 +115,9 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   async function deleteQuotationAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    const { user, org } = await requireOrgSession();
     if (!canDelete) redirect("/dashboard");
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = String(formData.get("id") ?? "").trim();
     await db.quotation.delete({ where: { id } });

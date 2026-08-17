@@ -18,6 +18,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { requireOrgSession } from "@/lib/org-context";
 
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
@@ -60,7 +62,8 @@ export default async function ChartOfAccountsPage() {
 
   async function createAccount(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const code = fd.get("code") as string;
     const name = fd.get("name") as string;
@@ -76,7 +79,8 @@ export default async function ChartOfAccountsPage() {
 
   async function toggleActive(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
     const acc = await db.chartOfAccount.findFirst({ where: { id } });
@@ -87,7 +91,8 @@ export default async function ChartOfAccountsPage() {
 
   async function deleteAccount(fd: FormData) {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: actor, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
     const acc = await db.chartOfAccount.findFirst({ where: { id } });
@@ -100,8 +105,9 @@ export default async function ChartOfAccountsPage() {
 
   async function seedDefaults() {
     "use server";
-    const { user: _u } = await getCurrentUserRole();
+    const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     // Only ADMIN and MANAGER can seed default accounts
     if (!["ADMIN", "MANAGER"].includes(_u.role)) return;
     const seedOrgId = _u.orgId;
