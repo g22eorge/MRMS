@@ -305,7 +305,16 @@ export default async function ClientDetailPage({
       {statement ? (
         <div className="dc-card px-3 py-2.5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
+            <div className="flex items-center gap-3">
+              <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Statement of Account</p>
+              {/* Same document the customer downloads from the portal. */}
+              <a
+                href={`/api/clients/${id}/statement`}
+                className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]"
+              >
+                PDF
+              </a>
+            </div>
             <div className="flex items-center gap-4 text-[0.8125rem]">
               <span className="text-[var(--ink-muted)]">Billed <span className="font-semibold text-[var(--ink)] tabular-nums">{formatMoney(statement.totals.billed, statement.currency)}</span></span>
               <span className="text-[var(--ink-muted)]">Paid <span className="font-semibold text-emerald-600 tabular-nums">{formatMoney(statement.totals.paid, statement.currency)}</span></span>
