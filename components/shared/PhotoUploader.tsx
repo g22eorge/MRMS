@@ -103,7 +103,7 @@ export function PhotoUploader({
           <option value="after">After</option>
           <option value="other">Other</option>
         </select>
-        <input name="files" type="file" accept="image/png,image/jpeg,image/webp" multiple required />
+        <input name="files" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" multiple required />
         {canManageVisibility ? (
           <label className="flex items-center gap-1.5 text-sm text-[var(--ink-muted)]">
             <input

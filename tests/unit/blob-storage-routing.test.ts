@@ -33,3 +33,43 @@ describe("isUploadThingRef — UploadThing files", () => {
     expect(isUploadThingRef("https://utfs.io/f/2e0fdb64-9957-4262-8e45-f372ba903ac8")).toBe(true);
   });
 });
+
+// ── Image signature gate ─────────────────────────────────────────────────────
+// iPhone photos are HEIC; rejecting them was what broke uploads in production.
+
+const { hasValidImageSignature } = await import("../../lib/blob-storage");
+
+const heicHeader = (brand: string) => {
+  const b = new Uint8Array(16);
+  b.set([0x66, 0x74, 0x79, 0x70], 4); // "ftyp"
+  b.set([...brand].map((c) => c.charCodeAt(0)), 8);
+  return b;
+};
+
+describe("hasValidImageSignature — HEIC/HEIF", () => {
+  it("accepts the heic brand an iPhone emits", () => {
+    expect(hasValidImageSignature("image/heic", heicHeader("heic"))).toBe(true);
+  });
+
+  it("accepts the mif1 brand", () => {
+    expect(hasValidImageSignature("image/heif", heicHeader("mif1"))).toBe(true);
+  });
+
+  it("rejects a non-HEIF brand claiming to be HEIC", () => {
+    expect(hasValidImageSignature("image/heic", heicHeader("qt  "))).toBe(false);
+  });
+
+  it("rejects bytes with no ftyp box", () => {
+    expect(hasValidImageSignature("image/heic", new Uint8Array(16))).toBe(false);
+  });
+});
+
+describe("hasValidImageSignature — existing formats still gated", () => {
+  it("accepts a real JPEG header", () => {
+    expect(hasValidImageSignature("image/jpeg", new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe(true);
+  });
+
+  it("rejects a renamed text file claiming to be PNG", () => {
+    expect(hasValidImageSignature("image/png", new Uint8Array([0x68, 0x65, 0x6c, 0x6c]))).toBe(false);
+  });
+});

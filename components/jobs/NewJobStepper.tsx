@@ -589,7 +589,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                   </div>
                   <div className="mt-3">
                     <label className="mb-1 block text-sm font-medium text-[var(--ink)]">Before Repair Photos (device {idx + 1})</label>
-                    <input name={`photos_${idx}`} type="file" accept="image/png,image/jpeg,image/webp" multiple className="text-sm text-[var(--ink-muted)]" />
+                    <input name={`photos_${idx}`} type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" multiple className="text-sm text-[var(--ink-muted)]" />
                   </div>
                 </div>
               );

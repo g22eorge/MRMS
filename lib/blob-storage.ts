@@ -6,17 +6,23 @@ import { UTApi } from "uploadthing/server";
 
 /**
  * Repair-photo storage. New uploads go to UploadThing when UPLOADTHING_TOKEN is
- * set, otherwise to Vercel Blob. Either way the file is stored **private** — the
- * storage URL is not directly viewable — and streamed to authorised viewers only
- * through /api/photos/[id].
+ * set, otherwise to Vercel Blob. Blob objects are private; UploadThing objects
+ * are public-read (its free tier refuses private files), so their URL is a
+ * bearer capability the app never hands to a browser. Every read is streamed
+ * through /api/photos/[id], which enforces authorisation either way.
  *
  * Both backends stay readable at once so photos uploaded before the switch keep
  * working without a migration; reads are routed per photo by its stored key.
  * Guarded so the app degrades cleanly when neither backend is configured.
  */
 
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+// HEIC/HEIF is what an iPhone produces by default, so it is accepted and
+// converted to JPEG on the way in (see uploadJobImage) — browsers cannot decode
+// HEIC, so storing it as-is would mean photos that upload but never display.
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
+// Phone photos routinely exceed 5 MB; this is the pre-conversion input limit.
+const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 
 export function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -39,12 +45,6 @@ function ut(): UTApi {
 }
 
 /**
- * Which backend a stored photo belongs to. UploadThing file keys are opaque and
- * contain no "/", while Vercel Blob keys are paths ("jobs/<id>/<file>") and blob
- * URLs are absolute — so the presence of a slash separates them. Hosted
- * UploadThing URLs are matched explicitly for rows that only kept a url.
- */
-/**
  * Public object URL for an UploadThing file key. The app id is read out of the
  * token (base64 JSON: { apiKey, appId, regions }) so serving a photo costs no
  * API round-trip. Returns null if the token is missing or malformed.
@@ -60,6 +60,12 @@ function publicUploadThingUrl(key: string): string | null {
   }
 }
 
+/**
+ * Which backend a stored photo belongs to. UploadThing file keys are opaque and
+ * contain no "/", while Vercel Blob keys are paths ("jobs/<id>/<file>") and blob
+ * URLs are absolute — so the presence of a slash separates them. Hosted
+ * UploadThing URLs are matched explicitly for rows that only kept a url.
+ */
 export function isUploadThingRef(urlOrKey: string): boolean {
   if (/(^|\/\/)[^/]*\b(ufs\.sh|utfs\.io)/.test(urlOrKey)) return true;
   return !urlOrKey.includes("/");
@@ -73,7 +79,45 @@ export function hasValidImageSignature(contentType: string, bytes: Uint8Array): 
     return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 // RIFF
       && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50; // WEBP
   }
+  if (HEIC_TYPES.has(contentType)) {
+    // ISO-BMFF: "ftyp" at offset 4, then a HEIF-family brand at offset 8.
+    const ftyp = bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
+    if (!ftyp) return false;
+    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+    return HEIF_BRANDS.has(brand);
+  }
   return false;
+}
+
+/** HEIF-family ftyp brands an iPhone (or a converter) can emit. */
+const HEIF_BRANDS = new Set([
+  "heic", "heix", "heim", "heis", "hevc", "hevx", "hevm", "hevs", "mif1", "msf1",
+]);
+
+/**
+ * Decode HEIC/HEIF to JPEG. The library is pulled in on demand so the decoder is
+ * only loaded when someone actually uploads a HEIC. Returns null on failure so
+ * the caller can report a clean error instead of throwing.
+ */
+async function heicToJpeg(bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer> | null> {
+  try {
+    const { default: convert } = await import("heic-convert");
+    const out = await convert({ buffer: Buffer.from(bytes), format: "JPEG", quality: 0.85 });
+    const copy = new Uint8Array(new ArrayBuffer(out.byteLength));
+    copy.set(new Uint8Array(out));
+    return copy;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Transport-level failures worth one retry — a dropped socket or HTTP/2 GOAWAY
+ * from the ingest endpoint, as opposed to a rejected token or an invalid file.
+ */
+function isTransientUploadError(err: { message?: string; code?: string } | null | undefined): boolean {
+  const text = `${err?.code ?? ""} ${err?.message ?? ""}`.toLowerCase();
+  return /transport|socket|goaway|econnreset|etimedout|fetch failed|network/.test(text);
 }
 
 export type UploadedImage = { url: string; key: string; mimeType: string; sizeBytes: number };
@@ -87,13 +131,25 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
     return { ok: false, error: "Photo storage is not configured yet (UPLOADTHING_TOKEN or BLOB_READ_WRITE_TOKEN)." };
   }
   if (!file || !file.size) return { ok: false, error: "Empty file." };
-  if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Only JPG, PNG or WebP images are allowed." };
-  if (file.size > MAX_BYTES) return { ok: false, error: "Each image must be 5 MB or smaller." };
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return { ok: false, error: `Only JPG, PNG, WebP or HEIC images are allowed${file.type ? ` (got ${file.type})` : ""}.` };
+  }
+  if (file.size > MAX_BYTES) return { ok: false, error: "Each image must be 15 MB or smaller." };
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  let bytes = new Uint8Array(await file.arrayBuffer());
   if (!hasValidImageSignature(file.type, bytes)) return { ok: false, error: "That file is not a valid image." };
 
-  const ext = file.type.split("/")[1] || "jpg";
+  // iPhone photos arrive as HEIC, which no browser can display — convert to JPEG
+  // so the job page and the customer portal can actually render them.
+  let mimeType = file.type;
+  if (HEIC_TYPES.has(mimeType)) {
+    const jpeg = await heicToJpeg(bytes);
+    if (!jpeg) return { ok: false, error: "That HEIC image could not be converted. Try exporting it as JPEG." };
+    bytes = jpeg;
+    mimeType = "image/jpeg";
+  }
+
+  const ext = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1] || "jpg";
   const key = `jobs/${jobId}/${Date.now()}-${randomUUID()}.${ext}`;
 
   if (uploadthingConfigured()) {
@@ -104,12 +160,19 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
       // the app never hands it to a browser; /api/photos/[id] proxies every read
       // and keeps enforcing the staff/portal and CLIENT/INTERNAL checks.
       // Switch this back to "private" if the app moves to a paid tier.
-      const named = new File([bytes], `${jobId}-${Date.now()}-${randomUUID()}.${ext}`, { type: file.type });
-      const res = await ut().uploadFiles(named, { acl: "public-read" });
+      const named = new File([bytes], `${jobId}-${Date.now()}-${randomUUID()}.${ext}`, { type: mimeType });
+      // One retry: the ingest endpoint occasionally drops the connection
+      // mid-upload (HTTP/2 GOAWAY / UND_ERR_SOCKET), which otherwise loses the
+      // photo for a transient network hiccup. Config and validation errors are
+      // not retried — they would just fail identically.
+      let res = await ut().uploadFiles(named, { acl: "public-read" });
+      if (res.error && isTransientUploadError(res.error)) {
+        res = await ut().uploadFiles(named, { acl: "public-read" });
+      }
       if (res.error || !res.data) {
         return { ok: false, error: `Upload failed: ${String(res.error?.message ?? "unknown UploadThing error").slice(0, 140)}` };
       }
-      return { ok: true, image: { url: res.data.ufsUrl, key: res.data.key, mimeType: file.type, sizeBytes: file.size } };
+      return { ok: true, image: { url: res.data.ufsUrl, key: res.data.key, mimeType, sizeBytes: bytes.length } };
     } catch (e) {
       return { ok: false, error: `Upload failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 140)}` };
     }
@@ -118,10 +181,10 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
   try {
     const res = await put(key, Buffer.from(bytes), {
       access: "private",
-      contentType: file.type,
+      contentType: mimeType,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-    return { ok: true, image: { url: res.url, key, mimeType: file.type, sizeBytes: file.size } };
+    return { ok: true, image: { url: res.url, key, mimeType, sizeBytes: bytes.length } };
   } catch (e) {
     return { ok: false, error: `Upload failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 140)}` };
   }
