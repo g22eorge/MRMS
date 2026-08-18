@@ -29,6 +29,10 @@ export function PhotoUploader({
   const formRef = useRef<HTMLFormElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Job photos are client-visible by default. Controlled (not a plain checkbox)
+  // because an unticked checkbox submits nothing, so the server could not tell
+  // "left at the default" apart from "deliberately unticked".
+  const [clientVisible, setClientVisible] = useState(true);
 
   function handleDelete(photoId: string) {
     startTransition(async () => {
@@ -73,6 +77,7 @@ export function PhotoUploader({
         action={(formData) => {
           startTransition(async () => {
             formData.append("jobId", jobId);
+            formData.set("visibility", clientVisible ? "CLIENT" : "INTERNAL");
             const res = await fetch("/api/upload", { method: "POST", body: formData });
             if (!res.ok) {
               toast.error("Upload failed");
@@ -94,7 +99,12 @@ export function PhotoUploader({
         <input name="files" type="file" accept="image/png,image/jpeg,image/webp" multiple required />
         {canManageVisibility ? (
           <label className="flex items-center gap-1.5 text-sm text-[var(--ink-muted)]">
-            <input name="visibility" type="checkbox" value="CLIENT" className="h-3.5 w-3.5 accent-[var(--accent)]" />
+            <input
+              type="checkbox"
+              checked={clientVisible}
+              onChange={(e) => setClientVisible(e.target.checked)}
+              className="h-3.5 w-3.5 accent-[var(--accent)]"
+            />
             Visible to client
           </label>
         ) : null}

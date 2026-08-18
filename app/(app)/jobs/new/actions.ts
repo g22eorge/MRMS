@@ -356,8 +356,8 @@ export async function createJobAction(
       },
     });
 
-      // Intake "before" photos → Vercel Blob (persistent). Default INTERNAL;
-      // staff can mark them client-visible later from the job's Photos tab.
+      // Intake "before" photos → Vercel Blob (persistent). Client-visible by
+      // default, matching the Photos tab; ADMIN/OPS can hide one afterwards.
       const files = formData.getAll(`photos_${i}`) as File[];
       for (const file of files) {
         if (!file?.size) continue;
@@ -368,7 +368,7 @@ export async function createJobAction(
             jobId: job.id,
             orgId,
             label: "before",
-            visibility: "INTERNAL",
+            visibility: "CLIENT",
             url: up.image.url,
             storageKey: up.image.key,
             mimeType: up.image.mimeType,

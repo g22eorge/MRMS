@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Client portal: an upload flagged "CLIENT" is shown to the customer; default
-  // INTERNAL (staff-only). Validation + storage handled by the Blob helper.
-  const visibility = String(formData.get("visibility") ?? "INTERNAL").toUpperCase() === "CLIENT" ? "CLIENT" : "INTERNAL";
+  // Client portal: job photos default to "CLIENT" (shown to the customer);
+  // ADMIN/OPS untick "Visible to client" to keep one staff-only, which sends an
+  // explicit "INTERNAL". Validation + storage handled by the Blob helper.
+  const visibility = String(formData.get("visibility") ?? "CLIENT").toUpperCase() === "INTERNAL" ? "INTERNAL" : "CLIENT";
 
   const created = [];
   for (const file of files) {
