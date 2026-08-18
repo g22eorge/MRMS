@@ -80,7 +80,14 @@ export function PhotoUploader({
             formData.set("visibility", clientVisible ? "CLIENT" : "INTERNAL");
             const res = await fetch("/api/upload", { method: "POST", body: formData });
             if (!res.ok) {
-              toast.error("Upload failed");
+              // Show the server's reason ("Only JPG, PNG or WebP…", "5 MB or
+              // smaller", storage/config errors) — a bare "Upload failed" hides
+              // exactly the detail needed to fix the upload.
+              const reason = await res
+                .json()
+                .then((d: { error?: string }) => d?.error)
+                .catch(() => null);
+              toast.error(reason || "Upload failed");
               return;
             }
             toast.success("Uploaded");
