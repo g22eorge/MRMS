@@ -44,6 +44,22 @@ function ut(): UTApi {
  * URLs are absolute — so the presence of a slash separates them. Hosted
  * UploadThing URLs are matched explicitly for rows that only kept a url.
  */
+/**
+ * Public object URL for an UploadThing file key. The app id is read out of the
+ * token (base64 JSON: { apiKey, appId, regions }) so serving a photo costs no
+ * API round-trip. Returns null if the token is missing or malformed.
+ */
+function publicUploadThingUrl(key: string): string | null {
+  const token = process.env.UPLOADTHING_TOKEN;
+  if (!token) return null;
+  try {
+    const { appId } = JSON.parse(Buffer.from(token, "base64").toString("utf8")) as { appId?: string };
+    return appId ? `https://${appId}.ufs.sh/f/${key}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export function isUploadThingRef(urlOrKey: string): boolean {
   if (/(^|\/\/)[^/]*\b(ufs\.sh|utfs\.io)/.test(urlOrKey)) return true;
   return !urlOrKey.includes("/");
@@ -82,10 +98,14 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
 
   if (uploadthingConfigured()) {
     try {
-      // Private ACL keeps the file unreadable without a signed URL, matching the
-      // Blob behaviour — /api/photos/[id] stays the only way a browser sees it.
+      // public-read, not private: UploadThing rejects private files on free apps
+      // ("Private files are not allowed for free apps"). The object URL is
+      // therefore a bearer capability — anyone holding it can read the file — so
+      // the app never hands it to a browser; /api/photos/[id] proxies every read
+      // and keeps enforcing the staff/portal and CLIENT/INTERNAL checks.
+      // Switch this back to "private" if the app moves to a paid tier.
       const named = new File([bytes], `${jobId}-${Date.now()}-${randomUUID()}.${ext}`, { type: file.type });
-      const res = await ut().uploadFiles(named, { acl: "private" });
+      const res = await ut().uploadFiles(named, { acl: "public-read" });
       if (res.error || !res.data) {
         return { ok: false, error: `Upload failed: ${String(res.error?.message ?? "unknown UploadThing error").slice(0, 140)}` };
       }
@@ -129,6 +149,17 @@ export async function streamPrivateBlob(
 ): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string } | null> {
   if (isUploadThingRef(urlOrKey)) {
     if (!uploadthingConfigured()) return null;
+    // Files are public-read (see uploadJobImage), so the object is fetched
+    // directly by URL — no API round-trip. If the app is later moved to a paid
+    // tier and uploads switch to private, that direct read 403s and the signed
+    // URL below takes over, so both tiers keep working.
+    const direct = urlOrKey.startsWith("http") ? urlOrKey : publicUploadThingUrl(urlOrKey);
+    if (direct) {
+      const res = await fetch(direct).catch(() => null);
+      if (res?.ok && res.body) {
+        return { stream: res.body, contentType: res.headers.get("content-type") || "application/octet-stream" };
+      }
+    }
     try {
       // No expiresIn: that option requires an override enabled on the
       // UploadThing dashboard, so the app default is used instead. The signed

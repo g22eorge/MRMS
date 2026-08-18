@@ -58,7 +58,10 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       // Only photos staff have marked visible to the client.
       photos: {
         where: { visibility: "CLIENT" },
-        select: { id: true, url: true, label: true, uploadedAt: true },
+        // No `url`: UploadThing files are public-read, so the object URL is a
+        // bearer capability. The page renders /api/photos/[id] instead, so the
+        // direct link never reaches the client's browser.
+        select: { id: true, label: true, uploadedAt: true },
         orderBy: { uploadedAt: "desc" },
       },
     },
