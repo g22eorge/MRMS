@@ -152,6 +152,7 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
   const ext = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1] || "jpg";
   const key = `jobs/${jobId}/${Date.now()}-${randomUUID()}.${ext}`;
 
+  let utError = "";
   if (uploadthingConfigured()) {
     try {
       // public-read, not private: UploadThing rejects private files on free apps
@@ -170,12 +171,22 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
         res = await ut().uploadFiles(named, { acl: "public-read" });
       }
       if (res.error || !res.data) {
-        return { ok: false, error: `Upload failed: ${String(res.error?.message ?? "unknown UploadThing error").slice(0, 140)}` };
+        utError = String(res.error?.message ?? "unknown UploadThing error");
+      } else {
+        return { ok: true, image: { url: res.data.ufsUrl, key: res.data.key, mimeType, sizeBytes: bytes.length } };
       }
-      return { ok: true, image: { url: res.data.ufsUrl, key: res.data.key, mimeType, sizeBytes: bytes.length } };
     } catch (e) {
-      return { ok: false, error: `Upload failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 140)}` };
+      utError = e instanceof Error ? e.message : String(e);
     }
+
+    // UploadThing is configured but did not accept the file — a bad token, a
+    // rejected ACL, an outage. If Blob is also configured, store there rather
+    // than losing the photo; a misconfigured new backend should not take down
+    // photo upload on a shop that already had a working one.
+    if (!blobConfigured()) {
+      return { ok: false, error: `Upload failed: ${utError.slice(0, 140)}` };
+    }
+    console.error("[storage] UploadThing rejected the upload, falling back to Vercel Blob:", utError);
   }
 
   try {
