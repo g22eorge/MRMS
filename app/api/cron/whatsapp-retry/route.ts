@@ -17,3 +17,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+// Vercel Cron invokes the scheduled path with a GET, so a POST-only route is
+// answered with 405 and the job silently never runs. Both verbs share one
+// handler; authorisation is header-based (Authorization: Bearer CRON_SECRET),
+// so it is identical either way.
+export const GET = POST;
