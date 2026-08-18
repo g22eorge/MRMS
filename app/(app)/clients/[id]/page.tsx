@@ -236,6 +236,30 @@ export default async function ClientDetailPage({
   const openJobs = client.jobs.filter((job: ClientDetail["jobs"][number]) => !DONE_STATUSES.includes(job.status)).length;
   const completedJobs = client.jobs.filter((job: ClientDetail["jobs"][number]) => DONE_STATUSES.includes(job.status)).length;
   const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
+
+  // Work delivered but never billed. The statement only counts invoices and POS
+  // sales, so a client whose finished jobs were never invoiced reads as
+  // "Billed 0 / Outstanding 0" however much work was done for them. This
+  // surfaces that gap without creating any document.
+  //
+  // Aggregated over every job of this client, not `client.jobs` — that list is
+  // capped at 25 and honours the page's status/search filters, so a money total
+  // derived from it would change as the user filters.
+  // `clientBill` is the client-facing amount (DB column finalCost).
+  const uninvoicedWork = canSeeFinancials
+    ? (
+        await prisma.job.aggregate({
+          where: {
+            orgId,
+            clientId: id,
+            status: { in: DONE_STATUSES as JobStatus[] },
+            invoice: { is: null },
+          },
+          _sum: { clientBill: true },
+        })
+      )._sum.clientBill ?? 0
+    : 0;
+
   const latestActivity = client.jobs[0]?.updatedAt ?? client.updatedAt;
   const hasHistoryFilters = Boolean(filters.q || filters.status);
   // Only worth a banner when the job list is filtered; otherwise the page speaks
@@ -508,6 +532,9 @@ export default async function ClientDetailPage({
               ? [
                   { label: "Billed", value: formatMoney(statement.totals.billed, statement.currency) },
                   { label: "Paid", value: formatMoney(statement.totals.paid, statement.currency) },
+                  ...(uninvoicedWork > 0
+                    ? [{ label: "Uninvoiced work", value: formatMoney(uninvoicedWork, statement.currency) }]
+                    : []),
                 ]
               : []),
             { label: "Joined", value: formatEATDate(client.createdAt) },

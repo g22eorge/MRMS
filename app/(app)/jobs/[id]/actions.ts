@@ -849,6 +849,9 @@ export async function recordClientPaymentAction(formData: FormData) {
         existingInvoice?.invoiceNumber ?? invoiceNumber,
         existingInvoice?.id,
       );
+      // clientId must be carried over from the job: the client statement and
+      // every receivables view query invoices by clientId, so an invoice without
+      // it is invisible on the client's account no matter what it is worth.
       const invoice = existingInvoice
         ? await tx.invoice.update({
             where: { id: existingInvoice.id },
@@ -857,6 +860,7 @@ export async function recordClientPaymentAction(formData: FormData) {
               issuedAt,
               currency: baseCurrency,
               totalAmount,
+              ...(job.clientId ? { clientId: job.clientId } : {}),
             },
             select: { id: true, totalAmount: true },
           })
@@ -864,6 +868,7 @@ export async function recordClientPaymentAction(formData: FormData) {
             data: {
               orgId,
               jobId: job.id,
+              clientId: job.clientId,
               invoiceNumber: safeInvoiceNumber,
               issuedAt,
               currency: baseCurrency,

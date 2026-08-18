@@ -142,6 +142,7 @@ export async function generateInvoiceBuffer(
               issuedAt: issuedAtDate,
               totalAmount: invoiceTotal,
               status: invoiceTotal <= 0 ? "PAID" : "ISSUED",
+              ...(job.client?.id ? { clientId: job.client.id } : {}),
             },
           });
         } else {
@@ -149,6 +150,9 @@ export async function generateInvoiceBuffer(
             data: {
               orgId,
               jobId: job.id,
+              // Without clientId the invoice never appears on the client's
+              // statement or in receivables, however much it is worth.
+              clientId: job.client?.id ?? null,
               invoiceNumber: safeInvoiceNumber,
               issuedAt: issuedAtDate,
               totalAmount: invoiceTotal,
