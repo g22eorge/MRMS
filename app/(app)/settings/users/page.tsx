@@ -945,7 +945,6 @@ export default async function UsersPage({
     <div className="space-y-3">
       <div className="dc-card overflow-hidden px-4 py-3">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">User Management</p>
-        <p className="text-[0.8125rem] text-[var(--ink-muted)]">Manage team access, roles and permissions</p>
       </div>
 
       {limitError && (

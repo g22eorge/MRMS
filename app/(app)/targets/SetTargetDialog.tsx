@@ -151,7 +151,6 @@ export function SetTargetDialog({ users, departments, branches }: Props) {
 
       <Modal open={open} onClose={handleClose} size="lg" ariaLabel="Set Target" backdropClassName="bg-black/40" panelClassName="p-6">
         <h2 className="text-base font-semibold text-[var(--ink)]">Set Target</h2>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">Define a performance target for a user, department, or branch.</p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div>

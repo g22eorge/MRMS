@@ -406,7 +406,6 @@ export default async function ClientDetailPage({
         <div className="dc-card px-3 py-2.5">
           <div className="mb-3">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Portal Access</p>
-            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Give this client&rsquo;s team a login to track their repairs in the client portal.</p>
           </div>
 
           {portalUsers.length > 0 && (
@@ -542,10 +541,10 @@ export default async function ClientDetailPage({
         )}
       </div>
 
-      <div className="dc-card overflow-hidden">
-        <div className="border-b border-[var(--line)] px-4 py-2.5">
+      <div className="overflow-hidden rounded-xl border border-[var(--line)]/60">
+        <div className="flex items-baseline gap-2 px-4 py-2.5">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Client Notes</p>
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Internal notes visible to your team only</p>
+          <span className="text-[0.6875rem] text-[var(--ink-muted)]/70">internal</span>
         </div>
         <form action={addClientNote} className="flex flex-col gap-2 p-4">
           <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
@@ -561,9 +560,9 @@ export default async function ClientDetailPage({
             <p className="text-[0.75rem] text-[var(--ink-muted)]">No notes yet.</p>
           ) : (
             client.notesEntries.map((note: ClientDetail["notesEntries"][number]) => (
-              <div key={note.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3">
-                <p className="text-sm leading-relaxed">{note.body}</p>
-                <p className="mt-1.5 text-[0.75rem] text-[var(--ink-muted)]">
+              <div key={note.id} className="border-l-2 border-[var(--line)] pl-3 py-1">
+                <p className="text-[0.8125rem] leading-relaxed text-[var(--ink)]/90">{note.body}</p>
+                <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]/80">
                   {note.author.name} · {formatEATDateTime(note.createdAt)}
                 </p>
               </div>

@@ -34,6 +34,17 @@ export function documentPdfUrl(path: string): string {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/**
+ * Where to send a customer for a document.
+ *
+ * NOT an /api/... path: every document PDF route is behind requireOrgSession,
+ * so a customer clicking one lands on a staff login screen. The portal is the
+ * only place they can authenticate and read their own documents.
+ */
+function portalDocumentsUrl(): string {
+  return documentPdfUrl("/portal/documents");
+}
+
 async function dispatchDocumentShare(params: {
   orgId: string;
   channel: DocumentShareChannel;
@@ -118,7 +129,7 @@ export async function shareReceiptDocument(params: {
   if (!recipient) return false;
 
   const source = payment.invoice?.invoiceNumber ?? payment.sale?.saleNumber ?? "payment";
-  const pdfUrl = documentPdfUrl(`/api/payments/${payment.id}/receipt`);
+  const pdfUrl = portalDocumentsUrl();
   const amountLine = `Amount: ${formatMoney(payment.amount, payment.currency)}`;
 
   return dispatchDocumentShare({
@@ -126,9 +137,9 @@ export async function shareReceiptDocument(params: {
     channel: params.channel,
     jobId: payment.invoice?.job?.id,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, your receipt for ${source} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, your receipt for ${source} is ready.\n\n${amountLine}\nView it here: ${pdfUrl}`,
     emailSubject: `Receipt for ${source}`,
-    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for ${source} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for ${source} is ready.\n\n${amountLine}\nView it here: ${pdfUrl}`,
   });
 }
 
@@ -147,16 +158,15 @@ export async function shareSaleReceiptDocument(params: {
   const recipient = resolveLinkedDocumentRecipient({ saleClient: sale.client });
   if (!recipient) return false;
 
-  const pdfUrl = documentPdfUrl(`/api/sales/${sale.id}/receipt`);
   const amountLine = `Total: ${formatMoney(sale.totalAmount, sale.currency ?? "UGX")}`;
 
   return dispatchDocumentShare({
     orgId: params.orgId,
     channel: params.channel,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, your receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, your receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}`,
     emailSubject: `Receipt for sale ${sale.saleNumber}`,
-    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\nYour receipt for sale ${sale.saleNumber} is ready.\n\n${amountLine}`,
   });
 }
 
@@ -180,7 +190,6 @@ export async function shareCreditNoteDocument(params: {
   const recipient = resolveLinkedDocumentRecipient({ saleClient: creditNote.sale.client });
   if (!recipient) return false;
 
-  const pdfUrl = documentPdfUrl(`/api/credit-notes/${creditNote.id}`);
   const amountLine = `Amount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}`;
   const intro = `Your credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.`;
 
@@ -188,9 +197,9 @@ export async function shareCreditNoteDocument(params: {
     orgId: params.orgId,
     channel: params.channel,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}`,
     emailSubject: `Credit note ${creditNote.creditNoteNumber}`,
-    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}`,
   });
 }
 
@@ -230,7 +239,6 @@ export async function shareRefundDocument(params: {
     refund.sale?.saleNumber ??
     refund.creditNote?.creditNoteNumber ??
     "refund";
-  const pdfUrl = documentPdfUrl(`/api/refunds/${refund.id}`);
   const amountLine = `Amount: ${formatMoney(refund.amount, refund.currency)}`;
   const intro = `Your refund document for ${source} is ready.`;
 
@@ -239,9 +247,9 @@ export async function shareRefundDocument(params: {
     channel: params.channel,
     jobId: refund.invoice?.job?.id,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}`,
     emailSubject: `Refund document for ${source}`,
-    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}`,
   });
 }
 
@@ -269,7 +277,6 @@ export async function shareDeliveryNoteDocument(params: {
   if (!recipient) return false;
 
   const source = note.invoice?.invoiceNumber ?? note.sale?.saleNumber ?? note.deliveryNoteNumber;
-  const pdfUrl = documentPdfUrl(`/api/delivery-notes/${note.id}`);
   const intro = `Your delivery note ${note.deliveryNoteNumber} for ${source} is ready.`;
 
   return dispatchDocumentShare({
@@ -277,9 +284,9 @@ export async function shareDeliveryNoteDocument(params: {
     channel: params.channel,
     jobId: note.invoice?.job?.id,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}`,
     emailSubject: `Delivery note ${note.deliveryNoteNumber}`,
-    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}`,
   });
 }
 
@@ -308,7 +315,7 @@ export async function shareInvoiceDocument(params: {
   });
   if (!recipient) return false;
 
-  const pdfUrl = documentPdfUrl(`/api/invoices/${invoice.id}/pdf`);
+  const pdfUrl = portalDocumentsUrl();
   const amountLine = `Amount: ${formatMoney(invoice.totalAmount, invoice.currency)}`;
   const intro = `Your invoice ${invoice.invoiceNumber} is ready.`;
 
@@ -317,9 +324,9 @@ export async function shareInvoiceDocument(params: {
     channel: params.channel,
     jobId: invoice.job?.id,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nView it here: ${pdfUrl}`,
     emailSubject: `Invoice ${invoice.invoiceNumber}`,
-    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nView it here: ${pdfUrl}`,
   });
 }
 
@@ -347,8 +354,7 @@ export async function shareQuotationDocument(params: {
   });
   if (!recipient) return false;
 
-  // Quotation PDF is served by the [id] route's GET (there is no /pdf subroute).
-  const pdfUrl = documentPdfUrl(`/api/quotations/${quotation.id}`);
+  const pdfUrl = portalDocumentsUrl();
   const amountLine = `Amount: ${formatMoney(quotation.totalAmount, quotation.currency)}`;
   const intro = `Your quotation ${quotation.quoteNumber} is ready.`;
 
@@ -357,9 +363,9 @@ export async function shareQuotationDocument(params: {
     channel: params.channel,
     jobId: quotation.job?.id,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nView it here: ${pdfUrl}`,
     emailSubject: `Quotation ${quotation.quoteNumber}`,
-    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+    emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nView it here: ${pdfUrl}`,
   });
 }
 

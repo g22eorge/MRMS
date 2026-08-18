@@ -41,7 +41,6 @@ export default async function ScheduleVisitPage() {
         <div className="px-4 py-3">
           <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Field</p>
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Schedule Field Visit</p>
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Create a new field visit and assign it to a technician.</p>
         </div>
       </div>
 

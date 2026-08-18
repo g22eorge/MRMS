@@ -53,7 +53,6 @@ export default async function NewSupplierBillPage({
         <div className="px-4 py-3">
           <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Supplier Bill</p>
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Record a supplier invoice for procurement costs.</p>
         </div>
       </div>
       <NewSupplierBillForm

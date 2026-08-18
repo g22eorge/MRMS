@@ -62,7 +62,6 @@ export default async function PortalDocumentsPage() {
       <PortalHeader orgName={org.name} userName={portalUser.name} role={portalUser.role} company={companyName} active="documents" accounts={accessibleClients} activeClientId={client.id} />
       <div>
         <h1 className="text-xl font-black text-[var(--ink)]">Documents</h1>
-        <p className="text-[0.8125rem] text-[var(--ink-muted)]">Every quotation, invoice and receipt on your account with {org.name}.</p>
       </div>
 
       {/* Account summary — the figures staff see on this client, same source */}

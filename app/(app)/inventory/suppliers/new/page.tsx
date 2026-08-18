@@ -26,7 +26,6 @@ export default function NewSupplierPage() {
         <div className="px-4 py-3">
           <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
           <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New supplier</p>
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">Add a supplier you buy stock from.</p>
         </div>
       </div>
 

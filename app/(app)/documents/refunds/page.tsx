@@ -510,7 +510,6 @@ export default async function RefundsPage({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Issue New Refund</p>
-              <p className="text-[0.8125rem] text-[var(--ink-muted)]">Record cash-out against an invoice, sale, or credit note.</p>
             </div>
             <DisclosureButton
               label="Cancel"
