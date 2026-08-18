@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
+import { shareStatementDocument } from "@/lib/notifications/share-document";
 import { createPortalUserAction, togglePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
@@ -206,6 +207,19 @@ export default async function ClientDetailPage({
     return { ok: true, error: null };
   }
 
+  async function sendStatementAction(formData: FormData) {
+    "use server";
+    const { user: currentUser, orgId: sendOrgId, org: sendOrg } = await requireOrgSession();
+    // Chasing what you are owed stays available on a suspended workspace, same
+    // rule as capturing a payment or sending an invoice.
+    assertOrgCanMutate({ access: sendOrg.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "PAYMENT" });
+    if (!can.viewFinancials(currentUser)) return;
+
+    const channel = String(formData.get("channel") ?? "") === "email" ? "email" : "whatsapp";
+    await shareStatementDocument({ orgId: sendOrgId, clientId: id, channel, baseCurrency: sendOrg.baseCurrency });
+    revalidatePath(`/clients/${id}`);
+  }
+
   async function addClientNote(formData: FormData) {
     "use server";
     const { session, user: currentUser, org } = await requireOrgSession();
@@ -327,6 +341,24 @@ export default async function ClientDetailPage({
               >
                 PDF
               </a>
+              {/* Sends a portal link, not an /api PDF path — those need a staff
+                  session, so a customer clicking one only reaches a login page. */}
+              {client.phone ? (
+                <form action={sendStatementAction}>
+                  <input type="hidden" name="channel" value="whatsapp" />
+                  <button className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
+                    Send WhatsApp
+                  </button>
+                </form>
+              ) : null}
+              {client.email ? (
+                <form action={sendStatementAction}>
+                  <input type="hidden" name="channel" value="email" />
+                  <button className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
+                    Send email
+                  </button>
+                </form>
+              ) : null}
             </div>
             <div className="flex items-center gap-4 text-[0.8125rem]">
               <span className="text-[var(--ink-muted)]">Billed <span className="font-semibold text-[var(--ink)] tabular-nums">{formatMoney(statement.totals.billed, statement.currency)}</span></span>

@@ -1,6 +1,7 @@
 import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney } from "@/lib/currency";
+import { getClientStatement } from "@/lib/commercial/statements";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { prisma } from "@/lib/prisma";
 
@@ -41,14 +42,17 @@ async function dispatchDocumentShare(params: {
   whatsappBody: string;
   emailSubject: string;
   emailBody: string;
+  /** Defaults to JOB_STATUS_UPDATE, which is what the job-linked shares use. */
+  type?: OutboundMessageType;
 }): Promise<boolean> {
+  const messageType = params.type ?? OutboundMessageType.JOB_STATUS_UPDATE;
   if (params.channel === "whatsapp") {
     if (!params.recipient.phone) return false;
     await enqueueWhatsAppMessage({
       orgId: params.orgId,
       jobId: params.jobId ?? undefined,
       to: params.recipient.phone,
-      type: OutboundMessageType.JOB_STATUS_UPDATE,
+      type: messageType,
       body: params.whatsappBody,
     });
     return true;
@@ -61,7 +65,7 @@ async function dispatchDocumentShare(params: {
     to: params.recipient.email,
     subject: params.emailSubject,
     body: params.emailBody,
-    type: OutboundMessageType.JOB_STATUS_UPDATE,
+    type: messageType,
   });
   return true;
 }
@@ -356,5 +360,48 @@ export async function shareQuotationDocument(params: {
     whatsappBody: `Hi ${recipient.fullName}, ${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
     emailSubject: `Quotation ${quotation.quoteNumber}`,
     emailBody: `Hi ${recipient.fullName},\n\n${intro}\n\n${amountLine}\nDownload PDF: ${pdfUrl}`,
+  });
+}
+
+/**
+ * Statement of account for a client.
+ *
+ * Unlike the document shares above this is client-scoped, not job-scoped, and it
+ * links to the customer portal rather than a /api/... PDF path: those routes
+ * require a STAFF session, so a customer clicking one only reaches a login
+ * screen. The portal link lands them where they can authenticate and download
+ * the same statement.
+ */
+export async function shareStatementDocument(params: {
+  orgId: string;
+  clientId: string;
+  channel: DocumentShareChannel;
+  baseCurrency: string;
+}): Promise<boolean> {
+  const client = await prisma.client.findFirst({
+    where: { id: params.clientId, orgId: params.orgId },
+    select: { fullName: true, phone: true, email: true },
+  });
+  if (!client) return false;
+
+  const recipient: DocumentRecipient = { fullName: client.fullName, phone: client.phone, email: client.email };
+  if (params.channel === "whatsapp" ? !recipient.phone : !recipient.email) return false;
+
+  const statement = await getClientStatement(params.orgId, params.clientId, params.baseCurrency);
+  const balance = formatMoney(statement.totals.outstanding, statement.currency);
+  const portalUrl = documentPdfUrl("/portal/documents");
+  const docCount = statement.lines.length;
+  const intro = statement.totals.outstanding > 0
+    ? `Your account balance is ${balance} across ${docCount} document${docCount === 1 ? "" : "s"}.`
+    : `Your account is fully settled — balance ${balance}.`;
+
+  return dispatchDocumentShare({
+    orgId: params.orgId,
+    channel: params.channel,
+    recipient,
+    whatsappBody: `Hi ${recipient.fullName}, here is your statement of account.\n\n${intro}\nView and download it here: ${portalUrl}`,
+    type: OutboundMessageType.INVOICE_REMINDER,
+    emailSubject: `Statement of account — balance ${balance}`,
+    emailBody: `Hi ${recipient.fullName},\n\nHere is your statement of account.\n\n${intro}\n\nView and download it here: ${portalUrl}`,
   });
 }
