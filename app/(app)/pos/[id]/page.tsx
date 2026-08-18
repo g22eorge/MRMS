@@ -12,6 +12,7 @@ import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { PosAddItemFields } from "@/components/pos/PosAddItemFields";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -264,7 +265,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const parts = await prisma.part.findMany({
     where: { orgId, isActive: true },
     orderBy: [{ name: "asc" }],
-    select: { id: true, sku: true, name: true, qtyOnHand: true },
+    select: { id: true, sku: true, name: true, qtyOnHand: true, sellingPrice: true },
     take: 300,
   }).catch(() => []);
 
@@ -364,6 +365,16 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       const item = await tx.saleItem.findFirst({ where: { id: itemId, saleId }, select: { id: true, partId: true, quantity: true, saleUomFactor: true } });
       if (!item) return;
 
+      // Same floor as addItemAction — without it, "add at the minimum, then
+      // edit the line lower" would quietly bypass the rule.
+      if (item.partId) {
+        const priced = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { name: true, sellingPrice: true } });
+        if (priced?.sellingPrice != null && unitPrice < priced.sellingPrice) {
+          const cur = await tx.sale.findFirst({ where: { id: saleId }, select: { currency: true } });
+          posReject(saleId, `${priced.name} cannot be sold below its minimum of ${formatMoney(priced.sellingPrice, normalizeCurrency(cur?.currency, org.baseCurrency))}.`);
+        }
+      }
+
       const delta = quantity - item.quantity;
       if (item.partId && delta !== 0) {
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
@@ -461,8 +472,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if (priceProvided && (!Number.isFinite(unitPrice) || unitPrice < 0)) posReject(saleId, "Enter a valid unit price.");
     if (!priceProvided && !partId) posReject(saleId, "Enter a unit price for a custom item.");
 
-    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
+    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true, currency: true } });
     if (!existingSale || existingSale.status !== "OPEN") posReject(saleId, "This sale is no longer open, so items can't be added.");
+    const lineCurrency = normalizeCurrency(existingSale.currency, org.baseCurrency);
 
     await prisma.$transaction(async (tx) => {
       let resolvedDescription = description;
@@ -484,6 +496,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         resolvedPartId = part.id;
         resolvedDescription = part.name;
         if (!priceProvided) unitPrice = part.sellingPrice ?? part.unitCost ?? 0;
+        // The product's selling price is a hard floor: staff may negotiate UP
+        // from it, never below. Discounts are a deliberate change to the
+        // product's selling price in Inventory, not a number typed at the till.
+        // Enforced here, not just in the form, so it cannot be bypassed.
+        if (part.sellingPrice != null && unitPrice < part.sellingPrice) {
+          posReject(saleId, `${part.name} cannot be sold below its minimum of ${formatMoney(part.sellingPrice, lineCurrency)}.`);
+        }
 
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - baseQty } });
         await tx.partStockTransaction.create({
@@ -1001,17 +1020,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         {isOpen ? (
           <form action={addItemAction} className={`grid gap-2 md:grid-cols-[1.3fr_1.7fr_72px_120px_auto] ${barClass}`}>
             <input type="hidden" name="saleId" value={sale.id} />
-            <select name="partId" defaultValue="" aria-label="Part" title="Optional: pick a part to deduct stock" className={field}>
-              <option value="">Custom item</option>
-              {parts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.qtyOnHand})
-                </option>
-              ))}
-            </select>
-            <input name="description" placeholder="Description" className={field} />
-            <input name="quantity" placeholder="Qty" defaultValue={1} inputMode="numeric" aria-label="Quantity" className={field} required />
-            <input name="unitPrice" placeholder="Price (auto)" inputMode="decimal" aria-label="Unit price" className={field} />
+            <PosAddItemFields parts={parts} currency={saleCurrency} fieldClass={field} />
             <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}
