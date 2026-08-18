@@ -1,6 +1,7 @@
 import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
+import { getClientStatement } from "@/lib/commercial/statements";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,10 @@ export default async function PortalDocumentsPage() {
     (j.invoice?.payments ?? []).map((p) => ({ ...p, jobNumber: j.jobNumber, invoiceNumber: j.invoice!.invoiceNumber })),
   );
 
+  // Same builder the staff client page uses, so the customer and the shop
+  // always quote the same balance.
+  const statement = await getClientStatement(org.id, client.id, org.baseCurrency);
+
   const companyName = client.organization || client.fullName;
   const dlClass = "rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]";
   const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
@@ -59,6 +64,32 @@ export default async function PortalDocumentsPage() {
         <h1 className="text-xl font-black text-[var(--ink)]">Documents</h1>
         <p className="text-[0.8125rem] text-[var(--ink-muted)]">Every quotation, invoice and receipt on your account with {org.name}.</p>
       </div>
+
+      {/* Account summary — the figures staff see on this client, same source */}
+      <section className={cardClass}>
+        <div className="flex flex-wrap items-end justify-between gap-3 px-4 py-3.5">
+          <div>
+            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Balance due</p>
+            <p className={`text-2xl font-black tabular-nums ${statement.totals.outstanding > 0 ? "text-red-500" : "text-emerald-600"}`}>
+              {formatMoney(statement.totals.outstanding, statement.currency)}
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-[0.8125rem]">
+            <span className="text-[var(--ink-muted)]">
+              Billed <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(statement.totals.billed, statement.currency)}</span>
+            </span>
+            <span className="text-[var(--ink-muted)]">
+              Paid <span className="font-semibold tabular-nums text-emerald-600">{formatMoney(statement.totals.paid, statement.currency)}</span>
+            </span>
+          </div>
+          <a
+            href="/api/portal/statement"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-[0.8125rem] font-bold text-[var(--accent-ink,#0f172a)] hover:opacity-90"
+          >
+            Download statement (PDF)
+          </a>
+        </div>
+      </section>
 
       {/* Quotations */}
       <section className={cardClass}>

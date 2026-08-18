@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/currency";
+import { getClientStatement } from "@/lib/commercial/statements";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +37,9 @@ export default async function PortalDashboardPage() {
     }),
   ]);
 
+  // Shared statement builder — the customer sees the same balance as staff.
+  const statement = await getClientStatement(org.id, client.id, org.baseCurrency);
+
   const companyName = client.organization || client.fullName;
 
   return (
@@ -57,6 +62,24 @@ export default async function PortalDashboardPage() {
             <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Account balance */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3.5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Balance due</p>
+            <p className={`text-2xl font-black tabular-nums ${statement.totals.outstanding > 0 ? "text-red-500" : "text-emerald-600"}`}>
+              {formatMoney(statement.totals.outstanding, statement.currency)}
+            </p>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">
+              Billed {formatMoney(statement.totals.billed, statement.currency)} · Paid {formatMoney(statement.totals.paid, statement.currency)}
+            </p>
+          </div>
+          <a href="/api/portal/statement" className="rounded-lg border border-[var(--line)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">
+            Statement (PDF)
+          </a>
+        </div>
       </div>
 
       {/* Recent repairs */}
