@@ -184,16 +184,31 @@ export function CommercialLineItemsEditor({
       align: "right",
       headerClassName: "w-28",
       className: "w-28 align-top",
-      cell: (item) => (
-        <input
-          type="number"
-          min={0}
-          step="any"
-          value={item.unitPrice}
-          onChange={(event) => onUpdateLine(item.key, { unitPrice: Number(event.target.value) })}
-          className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-right text-sm outline-none focus:border-[var(--accent)]/50"
-        />
-      ),
+      cell: (item) => {
+        // A stocked product's selling price is the minimum for the line: it can
+        // be negotiated up, never below. Mirrors the server rule so staff see it
+        // before submitting. Custom lines (no partId) have no floor.
+        const floor = item.partId ? parts.find((p) => p.id === item.partId)?.sellingPrice ?? null : null;
+        const below = floor != null && item.unitPrice < floor;
+        return (
+          <div>
+            <input
+              type="number"
+              min={floor ?? 0}
+              step="any"
+              value={item.unitPrice}
+              aria-invalid={below || undefined}
+              onChange={(event) => onUpdateLine(item.key, { unitPrice: Number(event.target.value) })}
+              className={`w-full rounded-lg border bg-[var(--panel)] px-2 py-1.5 text-right text-sm outline-none ${below ? "border-red-500/60 focus:border-red-500/70" : "border-[var(--line)] focus:border-[var(--accent)]/50"}`}
+            />
+            {floor != null ? (
+              <p className={`mt-0.5 text-right text-[0.6875rem] tabular-nums ${below ? "text-red-500" : "text-[var(--ink-muted)]/80"}`}>
+                {below ? `Below min ${formatAmount(floor)}` : `min ${formatAmount(floor)}`}
+              </p>
+            ) : null}
+          </div>
+        );
+      },
     },
     ...(canOverrideDiscount
       ? [{

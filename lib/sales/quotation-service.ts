@@ -95,10 +95,22 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
   if (partIds.length) {
     const validParts = await prisma.part.findMany({
       where: { id: { in: partIds }, orgId, isActive: true },
-      select: { id: true, taxable: true, taxRate: true },
+      select: { id: true, name: true, taxable: true, taxRate: true, sellingPrice: true },
     });
     if (validParts.length !== partIds.length) throw new Error("One or more quoted products are inactive or not found");
     for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
+
+    // A product's selling price is its minimum: a quotation may be negotiated
+    // up, never below the floor. Same rule as the POS till, enforced here so it
+    // holds regardless of what the form sent.
+    const floors = new Map(validParts.map((part) => [part.id, part]));
+    for (const item of items) {
+      if (!item.partId) continue;
+      const part = floors.get(item.partId);
+      if (part?.sellingPrice != null && item.unitPrice < part.sellingPrice) {
+        throw new Error(`${part.name} cannot be quoted below its minimum of ${part.sellingPrice}`);
+      }
+    }
   }
 
   const vat = computeLinesVat(

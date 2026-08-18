@@ -161,9 +161,23 @@ export default async function InvoicesPage({
     const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
     const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null; saleUomFactor: number | null; unitCost: number | null }>();
     if (partIds.length) {
-      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, taxable: true, taxRate: true, saleUomFactor: true, unitCost: true } });
+      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, name: true, taxable: true, taxRate: true, saleUomFactor: true, unitCost: true, sellingPrice: true } });
       if (validParts.length !== partIds.length) redirect("/documents/invoices?error=missing-fields");
       for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate, saleUomFactor: part.saleUomFactor, unitCost: part.unitCost });
+
+      // A product's selling price is its minimum: an invoice line may be
+      // negotiated up, never below the floor. Same rule as the POS till,
+      // enforced here so it holds regardless of what the form sent.
+      const floors = new Map(validParts.map((part) => [part.id, part]));
+      const belowFloor = items.find((item) => {
+        if (!item.partId) return false;
+        const part = floors.get(item.partId);
+        return part?.sellingPrice != null && item.unitPrice < part.sellingPrice;
+      });
+      if (belowFloor) {
+        const part = floors.get(belowFloor.partId as string)!;
+        redirect(`/documents/invoices?error=${encodeURIComponent(`${part.name} cannot be invoiced below its minimum of ${formatMoney(part.sellingPrice as number, currency)}.`)}`);
+      }
     }
 
     const invoiceType = INVOICE_TYPES.includes(invoiceTypeRaw as InvoiceType)
@@ -582,7 +596,16 @@ export default async function InvoicesPage({
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <p className="text-[0.8125rem] font-medium text-red-700">
-            {errorParam === "missing-fields" ? "Please fill in all required fields." : errorParam === "client-not-found" ? "Client not found." : "Something went wrong."}
+            {/* Known codes get friendly text; anything else is already a
+                human-readable message from the server (e.g. a price floor),
+                so show it rather than burying it under "Something went wrong". */}
+            {errorParam === "missing-fields"
+              ? "Please fill in all required fields."
+              : errorParam === "client-not-found"
+                ? "Client not found."
+                : errorParam.includes(" ")
+                  ? errorParam
+                  : "Something went wrong."}
           </p>
         </div>
       )}
