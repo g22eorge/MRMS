@@ -231,10 +231,16 @@ export default async function ClientDetailPage({
     revalidatePath(`/clients/${id}`);
   }
 
-  const totalJobs = client.jobs.length;
   const DONE_STATUSES = ["COMPLETED", "CLOSED", "DELIVERED"];
-  const openJobs = client.jobs.filter((job: ClientDetail["jobs"][number]) => !DONE_STATUSES.includes(job.status)).length;
-  const completedJobs = client.jobs.filter((job: ClientDetail["jobs"][number]) => DONE_STATUSES.includes(job.status)).length;
+
+  // Counted across every job of this client, not from `client.jobs` — that list
+  // is capped at 25 and honours the page's status/search filters, so deriving
+  // the summary from it understated a busy client and moved as you filtered.
+  const [totalJobs, completedJobs] = await Promise.all([
+    prisma.job.count({ where: { orgId, clientId: id } }),
+    prisma.job.count({ where: { orgId, clientId: id, status: { in: DONE_STATUSES as JobStatus[] } } }),
+  ]);
+  const openJobs = totalJobs - completedJobs;
   const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
 
   // Work delivered but never billed. The statement only counts invoices and POS
@@ -260,7 +266,14 @@ export default async function ClientDetailPage({
       )._sum.clientBill ?? 0
     : 0;
 
-  const latestActivity = client.jobs[0]?.updatedAt ?? client.updatedAt;
+  // Likewise filter-independent: the most recent job touch for this client,
+  // falling back to the client record itself when they have no jobs.
+  const lastTouchedJob = await prisma.job.findFirst({
+    where: { orgId, clientId: id },
+    orderBy: { updatedAt: "desc" },
+    select: { updatedAt: true },
+  });
+  const latestActivity = lastTouchedJob?.updatedAt ?? client.updatedAt;
   const hasHistoryFilters = Boolean(filters.q || filters.status);
   // Only worth a banner when the job list is filtered; otherwise the page speaks
   // for itself — no filler "client workspace" prose.
