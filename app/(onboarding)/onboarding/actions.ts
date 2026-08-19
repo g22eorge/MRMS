@@ -9,6 +9,7 @@ import { requireSession } from "@/lib/session";
 import { sendWelcomeEmail } from "@/lib/email";
 import { ALL_MODULES, recommendPlanForModules } from "@/lib/module-access";
 import { TRIAL_DAYS } from "@/lib/billing-access";
+import { defaultDocumentCodeForSlug } from "@/lib/commercial/org-number";
 
 const schema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters").max(100),
@@ -97,8 +98,15 @@ export async function createOrganization(
     });
 
     // Seed default branding settings for this org.
+    //
+    // The document code is set explicitly rather than left to the schema default
+    // of "EIS": document-number columns are globally unique while the counters
+    // are per-org, so every new tenant inheriting the same code meant their
+    // documents composed the same number as an existing tenant's and failed to
+    // write. The slug is globally unique, so deriving from it is collision-free
+    // on day one. The admin can shorten it in Settings -> Branding.
     await tx.documentBrandingSettings.create({
-      data: { orgId: org.id },
+      data: { orgId: org.id, quotePrefix: defaultDocumentCodeForSlug(slug) },
     });
 
     // Grant only the modules the client selected.

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { defaultBranding, getDocumentBrandingSettings, saveDocumentBrandingSettings } from "@/lib/document-branding";
-import { invalidateOrgNumberConfig } from "@/lib/commercial/org-number";
+import { documentCodeTakenByAnotherOrg, invalidateOrgNumberConfig } from "@/lib/commercial/org-number";
 import { BankAccountsEditor } from "@/components/settings/BankAccountsEditor";
 import { parsePaymentAccounts, formatPaymentAccounts } from "@/lib/branding-accounts";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -251,7 +251,7 @@ export default async function BrandingPage({
         companyName: "Business name", companyTagline: "Tagline",
         companyAddressLine1: "Address line 1", companyAddressLine2: "Address line 2",
         companyContacts: "Phone / contacts", companyEmail: "Email", companyWebsite: "Website",
-        documentTitle: "Document title", quotePrefix: "Quote prefix", quoteFormat: "Quote format",
+        documentTitle: "Document title", quotePrefix: "Document code", quoteFormat: "Quote format",
         quoteValidityDays: "Quote validity (days)", sequencePadLength: "Number padding",
         vatRatePercent: "VAT rate", vatLabel: "VAT label",
         termsText: "Terms text", footerText: "Footer text",
@@ -261,6 +261,18 @@ export default async function BrandingPage({
         .map((i) => `${labels[String(i.path[0])] ?? String(i.path[0])}: ${i.message}`)
         .join("; ");
       redirect(`/settings/branding?error=${encodeURIComponent(detail || "Invalid branding input")}`);
+    }
+
+    // The document code is what keeps one tenant's document numbers from
+    // colliding with another's — the number columns are globally unique while
+    // the counters are per-org — so two orgs must never share it.
+    const wantedCode = sanitizeText(parsed.data.quotePrefix);
+    if (await documentCodeTakenByAnotherOrg(saveOrgId, wantedCode)) {
+      redirect(
+        `/settings/branding?error=${encodeURIComponent(
+          `The document code "${wantedCode.toUpperCase()}" is already used by another workspace. Pick a different one — it has to be unique so your document numbers stay yours.`,
+        )}`,
+      );
     }
 
     const bankAccounts = parsePaymentAccounts(parsed.data.paymentAccounts);
@@ -276,7 +288,7 @@ export default async function BrandingPage({
       companyEmail: sanitizeOptionalText(parsed.data.companyEmail) ?? "",
       companyWebsite: sanitizeOptionalText(parsed.data.companyWebsite) ?? "",
       documentTitle: sanitizeText(parsed.data.documentTitle),
-      quotePrefix: sanitizeText(parsed.data.quotePrefix),
+      quotePrefix: wantedCode,
       quoteFormat: sanitizeText(parsed.data.quoteFormat),
       quoteValidityDays: parsed.data.quoteValidityDays,
       sequencePadLength: parsed.data.sequencePadLength,
@@ -344,10 +356,21 @@ export default async function BrandingPage({
           <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Document numbering <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional, the default is fine</span></summary>
           <div className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
             <input name="documentTitle" defaultValue={settings.documentTitle} placeholder="Document title" className={brandingFieldClass} />
-            <input name="quotePrefix" defaultValue={settings.quotePrefix} placeholder="Quote prefix" className={brandingFieldClass} />
+            <input
+              name="quotePrefix"
+              defaultValue={settings.quotePrefix}
+              placeholder="Document code"
+              aria-label="Document code"
+              className={brandingFieldClass}
+            />
             <input name="quoteFormat" defaultValue={settings.quoteFormat} placeholder="Quote format" className={brandingFieldClass} />
             <p className="text-[0.8125rem] text-[var(--ink-muted)] [overflow-wrap:anywhere] lg:col-span-2">
               Preview: <span className="font-medium text-[var(--ink)]">{quotePreview}</span>
+            </p>
+            <p className="text-[0.8125rem] text-[var(--ink-muted)] lg:col-span-2">
+              The document code starts every quote, invoice, receipt and credit note you
+              issue. It has to be different from every other workspace&rsquo;s, so your
+              numbers stay yours.
             </p>
             <input type="number" name="quoteValidityDays" defaultValue={settings.quoteValidityDays} placeholder="Validity days" className={brandingFieldClass} />
             <input type="number" name="sequencePadLength" defaultValue={settings.sequencePadLength} placeholder="Sequence pad length" className={brandingFieldClass} />
