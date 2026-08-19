@@ -212,7 +212,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const notes = String(formData.get("notes") ?? "").trim() || null;
     const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
 
-    if (!description || !Number.isFinite(amountRaw) || amountRaw <= 0) return;
+    // Was a bare `return`, so a description of only spaces — which passes the
+    // HTML `required` attribute and is then trimmed to "" here — made Save
+    // Expense do nothing at all, with no message. Tell the user instead.
+    if (!description) {
+      redirect(`/finance/expenses?error=${encodeURIComponent("Enter a description for this expense.")}`);
+    }
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      redirect(`/finance/expenses?error=${encodeURIComponent("Enter an amount greater than zero.")}`);
+    }
 
     const category = CATEGORIES.includes(categoryRaw as ExpenseCategory)
       ? (categoryRaw as ExpenseCategory)
@@ -227,8 +235,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // instead of recording (and paying out) the same money twice.
     const dupExpense = await findRecentDuplicate(db.expense, { orgId, description, amount: amountRaw, category });
     if (dupExpense) {
+      // Double-submit guard. Silently returning here looked identical to a
+      // broken button, so name it — the expense is already recorded.
       revalidatePath("/finance/expenses");
-      return;
+      redirect(`/finance/expenses?error=${encodeURIComponent("That expense was just recorded — not saving it twice.")}`);
     }
 
     const inner = `EXP-${new Date().getFullYear()}-`;
@@ -353,6 +363,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
+      {sp.error ? (
+        <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-[0.8125rem] font-medium text-red-600">
+          {sp.error}
+        </p>
+      ) : null}
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
         eyebrow="Finance"

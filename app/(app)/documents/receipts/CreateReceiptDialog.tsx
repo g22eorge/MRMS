@@ -9,23 +9,30 @@ type SourceOption = {
   label: string;
 };
 
+export type ReceiptFormState = { error?: string } | null;
+
 type Props = {
   sourceOptions: SourceOption[];
   baseCurrency: string;
   paymentMethods: string[];
-  action: (prev: null, formData: FormData) => Promise<null>;
+  action: (prev: ReceiptFormState, formData: FormData) => Promise<ReceiptFormState>;
   initialOpen?: boolean;
 };
 
 export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethods, action, initialOpen = false }: Props) {
   const [open, setOpen] = useState(initialOpen);
   const formRef = useRef<HTMLFormElement>(null);
-  const [, formAction, pending] = useActionState(async (prev: null, formData: FormData) => {
+  // Only close and clear on success. Doing it unconditionally meant a rejected
+  // receipt — an overpayment, or any foreign-currency invoice — closed the modal
+  // and emptied the form, so the user believed the money had been recorded.
+  const [state, formAction, pending] = useActionState(async (prev: ReceiptFormState, formData: FormData) => {
     const result = await action(prev, formData);
-    setOpen(false);
-    formRef.current?.reset();
+    if (!result?.error) {
+      setOpen(false);
+      formRef.current?.reset();
+    }
     return result;
-  }, null);
+  }, null as ReceiptFormState);
 
   return (
     <>
@@ -41,6 +48,11 @@ export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethod
         <ModalHeader title="Create Receipt from Invoice or Sale" onClose={() => setOpen(false)} />
 
         <form ref={formRef} action={formAction} className="flex flex-col gap-3 p-4">
+          {state?.error ? (
+            <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-[0.8125rem] font-medium text-red-600">
+              {state.error}
+            </p>
+          ) : null}
           <select
             name="sourceKey"
             required
@@ -58,7 +70,9 @@ export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethod
               <input
                 name="amount"
                 required
-                inputMode="decimal"
+                type="number"
+                min="0.01"
+                step="0.01"
                 placeholder="How much was paid"
                 className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm font-normal text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
               />

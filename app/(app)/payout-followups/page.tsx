@@ -568,7 +568,7 @@ export default async function PayoutFollowupsPage({
                   {/* Inline payment form */}
                   <form action={receiveInvoicePaymentAction} className="mt-2 flex items-center gap-2">
                     <input type="hidden" name="invoiceId" value={inv.id} />
-                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+                    <input name="amount" required type="number" min="0.01" step="0.01" max={balance} defaultValue={String(balance)} placeholder="Amount" className="h-8 w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
                     <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>
@@ -619,7 +619,7 @@ export default async function PayoutFollowupsPage({
                 <>
                   <form action={receiveInvoicePaymentAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="invoiceId" value={inv.id} />
-                    <input name="amount" required inputMode="decimal" defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
+                    <input name="amount" required type="number" min="0.01" step="0.01" max={balance} defaultValue={String(balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
                     <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
                       {PAYMENT_METHODS.map(m => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>

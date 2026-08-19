@@ -33,7 +33,7 @@ export const dynamic = "force-dynamic";
 export default async function RefundsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string; error?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -108,7 +108,14 @@ export default async function RefundsPage({
       currency = creditNote.currency;
       refundableAmount = Math.max(0, creditNote.totalAmount - creditNote.refunds.reduce((sum, refund) => sum + refund.amount, 0));
     }
-    if (refundableAmount <= 0 || amountRaw > refundableAmount) return;
+    // Was a bare return, so over-refunding did nothing at all — no refund, no
+    // message. The amount field has no max, so this is an ordinary typo.
+    if (refundableAmount <= 0) {
+      redirect(`/documents/refunds?error=${encodeURIComponent("There is nothing left to refund on that document.")}`);
+    }
+    if (amountRaw > refundableAmount) {
+      redirect(`/documents/refunds?error=${encodeURIComponent(`That is more than the refundable amount (${formatMoney(refundableAmount, normalizeCurrency(currency, org.baseCurrency))}).`)}`);
+    }
 
     // Capture the FX rate for a non-base refund so it can be converted for
     // base-currency reporting (was left null, making conversion impossible).
@@ -116,7 +123,7 @@ export default async function RefundsPage({
     const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
     const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
-      return;
+      redirect(`/documents/refunds?error=${encodeURIComponent(`Enter the exchange rate for this ${refundCurrency} refund.`)}`);
     }
 
     // Double-submit guard: an identical refund landed seconds ago — reuse it
@@ -482,6 +489,11 @@ export default async function RefundsPage({
   return (
     <Disclosure>
     <div className="space-y-4">
+      {params.error ? (
+        <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-[0.8125rem] font-medium text-red-600">
+          {params.error}
+        </p>
+      ) : null}
       {/* Header + KPIs */}
       <PageHeader
         eyebrow="Documents"

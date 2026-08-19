@@ -75,7 +75,7 @@ export default async function JournalPage({
   async function createEntry(fd: FormData) {
     "use server";
     const { user: _u, org } = await requireOrgSession();
-    if (!_u.orgId) return;
+    if (!_u.orgId) return { error: "Your account is not attached to a workspace." };
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const db = orgDb(_u.orgId);
 
@@ -83,7 +83,10 @@ export default async function JournalPage({
     const dateStr     = fd.get("date") as string;
     const reference   = ((fd.get("reference") as string) || "").trim() || null;
 
-    if (!description || !dateStr) return;
+    // A bare return here made the client treat the result as success and clear
+    // the form, so a description of only spaces looked like a saved entry.
+    if (!description) return { error: "Enter a description for this entry." };
+    if (!dateStr) return { error: "Choose a date for this entry." };
 
     const lines: { accountId: string; debit: number; credit: number; description: string }[] = [];
     for (let i = 0; i < 10; i++) {

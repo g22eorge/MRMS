@@ -35,10 +35,13 @@ function poNumber(po: { reference: string | null; id: string }) {
 
 export default async function PurchaseOrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
@@ -96,6 +99,11 @@ export default async function PurchaseOrderDetailPage({
 
   return (
     <div className="space-y-3">
+      {sp.error ? (
+        <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-[0.8125rem] font-medium text-red-600">
+          {sp.error}
+        </p>
+      ) : null}
       <RecordActionBar
         backHref="/inventory/purchase-orders"
         eyebrow="Purchase Order"

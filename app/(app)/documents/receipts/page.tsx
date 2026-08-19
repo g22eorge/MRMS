@@ -29,7 +29,7 @@ import {
 } from "@/components/documents";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
-import { CreateReceiptDialog } from "./CreateReceiptDialog";
+import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -50,7 +50,7 @@ export default async function ReceiptsPage({
   const createMode = params.new === "1";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  async function createReceiptAction(_prev: null, formData: FormData): Promise<null> {
+  async function createReceiptAction(_prev: ReceiptFormState, formData: FormData): Promise<ReceiptFormState> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     // Payment capture stays available while suspended (canRecordPaymentsWhenSuspended).
@@ -70,12 +70,16 @@ export default async function ReceiptsPage({
     const methodRaw = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
     const currency = normalizeCurrency(formData.get("currency"), baseCurrency);
-    if (!sourceId || !["invoice", "sale"].includes(sourceType) || !Number.isFinite(amount) || amount <= 0) return null;
+    if (!sourceId || !["invoice", "sale"].includes(sourceType)) return { error: "Choose the invoice or sale this receipt is for." };
+    if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter an amount greater than zero." };
 
     const method = parsePaymentMethod(methodRaw, "OTHER");
     if (sourceType === "invoice") {
       const invoice = await db.invoice.findFirst({ where: { id: sourceId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, clientId: true, jobId: true, currency: true } });
-      if (!invoice || invoice.paidAmount + amount > invoice.totalAmount) return null;
+      if (!invoice) return { error: "That invoice could not be found." };
+      if (invoice.paidAmount + amount > invoice.totalAmount) {
+        return { error: `That is more than the balance — ${formatMoney(invoice.totalAmount - invoice.paidAmount, normalizeCurrency(invoice.currency, baseCurrency))} outstanding.` };
+      }
 
       // Record the payment in the INVOICE's currency, not the form's. A foreign-
       // currency invoice needs an FX rate or syncInvoicePaymentState converts to 0
@@ -85,7 +89,9 @@ export default async function ReceiptsPage({
       const invCurrency = normalizeCurrency(invoice.currency, baseCurrency);
       const rateRaw = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
       const exchangeRateToBase = invCurrency === baseCurrency ? null : (rateRaw ? Number(rateRaw) : null);
-      if (invCurrency !== baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) return null;
+      if (invCurrency !== baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
+        return { error: `This invoice is in ${invCurrency}. Use Collect payment on the invoice, which records the exchange rate.` };
+      }
 
       let deduped = false;
       await prisma.$transaction(async (tx) => {
@@ -98,9 +104,14 @@ export default async function ReceiptsPage({
       if (!deduped) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Invoice", entityId: invoice.id, action: "RECEIPT_CREATED", summary: "Receipt generated from invoice" });
     } else {
       const sale = await prisma.sale.findFirst({ where: { id: sourceId, orgId, status: { not: "VOID" } }, select: { id: true, totalAmount: true, paidAmount: true, currency: true, clientId: true } });
-      if (!sale || sale.paidAmount + amount > sale.totalAmount) return null;
+      if (!sale) return { error: "That sale could not be found." };
+      if (sale.paidAmount + amount > sale.totalAmount) {
+        return { error: `That is more than the balance — ${formatMoney(sale.totalAmount - sale.paidAmount, normalizeCurrency(sale.currency, baseCurrency))} outstanding.` };
+      }
       const saleCurrency = normalizeCurrency(sale.currency, baseCurrency);
-      if (saleCurrency !== baseCurrency || currency !== baseCurrency) return null;
+      if (saleCurrency !== baseCurrency || currency !== baseCurrency) {
+        return { error: `Receipts for ${saleCurrency} sales are not supported yet — record the payment on the sale itself.` };
+      }
 
       let deduped = false;
       await prisma.$transaction(async (tx) => {
@@ -544,7 +555,7 @@ export default async function ReceiptsPage({
                       <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
                         <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
+                      <input name="amount" required type="number" min="0.01" step="0.01" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
                         {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                       </select>
@@ -669,7 +680,7 @@ export default async function ReceiptsPage({
                     <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
                       <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     </label>
-                    <input name="amount" inputMode="decimal" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                    <input name="amount" required type="number" min="0.01" step="0.01" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50">
                       {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
                     </select>

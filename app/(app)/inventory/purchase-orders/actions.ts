@@ -338,10 +338,18 @@ export async function setPurchaseOrderStatusAction(formData: FormData): Promise<
     where: { id, orgId },
     include: { items: { select: { qtyReceived: true, unitCost: true } } },
   });
-  if (!po) return;
-  if (po.status === "RECEIVED") return;
-  if (status === "ORDERED" && po.items.some((item) => item.unitCost <= 0)) return;
-  if (po.items.some((item) => item.qtyReceived > 0) && status !== "ORDERED") return;
+  // These were bare returns, so "Issue" on a draft with an unpriced line — the
+  // ordinary case — did nothing at all and said nothing.
+  // `redirect` throws, so these both narrow `po` and give the user a reason.
+  const poError = (msg: string) => `/inventory/purchase-orders/${id}?error=${encodeURIComponent(msg)}`;
+  if (!po) redirect(poError("That purchase order could not be found."));
+  if (po.status === "RECEIVED") redirect(poError("This order is already fully received."));
+  if (status === "ORDERED" && po.items.some((item) => item.unitCost <= 0)) {
+    redirect(poError("Every line needs a unit cost before the order can be issued."));
+  }
+  if (po.items.some((item) => item.qtyReceived > 0) && status !== "ORDERED") {
+    redirect(poError("Stock has already been received against this order, so its status cannot change."));
+  }
 
   await prisma.purchaseOrder.update({
     where: { id },

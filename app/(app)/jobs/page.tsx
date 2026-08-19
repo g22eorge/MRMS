@@ -348,6 +348,11 @@ export default async function JobsPage({
     if (total > 0) uiStatusCountMap.set(uiStatus, total);
   }
 
+  // Unfiltered total for the "All" chip. `total` is the count of the CURRENT
+  // query, so while a filter is applied it understates — the chip that clears
+  // every filter should say how many jobs it will show, not how many are showing.
+  const allJobsCount = [...dbStatusCountMap.values()].reduce((sum, n) => sum + n, 0);
+
   // Attention counts — aggregate counts only (no rows), scoped to org + role.
   const overdueThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const [overdueCount, completedUnpaidCount] = await Promise.all([
@@ -591,7 +596,7 @@ export default async function JobsPage({
           // so a shop with 34 jobs looked like it had 20, with no way to clear it.
           const isOverdue = filters.overdue === "1";
           const KEY_CHIPS = [
-            { href: statusChipHref(""),                  label: "All",      count: total ?? 0,                                     active: !statusValue && !isMine && !isOverdue },
+            { href: statusChipHref(""),                  label: "All",      count: allJobsCount || (total ?? 0),                   active: !statusValue && !isMine && !isOverdue },
             { href: mineHref,                            label: "Mine",     count: null,                                           active: isMine                  },
             { href: overdueChipHref,                     label: "Overdue",  count: overdueCount,                                   active: isOverdue               },
             { href: statusChipHref("AWAITING_APPROVAL"), label: "Awaiting", count: uiStatusCountMap.get("AWAITING_APPROVAL") ?? 0,  active: statusValue === "AWAITING_APPROVAL" },
