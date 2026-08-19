@@ -6,6 +6,7 @@ import { z } from "zod";
 import { LeadSource, LeadStatus, QuotationStatus } from "@prisma/client";
 
 import { computeLinesVat } from "@/lib/commercial/vat";
+import { normalizeCurrency, roundMoney } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -271,7 +272,7 @@ function quotationLineTotal(item: { quantity: number; unitPrice: number; discoun
 async function recalculateQuotationTotals(quotationId: string) {
   const [items, quotation] = await Promise.all([
     prisma.quotationItem.findMany({ where: { quotationId }, select: { lineTotal: true, partId: true } }),
-    prisma.quotation.findUnique({ where: { id: quotationId }, select: { subtotal: true, vatAmount: true, taxRate: true, orgId: true } }),
+    prisma.quotation.findUnique({ where: { id: quotationId }, select: { subtotal: true, vatAmount: true, taxRate: true, orgId: true, currency: true } }),
   ]);
   const subtotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
   const inferredTaxRate = quotation?.taxRate ?? (
@@ -298,10 +299,19 @@ async function recalculateQuotationTotals(quotationId: string) {
     }),
     { applicable: inferredTaxRate > 0, defaultRatePercent: inferredTaxRate, inclusive: false },
   );
-  const vatAmount = vat.vatAmount;
+  // createQuotationRecord rounds all three, this did not — so adding a line and
+  // then deleting it left the quotation holding unrounded totals that no longer
+  // matched what it was created with.
+  const quoteCurrency = normalizeCurrency(quotation?.currency, "UGX");
+  const roundedSubtotal = roundMoney(subtotal, quoteCurrency);
+  const vatAmount = roundMoney(vat.vatAmount, quoteCurrency);
   await prisma.quotation.update({
     where: { id: quotationId },
-    data: { subtotal, vatAmount, totalAmount: subtotal + vatAmount },
+    data: {
+      subtotal: roundedSubtotal,
+      vatAmount,
+      totalAmount: roundMoney(roundedSubtotal + vatAmount, quoteCurrency),
+    },
   });
 }
 

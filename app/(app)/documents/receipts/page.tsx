@@ -234,18 +234,23 @@ export default async function ReceiptsPage({
     if (!source) return;
 
     await prisma.$transaction(async (tx) => {
+      // Void (rather than delete) the linked Receipt document so the numbered
+      // record is retained for audit; the job timeline already hides voided rows.
+      //
+      // This MUST run before the payment is deleted: Receipt.paymentId is an
+      // onDelete: SetNull FK, so deleting the payment first detaches the receipt
+      // and this update then matches zero rows — leaving a live, un-voided,
+      // still-printable receipt pointing at nothing.
+      await tx.receipt.updateMany({
+        where: { orgId, paymentId },
+        data: { voidedAt: new Date(), voidReason: "Payment deleted" },
+      });
+
       await tx.payment.deleteMany({ where: { id: paymentId, orgId } });
 
       // Reverse the cash-basis ledger post for this payment ("pay:<id>") so the
       // deletion doesn't leave the ledger overstating cash.
       await reverseJournalEntry(tx, { orgId, userId: user.id, originalReference: `pay:${paymentId}`, description: "Reversal — receipt/payment deleted" });
-
-      // Void (rather than delete) the linked Receipt document so the numbered
-      // record is retained for audit; the job timeline already hides voided rows.
-      await tx.receipt.updateMany({
-        where: { orgId, paymentId },
-        data: { voidedAt: new Date(), voidReason: "Payment deleted" },
-      });
 
       if (source.invoiceId) {
         const invoice = await tx.invoice.findFirst({ where: { id: source.invoiceId, orgId }, select: { id: true, totalAmount: true, jobId: true } });

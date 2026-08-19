@@ -35,6 +35,7 @@ type SearchParams = {
   adv?: string;
   overdue?: string;
   mine?: string;
+  error?: string;
 };
 
 const jobListSelect = {
@@ -116,6 +117,7 @@ export default async function JobsPage({
 }) {
   const { session, user, orgId } = await requireOrgSession();
   const filters = await searchParams;
+  const jobsError = (filters.error ?? "").trim();
   const q = (filters.q ?? "").trim();
   const statusValueRaw = (filters.status ?? "").split(",")[0]?.trim() ?? "";
   const statusValue = (UI_JOB_STATUSES as readonly string[]).includes(statusValueRaw) ? statusValueRaw : "";
@@ -416,6 +418,23 @@ export default async function JobsPage({
     if (user.role !== "ADMIN") redirect("/dashboard");
     const id = String(formData.get("id") ?? "");
     if (!id) return;
+
+    // Job -> Invoice -> Payment/Refund all cascade, so deleting a job that has
+    // been paid silently destroys the record of money actually received. The
+    // ledger keeps its cash posting (journal rows reference payments by string,
+    // not by FK), so the books would permanently overstate cash with nothing
+    // left to reconcile against. Cancel the job instead.
+    const paidLinks = await prisma.payment.count({
+      where: { orgId: deleteOrgId, invoice: { jobId: id } },
+    });
+    if (paidLinks > 0) {
+      redirect(
+        `/jobs?error=${encodeURIComponent(
+          "This job has payments recorded against it, so deleting it would erase them. Void the invoice or set the job to Cancelled instead.",
+        )}`,
+      );
+    }
+
     await prisma.job.delete({ where: { id, orgId: deleteOrgId } });
     revalidatePath("/jobs");
   }
@@ -516,6 +535,15 @@ export default async function JobsPage({
 
   return (
     <div className="space-y-4 pb-[calc(env(safe-area-inset-bottom)+5.25rem)] sm:pb-4">
+
+      {jobsError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+        >
+          {jobsError}
+        </p>
+      )}
 
       {/* ── New Job shortcut — desktop only; mobile uses Quick Actions on home ── */}
       {can.createJob(user) ? (

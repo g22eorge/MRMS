@@ -1,9 +1,20 @@
 import { prisma } from "@/lib/prisma";
+import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 
+/**
+ * Complaint reference, e.g. "EIS-CMP-2026-0004".
+ *
+ * Was `CMP-${year}-${count+1}` from a per-org `count()`, which broke in three
+ * ways against the GLOBAL unique on Complaint.complaintNumber: it carried no org
+ * tag, so two tenants sitting on the same count produced the same reference; it
+ * counted a lifetime total rather than the year, so the year prefix was
+ * decorative; and read-then-write meant two concurrent submissions computed the
+ * same number. Every collision surfaced as an uncaught P2002 — a 500 on the
+ * public feedback form and the customer portal, both of which are unauthenticated
+ * customer-facing pages. The shared counter is atomic and org-tagged.
+ */
 export async function generateComplaintNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.complaint.count({ where: { orgId } });
-  return `CMP-${year}-${String(count + 1).padStart(4, "0")}`;
+  return nextDocumentNumber(prisma, "CMP", "complaint", orgId);
 }
 
 export const COMPLAINT_CATEGORY_LABELS: Record<string, string> = {

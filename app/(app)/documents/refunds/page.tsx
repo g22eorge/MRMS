@@ -77,53 +77,105 @@ export default async function RefundsPage({
     let saleId: string | null = null;
     let creditNoteId: string | null = null;
     let currency = org.baseCurrency;
-    let refundableAmount = 0;
+
+    // Everything below is held in ORG BASE currency, because that is the unit
+    // Invoice.paidAmount and Sale.paidAmount are stored in. Mixing that with a
+    // document-currency figure used to make a USD 100 sale look like it had
+    // hundreds of thousands refundable.
+    let refundableBase = 0;
+    // A credit note stores no FX rate of its own, so its ceiling can only be
+    // converted once the rate on this form has been read. Held here until then.
+    let creditNoteDocTotal: number | null = null;
+    let creditNoteRefundedBase = 0;
 
     if (sourceType === "invoice") {
       const inv = await prisma.invoice.findFirst({
         where: { id: sourceId, orgId, status: { not: "VOID" } },
-        select: { id: true, paidAmount: true, currency: true, refunds: { select: { amount: true } } },
+        select: { id: true, paidAmount: true, currency: true },
       });
       if (!inv) return;
       invoiceId = inv.id;
       currency = inv.currency;
-      refundableAmount = Math.max(0, inv.paidAmount - inv.refunds.reduce((sum, refund) => sum + refund.amount, 0));
+      // paidAmount is already net of both REFUND-kind payments and Refund rows
+      // (see sumInvoicePaidAmount), so subtracting refunds again would halve it.
+      refundableBase = Math.max(0, inv.paidAmount);
     } else if (sourceType === "sale") {
       const sale = await prisma.sale.findFirst({
         where: { id: sourceId, orgId, status: { not: "VOID" } },
-        select: { id: true, paidAmount: true, currency: true, refunds: { select: { amount: true } } },
+        select: { id: true, paidAmount: true, currency: true },
       });
       if (!sale) return;
       saleId = sale.id;
       currency = sale.currency;
-      refundableAmount = Math.max(0, sale.paidAmount - sale.refunds.reduce((sum, refund) => sum + refund.amount, 0));
+      refundableBase = Math.max(0, sale.paidAmount);
     } else {
       const creditNote = await prisma.creditNote.findFirst({
         where: { id: sourceId, orgId },
-        select: { id: true, saleId: true, totalAmount: true, currency: true, refunds: { select: { amount: true } } },
+        select: {
+          id: true,
+          saleId: true,
+          totalAmount: true,
+          currency: true,
+          refunds: { select: { amount: true, currency: true, exchangeRateToBase: true } },
+        },
       });
       if (!creditNote) return;
       creditNoteId = creditNote.id;
       saleId = creditNote.saleId;
       currency = creditNote.currency;
-      refundableAmount = Math.max(0, creditNote.totalAmount - creditNote.refunds.reduce((sum, refund) => sum + refund.amount, 0));
-    }
-    // Was a bare return, so over-refunding did nothing at all — no refund, no
-    // message. The amount field has no max, so this is an ordinary typo.
-    if (refundableAmount <= 0) {
-      redirect(`/documents/refunds?error=${encodeURIComponent("There is nothing left to refund on that document.")}`);
-    }
-    if (amountRaw > refundableAmount) {
-      redirect(`/documents/refunds?error=${encodeURIComponent(`That is more than the refundable amount (${formatMoney(refundableAmount, normalizeCurrency(currency, org.baseCurrency))}).`)}`);
+      // A credit note carries no paidAmount and stores no rate of its own, so
+      // its total stays in document currency until the form's rate is read.
+      creditNoteDocTotal = creditNote.totalAmount;
+      creditNoteRefundedBase = creditNote.refunds.reduce(
+        (sum, refund) =>
+          sum +
+          toBaseAmount({
+            amount: refund.amount,
+            currency: refund.currency,
+            baseCurrency: org.baseCurrency,
+            exchangeRateToBase: refund.exchangeRateToBase,
+          }),
+        0,
+      );
     }
 
     // Capture the FX rate for a non-base refund so it can be converted for
     // base-currency reporting (was left null, making conversion impossible).
+    // This has to happen before the cap check: the cap is in base and the typed
+    // amount is in document currency, so one of them needs converting first.
     const refundCurrency = normalizeCurrency(currency, org.baseCurrency);
     const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
     const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
       redirect(`/documents/refunds?error=${encodeURIComponent(`Enter the exchange rate for this ${refundCurrency} refund.`)}`);
+    }
+
+    if (creditNoteDocTotal != null) {
+      const creditedBase = toBaseAmount({
+        amount: creditNoteDocTotal,
+        currency: refundCurrency,
+        baseCurrency: org.baseCurrency,
+        exchangeRateToBase,
+      });
+      refundableBase = Math.max(0, creditedBase - creditNoteRefundedBase);
+    }
+
+    // Show the ceiling in the currency the user is actually typing in.
+    const refundableAmount = exchangeRateToBase ? refundableBase / exchangeRateToBase : refundableBase;
+    const amountBase = toBaseAmount({
+      amount: amountRaw,
+      currency: refundCurrency,
+      baseCurrency: org.baseCurrency,
+      exchangeRateToBase,
+    });
+
+    // Was a bare return, so over-refunding did nothing at all — no refund, no
+    // message. The amount field has no max, so this is an ordinary typo.
+    if (refundableBase <= 0) {
+      redirect(`/documents/refunds?error=${encodeURIComponent("There is nothing left to refund on that document.")}`);
+    }
+    if (amountBase > refundableBase) {
+      redirect(`/documents/refunds?error=${encodeURIComponent(`That is more than the refundable amount (${formatMoney(refundableAmount, refundCurrency)}).`)}`);
     }
 
     // Double-submit guard: an identical refund landed seconds ago — reuse it

@@ -5,7 +5,8 @@ import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
-import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { formatMoney, normalizeCurrency, roundMoney } from "@/lib/currency";
+import { computeVat } from "@/lib/commercial/vat";
 import { formatEATDate } from "@/lib/date-eat";
 import { DataTable } from "@/components/ui/DataTable";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
@@ -485,9 +486,30 @@ export default async function InvoiceDetailPage({
               .filter((i) => i.description && Number.isFinite(i.quantity) && i.quantity > 0 && Number.isFinite(i.unitPrice) && i.unitPrice >= 0);
             if (!items.length) return;
 
-            const newSubtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-            const newTax = taxRate > 0 ? newSubtotal * (taxRate / 100) : 0;
-            const totalAmount = newSubtotal + newTax;
+            // Per-product tax, same as the create path. This used to apply the
+            // single chosen rate to the whole subtotal and then pro-rate it back
+            // across lines, which meant re-saving an invoice with no changes
+            // taxed lines whose product is marked exempt. Totals were also left
+            // unrounded, so a UGX invoice could sit at 14567.1 and the
+            // paidAmount >= totalAmount test could never be satisfied by a
+            // whole-shilling payment — the invoice was stuck at ISSUED forever.
+            const editPartIds = [...new Set(items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+            const editTaxParts = editPartIds.length
+              ? await prisma.part.findMany({
+                  where: { id: { in: editPartIds }, orgId },
+                  select: { id: true, taxable: true, taxRate: true },
+                })
+              : [];
+            const editTaxByPart = new Map(editTaxParts.map((p) => [p.id, p]));
+            const lineTaxes = items.map((item) => {
+              const part = item.partId ? editTaxByPart.get(item.partId) : undefined;
+              const taxable = part ? part.taxable : true;
+              const rate = taxable ? (part?.taxRate ?? taxRate) : 0;
+              return computeVat(item.lineTotal, { applicable: taxRate > 0, ratePercent: rate, inclusive: false }).vatAmount;
+            });
+            const newSubtotal = roundMoney(items.reduce((s, i) => s + i.lineTotal, 0), currency);
+            const newTax = roundMoney(lineTaxes.reduce((sum, tax) => sum + tax, 0), currency);
+            const totalAmount = roundMoney(newSubtotal + newTax, currency);
             // Only re-point the invoice at a client that belongs to this org — a
             // forged clientId must not surface another tenant's name/phone on the PDF.
             const requestedClientId = String(fd.get("clientId") ?? "").trim() || null;
@@ -511,7 +533,7 @@ export default async function InvoiceDetailPage({
                   ...(clientId ? { clientId } : {}),
                   totalAmount,
                   lines: {
-                    create: items.map((item) => ({
+                    create: items.map((item, index) => ({
                       orgId: orgId,
                       sourceType: item.partId ? "Part" : "Custom",
                       sourceId: item.partId,
@@ -519,7 +541,7 @@ export default async function InvoiceDetailPage({
                       quantity: item.quantity,
                       unitPrice: item.unitPrice,
                       discountAmount: item.discountAmount,
-                      taxAmount: newTax > 0 && newSubtotal > 0 ? newTax * (item.lineTotal / newSubtotal) : 0,
+                      taxAmount: lineTaxes[index] ?? 0,
                       lineTotal: item.lineTotal,
                     })),
                   },

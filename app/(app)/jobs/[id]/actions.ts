@@ -41,7 +41,7 @@ import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
-import { isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
+import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 
 const workflowReasonValues = [
   "NONE",
@@ -889,18 +889,40 @@ export async function recordClientPaymentAction(formData: FormData) {
         });
       }
 
-      const existingPayments = await tx.payment.findMany({
-        where: { orgId, invoiceId: invoice.id },
-        select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
-      });
-      const existingPaidAmount = existingPayments.reduce(
-        (sum, p) => sum + (p.kind === "REFUND" ? -1 : 1) * toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }),
-        0,
-      );
+      const [existingPayments, existingRefunds] = await Promise.all([
+        tx.payment.findMany({
+          where: { orgId, invoiceId: invoice.id },
+          select: { amount: true, currency: true, exchangeRateToBase: true, kind: true },
+        }),
+        // Refunds issued through Documents → Refunds also reduce what is left to
+        // give back; counting only Payment rows would let the same money go out
+        // twice, once down each path.
+        tx.refund.findMany({
+          where: { orgId, invoiceId: invoice.id },
+          select: { amount: true, currency: true, exchangeRateToBase: true },
+        }),
+      ]);
+      const existingPaidAmount =
+        existingPayments.reduce(
+          (sum, p) => sum + (p.kind === "REFUND" ? -1 : 1) * toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }),
+          0,
+        ) -
+        existingRefunds.reduce(
+          (sum, r) => sum + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency, exchangeRateToBase: r.exchangeRateToBase }),
+          0,
+        );
       const signedAmount = payload.kind === "REFUND" ? -payload.amount : payload.amount;
       const nextPaidAmount = existingPaidAmount + toBaseAmount({ amount: signedAmount, currency, baseCurrency, exchangeRateToBase });
       if (nextPaidAmount > invoice.totalAmount && payload.confirmOverpayment !== "true") {
         throw new Error("This payment will overpay the client bill. Tick confirm overpayment if this is intentional.");
+      }
+      // Only the upper bound was checked, so refunding more than was ever paid
+      // drove paidAmount negative and every outstanding balance in the app then
+      // read HIGHER than the invoice total.
+      if (nextPaidAmount < 0) {
+        throw new Error(
+          `That refund is more than has been paid on this bill. At most ${formatMoney(Math.max(0, existingPaidAmount), baseCurrency)} can be refunded.`,
+        );
       }
 
       // Double-submit guard: an identical payment on this invoice landed seconds

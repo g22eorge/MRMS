@@ -207,11 +207,17 @@ export default async function InvoicesPage({
     // Per-product tax: each line taxed at its product's rate (exempt lines at 0),
     // falling back to the invoice's chosen rate. The chosen rate stays the master
     // on/off — when it's 0, nothing is taxed.
+    //
+    // Per-line taxes stay UNROUNDED and only the sum is rounded, matching POS and
+    // quotations (computeLinesVat). Rounding each line first and then adding them
+    // priced the same basket differently depending on which screen created it —
+    // four UGX 25 lines at 18% came to 20 through this form but 18 through the
+    // till, because each 4.5 rounded up to 5.
     const lineTaxes = items.map((item) => {
       const part = item.partId ? taxByPart.get(item.partId) : undefined;
       const taxable = part ? part.taxable : true;
       const rate = taxable ? (part?.taxRate ?? taxRate) : 0;
-      return roundMoney(computeVat(item.lineTotal, { applicable: taxRate > 0, ratePercent: rate, inclusive: false }).vatAmount, currency);
+      return computeVat(item.lineTotal, { applicable: taxRate > 0, ratePercent: rate, inclusive: false }).vatAmount;
     });
     const taxAmount = roundMoney(lineTaxes.reduce((sum, tax) => sum + tax, 0), currency);
     const totalAmount = roundMoney(subtotal + taxAmount, currency);

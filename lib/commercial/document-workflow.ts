@@ -5,7 +5,7 @@ import { getOrgNumberConfig, composeDocumentNumber, maxNumberSequence } from "@/
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
-type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote";
+type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
 /** Highest existing sequence for `inner` (e.g. "INV-2026-") within one org,
  * tolerating both tagged (EGL-INV-2026-0007) and legacy untagged numbers so the
@@ -19,7 +19,9 @@ async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner:
         ? (await tx.deliveryNote.findMany({ where: { orgId, deliveryNoteNumber: { contains: inner } }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
         : countModel === "creditNote"
           ? (await tx.creditNote.findMany({ where: { orgId, creditNoteNumber: { contains: inner } }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
-          : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner } }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
+          : countModel === "complaint"
+            ? (await tx.complaint.findMany({ where: { orgId, complaintNumber: { contains: inner } }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
+            : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner } }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
   return maxNumberSequence(inner, numbers.filter(Boolean));
 }
 

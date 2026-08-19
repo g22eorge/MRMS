@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { type PaymentMethod } from "@prisma/client";
 
-import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
@@ -32,10 +32,34 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * What a returned set of lines is actually worth to the customer.
+ *
+ * The gross line value (qty x unit price) is NOT it: the sale's total is net of
+ * any document discount and inclusive of VAT, so crediting gross both refuses to
+ * fully return a discounted sale (gross > total, so the cap rejects it) and
+ * over-refunds a partial return of one. Pro-rating the sale total by the share
+ * of gross being returned carries the discount and the VAT along with it, and a
+ * full return lands exactly on the sale total.
+ */
+function creditValueForReturn(params: {
+  grossReturned: number;
+  saleSubtotal: number;
+  saleTotal: number;
+  currency: string;
+}): number {
+  const { grossReturned, saleSubtotal, saleTotal, currency } = params;
+  if (grossReturned <= 0) return 0;
+  // No usable subtotal (legacy/zero row) — fall back to gross rather than zero.
+  if (!Number.isFinite(saleSubtotal) || saleSubtotal <= 0) return roundMoney(grossReturned, currency);
+  const share = Math.min(1, grossReturned / saleSubtotal);
+  return roundMoney(saleTotal * share, currency);
+}
+
 export default async function CreditNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string; period?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; period?: string; page?: string; error?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -48,6 +72,7 @@ export default async function CreditNotesPage({
   const filter = params.filter ?? "all";
   const periodFilter = params.period ?? "all";
   const page = parsePage(params.page);
+  const errorMessage = (params.error ?? "").trim();
   const nowCN = new Date();
   const cnThisMonthStart = new Date(nowCN.getFullYear(), nowCN.getMonth(), 1);
   const cnLastMonthStart = new Date(nowCN.getFullYear(), nowCN.getMonth() - 1, 1);
@@ -281,13 +306,34 @@ export default async function CreditNotesPage({
       .filter((item) => item.quantity > 0);
     if (!items.length) return;
 
-    const totalAmount = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    const grossReturned = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
     // Cumulative-return cap: existing credit notes for this sale plus this one
     // must not exceed the sale total (prevents unlimited over-refund).
-    const saleTotal = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { totalAmount: true } });
+    const saleTotal = await prisma.sale.findFirst({
+      where: { id: saleId, orgId },
+      select: { totalAmount: true, subtotal: true, currency: true },
+    });
+    if (!saleTotal) return;
+    const totalAmount = creditValueForReturn({
+      grossReturned,
+      saleSubtotal: saleTotal.subtotal,
+      saleTotal: saleTotal.totalAmount,
+      currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
+    });
+    if (totalAmount <= 0) return;
     const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-    if (saleTotal && (priorCredited._sum.totalAmount ?? 0) + totalAmount > saleTotal.totalAmount) return;
+    const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
+    if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
+      // Was a bare return: the dialog closed and nothing happened, with no hint
+      // that the sale had already been credited.
+      const left = Math.max(0, saleTotal.totalAmount - alreadyCredited);
+      redirect(
+        `/documents/credit-notes?error=${encodeURIComponent(
+          `This sale has already been credited down to ${formatMoney(left, normalizeCurrency(saleTotal.currency, org.baseCurrency))}. Reduce the quantities and try again.`,
+        )}`,
+      );
+    }
 
     // Double-submit guard: an identical credit note for this sale landed seconds ago.
     const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, saleId, totalAmount });
@@ -387,13 +433,32 @@ export default async function CreditNotesPage({
       .filter((item) => item.quantity > 0);
     if (!items.length) return;
 
-    const totalAmount = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-    if (totalAmount <= 0) return;
+    const grossReturned = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    if (grossReturned <= 0) return;
 
     // Same cumulative-return cap as createCreditNoteAction.
-    const saleTotal = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { totalAmount: true } });
+    const saleTotal = await prisma.sale.findFirst({
+      where: { id: saleId, orgId },
+      select: { totalAmount: true, subtotal: true, currency: true },
+    });
+    if (!saleTotal) return;
+    const totalAmount = creditValueForReturn({
+      grossReturned,
+      saleSubtotal: saleTotal.subtotal,
+      saleTotal: saleTotal.totalAmount,
+      currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
+    });
+    if (totalAmount <= 0) return;
     const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-    if (saleTotal && (priorCredited._sum.totalAmount ?? 0) + totalAmount > saleTotal.totalAmount) return;
+    const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
+    if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
+      const left = Math.max(0, saleTotal.totalAmount - alreadyCredited);
+      redirect(
+        `/documents/credit-notes?error=${encodeURIComponent(
+          `This sale has already been credited down to ${formatMoney(left, normalizeCurrency(saleTotal.currency, org.baseCurrency))}. Reduce the quantities and try again.`,
+        )}`,
+      );
+    }
 
     // FX handling mirrors issueRefundFromCreditNoteAction — a foreign refund must
     // carry a rate so the ledger posts the base value, not the document amount.
@@ -711,6 +776,15 @@ export default async function CreditNotesPage({
 
   return (
     <div className="space-y-4">
+      {errorMessage && (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+        >
+          {errorMessage}
+        </p>
+      )}
+
       {/* Header + KPIs */}
       <PageHeader
         eyebrow="Documents"
