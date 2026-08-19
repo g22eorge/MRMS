@@ -90,7 +90,18 @@ export default async function WhatsAppSettingsPage() {
         />
       ) : null}
 
-      <WhatsAppConfigForm orgId={orgId} current={currentConfig} />
+      <WhatsAppConfigForm
+        orgId={orgId}
+        current={
+          currentConfig
+            ? {
+                businessNumber: currentConfig.businessNumber,
+                phoneNumberId: currentConfig.phoneNumberId,
+                businessAccountId: currentConfig.businessAccountId,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

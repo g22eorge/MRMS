@@ -76,6 +76,27 @@ export async function getOrgWhatsAppConfig(orgId: string): Promise<OrgWhatsAppCo
   }
 }
 
+/**
+ * Which tenant owns the WhatsApp business number a webhook arrived on.
+ *
+ * Meta sends `metadata.phone_number_id` on every inbound message, and each org
+ * registers its own, so this is the only reliable way to tell whose customer is
+ * writing in. Without it the webhook matched clients by phone number across the
+ * whole database.
+ */
+export async function findOrgIdByWhatsAppPhoneNumberId(phoneNumberId: string): Promise<string | null> {
+  if (!phoneNumberId) return null;
+  try {
+    await ensureTable();
+    const rows = await prisma.$queryRaw<Array<{ orgId: unknown }>>`
+      SELECT orgId FROM "OrgWhatsAppConfig" WHERE phoneNumberId = ${phoneNumberId} LIMIT 1
+    `;
+    return rows[0]?.orgId ? String(rows[0].orgId) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveOrgWhatsAppConfig(
   orgId: string,
   config: Omit<OrgWhatsAppConfig, "orgId">,

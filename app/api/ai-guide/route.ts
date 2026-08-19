@@ -739,6 +739,16 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   const { user } = await getCurrentUserRoleOptional();
 
+  // The proxy only checks that a session COOKIE is present — getSessionCookie()
+  // does no signature validation — so any request carrying an arbitrary cookie
+  // value reached this handler with user === null. That served the org's Gemini
+  // quota to anonymous callers and, because getAiSettings(undefined) falls back
+  // to permissive defaults, bypassed every per-org AI kill switch as well.
+  // The sibling AI routes already return 401 here.
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   let body: { message: string; history?: ChatMessage[]; page?: string };
   try {
     body = await request.json();

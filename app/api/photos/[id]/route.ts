@@ -25,17 +25,22 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     where: { id },
     select: {
       url: true, storageKey: true, mimeType: true, visibility: true,
-      job: { select: { orgId: true, clientId: true } },
+      job: { select: { orgId: true, clientId: true, assignedToId: true } },
     },
   });
   if (!photo || !photo.job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let authorised = false;
 
-  // Staff path — any in-org staff member may view the job's photos.
+  // Staff path — any in-org staff member may view the job's photos, EXCEPT
+  // technicians, who are limited to jobs assigned to them. Every sibling photo
+  // route already enforces this (api/upload, api/uploads/[...segments],
+  // api/jobs/[id]); this one did not, so an external technician holding any
+  // photo id in the org could stream jobs they were never assigned.
   const staff = await getOrgSessionOptional();
   if (staff.user && staff.orgId && staff.orgId === photo.job.orgId && STAFF_VIEW_ROLES.has(staff.user.role)) {
-    authorised = true;
+    const isTechnician = staff.user.role === "TECHNICIAN_EXTERNAL" || staff.user.role === "TECHNICIAN_INTERNAL";
+    authorised = !isTechnician || photo.job.assignedToId === staff.user.id;
   }
 
   // Portal path — client-visible photos on one of the login's own accounts only.

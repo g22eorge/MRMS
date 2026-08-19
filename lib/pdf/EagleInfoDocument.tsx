@@ -159,6 +159,8 @@ export type EagleInfoDocumentProps = {
 
   // Totals
   subTotal?: string | null;
+  discountLabel?: string | null;  // e.g. "Discount"
+  discountAmount?: string | null; // pre-formatted, shown as a deduction
   vatLabel?: string | null;   // e.g. "VAT (18%)"
   vatAmount?: string | null;  // pre-formatted
   totalLabel?: string;        // "Total"
@@ -180,7 +182,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
     docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate, metaRows, topRuleColor,
     clientLabel = "To", clientName, clientEmail, clientPhone, clientLocation,
     lineItems,
-    subTotal, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
+    subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
     notes, paymentTo, termsText,
   } = props;
 
@@ -300,6 +302,12 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Sub Total</Text>
               <Text style={s.totalValue}>{subTotal}</Text>
+            </View>
+          ) : null}
+          {discountAmount ? (
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>{discountLabel || "Discount"}</Text>
+              <Text style={s.totalValue}>-{discountAmount}</Text>
             </View>
           ) : null}
           {vatLabel && vatAmount ? (

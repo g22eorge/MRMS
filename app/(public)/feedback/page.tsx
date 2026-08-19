@@ -22,14 +22,21 @@ export default async function FeedbackPage({
   const submitted = typeof params.submitted === "string" ? params.submitted : "";
   const error = typeof params.error === "string" ? params.error : "";
 
-  // Look up job by job number
+  // Look up job by job number.
+  //
+  // This page is unauthenticated (see PUBLIC_PATHS in proxy.ts) and `ref` is a
+  // plain job number, which is a per-org sequential counter — not a secret.
+  // Selecting the client here therefore handed the customer's full name, phone
+  // and email to anyone willing to count upwards, for every tenant at once.
+  // Only the device is confirmed back now, which is the same thing the public
+  // status tracker already shows; the customer types their own contact details,
+  // which they know and an enumerator does not.
   let jobInfo: {
     id: string;
     jobNumber: string;
     orgId: string | null;
     brand: string;
     model: string;
-    client: { fullName: string; phone: string; email: string | null };
   } | null = null;
 
   if (ref) {
@@ -42,7 +49,6 @@ export default async function FeedbackPage({
           orgId: true,
           brand: true,
           model: true,
-          client: { select: { fullName: true, phone: true, email: true } },
         },
       })
       .catch(() => null);
@@ -176,7 +182,7 @@ export default async function FeedbackPage({
             {jobInfo && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                  {jobInfo.brand} {jobInfo.model} — {jobInfo.client.fullName}
+                  {jobInfo.brand} {jobInfo.model}
                 </p>
               </div>
             )}
@@ -189,22 +195,19 @@ export default async function FeedbackPage({
             </p>
             <input
               name="clientName"
-              defaultValue={jobInfo?.client.fullName ?? ""}
-              placeholder="Full name *"
+                            placeholder="Full name *"
               required
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientPhone"
-              defaultValue={jobInfo?.client.phone ?? ""}
-              placeholder="Phone number *"
+                            placeholder="Phone number *"
               required
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             <input
               name="clientEmail"
-              defaultValue={jobInfo?.client.email ?? ""}
-              placeholder="Email (optional)"
+                            placeholder="Email (optional)"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
           </div>

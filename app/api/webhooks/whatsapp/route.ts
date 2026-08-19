@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { normalizeUgPhone } from "@/lib/phone";
+import { findOrgIdByWhatsAppPhoneNumberId } from "@/lib/org-whatsapp-config";
 
 export const dynamic = "force-dynamic";
 
@@ -60,12 +61,13 @@ type MetaWebhookPayload = {
           errors?: Array<{ code?: number | string; title?: string; message?: string; error_data?: unknown }>;
         }>;
         messages?: MetaMessage[];
+        metadata?: { display_phone_number?: string; phone_number_id?: string };
       };
     }>;
   }>;
 };
 
-async function handleInboundMessage(msg: MetaMessage): Promise<void> {
+async function handleInboundMessage(msg: MetaMessage, orgId: string | null): Promise<void> {
   const wamid = typeof msg.id === "string" ? msg.id : null;
   const rawFrom = typeof msg.from === "string" ? msg.from : null;
   const ts = typeof msg.timestamp === "string" ? Number(msg.timestamp) : null;
@@ -91,23 +93,33 @@ async function handleInboundMessage(msg: MetaMessage): Promise<void> {
     mediaCaption = media?.caption ?? null;
   }
 
-  // Look up client by phone (normalized digits or with leading +)
-  const client = await prisma.client.findFirst({
-    where: {
-      OR: [
-        { phone: from },
-        { phone: `+${from}` },
-        { phone: rawFrom },
-      ],
-    },
-    select: { id: true },
-  });
+  // Look up client by phone (normalized digits or with leading +), WITHIN the
+  // org that owns the business number this message arrived on. This used to be
+  // a global findFirst on phone alone, so a number that exists as a client in
+  // more than one tenant — a shared company line, a customer of two shops on
+  // the same instance — could file an inbound message against the wrong org's
+  // client and job, and show it to that org's staff. With no orderBy, which
+  // tenant won was arbitrary.
+  const client = orgId
+    ? await prisma.client.findFirst({
+        where: {
+          orgId,
+          OR: [
+            { phone: from },
+            { phone: `+${from}` },
+            { phone: rawFrom },
+          ],
+        },
+        select: { id: true },
+      })
+    : null;
 
   // Find the most recent non-terminal job for this client
   let jobId: string | null = null;
-  if (client) {
+  if (client && orgId) {
     const activeJob = await prisma.job.findFirst({
       where: {
+        orgId,
         clientId: client.id,
         status: { notIn: ["COMPLETED", "CLOSED", "DELIVERED"] },
       },
@@ -116,7 +128,7 @@ async function handleInboundMessage(msg: MetaMessage): Promise<void> {
     });
     // Fall back to the very latest job if all are terminal
     const latestJob = activeJob ?? await prisma.job.findFirst({
-      where: { clientId: client.id },
+      where: { orgId, clientId: client.id },
       orderBy: { receivedAt: "desc" },
       select: { id: true },
     });
@@ -133,6 +145,7 @@ async function handleInboundMessage(msg: MetaMessage): Promise<void> {
       mediaId,
       mediaCaption,
       timestamp,
+      orgId,
       clientId: client?.id ?? null,
       jobId,
       isRead: false,
@@ -175,7 +188,7 @@ export async function POST(request: NextRequest) {
     error: string | null;
   }> = [];
 
-  const inboundMessages: MetaMessage[] = [];
+  const inboundMessages: Array<{ msg: MetaMessage; phoneNumberId: string | null }> = [];
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
@@ -191,8 +204,9 @@ export async function POST(request: NextRequest) {
         statusUpdates.push({ id, status, at: ts ? new Date(ts * 1000) : null, errorCode, error });
       }
 
+      const phoneNumberId = change.value?.metadata?.phone_number_id ?? null;
       for (const msg of change.value?.messages ?? []) {
-        inboundMessages.push(msg);
+        inboundMessages.push({ msg, phoneNumberId });
       }
     }
   }
@@ -215,9 +229,17 @@ export async function POST(request: NextRequest) {
 
   // Process inbound messages (best-effort — don't fail the webhook on errors)
   let inboundStored = 0;
-  for (const msg of inboundMessages) {
+  const orgIdByPhoneNumberId = new Map<string, string | null>();
+  for (const { msg, phoneNumberId } of inboundMessages) {
     try {
-      await handleInboundMessage(msg);
+      let orgId: string | null = null;
+      if (phoneNumberId) {
+        if (!orgIdByPhoneNumberId.has(phoneNumberId)) {
+          orgIdByPhoneNumberId.set(phoneNumberId, await findOrgIdByWhatsAppPhoneNumberId(phoneNumberId));
+        }
+        orgId = orgIdByPhoneNumberId.get(phoneNumberId) ?? null;
+      }
+      await handleInboundMessage(msg, orgId);
       inboundStored++;
     } catch (err) {
       console.error("[WhatsApp webhook] Failed to store inbound message:", err);

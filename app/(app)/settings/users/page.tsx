@@ -9,6 +9,8 @@ import { UserAccessControlPanel } from "@/components/settings/UserAccessControlP
 import { UserDetailsForm } from "@/components/settings/UserDetailsForm";
 import { UserPasswordResetForm } from "@/components/settings/UserPasswordResetForm";
 import { EXTRA_PERMISSIONS } from "@/lib/permissions";
+import { isPlatformAdminEmail } from "@/lib/platform-admin";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { inviteSchema, INVITE_TTL_DAYS, type InviteState } from "@/lib/invites";
@@ -470,6 +472,14 @@ export default async function UsersPage({
     });
     if (emailConflict) return { error: "Email is already in use by another user" };
 
+    // Platform-admin identity is decided by email alone (lib/platform-admin.ts),
+    // so letting a tenant admin type that address here would hand them the
+    // platform console and the raw-SQL db-fix endpoint. The unique index blocks
+    // it only while that account actually exists.
+    if (isPlatformAdminEmail(parsed.data.email) && !isPlatformAdminEmail(existing.email)) {
+      return { error: "That email address is reserved." };
+    }
+
     const nextPhone = parsed.data.phone ? parsed.data.phone : null;
     const changed = {
       name: existing.name !== parsed.data.name,
@@ -762,8 +772,15 @@ export default async function UsersPage({
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + INVITE_TTL_DAYS);
 
+    // The schema default is cuid(), which is mostly a timestamp plus a counter
+    // and carries only ~41 bits of randomness. This token is a bearer credential:
+    // redeeming it creates a fully provisioned staff account with the invited
+    // role and no proof of email ownership, and /invite is public and not rate
+    // limited. Generate it from a CSPRNG instead, like the portal session token.
+    const inviteToken = randomBytes(32).toString("hex");
+
     const invite = await prisma.userInvite.create({
-      data: { email, role, orgId: actorOrgId, invitedById: actor.id, expiresAt },
+      data: { token: inviteToken, email, role, orgId: actorOrgId, invitedById: actor.id, expiresAt },
     });
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -796,6 +813,12 @@ export default async function UsersPage({
     if (!userLimit.allowed) {
       // Can't return from a void server action — redirect with error param
       redirect(`/settings/users?limitError=${encodeURIComponent(userLimit.reason)}`);
+    }
+
+    // Same reservation as the edit path: a new ADMIN carrying the platform
+    // admin's address would inherit platform-wide access.
+    if (isPlatformAdminEmail(parsed.data.email)) {
+      redirect(`/settings/users?limitError=${encodeURIComponent("That email address is reserved.")}`);
     }
 
     const created = await prisma.user.create({

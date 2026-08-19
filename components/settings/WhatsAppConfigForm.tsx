@@ -1,12 +1,26 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import type { OrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { saveWhatsAppConfigAction, deleteWhatsAppConfigAction } from "@/app/(app)/settings/notifications/whatsapp/actions";
+
+/**
+ * Only the non-secret identifiers. This is a Client Component, so whatever it
+ * receives is serialised into the RSC payload embedded in the page HTML — and
+ * it used to receive the whole OrgWhatsAppConfig, publishing the Meta access
+ * token and the Africa's Talking API key in plain text to anyone who could view
+ * source, read the browser cache, or capture a HAR. The UI already pretended
+ * they were hidden ("leave blank to keep the existing token"); now they really
+ * are, because they never leave the server.
+ */
+export type WhatsAppConfigPublic = {
+  businessNumber: string;
+  phoneNumberId: string;
+  businessAccountId: string;
+};
 
 type Props = {
   orgId: string;
-  current: OrgWhatsAppConfig | null;
+  current: WhatsAppConfigPublic | null;
 };
 
 type State = { ok: boolean; error?: string } | null;

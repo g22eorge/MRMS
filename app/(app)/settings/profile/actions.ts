@@ -136,9 +136,15 @@ export async function changePasswordAction(
     return { error: "Current password is incorrect" };
   }
 
-  await prisma.account.update({
-    where: { id: account.id },
-    data: { password: await hashPassword(parsed.data.newPassword) },
+  await prisma.$transaction(async (tx) => {
+    await tx.account.update({
+      where: { id: account.id },
+      data: { password: await hashPassword(parsed.data.newPassword) },
+    });
+    // Changing a password is how someone reacts to a suspected compromise, so
+    // it has to end the attacker's session too. The admin reset paths already
+    // did this; the self-service one left every other session logged in.
+    await tx.session.deleteMany({ where: { userId: session.user.id } });
   });
 
   return { success: "Password changed" };

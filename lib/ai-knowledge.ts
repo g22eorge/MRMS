@@ -81,14 +81,20 @@ export async function retrieveAiKnowledge(query: string, orgId?: string | null, 
     const rows = await prisma.aiKnowledgeArticle.findMany({
       where: {
         isActive: true,
-        OR: [
-          { orgId: null },
-          ...(includeOrgKnowledge ? [{ orgId }] : []),
-          ...queryTokens.flatMap((token) => [
-            { title: { contains: token } },
-            { module: { contains: token } },
-            { content: { contains: token } },
-          ]),
+        // Tenancy and relevance must BOTH hold. They used to be siblings in one
+        // OR, so any article from any organisation whose text merely contained a
+        // query token was returned — and orgId was then stripped from the result,
+        // so the caller could not tell it was another tenant's. Asking the AI
+        // about "pricing" or "suppliers" pulled back rival orgs' private notes.
+        AND: [
+          { OR: [{ orgId: null }, ...(includeOrgKnowledge ? [{ orgId }] : [])] },
+          {
+            OR: queryTokens.flatMap((token) => [
+              { title: { contains: token } },
+              { module: { contains: token } },
+              { content: { contains: token } },
+            ]),
+          },
         ],
       },
       select: { id: true, orgId: true, title: true, module: true, content: true, embeddingJson: true },

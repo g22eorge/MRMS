@@ -6,6 +6,7 @@ import { createTextEmbedding } from "@/lib/ai-governance";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { can } from "@/lib/permissions";
+import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 
 async function createArticleAction(formData: FormData) {
@@ -21,8 +22,15 @@ async function createArticleAction(formData: FormData) {
 
   if (!title || !content) return;
 
+  // "Global" articles (orgId: null) are served into the AI prompt of EVERY
+  // tenant, so a tenant admin picking that scope could publish content to all
+  // other customers' assistants — a cross-tenant content-poisoning primitive.
+  // Only the platform operator may write global knowledge.
+  const allowGlobal = isPlatformAdminEmail(user.email);
+  const articleOrgId = scope === "global" && allowGlobal ? null : orgId;
+
   await prisma.aiKnowledgeArticle.create({
-    data: { title, module: moduleName, content, orgId: scope === "global" ? null : orgId, embeddingJson: JSON.stringify(createTextEmbedding(`${title} ${moduleName} ${content}`)) },
+    data: { title, module: moduleName, content, orgId: articleOrgId, embeddingJson: JSON.stringify(createTextEmbedding(`${title} ${moduleName} ${content}`)) },
   });
   revalidatePath("/settings/ai");
 }
@@ -67,8 +75,10 @@ async function toggleArticleAction(formData: FormData) {
   const isActive = String(formData.get("isActive") ?? "") === "true";
   if (!id) return;
 
+  // Matching { orgId: null } let any tenant admin disable the shared global
+  // articles for everyone. Only the platform operator can touch those.
   await prisma.aiKnowledgeArticle.updateMany({
-    where: { id, OR: [{ orgId }, { orgId: null }] },
+    where: isPlatformAdminEmail(user.email) ? { id, OR: [{ orgId }, { orgId: null }] } : { id, orgId },
     data: { isActive: !isActive },
   });
   revalidatePath("/settings/ai");

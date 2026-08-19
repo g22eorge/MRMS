@@ -58,12 +58,44 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
     }
   }
 
-  const updated = await tx.documentSequence.update({
-    where: { orgId_type_year: { orgId, type, year } },
-    data: { value: { increment: 1 } },
-    select: { value: true },
-  });
-  return composeDocumentNumber(prefix, type, year, updated.value, pad);
+  // The number columns (invoiceNumber, receiptNumber, …) are declared GLOBALLY
+  // unique, but every org currently carries the same branding quotePrefix, so
+  // the org tag does not separate tenants. Two orgs' independent counters then
+  // compose the same string and the second tenant's write dies with P2002 —
+  // it simply cannot issue that document. Invoices already worked around this
+  // in nextAvailableInvoiceNumber; every other type had no protection.
+  //
+  // Advancing past a taken number keeps the tenant transacting. It is a
+  // stopgap, not the cure: giving each org its own prefix is the real fix, and
+  // that is a numbering-format decision for the business to make.
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const updated = await tx.documentSequence.update({
+      where: { orgId_type_year: { orgId, type, year } },
+      data: { value: { increment: 1 } },
+      select: { value: true },
+    });
+    const candidate = composeDocumentNumber(prefix, type, year, updated.value, pad);
+    if (!(await documentNumberTaken(tx, countModel, candidate))) return candidate;
+  }
+  throw new Error(`Could not allocate a unique ${type} number for this organisation.`);
+}
+
+/** Is this composed number already used by ANY org? (the columns are global @unique) */
+async function documentNumberTaken(tx: Tx, countModel: CountModel, value: string): Promise<boolean> {
+  switch (countModel) {
+    case "quotation":
+      return Boolean(await tx.quotation.findFirst({ where: { quoteNumber: value }, select: { id: true } }));
+    case "invoice":
+      return Boolean(await tx.invoice.findFirst({ where: { invoiceNumber: value }, select: { id: true } }));
+    case "deliveryNote":
+      return Boolean(await tx.deliveryNote.findFirst({ where: { deliveryNoteNumber: value }, select: { id: true } }));
+    case "creditNote":
+      return Boolean(await tx.creditNote.findFirst({ where: { creditNoteNumber: value }, select: { id: true } }));
+    case "complaint":
+      return Boolean(await tx.complaint.findFirst({ where: { complaintNumber: value }, select: { id: true } }));
+    default:
+      return Boolean(await tx.receipt.findFirst({ where: { receiptNumber: value }, select: { id: true } }));
+  }
 }
 
 export async function nextAvailableInvoiceNumber(tx: Tx, orgId: string, preferred?: string | null, excludeInvoiceId?: string | null) {

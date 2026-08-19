@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminOrgsPage() {
   const { user } = await requireOrgSession();
-  if (!checkIsPlatformAdmin(user.email)) redirect("/dashboard");
+  // Email alone is deliberately NOT enough — requirePlatformAdmin also requires
+  // role ADMIN, so that a downgraded account keeping the address cannot read
+  // every org on the instance. This page was the one place that skipped it.
+  if (!checkIsPlatformAdmin(user.email) || user.role !== "ADMIN") redirect("/dashboard");
 
   const orgs = await prisma.organization.findMany({
     orderBy: { createdAt: "asc" },

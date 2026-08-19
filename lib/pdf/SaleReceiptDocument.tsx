@@ -100,6 +100,10 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       clientLocation={null}
       lineItems={lineItems}
       subTotal={sale.discountAmount > 0 || sale.vatAmount > 0 ? formatMoney(sale.subtotal, currency) : null}
+      // The discount was accepted as a prop but never rendered, so a discounted
+      // sale printed "Sub-total 100,000 … Total 80,000" with nothing accounting
+      // for the gap. The thermal and branded templates already showed it.
+      discountAmount={sale.discountAmount > 0 ? formatMoney(sale.discountAmount, currency) : null}
       vatLabel={sale.vatAmount > 0 ? `VAT (${branding?.vatRatePercent ?? 18}%)` : null}
       vatAmount={sale.vatAmount > 0 ? formatMoney(sale.vatAmount, currency) : null}
       totalLabel="Total"
