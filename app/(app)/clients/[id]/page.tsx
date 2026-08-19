@@ -24,7 +24,7 @@ import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 
 const updateClientSchema = z.object({
-  fullName: z.string().min(2),
+  fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(4, "Enter a valid phone number"),
   email: z.string().optional(),
   organization: z.string().optional(),

@@ -161,9 +161,27 @@ export default async function InvoicesPage({
     const partIds = [...new Set(items.map((item) => item.partId).filter((partId): partId is string => Boolean(partId)))];
     const taxByPart = new Map<string, { taxable: boolean; taxRate: number | null; saleUomFactor: number | null; unitCost: number | null }>();
     if (partIds.length) {
-      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, name: true, taxable: true, taxRate: true, saleUomFactor: true, unitCost: true, sellingPrice: true } });
+      const validParts = await prisma.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, name: true, taxable: true, taxRate: true, saleUomFactor: true, unitCost: true, sellingPrice: true, qtyOnHand: true } });
       if (validParts.length !== partIds.length) redirect("/documents/invoices?error=missing-fields");
       for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate, saleUomFactor: part.saleUomFactor, unitCost: part.unitCost });
+
+      // Stock availability. The POS refuses to oversell; without this the same
+      // product could be invoiced past zero and drive qtyOnHand negative, since
+      // the loop below decrements unconditionally. Quantities are summed per
+      // product first, so two lines of the same item cannot slip through.
+      const stockById = new Map(validParts.map((part) => [part.id, part]));
+      const wantedByPart = new Map<string, number>();
+      for (const item of items) {
+        if (!item.partId) continue;
+        const factor = stockById.get(item.partId)?.saleUomFactor ?? 1;
+        wantedByPart.set(item.partId, (wantedByPart.get(item.partId) ?? 0) + item.quantity * (factor || 1));
+      }
+      for (const [partId, wanted] of wantedByPart) {
+        const part = stockById.get(partId);
+        if (part && part.qtyOnHand - wanted < 0) {
+          redirect(`/documents/invoices?error=${encodeURIComponent(`Not enough stock for ${part.name} — only ${part.qtyOnHand} on hand.`)}`);
+        }
+      }
 
       // A product's selling price is its minimum: an invoice line may be
       // negotiated up, never below the floor. Same rule as the POS till,

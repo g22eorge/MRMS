@@ -65,7 +65,7 @@ const deviceSchema = z
   });
 
 const newJobSchema = z.object({
-  fullName: z.string().min(2),
+  fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
   email: z.string().email().optional().or(z.literal("")),
   organization: z.string().optional(),

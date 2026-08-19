@@ -22,6 +22,7 @@ import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { parsePeriodInt } from "@/lib/date-eat";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -52,8 +53,8 @@ export default async function JournalPage({
 
   const sp = await searchParams;
   const now    = new Date();
-  const year   = parseInt(sp.year  ?? String(now.getFullYear()));
-  const month  = parseInt(sp.month ?? "0"); // 0 = all months
+  const year   = parsePeriodInt(sp.year, now.getFullYear());
+  const month  = parsePeriodInt(sp.month, 0); // 0 = all months
   const statusFilter = sp.status ?? "all";
   const searchQ = (sp.q ?? "").trim();
   const currency = "UGX";

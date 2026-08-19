@@ -23,7 +23,7 @@ export const HREF_MODULE: Record<string, string> = {
   "/inventory/supplier-bills": "PURCHASE_ORDERS",
   "/inventory/suppliers": "PURCHASE_ORDERS",
   "/finance": "INVOICING",
-  "/documents/job-cards": "INVOICING",
+  "/documents/job-cards": "JOBS",
   "/documents/quotations": "INVOICING",
   "/documents/invoices": "INVOICING",
   "/documents/receipts": "INVOICING",

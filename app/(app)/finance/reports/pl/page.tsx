@@ -10,6 +10,7 @@ import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { PLTrendChart } from "@/components/reports/FinanceCharts";
 import { DataTable } from "@/components/ui/DataTable";
+import { parsePeriodInt } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,8 @@ export default async function PLPage({
   const sp = await searchParams;
   const currency = org.baseCurrency;
   const now = new Date();
-  const year = parseInt(sp.year ?? String(now.getFullYear()));
-  const month = parseInt(sp.month ?? String(now.getMonth() + 1));
+  const year = parsePeriodInt(sp.year, now.getFullYear());
+  const month = parsePeriodInt(sp.month, now.getMonth() + 1);
   const mode = sp.mode === "ytd" ? "ytd" : "month";
 
   // Current period

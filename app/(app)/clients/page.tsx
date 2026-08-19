@@ -28,7 +28,7 @@ import {
 } from "@/lib/phone";
 
 const createClientSchema = z.object({
-  fullName: z.string().min(2),
+  fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
   email: z.string().optional(),
   organization: z.string().optional(),

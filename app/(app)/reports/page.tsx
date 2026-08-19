@@ -1149,7 +1149,7 @@ export default async function ReportsPage({
                 <p className="mt-1 text-2xl font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(receivables.total, currency)}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">{receivables.invoiceCount + receivables.saleCount} open invoices &amp; sales</p>
                 {receivables.total > 0 && (
-                  <Link href="/finance/invoices" className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:underline">
+                  <Link href="/documents/invoices" className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:underline">
                     View outstanding invoices →
                   </Link>
                 )}

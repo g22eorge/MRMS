@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
-import { formatEATDateTime } from "@/lib/date-eat";
+import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
@@ -1144,7 +1144,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         {watchLabel ? (
           <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2">
             <div className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-            <p className="text-xs font-semibold text-amber-600">{watchLabel} · {statusAgeHours}h in this state</p>
+            <p className="text-xs font-semibold text-amber-600">{watchLabel} · {formatElapsedHours(statusAgeHours)} in this state</p>
           </div>
         ) : null}
 
@@ -1360,7 +1360,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           {/* Contact card */}
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)]/15 text-2xl font-black text-[var(--accent)]">
-              {(job.client?.fullName ?? "?")[0].toUpperCase()}
+              {(job.client?.fullName?.trim() || "?").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-lg font-black text-[var(--ink)]">{job.client?.fullName ?? "No client"}</p>

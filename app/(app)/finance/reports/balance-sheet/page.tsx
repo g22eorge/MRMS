@@ -9,6 +9,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
+import { parsePeriodInt } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -88,8 +89,8 @@ export default async function BalanceSheetPage({
   const sp = await searchParams;
   const currency = org.baseCurrency;
   const now = new Date();
-  const year = parseInt(sp.year ?? String(now.getFullYear()));
-  const month = parseInt(sp.month ?? String(now.getMonth() + 1));
+  const year = parsePeriodInt(sp.year, now.getFullYear());
+  const month = parsePeriodInt(sp.month, now.getMonth() + 1);
 
   const asOf = new Date(year, month, 0, 23, 59, 59);
 

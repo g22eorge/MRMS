@@ -63,3 +63,23 @@ export function formatEATTime(value: Date | string) {
     timeZone: EAT_TIMEZONE,
   });
 }
+
+/**
+ * Elapsed-time label for staleness badges ("no update 6h", "no update 11d").
+ * Hours alone stop being readable past a day — "283h" makes the reader divide.
+ */
+export function formatElapsedHours(hours: number): string {
+  if (!Number.isFinite(hours) || hours < 0) return "0h";
+  if (hours < 48) return `${Math.floor(hours)}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+/**
+ * Parse a ?year= / ?month= query value, falling back when it is not a number.
+ * Without this, "abc" became NaN -> Invalid Date -> a report that rendered with
+ * no figures at all, which reads as "you earned nothing" rather than an error.
+ */
+export function parsePeriodInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}

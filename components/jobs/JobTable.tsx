@@ -50,7 +50,7 @@ function statusAvatarClass(status: string): string {
   return map[s] ?? "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
 }
 import { formatMoney } from "@/lib/currency";
-import { formatEATDate } from "@/lib/date-eat";
+import { formatEATDate, formatElapsedHours } from "@/lib/date-eat";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
@@ -540,7 +540,7 @@ export function JobTable({
                       {metaParts.join(" · ")}
                       {/* Enhancement 6: show stale indicator */}
                       {showStale && (
-                        <span className="ml-1 text-amber-600">· no update {updatedAgo}h</span>
+                        <span className="ml-1 text-amber-600">· no update {formatElapsedHours(updatedAgo)}</span>
                       )}
                     </p>
                     <div className="flex shrink-0 items-center gap-1">

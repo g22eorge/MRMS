@@ -586,9 +586,14 @@ export default async function JobsPage({
             p.set("mine", "1"); p.delete("status");
             return `/jobs?${p.toString()}`;
           })();
+          // The overdue filter arrives from the dashboard as ?overdue=1. Without a
+          // chip for it, mobile showed "All" highlighted over a filtered list —
+          // so a shop with 34 jobs looked like it had 20, with no way to clear it.
+          const isOverdue = filters.overdue === "1";
           const KEY_CHIPS = [
-            { href: statusChipHref(""),                  label: "All",      count: total ?? 0,                                     active: !statusValue && !isMine },
+            { href: statusChipHref(""),                  label: "All",      count: total ?? 0,                                     active: !statusValue && !isMine && !isOverdue },
             { href: mineHref,                            label: "Mine",     count: null,                                           active: isMine                  },
+            { href: overdueChipHref,                     label: "Overdue",  count: overdueCount,                                   active: isOverdue               },
             { href: statusChipHref("AWAITING_APPROVAL"), label: "Awaiting", count: uiStatusCountMap.get("AWAITING_APPROVAL") ?? 0,  active: statusValue === "AWAITING_APPROVAL" },
             { href: statusChipHref("IN_REPAIR"),         label: "In Repair",count: uiStatusCountMap.get("IN_REPAIR") ?? 0,          active: statusValue === "IN_REPAIR" },
             { href: statusChipHref("READY_FOR_PICKUP"),  label: "Ready",    count: uiStatusCountMap.get("READY_FOR_PICKUP") ?? 0,   active: statusValue === "READY_FOR_PICKUP" },

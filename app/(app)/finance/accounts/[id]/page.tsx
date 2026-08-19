@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
+import { parsePeriodInt } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,8 @@ export default async function AccountLedgerPage({
   const sp = await searchParams;
 
   const now = new Date();
-  const year  = parseInt(sp.year  ?? String(now.getFullYear()));
-  const month = parseInt(sp.month ?? "0"); // 0 = all time
+  const year  = parsePeriodInt(sp.year, now.getFullYear());
+  const month = parsePeriodInt(sp.month, 0); // 0 = all time
 
   const account = await db.chartOfAccount.findFirst({
     where: { id },

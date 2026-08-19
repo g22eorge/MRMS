@@ -148,8 +148,8 @@ export default async function QuotationDetailPage({
     try {
       await addQuotationItem(id, {
         description: String(formData.get("description") ?? ""),
-        quantity: Number(formData.get("quantity") ?? 1),
-        unitPrice: Number(formData.get("unitPrice") ?? 0),
+        quantity: Math.max(1, Number(formData.get("quantity")) || 1),
+        unitPrice: Math.max(0, Number(formData.get("unitPrice")) || 0),
         discount: Number(formData.get("discount") ?? 0),
       });
     } catch (e) {
@@ -165,8 +165,8 @@ export default async function QuotationDetailPage({
     try {
       await updateQuotationItem(itemId, {
         description: String(formData.get("description") ?? ""),
-        quantity: Number(formData.get("quantity") ?? 1),
-        unitPrice: Number(formData.get("unitPrice") ?? 0),
+        quantity: Math.max(1, Number(formData.get("quantity")) || 1),
+        unitPrice: Math.max(0, Number(formData.get("unitPrice")) || 0),
         discount: Number(formData.get("discount") ?? 0),
       });
     } catch (e) {
