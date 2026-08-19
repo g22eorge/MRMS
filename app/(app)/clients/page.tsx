@@ -40,6 +40,7 @@ type SearchParams = {
   segment?: string;
   page?: string;
   createError?: string;
+  error?: string;
 };
 
 export default async function ClientsPage({
@@ -127,7 +128,7 @@ export default async function ClientsPage({
   async function createClientAction(formData: FormData) {
     "use server";
 
-    const { user: currentUser, org } = await requireOrgSession();
+    const { user: currentUser, orgId: createOrgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: currentUser.role, userAccessMode: currentUser.accessMode, kind: "GENERAL" });
     if (!(currentUser.role === "ADMIN" || currentUser.role === "OPS")) return;
 
@@ -149,7 +150,7 @@ export default async function ClientsPage({
     }
 
     const normalizedPhone = normalizePhoneForStorage(sanitizeText(parsed.data.phone));
-    const orgClient = orgDb(currentUser.orgId);
+    const orgClient = orgDb(createOrgId);
     const existingByPhone = await orgClient.client.findFirst({
       where: { phone: { in: phoneLookupVariants(normalizedPhone) } },
       select: { id: true },
@@ -161,6 +162,7 @@ export default async function ClientsPage({
 
     await orgClient.client.create({
       data: {
+        orgId: createOrgId,
         fullName: sanitizeText(parsed.data.fullName),
         phone: normalizedPhone,
         email: sanitizeOptionalText(parsed.data.email),
@@ -186,12 +188,38 @@ export default async function ClientsPage({
     const id = String(formData.get("id") ?? "");
     if (!id) return;
 
-    const clientWithJobs = await db.client.findUnique({
+    // Invoice, Sale, Quotation and Receipt all hold clientId as onDelete:
+    // SetNull, so deleting a client does not remove its financial records — it
+    // silently CUTS THEM LOOSE. That is exactly how this workspace ended up with
+    // dozens of invoices belonging to nobody, which had to be traced back and
+    // repaired by hand. Jobs were already checked; money never was.
+    const existing = await db.client.findUnique({
       where: { id },
-      include: { _count: { select: { jobs: true } } },
+      select: {
+        fullName: true,
+        _count: { select: { jobs: true, invoices: true, sales: true, quotations: true } },
+      },
     });
+    if (!existing) return;
 
-    if (!clientWithJobs || clientWithJobs._count.jobs > 0) return;
+    const blockers: string[] = [];
+    if (existing._count.jobs > 0) blockers.push(`${existing._count.jobs} repair job${existing._count.jobs === 1 ? "" : "s"}`);
+    if (existing._count.invoices > 0) blockers.push(`${existing._count.invoices} invoice${existing._count.invoices === 1 ? "" : "s"}`);
+    if (existing._count.sales > 0) blockers.push(`${existing._count.sales} sale${existing._count.sales === 1 ? "" : "s"}`);
+    if (existing._count.quotations > 0) blockers.push(`${existing._count.quotations} quotation${existing._count.quotations === 1 ? "" : "s"}`);
+
+    if (blockers.length) {
+      // Was a bare return: the row simply stayed and nobody was told why.
+      const list = blockers.length === 1
+        ? blockers[0]
+        : `${blockers.slice(0, -1).join(", ")} and ${blockers[blockers.length - 1]}`;
+      redirect(
+        `/clients?error=${encodeURIComponent(
+          `${existing.fullName} still has ${list}, so deleting would leave those records with no customer attached. Merge this client into another one instead.`,
+        )}`,
+      );
+    }
+
     await db.client.delete({ where: { id } });
     revalidatePath("/clients");
   }
@@ -219,6 +247,15 @@ export default async function ClientsPage({
   return (
     <DisclosureProvider defaultOpen={Boolean(filters.createError)}>
     <div className="space-y-4">
+
+      {filters.error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+        >
+          {filters.error}
+        </p>
+      ) : null}
 
       {/* ══ MOBILE HEADER ══ */}
       <div className="lg:hidden space-y-3">

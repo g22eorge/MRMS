@@ -132,13 +132,37 @@ export async function mergeClientIntoAction(input: {
   let moved = 0;
   try {
     await prisma.$transaction(async (tx) => {
+      // Capture what the source client WAS before it is destroyed. A merge is
+      // irreversible otherwise: the row is deleted and all that survived was a
+      // one-line audit summary, so a merge into the wrong target could not be
+      // unpicked. ClientMergeRecord.snapshotJson exists for exactly this and was
+      // never being written.
+      const sourceSnapshot = await tx.client.findUnique({ where: { id: sourceId } });
+      const movedByModel: Record<string, number> = {};
+
       for (const model of presentModels) {
         const res = await delegate(tx, model).updateMany({
           where: { clientId: sourceId },
           data: { clientId: targetId },
         });
+        movedByModel[model] = res.count;
         moved += res.count;
       }
+
+      await tx.clientMergeRecord.create({
+        data: {
+          orgId,
+          sourceClientId: sourceId,
+          targetClientId: targetId,
+          mergedById: user.id,
+          // No reason field is collected in the UI today; the column stays open
+          // for when one is.
+          reason: null,
+          // Everything needed to recreate the source and re-point its records.
+          snapshotJson: JSON.stringify({ client: sourceSnapshot, movedByModel }),
+        },
+      });
+
       // Source now owns nothing; safe to remove.
       await tx.client.delete({ where: { id: sourceId } });
     });

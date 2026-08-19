@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
+import { currencyDecimals, normalizeCurrency, roundMoney } from "@/lib/currency";
+
 /**
  * Cash-basis double-entry posting service (C5).
  *
@@ -80,7 +82,21 @@ async function nextEntryNumber(tx: Tx, orgId: string, year: number): Promise<str
   return `${prefix}${String(updated.value).padStart(4, "0")}`;
 }
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+/**
+ * The org's base currency, for rounding ledger lines to a real minor unit.
+ *
+ * Read on the caller's `tx` — this runs inside interactive write transactions,
+ * and on Turso/libSQL a read issued on the global client while such a
+ * transaction holds the connection deadlocks it.
+ */
+async function ledgerCurrency(tx: Tx, orgId: string): Promise<string> {
+  try {
+    const org = await tx.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } });
+    return normalizeCurrency(org?.baseCurrency, "UGX");
+  } catch {
+    return "UGX";
+  }
+}
 
 type PostLine = { code: CoreAccountCode | string; debit?: number; credit?: number; memo?: string };
 
@@ -109,22 +125,33 @@ export async function postJournalEntry(tx: Tx, params: PostJournalParams): Promi
 
   const accounts = await ensureCoreAccounts(tx, params.orgId);
 
+  // Round to the org's actual minor unit, not a hardcoded two decimals. The
+  // ledger used round2 regardless of currency, so on a zero-decimal currency
+  // like UGX every line kept up to two phantom decimals — and because the
+  // balance tolerance was a flat 0.01, whether an entry was accepted depended
+  // on how many lines it had: three lines each 0.004 out summed past the
+  // tolerance while one line did not. Same entry, different verdict.
+  const currency = await ledgerCurrency(tx, params.orgId);
+
   let totalDebit = 0;
   let totalCredit = 0;
   const lineData = params.lines.map((l) => {
     const accountId = accounts[l.code];
     if (!accountId) throw new Error(`Auto-post: unknown account code ${l.code}`);
-    const debit = round2(l.debit ?? 0);
-    const credit = round2(l.credit ?? 0);
+    const debit = roundMoney(l.debit ?? 0, currency);
+    const credit = roundMoney(l.credit ?? 0, currency);
     totalDebit += debit;
     totalCredit += credit;
     return { accountId, debit, credit, description: l.memo ?? null };
   });
 
-  totalDebit = round2(totalDebit);
-  totalCredit = round2(totalCredit);
+  totalDebit = roundMoney(totalDebit, currency);
+  totalCredit = roundMoney(totalCredit, currency);
   if (totalDebit <= 0 && totalCredit <= 0) return null;
-  if (Math.abs(totalDebit - totalCredit) > 0.01) {
+  // Both sides are now on the same minor-unit grid, so anything beyond half a
+  // minor unit is a genuine imbalance rather than accumulated float dust.
+  const tolerance = 10 ** -currencyDecimals(currency) / 2;
+  if (Math.abs(totalDebit - totalCredit) > tolerance) {
     throw new Error(`Auto-post not balanced: debit ${totalDebit} != credit ${totalCredit} (${params.description})`);
   }
 

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { EditJobForm } from "@/components/jobs/EditJobForm";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserRole } from "@/lib/session";
+import { requireOrgSession } from "@/lib/org-context";
 
 export default async function EditJobPage({
   params,
@@ -13,13 +13,13 @@ export default async function EditJobPage({
 }) {
   const { id } = await params;
   const { returnTo } = await searchParams;
-  const { session, user } = await getCurrentUserRole();
+  const { session, user, orgId } = await requireOrgSession();
 
   // Always tenant-scoped by orgId; technicians are further limited to their own jobs.
   const where =
     user.role === "TECHNICIAN_EXTERNAL" || user.role === "TECHNICIAN_INTERNAL"
-      ? { id, orgId: user.orgId, assignedToId: session.user.id }
-      : { id, orgId: user.orgId };
+      ? { id, orgId, assignedToId: session.user.id }
+      : { id, orgId };
 
   const job = await prisma.job.findFirst({ where });
 

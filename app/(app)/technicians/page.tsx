@@ -7,7 +7,7 @@ import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBad
 import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserRole } from "@/lib/session";
+import { requireOrgSession } from "@/lib/org-context";
 import { Role } from "@prisma/client";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
@@ -79,17 +79,17 @@ export default async function TechniciansPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { user } = await getCurrentUserRole();
+  const { user, orgId } = await requireOrgSession();
   const filters = await searchParams;
   const page = parsePage(filters.page);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const [totalTechs, internalCount, externalCount, assignedThisMonth] = await Promise.all([
-    prisma.user.count({ where: { orgId: user.orgId, role: { in: ["TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] } } }).catch(() => 0),
-    prisma.user.count({ where: { orgId: user.orgId, role: "TECHNICIAN_INTERNAL" } }).catch(() => 0),
-    prisma.user.count({ where: { orgId: user.orgId, role: "TECHNICIAN_EXTERNAL" } }).catch(() => 0),
-    prisma.job.count({ where: { orgId: user.orgId, assignedToId: { not: null }, receivedAt: { gte: monthStart } } }).catch(() => 0),
+    prisma.user.count({ where: { orgId, role: { in: ["TECHNICIAN_INTERNAL", "TECHNICIAN_EXTERNAL"] } } }).catch(() => 0),
+    prisma.user.count({ where: { orgId, role: "TECHNICIAN_INTERNAL" } }).catch(() => 0),
+    prisma.user.count({ where: { orgId, role: "TECHNICIAN_EXTERNAL" } }).catch(() => 0),
+    prisma.job.count({ where: { orgId, assignedToId: { not: null }, receivedAt: { gte: monthStart } } }).catch(() => 0),
   ]);
 
   const validStatuses = new Set<string>(JOB_STATUSES);
@@ -131,7 +131,7 @@ export default async function TechniciansPage({
 
   const jobs = await prisma.job.findMany({
     where: {
-      orgId: user.orgId, // tenant scope — the role branches below only filter by assignee
+      orgId, // tenant scope — the role branches below only filter by assignee
       ...where,
       ...(filters.q
         ? {

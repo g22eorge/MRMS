@@ -15,7 +15,7 @@ export async function OpsDashboard({
   period,
   filters,
 }: {
-  orgId: string | null;
+  orgId: string;
   period: "month" | "year";
   filters: PeriodFilters;
 }) {

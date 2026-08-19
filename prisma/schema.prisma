@@ -517,8 +517,8 @@ model Client {
   organization String?
   address      String?
   notes        String?
-  orgId        String?
-  org          Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  orgId        String 
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -545,8 +545,8 @@ model Device {
   id       String        @id @default(cuid())
   clientId String
   client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  orgId    String?
-  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  orgId    String 
+  org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   deviceType    DeviceType
   brand         String
@@ -580,8 +580,8 @@ model Job {
   jobNumber     String        @unique
   status        JobStatus     @default(RECEIVED)
   repairPath    RepairPath?
-  orgId         String?
-  org           Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  orgId         String 
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   branchId      String?
   branch        Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   clientId      String
@@ -1050,8 +1050,8 @@ model Part {
   qtyReserved  Int           @default(0)
   reorderLevel Int           @default(0)
   isActive     Boolean       @default(true)
-  orgId        String?
-  org          Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  orgId        String 
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -2013,17 +2013,6 @@ model OrgUsageSnapshot {
   @@index([orgId, metric, capturedAt])
 }
 
-model OrgSecurityPolicy {
-  id                    String   @id @default(cuid())
-  orgId                 String   @unique
-  requireMfa            Boolean  @default(false)
-  sessionTimeoutMinutes Int?
-  passwordMinLength     Int      @default(8)
-  allowedIpRanges       String?
-  updatedById           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-}
 
 model CustomerConsent {
   id          String    @id @default(cuid())

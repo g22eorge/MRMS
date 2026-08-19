@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { getCurrentUserRole } from "@/lib/session";
 
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 import { getOnboardingStatus } from "@/lib/onboarding-checklist";
@@ -22,6 +21,7 @@ import { SystemOverviewDashboard } from "./sections/SystemOverviewDashboard";
 import { TechFieldDashboard } from "./sections/TechFieldDashboard";
 import { TechManagerDashboard } from "./sections/TechManagerDashboard";
 import type { PeriodFilters } from "./sections/data";
+import { requireOrgSession } from "@/lib/org-context";
 
 type SearchParams = PeriodFilters;
 
@@ -30,11 +30,14 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { session, user } = await getCurrentUserRole();
+  const { session, user, orgId } = await requireOrgSession();
   const permissionUser = { role: user.role, permissions: user.permissions };
   const filters = await searchParams;
   const period: "month" | "year" = filters.period === "year" ? "year" : "month";
-  const orgId = user.orgId ?? null;
+  // requireOrgSession guarantees a real orgId (a user without one is sent to
+  // onboarding, a platform admin to the platform console). The old
+  // `user.orgId ?? ""` fallbacks below scoped every query to the empty string,
+  // which silently returned nothing rather than failing.
 
   // One dashboard design language: `calm-scope` remaps the app tokens
   // (--panel/--ink/--line/--accent…) to the shared --dc-* "calm" palette that
@@ -48,7 +51,7 @@ export default async function DashboardPage({
         return <ExternalTechDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;
 
       case "TECHNICIAN_INTERNAL":
-        return <InternalTechDashboard userId={session.user.id} orgId={orgId ?? ""} permissionUser={permissionUser} period={period} filters={filters} />;
+        return <InternalTechDashboard userId={session.user.id} orgId={orgId} permissionUser={permissionUser} period={period} filters={filters} />;
 
       case "TECH_MANAGER":
         return <TechManagerDashboard orgId={orgId} />;
@@ -61,13 +64,13 @@ export default async function DashboardPage({
 
       case "FRONT_DESK":
       case "INTAKE":
-        return <IntakeDashboard userId={session.user.id} orgId={orgId ?? ""} period={period} filters={filters} />;
+        return <IntakeDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;
 
       case "MANAGER":
         return <ManagerDashboard orgId={orgId} />;
 
       case "FINANCE":
-        return <FinanceDashboard orgId={orgId ?? ""} />;
+        return <FinanceDashboard orgId={orgId} />;
 
       case "SALES":
         return <SalesDashboard userId={user.id} orgId={orgId} />;
@@ -88,7 +91,7 @@ export default async function DashboardPage({
         return <TechFieldDashboard userId={session.user.id} />;
 
       default:
-        return <SystemOverviewDashboard orgId={orgId ?? ""} />;
+        return <SystemOverviewDashboard orgId={orgId} />;
     }
   })();
 

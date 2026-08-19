@@ -53,7 +53,9 @@ try {
     ok("scopedDb findMany stayed org-local");
   }
 
-  await prisma.client.delete({ where: { id: clientB.id } });
+  // Client.orgId is required with onDelete: Cascade, so removing the orgs takes
+  // their clients with them — no need to delete clientB first, and no orphan is
+  // left behind if this teardown is interrupted.
   await prisma.organization.delete({ where: { id: orgA.id } });
   await prisma.organization.delete({ where: { id: orgB.id } });
 } catch (error) {

@@ -59,7 +59,6 @@ export const ORG_SCOPED_MODELS = new Set([
   "Notification",
   "OrgFeatureEntitlement",
   "OrgModuleGrant",
-  "OrgSecurityPolicy",
   "OrgSubscriptionEvent",
   "OrgUsageSnapshot",
   "OutboundMessage",
