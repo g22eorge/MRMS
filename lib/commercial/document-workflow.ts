@@ -214,6 +214,21 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
   const invoiceNumber = await nextAvailableInvoiceNumber(tx, params.orgId);
   const totalAmount = quotation.totalAmount;
   const taxableSubtotal = quotation.subtotal > 0 ? quotation.subtotal : totalAmount;
+
+  // Snapshot the cost of any stocked product on the quotation, exactly as the
+  // direct-invoice path does. These lines were written as sourceType
+  // "QuotationItem" with no costAtSale, and the COGS query only looks at
+  // sourceType "Part" — so every quotation-converted sale reported zero cost
+  // and therefore a 100% gross margin, with not even the live-cost fallback
+  // applying. Repair invoices all come through here.
+  const quotedPartIds = [...new Set(quotation.items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+  const quotedParts = quotedPartIds.length
+    ? await tx.part.findMany({
+        where: { id: { in: quotedPartIds }, orgId: params.orgId },
+        select: { id: true, unitCost: true, saleUomFactor: true },
+      })
+    : [];
+  const quotedPartById = new Map(quotedParts.map((p) => [p.id, p]));
   const invoice = await tx.invoice.create({
     data: {
       orgId: params.orgId,
@@ -236,10 +251,15 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
                   : 0,
                 lineCurrency,
               );
+              const part = item.partId ? quotedPartById.get(item.partId) : undefined;
               return {
                 orgId: params.orgId,
-                sourceType: "QuotationItem",
-                sourceId: item.id,
+                // Part-linked lines are tagged "Part" so cost reporting sees
+                // them; free-text lines keep pointing back at the quote item.
+                sourceType: part ? "Part" : "QuotationItem",
+                sourceId: part ? item.partId : item.id,
+                costAtSale: part?.unitCost ?? null,
+                saleUomFactor: part?.saleUomFactor ?? null,
                 description: item.description,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,

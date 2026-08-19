@@ -85,7 +85,9 @@ export async function loadSalesRevenueTrend(trendMonths: TrendMonth[], orgId?: s
     // COGS inputs, bucketed by paidAt below (matches the operational report basis)
     prisma.saleItem
       .findMany({
-        where: { partId: { not: null }, sale: { orgId, status: "PAID", paidAt: { gte: rangeStart, lte: rangeEnd } } },
+        // Returned sales leave PAID, which used to drop their cost while the
+        // revenue stayed — see loadCogsForRange in reports/page.tsx.
+        where: { partId: { not: null }, sale: { orgId, status: { in: ["PAID", "PARTIALLY_RETURNED", "RETURNED"] }, paidAt: { gte: rangeStart, lte: rangeEnd } } },
         select: { quantity: true, saleUomFactor: true, costAtSale: true, part: { select: { unitCost: true, saleUomFactor: true } }, sale: { select: { paidAt: true } } },
       })
       .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; part: { unitCost: number | null; saleUomFactor: number | null } | null; sale: { paidAt: Date | null } | null }>),

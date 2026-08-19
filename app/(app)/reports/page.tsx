@@ -71,7 +71,15 @@ async function loadCogsForRange(orgId: string, start: Date, end?: Date): Promise
   const [saleItems, invoiceLines] = await Promise.all([
     prisma.saleItem
       .findMany({
-        where: { partId: { not: null }, sale: { orgId, status: "PAID", paidAt: paidWindow } },
+        // Returned sales still count. syncSalePaymentState flips a sale to
+        // RETURNED / PARTIALLY_RETURNED once a credit note lands, which used to
+        // drop it out of this PAID-only filter — so its cost vanished while the
+        // revenue (summed from Payment rows) stayed, and the month's margin ran
+        // to 100%. The goods that actually came back are netted off below.
+        where: {
+          partId: { not: null },
+          sale: { orgId, status: { in: ["PAID", "PARTIALLY_RETURNED", "RETURNED"] }, paidAt: paidWindow },
+        },
         select: { quantity: true, saleUomFactor: true, costAtSale: true, part: { select: { unitCost: true, saleUomFactor: true } } },
       })
       .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; costAtSale: number | null; part: { unitCost: number | null; saleUomFactor: number | null } | null }>),
@@ -106,7 +114,21 @@ async function loadCogsForRange(orgId: string, start: Date, end?: Date): Promise
     const cost = l.costAtSale ?? live?.unitCost ?? 0;
     cogs += l.quantity * factor * cost;
   }
-  return cogs;
+
+  // Returned goods went back into stock, so their cost is no longer a cost of
+  // goods SOLD. Net them off rather than leaving the full sale's cost standing.
+  const returnedItems = await prisma.creditNoteItem
+    .findMany({
+      where: { partId: { not: null }, creditNote: { orgId, issuedAt: paidWindow } },
+      select: { quantity: true, saleUomFactor: true, part: { select: { unitCost: true, saleUomFactor: true } } },
+    })
+    .catch(() => [] as Array<{ quantity: number; saleUomFactor: number | null; part: { unitCost: number | null; saleUomFactor: number | null } | null }>);
+  for (const r of returnedItems) {
+    const factor = r.saleUomFactor ?? r.part?.saleUomFactor ?? 1;
+    cogs -= r.quantity * factor * (r.part?.unitCost ?? 0);
+  }
+
+  return Math.max(0, cogs);
 }
 
 const statusLabel: Record<ReturnType<typeof normalizeJobStatus>, string> = {
