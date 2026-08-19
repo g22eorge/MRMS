@@ -538,6 +538,7 @@ model Client {
 
   @@unique([phone, orgId])
   @@index([orgId])
+  @@index([orgId, updatedAt])
 }
 
 model Device {
@@ -734,6 +735,7 @@ model Invoice {
   @@index([orgId, issuedAt])
   @@index([orgId, status])
   @@index([orgId, invoiceType])
+  @@index([orgId, createdAt])
   @@index([clientId])
 }
 
@@ -1038,7 +1040,13 @@ model Part {
   // base units; sales multiply by saleUomFactor, receipts by purchaseUomFactor.
   saleUomFactor     Float?
   purchaseUomFactor Float?
-  qtyOnHand    Int           @default(0)
+  // Float, not Int: qtyOnHand is in BASE units and every write derives it by
+  // multiplying a sale/purchase quantity by a Float UoM factor, so a factor like
+  // 0.5 (half-metre, half-litre) produces a fractional base quantity. Declaring
+  // it Int did not stop SQLite storing the fraction — it only made Prisma hand
+  // back a non-integer typed as Int, so stock totals, reorder comparisons and
+  // the negative-stock guard all read a value the type said was impossible.
+  qtyOnHand    Float         @default(0)
   qtyReserved  Int           @default(0)
   reorderLevel Int           @default(0)
   isActive     Boolean       @default(true)
@@ -1089,7 +1097,8 @@ model PartStockTransaction {
   partId      String
   part        Part                 @relation(fields: [partId], references: [id], onDelete: Cascade)
   type        StockTransactionType
-  quantity    Int
+  // Base units, derived via a Float UoM factor — see Part.qtyOnHand.
+  quantity    Float
   reason      String?
   // M6: org scope, location, unit cost, and the source document that caused the
   // movement — so a stock ledger row can be reconciled and valued.
@@ -1157,6 +1166,7 @@ model Photo {
 
   @@index([jobId, uploadedAt])
   @@index([jobId, visibility])
+  @@index([orgId])
 }
 
 model AuditLog {
@@ -2369,6 +2379,7 @@ model Expense {
 
   @@index([orgId, paidAt])
   @@index([orgId, category])
+  @@index([orgId, createdAt])
   @@index([supplierId])
 }
 
@@ -2451,6 +2462,8 @@ model Receipt {
   @@index([orgId, issuedAt])
   @@index([paymentId])
   @@index([clientId])
+  @@index([saleId])
+  @@index([invoiceId])
 }
 
 model PaymentAllocation {
@@ -2840,6 +2853,7 @@ model Quotation {
 
   @@index([orgId, status])
   @@index([leadId])
+  @@index([orgId, createdAt])
   @@index([clientId])
   @@index([jobId])
 }
@@ -3008,6 +3022,9 @@ model JournalEntry {
   lines JournalLine[]
 
   @@unique([orgId, entryNumber])
+  // Every money event looks an entry up by reference for idempotency, which
+  // without this scanned the org's entire ledger.
+  @@index([orgId, reference])
   @@index([orgId, date])
   @@index([orgId, status])
   @@index([orgId, status, date])

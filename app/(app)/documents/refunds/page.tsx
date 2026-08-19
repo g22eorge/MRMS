@@ -220,6 +220,47 @@ export default async function RefundsPage({
       } else if (saleId) {
         await syncSalePaymentState(tx, { orgId, saleId });
       }
+
+      // Re-check the ceiling INSIDE the transaction. The check above runs before
+      // the transaction opens, so two refunds submitted at the same moment both
+      // read the pre-write ceiling and both pass — and the duplicate guard only
+      // catches identical amounts within ten seconds, not two different ones.
+      // The sync above has already subtracted this refund, so an over-refund now
+      // shows up as a negative paid balance, and throwing rolls the whole thing
+      // back rather than paying out money that was not there.
+      if (invoiceId || saleId) {
+        const after = invoiceId
+          ? await tx.invoice.findFirst({ where: { id: invoiceId, orgId }, select: { paidAmount: true } })
+          : await tx.sale.findFirst({ where: { id: saleId as string, orgId }, select: { paidAmount: true } });
+        if (after && after.paidAmount < -0.005) {
+          throw new Error("That refund is larger than what is left on the document. Reload and try again.");
+        }
+      } else if (creditNoteId) {
+        const [cn, drawn] = await Promise.all([
+          tx.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { totalAmount: true, currency: true } }),
+          tx.refund.findMany({
+            where: { orgId, creditNoteId },
+            select: { amount: true, currency: true, exchangeRateToBase: true },
+          }),
+        ]);
+        if (cn) {
+          const creditedBase = toBaseAmount({
+            amount: cn.totalAmount,
+            currency: cn.currency,
+            baseCurrency: org.baseCurrency,
+            exchangeRateToBase,
+          });
+          const drawnBase = drawn.reduce(
+            (sum, r) =>
+              sum +
+              toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }),
+            0,
+          );
+          if (drawnBase - creditedBase > 0.005) {
+            throw new Error("That refund is larger than what is left on the credit note. Reload and try again.");
+          }
+        }
+      }
       // C5: cash-basis ledger post — reverse revenue, pay out cash. Post the base
       // value of a foreign refund (was posting the document-currency number).
       const baseRefund = refundCurrency === org.baseCurrency

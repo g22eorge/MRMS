@@ -369,6 +369,15 @@ export default async function CreditNotesPage({
         select: { id: true },
       });
       creditNoteId = created.id;
+      // Re-check the cumulative cap INSIDE the transaction. The aggregate above
+      // runs before the transaction opens, so two credit notes for different
+      // amounts submitted at the same moment both read the same prior total and
+      // both commit, crediting more than the sale was worth. The duplicate guard
+      // only catches identical amounts within ten seconds.
+      const committed = await tx.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
+      if ((committed._sum.totalAmount ?? 0) - saleTotal.totalAmount > 0.005) {
+        throw new Error("This sale has already been credited in full. Reload and try again.");
+      }
       // M10: reflect the return on the sale (PARTIALLY_RETURNED / RETURNED).
       await syncSalePaymentState(tx, { orgId, saleId });
     });
@@ -505,6 +514,14 @@ export default async function CreditNotesPage({
         select: { id: true },
       });
       creditNoteId = cn.id;
+
+      // Same in-transaction re-check as createCreditNoteAction: the cap read
+      // before this transaction opened cannot see a concurrent credit note for
+      // a different amount, and both would otherwise commit.
+      const committed = await tx.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
+      if ((committed._sum.totalAmount ?? 0) - saleTotal.totalAmount > 0.005) {
+        throw new Error("This sale has already been credited in full. Reload and try again.");
+      }
 
       // Restock the returned units (mirror markItemsReceivedAction).
       for (const it of items) {

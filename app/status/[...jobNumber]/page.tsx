@@ -86,7 +86,11 @@ export default async function PublicStatusPage({
       deviceType: true,
       brand: true,
       model: true,
-      serialOrImei: true,
+      // serialOrImei is deliberately NOT selected. This page is public and
+      // keyed on a job number, which is a sequential per-org counter — so
+      // selecting it let anyone walk the number space and harvest device
+      // serials and IMEIs across every tenant. The customer already knows
+      // which device they handed in; the brand and model confirm it.
       repairTimeline: true,
       timelineMinMinutes: true,
       timelineMaxMinutes: true,
@@ -142,9 +146,6 @@ export default async function PublicStatusPage({
             <p className="text-[0.75rem] font-bold uppercase tracking-widest text-gray-400">Device</p>
             <p className="font-semibold text-gray-800">{job.brand} {job.model}</p>
             <p className="text-sm text-gray-500">{formatDeviceType(job.deviceType)}</p>
-            {job.serialOrImei && (
-              <p className="text-xs text-gray-400 mono">S/N: {job.serialOrImei}</p>
-            )}
           </div>
 
           {/* Dates & timeline */}

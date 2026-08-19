@@ -1,6 +1,14 @@
 /**
  * Models with a direct `orgId` column — keep in sync with prisma/schema.prisma.
  * Used by the unified org-scoped Prisma client (`scopedDb` / `orgDb`).
+ *
+ * A model that HAS an orgId but is missing from this set makes scopedDb a silent
+ * no-op for it: no filter injected on reads, no cross-org check on findUnique,
+ * no where-clause restriction on writes. That is worse than not using the scoped
+ * client at all, because the call site looks safe. Eight such models were absent
+ * (the stock ledger, job photos, and the portal tables among them); nothing calls
+ * the scoped client on them today, so this is defence in depth for whoever does
+ * next. Any new model with an orgId column belongs here.
  */
 export const ORG_SCOPED_MODELS = new Set([
   "AiFeedback",
@@ -27,10 +35,12 @@ export const ORG_SCOPED_MODELS = new Set([
   "CustomerApproval",
   "CustomerConsent",
   "DeliveryNote",
+  "Department",
   "Device",
   "DeviceSpecification",
   "DiagnosisReport",
   "DocumentBrandingSettings",
+  "DocumentSequence",
   "DocumentTaxLine",
   "Expense",
   "FieldVisit",
@@ -39,6 +49,7 @@ export const ORG_SCOPED_MODELS = new Set([
   "InboundMessage",
   "InventoryCategory",
   "Invoice",
+  "InvoiceAttachment",
   "InvoiceLine",
   "Job",
   "JobAssignmentHistory",
@@ -54,8 +65,12 @@ export const ORG_SCOPED_MODELS = new Set([
   "OutboundMessage",
   "Part",
   "PartLocationStock",
+  "PartStockTransaction",
   "Payment",
   "PaymentAllocation",
+  "Photo",
+  "PortalUser",
+  "PortalUserClient",
   "PosSession",
   "PurchaseOrder",
   "PurchaseRequest",
@@ -65,6 +80,7 @@ export const ORG_SCOPED_MODELS = new Set([
   "RecurringInvoice",
   "Refund",
   "ReorderRule",
+  "RepairMessage",
   "RepairRequest",
   "RepairRequestSequence",
   "RepairTask",

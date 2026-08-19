@@ -320,6 +320,21 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
   }
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "DiagnosisReport_orgId_jobId_createdAt_idx" ON "DiagnosisReport"("orgId", "jobId", "createdAt")');
 
+  // Hot-path indexes added after a performance review. All additive and
+  // idempotent. JournalEntry(orgId, reference) is the important one: the
+  // idempotency check runs on every payment, refund and credit note and
+  // without it scans the org's entire ledger each time. The rest back the
+  // default sort of the busiest list pages, and the two Receipt foreign keys
+  // had no index at all.
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "JournalEntry_orgId_reference_idx" ON "JournalEntry"("orgId", "reference")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Invoice_orgId_createdAt_idx" ON "Invoice"("orgId", "createdAt")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Client_orgId_updatedAt_idx" ON "Client"("orgId", "updatedAt")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Quotation_orgId_createdAt_idx" ON "Quotation"("orgId", "createdAt")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Expense_orgId_createdAt_idx" ON "Expense"("orgId", "createdAt")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Receipt_saleId_idx" ON "Receipt"("saleId")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Receipt_invoiceId_idx" ON "Receipt"("invoiceId")');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Photo_orgId_idx" ON "Photo"("orgId")');
+
   // SystemAnnouncement — platform-wide banner (Phase 2)
   if (!(await tableExists("SystemAnnouncement"))) {
     await prisma.$executeRawUnsafe(`
