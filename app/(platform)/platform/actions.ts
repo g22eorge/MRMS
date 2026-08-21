@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { OrgPlan, OrgModule } from "@prisma/client";
@@ -123,7 +124,11 @@ export async function setOrgSmsSenderAction(formData: FormData) {
   const raw = (formData.get("senderId") as string | null)?.trim() ?? "";
   if (!orgId) return;
   const senderId = raw === "" ? null : raw;
-  if (senderId && (senderId.length > 11 || !/^[A-Za-z0-9]+$/.test(senderId))) return;
+  if (senderId && (senderId.length > 11 || !/^[A-Za-z0-9]+$/.test(senderId))) {
+    // Africa's Talking caps alphanumeric sender IDs at 11 characters, letters and
+    // digits only. Silently ignoring a bad one looked like the save had worked.
+    redirect(`/platform/orgs/${orgId}?error=${encodeURIComponent("A sender ID must be 11 characters or fewer, letters and digits only.")}`);
+  }
   await setOrgAtSenderId(orgId, senderId);
   revalidatePlatformOrg(orgId);
 }

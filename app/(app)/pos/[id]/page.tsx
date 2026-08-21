@@ -316,7 +316,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         refunds: { select: { id: true }, take: 1 },
       },
     });
-    if (!sale || sale.status !== "OPEN" || sale.invoicedAt || sale.payments.length || sale.creditNotes.length || sale.refunds.length) return;
+    if (!sale) return;
+    if (sale.status !== "OPEN" || sale.invoicedAt || sale.payments.length || sale.creditNotes.length || sale.refunds.length) {
+      // Deleting a sale that has been invoiced, paid, credited or refunded would
+      // destroy the record of that money. Void it instead.
+      posReject(saleId, "This sale has already been invoiced or paid, so it can't be deleted. Void it instead.");
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
@@ -356,7 +361,10 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     const description = String(formData.get("description") ?? "").trim();
     const quantity = Math.max(1, Math.floor(Number(String(formData.get("quantity") ?? "1").trim())));
     const unitPrice = Number(String(formData.get("unitPrice") ?? "0").trim());
-    if (!saleId || !itemId || !description || !Number.isFinite(quantity) || !Number.isFinite(unitPrice) || unitPrice < 0) return;
+    if (!saleId || !itemId) return;
+    if (!description) posReject(saleId, "Give the line a description before saving it.");
+    if (!Number.isFinite(quantity)) posReject(saleId, "Enter a whole-number quantity.");
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) posReject(saleId, "Enter a price of zero or more.");
 
     await prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });

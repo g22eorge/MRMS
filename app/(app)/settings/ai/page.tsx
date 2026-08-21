@@ -8,6 +8,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { can } from "@/lib/permissions";
 import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 async function createArticleAction(formData: FormData) {
   "use server";
@@ -20,7 +21,9 @@ async function createArticleAction(formData: FormData) {
   const content = String(formData.get("content") ?? "").trim();
   const scope = String(formData.get("scope") ?? "org");
 
-  if (!title || !content) return;
+  if (!title || !content) {
+    redirect(`/settings/ai?error=${encodeURIComponent("An article needs a title and some content.")}`);
+  }
 
   // "Global" articles (orgId: null) are served into the AI prompt of EVERY
   // tenant, so a tenant admin picking that scope could publish content to all
@@ -84,7 +87,7 @@ async function toggleArticleAction(formData: FormData) {
   revalidatePath("/settings/ai");
 }
 
-export default async function AiSettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+export default async function AiSettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { user, orgId } = await requireOrgSession();
   const params = await searchParams;
   const saved = params.saved === "1";
@@ -116,6 +119,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
 
   return (
     <section className="space-y-4">
+      <FormErrorBanner message={params.error} />
       <div className="dc-card overflow-hidden px-4 py-3">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Knowledge &amp; Feedback</p>
         <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">

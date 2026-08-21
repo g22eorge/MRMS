@@ -178,7 +178,10 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim() || null;
 
-  if (!billId || !Number.isFinite(amount) || amount <= 0) return;
+  if (!billId) return;
+  if (!Number.isFinite(amount) || amount <= 0) {
+    redirect(`/inventory/supplier-bills?error=${encodeURIComponent("Enter a payment amount greater than zero.")}`);
+  }
 
   // postSupplierPayment writes to the C5 ledger inside the txn — ensure schema first.
   await ensureMoneySchema();

@@ -20,6 +20,7 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
@@ -50,7 +51,12 @@ const TYPE_HEADER: Record<AccountType, string> = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ChartOfAccountsPage() {
+export default async function ChartOfAccountsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const acctParams = searchParams ? await searchParams : {};
   const { user } = await getCurrentUserRole();
   if (!user.orgId) redirect("/dashboard");
   const orgId = user.orgId;
@@ -70,7 +76,9 @@ export default async function ChartOfAccountsPage() {
     const type = fd.get("type") as AccountType;
     const parentId = (fd.get("parentId") as string) || null;
     const description = (fd.get("description") as string) || null;
-    if (!code || !name || !type) return;
+    if (!code || !name || !type) {
+      redirect(`/finance/accounts?error=${encodeURIComponent("An account needs a code, a name and a type.")}`);
+    }
     await db.chartOfAccount.create({
       data: { code: code.trim(), name: name.trim(), type, parentId, description, orgId },
     });
@@ -241,6 +249,7 @@ export default async function ChartOfAccountsPage() {
 
   return (
     <div className="space-y-4">
+      <FormErrorBanner message={acctParams.error} />
       <PageHeader
         eyebrow="Finance"
         title="Accounts"

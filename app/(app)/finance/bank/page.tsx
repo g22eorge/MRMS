@@ -19,6 +19,7 @@ import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pag
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,9 @@ export default async function BankPage({
     const bankName = fd.get("bankName") as string;
     const accountNumber = (fd.get("accountNumber") as string) || null;
     const openingBal = parseFloat(fd.get("openingBalance") as string) || 0;
-    if (!name || !bankName) return;
+    if (!name || !bankName) {
+      redirect(`/finance/bank?error=${encodeURIComponent("Give the account a name and a bank name.")}`);
+    }
     await db.bankAccount.create({
       data: { name, bankName, accountNumber, openingBalance: openingBal, currentBalance: openingBal, orgId },
     });
@@ -73,7 +76,10 @@ export default async function BankPage({
     const amount = parseFloat(fd.get("amount") as string) || 0;
     const type = fd.get("type") as BankTransactionType;
     const reference = (fd.get("reference") as string) || null;
-    if (!bankAccountId || !date || !description || amount <= 0) return;
+    if (!bankAccountId) return;
+    if (!date || !description || amount <= 0) {
+      redirect(`/finance/bank?error=${encodeURIComponent("A transaction needs a date, a description and an amount greater than zero.")}`);
+    }
 
     const balanceDelta = type === "CREDIT" ? amount : -amount;
     await prisma.$transaction([
@@ -201,6 +207,7 @@ export default async function BankPage({
   return (
     <div className="space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
+      <FormErrorBanner message={sp.error} />
       <PageHeader
         eyebrow="Finance"
         title="Bank & cash"

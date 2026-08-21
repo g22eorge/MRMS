@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -53,7 +54,7 @@ type Segment = (typeof SEGMENTS)[number];
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ period?: string; q?: string; page?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -61,7 +62,7 @@ export default async function PosPage({
     redirect("/dashboard");
   }
 
-  const { period, q: rawQ, page: pageParam } = await searchParams;
+  const { period, q: rawQ, page: pageParam, error: posListError } = await searchParams;
   const page = parsePage(pageParam);
   const currency = org.baseCurrency;
   const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
@@ -170,7 +171,12 @@ export default async function PosPage({
         refunds: { select: { id: true }, take: 1 },
       },
     });
-    if (!sale || sale.status !== "OPEN" || sale.invoicedAt || sale.payments.length || sale.creditNotes.length || sale.refunds.length) return;
+    if (!sale) return;
+    if (sale.status !== "OPEN" || sale.invoicedAt || sale.payments.length || sale.creditNotes.length || sale.refunds.length) {
+      // Same reasoning as the sale detail page: deleting an invoiced or paid
+      // sale would erase the record of that money.
+      redirect(`/pos?error=${encodeURIComponent("This sale has already been invoiced or paid, so it can't be deleted. Void it instead.")}`);
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
@@ -303,6 +309,7 @@ export default async function PosPage({
     <ListPageLayout
       headerNode={
         <>
+          <FormErrorBanner message={posListError} />
           {dbNeedsFix ? (
             <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
               <p className="font-semibold text-amber-50">POS database tables are missing.</p>

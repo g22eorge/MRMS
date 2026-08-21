@@ -10,13 +10,14 @@ import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/sh
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
 export default async function TaxRatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; error?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.toLowerCase().trim() ?? "";
@@ -46,7 +47,12 @@ export default async function TaxRatesPage({
     const appliesToSales = formData.get("appliesToSales") === "on";
     const appliesToPurchases = formData.get("appliesToPurchases") === "on";
 
-    if (!name || !code || !Number.isFinite(rateRaw) || rateRaw < 0) return;
+    if (!name || !code) {
+      redirect(`/finance/tax-rates?error=${encodeURIComponent("A tax rate needs a name and a code.")}`);
+    }
+    if (!Number.isFinite(rateRaw) || rateRaw < 0) {
+      redirect(`/finance/tax-rates?error=${encodeURIComponent("Enter a rate of zero or more.")}`);
+    }
 
     const existing = await prisma.taxRate.findFirst({ where: { orgId, code } });
     if (existing) return;
@@ -159,6 +165,7 @@ export default async function TaxRatesPage({
   return (
     <div className="space-y-4">
       {/* Header */}
+      <FormErrorBanner message={sp.error} />
       <PageHeader
         eyebrow="Finance"
         title="Tax Rates"

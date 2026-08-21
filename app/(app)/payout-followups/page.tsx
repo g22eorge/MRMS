@@ -5,7 +5,7 @@ import { Prisma, JobStatus, InvoiceStatus, SupplierBillStatus } from "@prisma/cl
 
 import { postTechnicianPayout } from "@/lib/accounting/post";
 import { resolveTechCost } from "@/lib/billing";
-import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
 import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
@@ -18,6 +18,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -27,6 +28,7 @@ type SearchParams = {
   tech?: string;
   page?: string;
   section?: string;
+  error?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -169,7 +171,10 @@ async function receiveInvoicePaymentAction(formData: FormData) {
   const methodRaw = String(formData.get("method") ?? "CASH").trim();
   const reference = String(formData.get("reference") ?? "").trim();
 
-  if (!invoiceId || !Number.isFinite(amountRaw) || amountRaw <= 0) return;
+  if (!invoiceId) return;
+  if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+    redirect(`/payout-followups?error=${encodeURIComponent("Enter a payment amount greater than zero.")}`);
+  }
   const method = parsePaymentMethod(methodRaw, "OTHER");
 
   const invoice = await prisma.invoice.findFirst({
@@ -177,7 +182,10 @@ async function receiveInvoicePaymentAction(formData: FormData) {
     select: { id: true, totalAmount: true, paidAmount: true, jobId: true, clientId: true, status: true },
   });
   if (!invoice || invoice.status === "VOID") return;
-  if ((invoice.paidAmount ?? 0) + amountRaw > invoice.totalAmount) return;
+  if ((invoice.paidAmount ?? 0) + amountRaw > invoice.totalAmount) {
+    const left = Math.max(0, invoice.totalAmount - (invoice.paidAmount ?? 0));
+    redirect(`/payout-followups?error=${encodeURIComponent(`That is more than the outstanding balance of ${formatMoney(left, getAppCurrency())}.`)}`);
+  }
 
   const currency = getAppCurrency();
   const baseCurrency = org.baseCurrency;
@@ -427,6 +435,7 @@ export default async function PayoutFollowupsPage({
     <ListPageLayout
       headerNode={
         <>
+          <FormErrorBanner message={filters.error} />
           <PageHeader
             eyebrow="Finance"
             title="Collections &amp; Payouts"

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -30,7 +31,13 @@ export async function createPortalUserAction(formData: FormData): Promise<void> 
   const role = (ROLES.includes(roleRaw as PortalRole) ? roleRaw : "IT_OFFICER") as PortalRole;
   const password = String(formData.get("password") ?? "");
 
-  if (!clientId || !name || !email || password.length < 8) return;
+  if (!clientId) return;
+  if (!name || !email) {
+    redirect(`/clients/${clientId}?error=${encodeURIComponent("A portal login needs a name and an email address.")}`);
+  }
+  if (password.length < 8) {
+    redirect(`/clients/${clientId}?error=${encodeURIComponent("The portal password must be at least 8 characters.")}`);
+  }
 
   // Client must belong to this org.
   const client = await prisma.client.findFirst({ where: { id: clientId, orgId }, select: { id: true } });
@@ -38,7 +45,11 @@ export async function createPortalUserAction(formData: FormData): Promise<void> 
 
   // Email must be unique within the org's portal.
   const existing = await prisma.portalUser.findFirst({ where: { orgId, email }, select: { id: true } });
-  if (existing) return;
+  if (existing) {
+    // Was a bare return, so the form just closed and the login never appeared —
+    // with no hint that the address was already taken.
+    redirect(`/clients/${clientId}?error=${encodeURIComponent(`${email} already has a portal login in this workspace.`)}`);
+  }
 
   const created = await prisma.portalUser.create({
     data: {

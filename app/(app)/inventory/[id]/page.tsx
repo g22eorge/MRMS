@@ -14,6 +14,7 @@ import { can } from "@/lib/permissions";
 import { adjustStockAction, updatePartAction, togglePartActiveAction } from "../actions";
 import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { StockAdjustModal } from "@/components/inventory/StockAdjustModal";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 // Subtle grouping label inside the details panel — keeps a long edit form
 // scannable without hand-rolling repeated markup.
@@ -108,6 +109,7 @@ export default async function PartDetailPage({
 
   return (
     <div className="space-y-5">
+      <FormErrorBanner message={typeof sp.error === "string" ? sp.error : undefined} />
 
       {/* ── Banners ── */}
       {saved && (

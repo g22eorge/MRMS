@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { revalidatePath } from "next/cache";
 import { type DeliveryMethod, Prisma } from "@prisma/client";
 
@@ -33,7 +34,7 @@ const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 export default async function DeliveryNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; error?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   const sp = await searchParams;
@@ -81,7 +82,12 @@ export default async function DeliveryNotesPage({
           job: { select: { jobNumber: true, brand: true, model: true } },
         },
       });
-      if (!invoice || invoice.paidAmount < invoice.totalAmount) return;
+      if (!invoice) return;
+      if (invoice.paidAmount < invoice.totalAmount) {
+        // A delivery note is only issued once the invoice is settled; saying so
+        // beats the dialog closing with nothing having happened.
+        redirect(`/documents/delivery-notes?error=${encodeURIComponent("That invoice is not fully paid yet, so a delivery note can't be issued for it.")}`);
+      }
 
       const fallbackDescription = invoice.job
         ? `Repair handover for ${invoice.job.jobNumber} (${invoice.job.brand} ${invoice.job.model})`
@@ -382,6 +388,7 @@ export default async function DeliveryNotesPage({
   return (
     <Disclosure>
     <section className="space-y-4">
+      <FormErrorBanner message={sp.error} />
       <DocumentPageHeader
         title="Delivery Notes"
         action={

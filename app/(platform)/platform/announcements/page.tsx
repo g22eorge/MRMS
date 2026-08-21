@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { formatEATMediumDate } from "@/lib/date-eat";
 import { createAnnouncementAction, toggleAnnouncementAction, deleteAnnouncementAction } from "./actions";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,12 @@ const LEVEL_CHIP: Record<string, string> = {
   CRITICAL: "bg-red-500/10 text-red-700 border-red-400/30 dark:text-red-400",
 };
 
-export default async function PlatformAnnouncementsPage() {
+export default async function PlatformAnnouncementsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const sp = searchParams ? await searchParams : {};
   await requirePlatformAdmin();
 
   const announcements = await prisma.systemAnnouncement.findMany({ orderBy: { createdAt: "desc" } });
@@ -19,6 +25,7 @@ export default async function PlatformAnnouncementsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+      <FormErrorBanner message={sp.error} />
       <div>
         <h1 className="text-lg font-black text-[var(--ink)]">System Announcements</h1>
         <p className="text-[0.8125rem] text-[var(--ink-muted)]">Published to a banner across every organization&rsquo;s workspace.</p>

@@ -21,6 +21,7 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
@@ -107,7 +108,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     const subject = (fd.get("subject") as string) || null;
     const body = fd.get("body") as string;
     const scheduledAt = fd.get("scheduledAt") as string;
-    if (!name || !type || !body) return;
+    if (!name || !type || !body) {
+      redirect(`/sales/campaigns?error=${encodeURIComponent("A campaign needs a name, a type and a message.")}`);
+    }
     await db.campaign.create({
       data: {
         orgId, name, type, subject, body, createdById: user.id,
@@ -299,6 +302,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     <ListPageLayout
       headerNode={
         <>
+          <FormErrorBanner message={sp.error} />
           {/* ══ MOBILE HEADER ══ */}
           <div className="space-y-3 lg:hidden">
             <div className="flex items-center justify-between gap-3">

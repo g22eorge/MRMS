@@ -144,7 +144,10 @@ export default async function CreditNotesPage({
     const methodRaw = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
     const note = String(formData.get("note") ?? "").trim();
-    if (!creditNoteId || !Number.isFinite(amountRaw) || amountRaw <= 0) return;
+    if (!creditNoteId) return;
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Enter a refund amount greater than zero.")}`);
+    }
 
     const cn = await prisma.creditNote.findFirst({
       where: { id: creditNoteId, orgId },
@@ -153,7 +156,10 @@ export default async function CreditNotesPage({
     if (!cn) return;
 
     const alreadyRefunded = cn.refunds.reduce((s, r) => s + r.amount, 0);
-    if (alreadyRefunded + amountRaw > cn.totalAmount) return;
+    if (alreadyRefunded + amountRaw > cn.totalAmount) {
+      const left = Math.max(0, cn.totalAmount - alreadyRefunded);
+      redirect(`/documents/credit-notes?error=${encodeURIComponent(`Only ${formatMoney(left, normalizeCurrency(cn.currency, org.baseCurrency))} is left to refund on this credit note.`)}`);
+    }
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 
@@ -274,7 +280,10 @@ export default async function CreditNotesPage({
     const saleId = String(formData.get("saleId") ?? "").trim();
     const reason = String(formData.get("reason") ?? "").trim();
     const itemIds = formData.getAll("itemId").map((value) => String(value)).filter(Boolean);
-    if (!saleId || !reason) return;
+    if (!saleId) return;
+    if (!reason) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Give a reason for the return — it appears on the credit note.")}`);
+    }
     if (!itemIds.length) return;
 
     const sale = await prisma.sale.findFirst({
@@ -321,7 +330,9 @@ export default async function CreditNotesPage({
       saleTotal: saleTotal.totalAmount,
       currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
     });
-    if (totalAmount <= 0) return;
+    if (totalAmount <= 0) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Those quantities come to nothing to credit. Check the amounts and try again.")}`);
+    }
     const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
     const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
     if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
@@ -417,7 +428,13 @@ export default async function CreditNotesPage({
     const itemIds = formData.getAll("itemId").map((value) => String(value)).filter(Boolean);
     const methodRaw = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
-    if (!saleId || !reason || !itemIds.length) return;
+    if (!saleId) return;
+    if (!reason) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Give a reason for the return — it appears on the credit note.")}`);
+    }
+    if (!itemIds.length) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Pick at least one item to return.")}`);
+    }
 
     const sale = await prisma.sale.findFirst({
       where: { id: saleId, orgId },
@@ -457,7 +474,9 @@ export default async function CreditNotesPage({
       saleTotal: saleTotal.totalAmount,
       currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
     });
-    if (totalAmount <= 0) return;
+    if (totalAmount <= 0) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Those quantities come to nothing to credit. Check the amounts and try again.")}`);
+    }
     const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
     const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
     if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
@@ -474,7 +493,9 @@ export default async function CreditNotesPage({
     const refundCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
     const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
     const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
-    if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) return;
+    if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent(`Enter the exchange rate for this ${refundCurrency} refund.`)}`);
+    }
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 

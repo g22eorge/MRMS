@@ -14,16 +14,17 @@ import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export default async function JobDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ returnTo?: string; returnLabel?: string; tab?: string }>;
+  searchParams: Promise<{ returnTo?: string; returnLabel?: string; tab?: string; error?: string }>;
 }) {
   const { id } = await params;
-  const { returnTo, returnLabel, tab } = await searchParams;
+  const { returnTo, returnLabel, tab, error: jobError } = await searchParams;
   const { session, user, orgId, org } = await requireOrgSession();
   const safeReturnTo =
     returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
@@ -339,7 +340,7 @@ export default async function JobDetailPage({
       </ul>
       <form action={staffReplyRepairMessageAction} className="flex gap-2">
         <input type="hidden" name="jobId" value={id} />
-        <input name="body" required maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
+        <input name="body" required pattern=".*\S.*" title="Type a message before sending." maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
         <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</button>
       </form>
     </div>
@@ -424,6 +425,8 @@ export default async function JobDetailPage({
   );
 
   return (
+    <>
+    <FormErrorBanner message={jobError} />
     <JobDetailTabs
       role={user.role}
       permissions={user.permissions}
@@ -440,5 +443,6 @@ export default async function JobDetailPage({
       moveSlot={movePanel}
       portalSlot={portalPanel}
     />
+    </>
   );
 }

@@ -14,6 +14,7 @@ import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ function nextDueDateFromFrequency(from: Date, freq: Frequency): Date {
 export default async function RecurringInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; error?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.toLowerCase().trim() ?? "";
@@ -96,7 +97,9 @@ export default async function RecurringInvoicesPage({
     const notes = String(formData.get("notes") ?? "").trim() || null;
     const startDateRaw = String(formData.get("startDate") ?? "").trim();
 
-    if (!clientId || !subject) return;
+    if (!clientId || !subject) {
+      redirect(`/finance/recurring?error=${encodeURIComponent("Pick a client and give the recurring invoice a subject.")}`);
+    }
 
     const frequency = (FREQUENCIES as readonly string[]).includes(freqRaw) ? (freqRaw as Frequency) : "MONTHLY";
     const invoiceType = (INVOICE_TYPES as readonly string[]).includes(invoiceTypeRaw)
@@ -109,7 +112,9 @@ export default async function RecurringInvoicesPage({
     const unitPrices = formData.getAll("itemPrice").map((v) => Number(String(v)));
     const discounts = formData.getAll("itemDiscount").map((v) => Number(String(v)) || 0);
 
-    if (descriptions.length === 0) return;
+    if (descriptions.length === 0) {
+      redirect(`/finance/recurring?error=${encodeURIComponent("Add at least one line to the recurring invoice.")}`);
+    }
 
     const items = descriptions.map((desc, i) => {
       const qty = Number.isFinite(quantities[i]) && quantities[i] > 0 ? quantities[i] : 1;
@@ -300,6 +305,7 @@ export default async function RecurringInvoicesPage({
   return (
     <div className="space-y-4">
       {/* Header */}
+      <FormErrorBanner message={sp.error} />
       <PageHeader
         eyebrow="Finance"
         title="Recurring Invoices"

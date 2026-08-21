@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -34,7 +35,11 @@ export async function generateAssessmentAction(formData: FormData): Promise<void
   // can come from more than one field depending on the workflow.
   const diagnosis = (job.diagnosisNotes ?? "").trim() || (job.externalDiagnosis ?? "").trim();
   const repairDetails = (job.recommendedRepair ?? "").trim() || (job.workDone ?? "").trim();
-  if (!diagnosis || !repairDetails) return;
+  if (!diagnosis || !repairDetails) {
+    // The draft is generated from what is already on the job, so an empty
+    // diagnosis means the button quietly did nothing at all.
+    redirect(`/jobs/${jobId}?error=${encodeURIComponent("Record the diagnosis and the recommended repair on this job before drafting an assessment.")}`);
+  }
 
   const ai = await generateAssessmentDraft({
     orgId,

@@ -10,6 +10,7 @@ import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { createSupplierPaymentAction } from "./actions";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 export default async function SupplierBillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; error?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
@@ -63,6 +64,7 @@ export default async function SupplierBillsPage({
 
   return (
     <ListPageLayout
+      topBar={<FormErrorBanner message={params.error} />}
       header={{
         eyebrow: "Procurement",
         title: "Supplier Bills",

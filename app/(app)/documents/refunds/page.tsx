@@ -69,7 +69,9 @@ export default async function RefundsPage({
 
     const [sourceType, sourceId] = sourceKey.split(":", 2);
     if (!sourceId || !["invoice", "sale", "creditNote"].includes(sourceType)) return;
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) return;
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      redirect(`/documents/refunds?error=${encodeURIComponent("Enter a refund amount greater than zero.")}`);
+    }
 
     const method = parsePaymentMethod(methodRaw, "CASH");
 

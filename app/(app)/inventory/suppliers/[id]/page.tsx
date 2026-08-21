@@ -13,6 +13,7 @@ import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { SupplierEditForm } from "./SupplierEditForm";
 import { SupplierActivityFeed, type SupplierActivityItem } from "./SupplierActivityFeed";
 import { createSupplierPriceAction, deleteSupplierPriceAction, updateSupplierPriceAction } from "../actions";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -227,6 +228,7 @@ export default async function SupplierDetailPage({
 
   return (
     <div className="space-y-4">
+      <FormErrorBanner message={typeof qs.error === "string" ? qs.error : undefined} />
       <RecordActionBar
         backHref="/inventory/suppliers"
         eyebrow="Inventory · Supplier"

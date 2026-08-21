@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
@@ -18,7 +19,9 @@ export async function createAnnouncementAction(formData: FormData) {
   const level = LEVELS.includes(levelRaw) ? levelRaw : "INFO";
   const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
   const endsAtRaw = String(formData.get("endsAt") ?? "").trim();
-  if (!title || !body) return;
+  if (!title || !body) {
+    redirect(`/platform/announcements?error=${encodeURIComponent("An announcement needs a title and a message.")}`);
+  }
 
   const created = await prisma.systemAnnouncement.create({
     data: {

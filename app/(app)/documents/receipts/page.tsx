@@ -28,13 +28,14 @@ import {
   DocumentEmptyState,
 } from "@/components/documents";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -143,7 +144,10 @@ export default async function ReceiptsPage({
     const reference = String(formData.get("reference") ?? "").trim();
     const note = String(formData.get("note") ?? "").trim();
     const issueDateRaw = String(formData.get("issueDate") ?? "").trim();
-    if (!paymentId || !Number.isFinite(amount) || amount <= 0) return;
+    if (!paymentId) return;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      redirect(`/documents/receipts?error=${encodeURIComponent("Enter a receipt amount greater than zero.")}`);
+    }
 
     const method = parsePaymentMethod(methodRaw, "OTHER");
 
@@ -154,7 +158,9 @@ export default async function ReceiptsPage({
     if (!source) return;
     // Governance: a voided receipt is a closed record — never edit it.
     const existingReceipt = await prisma.receipt.findFirst({ where: { orgId, paymentId }, select: { voidedAt: true } });
-    if (existingReceipt?.voidedAt) return;
+    if (existingReceipt?.voidedAt) {
+      redirect(`/documents/receipts?error=${encodeURIComponent("That receipt has been voided, so it can no longer be edited.")}`);
+    }
     // Ledger delta in the payment's own currency (matching how the original
     // "pay:<id>" entry posted), so an amount change keeps the books in step.
     const ledgerDelta = Math.round((amount - source.amount + Number.EPSILON) * 100) / 100;
@@ -168,7 +174,9 @@ export default async function ReceiptsPage({
       });
       const nextPaidAmount = otherPayments.reduce((sum, p) => sum + toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase }), 0)
         + toBaseAmount({ amount, currency: source.currency, baseCurrency, exchangeRateToBase: source.exchangeRateToBase });
-      if (nextPaidAmount > invoice.totalAmount) return;
+      if (nextPaidAmount > invoice.totalAmount) {
+        redirect(`/documents/receipts?error=${encodeURIComponent(`That amount would pay more than the invoice total of ${formatMoney(invoice.totalAmount, baseCurrency)}.`)}`);
+      }
     }
 
     await prisma.$transaction(async (tx) => {
@@ -445,6 +453,7 @@ export default async function ReceiptsPage({
 
   return (
     <section className="space-y-4">
+      <FormErrorBanner message={params.error} />
       <DocumentPageHeader
         title="Receipts"
         action={

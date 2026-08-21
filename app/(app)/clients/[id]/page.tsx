@@ -22,6 +22,7 @@ import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 const updateClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
@@ -54,7 +55,7 @@ export default async function ClientDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; error?: string }>;
 }) {
   const { id } = await params;
   const filters = await searchParams;
@@ -297,6 +298,7 @@ export default async function ClientDetailPage({
 
   return (
     <div className="space-y-4">
+      <FormErrorBanner message={filters.error} />
       <RecordActionBar
         backHref="/clients"
         eyebrow="Clients"

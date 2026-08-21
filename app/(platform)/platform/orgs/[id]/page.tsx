@@ -23,6 +23,7 @@ import { ALL_MODULES, MODULE_LABELS } from "@/lib/module-access";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +43,15 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default async function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrgDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+}) {
   const { id } = await params;
+  const sp = searchParams ? await searchParams : {};
   await requirePlatformAdmin();
 
   const org = await prisma.organization.findUnique({
@@ -87,6 +95,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
+      <FormErrorBanner message={sp.error} />
 
       {/* Back + breadcrumb */}
       <Link href={PLATFORM_ROUTES.home} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
