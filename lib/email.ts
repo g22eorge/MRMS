@@ -30,28 +30,46 @@ const base = (body: string) => `
   </div>
 `;
 
+/**
+ * Escape a value before it is interpolated into an email's HTML.
+ *
+ * `sanitizeText` only collapses whitespace despite its name — it strips no
+ * markup at all. Org names and profile names are user-set, so interpolating
+ * them raw let a workspace called `<script>…` or `"><img onerror=…>` inject
+ * markup into the mail. Self-targeted (these go to the org's own admin), which
+ * is why it is low severity rather than none.
+ */
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendWelcomeEmail(to: string, name: string, orgName: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  await send(to, `Welcome to Duuka ProMax — ${orgName}`, base(`
-    <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 8px">Welcome, ${name}!</h2>
-    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your workspace <strong style="color:#fff">${orgName}</strong> is live. You're on a free ${TRIAL_DAYS}-day trial — no credit card needed.</p>
+  await send(to, `Welcome to Duuka ProMax — ${esc(orgName)}`, base(`
+    <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 8px">Welcome, ${esc(name)}!</h2>
+    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your workspace <strong style="color:#fff">${esc(orgName)}</strong> is live. You're on a free ${TRIAL_DAYS}-day trial — no credit card needed.</p>
     <a href="${appUrl}/dashboard" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Open your workspace →</a>
   `));
 }
 
 export async function sendTrialExpiryWarning(to: string, name: string, orgName: string, daysLeft: number) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  await send(to, `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — ${orgName}`, base(`
+  await send(to, `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — ${esc(orgName)}`, base(`
     <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 8px">Trial ending soon</h2>
-    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your free trial for <strong style="color:#fff">${orgName}</strong> ends in <strong style="color:#D4AF37">${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>. Upgrade to keep your data and continue managing repairs.</p>
+    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Your free trial for <strong style="color:#fff">${esc(orgName)}</strong> ends in <strong style="color:#D4AF37">${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>. Upgrade to keep your data and continue managing repairs.</p>
     <a href="${appUrl}/settings/billing" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Upgrade now →</a>
   `));
 }
 
 export async function sendPaymentConfirmation(to: string, name: string, orgName: string, plan: string, amount: number) {
-  await send(to, `Payment confirmed — ${orgName}`, base(`
+  await send(to, `Payment confirmed — ${esc(orgName)}`, base(`
     <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 8px">Payment confirmed ✓</h2>
-    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Thank you, ${name}. Your <strong style="color:#fff">${plan}</strong> subscription for <strong style="color:#fff">${orgName}</strong> is active.</p>
+    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">Thank you, ${esc(name)}. Your <strong style="color:#fff">${esc(plan)}</strong> subscription for <strong style="color:#fff">${esc(orgName)}</strong> is active.</p>
     <div style="background:#1a1a1a;border-radius:8px;padding:16px;margin-bottom:24px">
       <p style="margin:0;font-size:13px;color:#aaa">Amount charged</p>
       <p style="margin:4px 0 0;font-size:24px;font-weight:700;color:#D4AF37">UGX ${amount.toLocaleString()}</p>
@@ -62,9 +80,9 @@ export async function sendPaymentConfirmation(to: string, name: string, orgName:
 
 export async function sendPaymentFailedAlert(to: string, name: string, orgName: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  await send(to, `Action required: payment failed — ${orgName}`, base(`
+  await send(to, `Action required: payment failed — ${esc(orgName)}`, base(`
     <h2 style="font-size:20px;font-weight:700;color:#e55;margin:0 0 8px">Payment failed</h2>
-    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">We couldn't process your payment for <strong style="color:#fff">${orgName}</strong>. Please update your payment method to avoid losing access.</p>
+    <p style="color:#aaa;line-height:1.6;margin:0 0 24px">We couldn't process your payment for <strong style="color:#fff">${esc(orgName)}</strong>. Please update your payment method to avoid losing access.</p>
     <a href="${appUrl}/settings/billing" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Update payment →</a>
   `));
 }
