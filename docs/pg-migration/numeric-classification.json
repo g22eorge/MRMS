@@ -1,0 +1,909 @@
+{
+  "generatedAt": "2026-08-24T19:07:18.341Z",
+  "classes": {
+    "money": {
+      "prismaType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    "rate": {
+      "prismaType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    "factor": {
+      "prismaType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    "quantity": {
+      "prismaType": "Decimal",
+      "native": "@db.Decimal(18, 3)"
+    },
+    "measure": {
+      "prismaType": "Float",
+      "native": null
+    }
+  },
+  "fields": [
+    {
+      "model": "Job",
+      "field": "externalTechBill",
+      "column": "costEstimate",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Job",
+      "field": "clientBill",
+      "column": "finalCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Job",
+      "field": "externalTechFee",
+      "column": "externalTechFee",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Invoice",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Invoice",
+      "field": "paidAmount",
+      "column": "paidAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Payment",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "Payment",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "TechnicianPayout",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Refund",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "Refund",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CreditNote",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CreditNoteItem",
+      "field": "unitPrice",
+      "column": "unitPrice",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CreditNoteItem",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CreditNoteItem",
+      "field": "saleUomFactor",
+      "column": "saleUomFactor",
+      "optional": true,
+      "class": "factor",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "Sale",
+      "field": "subtotal",
+      "column": "subtotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Sale",
+      "field": "discountAmount",
+      "column": "discountAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Sale",
+      "field": "vatAmount",
+      "column": "vatAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Sale",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Sale",
+      "field": "paidAmount",
+      "column": "paidAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SaleItem",
+      "field": "unitPrice",
+      "column": "unitPrice",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SaleItem",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SaleItem",
+      "field": "saleUomFactor",
+      "column": "saleUomFactor",
+      "optional": true,
+      "class": "factor",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "SaleItem",
+      "field": "costAtSale",
+      "column": "costAtSale",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Part",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Part",
+      "field": "sellingPrice",
+      "column": "sellingPrice",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Part",
+      "field": "taxRate",
+      "column": "taxRate",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "Part",
+      "field": "saleUomFactor",
+      "column": "saleUomFactor",
+      "optional": true,
+      "class": "factor",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "Part",
+      "field": "purchaseUomFactor",
+      "column": "purchaseUomFactor",
+      "optional": true,
+      "class": "factor",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "Part",
+      "field": "qtyOnHand",
+      "column": "qtyOnHand",
+      "optional": false,
+      "class": "quantity",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 3)"
+    },
+    {
+      "model": "PartReservation",
+      "field": "unitCostSnapshot",
+      "column": "unitCostSnapshot",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PartStockTransaction",
+      "field": "quantity",
+      "column": "quantity",
+      "optional": false,
+      "class": "quantity",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 3)"
+    },
+    {
+      "model": "PartStockTransaction",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "OneTimeExternalTechAssignment",
+      "field": "agreedRepairCost",
+      "column": "agreedRepairCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "OneTimeExternalTechAssignment",
+      "field": "expectedPartsCost",
+      "column": "expectedPartsCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "DocumentBrandingSettings",
+      "field": "vatRatePercent",
+      "column": "vatRatePercent",
+      "optional": false,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "PurchaseRequestItem",
+      "field": "estimatedUnitCost",
+      "column": "estimatedUnitCost",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PurchaseOrderItem",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "GoodsReceivedItem",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBill",
+      "field": "subtotal",
+      "column": "subtotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBill",
+      "field": "taxAmount",
+      "column": "taxAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBill",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBill",
+      "field": "paidAmount",
+      "column": "paidAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBillItem",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBillItem",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierPayment",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "OrgFeatureEntitlement",
+      "field": "limitValue",
+      "column": "limitValue",
+      "optional": true,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "OrgSubscriptionEvent",
+      "field": "amount",
+      "column": "amount",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "OrgUsageSnapshot",
+      "field": "value",
+      "column": "value",
+      "optional": false,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "CustomerApproval",
+      "field": "amount",
+      "column": "amount",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierPrice",
+      "field": "unitCost",
+      "column": "unitCost",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "quantity",
+      "column": "quantity",
+      "optional": false,
+      "class": "quantity",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 3)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "unitPrice",
+      "column": "unitPrice",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "discountAmount",
+      "column": "discountAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "taxAmount",
+      "column": "taxAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "saleUomFactor",
+      "column": "saleUomFactor",
+      "optional": true,
+      "class": "factor",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "InvoiceLine",
+      "field": "costAtSale",
+      "column": "costAtSale",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "TaxRate",
+      "field": "rate",
+      "column": "rate",
+      "optional": false,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "Expense",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Expense",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "RecurringInvoiceItem",
+      "field": "quantity",
+      "column": "quantity",
+      "optional": false,
+      "class": "quantity",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 3)"
+    },
+    {
+      "model": "RecurringInvoiceItem",
+      "field": "unitPrice",
+      "column": "unitPrice",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "RecurringInvoiceItem",
+      "field": "discountAmount",
+      "column": "discountAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "RecurringInvoiceItem",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "DocumentTaxLine",
+      "field": "taxRate",
+      "column": "taxRate",
+      "optional": false,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "DocumentTaxLine",
+      "field": "taxableAmount",
+      "column": "taxableAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "DocumentTaxLine",
+      "field": "taxAmount",
+      "column": "taxAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Receipt",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PaymentAllocation",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CashierShift",
+      "field": "openingCash",
+      "column": "openingCash",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CashierShift",
+      "field": "closingCash",
+      "column": "closingCash",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SalesTarget",
+      "field": "targetRevenue",
+      "column": "targetRevenue",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SalesTarget",
+      "field": "targetValue",
+      "column": "targetValue",
+      "optional": false,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "SalesTarget",
+      "field": "actualValue",
+      "column": "actualValue",
+      "optional": false,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "Lead",
+      "field": "estimatedValue",
+      "column": "estimatedValue",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Quotation",
+      "field": "subtotal",
+      "column": "subtotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Quotation",
+      "field": "discountAmount",
+      "column": "discountAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Quotation",
+      "field": "vatAmount",
+      "column": "vatAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Quotation",
+      "field": "taxRate",
+      "column": "taxRate",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "Quotation",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "QuotationItem",
+      "field": "unitPrice",
+      "column": "unitPrice",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "QuotationItem",
+      "field": "discount",
+      "column": "discount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "QuotationItem",
+      "field": "lineTotal",
+      "column": "lineTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "openingFloat",
+      "column": "openingFloat",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "closingCash",
+      "column": "closingCash",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "cashTotal",
+      "column": "cashTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "cardTotal",
+      "column": "cardTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "mobileTotal",
+      "column": "mobileTotal",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "totalSales",
+      "column": "totalSales",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "PosSession",
+      "field": "actualClosingBalance",
+      "column": "actualClosingBalance",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "FieldVisit",
+      "field": "gpsLat",
+      "column": "gpsLat",
+      "optional": true,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "FieldVisit",
+      "field": "gpsLng",
+      "column": "gpsLng",
+      "optional": true,
+      "class": "measure",
+      "targetType": "Float",
+      "native": null
+    },
+    {
+      "model": "JournalEntry",
+      "field": "totalAmount",
+      "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "JournalLine",
+      "field": "debit",
+      "column": "debit",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "JournalLine",
+      "field": "credit",
+      "column": "credit",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "BankAccount",
+      "field": "openingBalance",
+      "column": "openingBalance",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "BankAccount",
+      "field": "currentBalance",
+      "column": "currentBalance",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "BankTransaction",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    }
+  ]
+}

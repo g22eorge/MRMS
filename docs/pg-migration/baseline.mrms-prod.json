@@ -1,0 +1,1612 @@
+{
+  "source": "mrms-prod.db",
+  "capturedAt": "2026-08-24T19:05:40.405Z",
+  "totals": {
+    "tables": 113,
+    "rows": 2778
+  },
+  "tables": {
+    "Account": {
+      "rows": 10,
+      "sums": {},
+      "ranges": {
+        "accessTokenExpiresAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "refreshTokenExpiresAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-04-10T00:12:37.178+00:00",
+          "max": "2026-07-02T12:07:31.950+00:00",
+          "nonNull": 10
+        },
+        "updatedAt": {
+          "min": "2026-04-10T00:21:56.526+00:00",
+          "max": "2026-07-02T12:07:31.950+00:00",
+          "nonNull": 10
+        }
+      }
+    },
+    "AiFeedback": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-29T10:47:37.248+00:00",
+          "max": "2026-05-29T10:47:37.248+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "AiKnowledgeArticle": {
+      "rows": 7,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-25 13:45:34",
+          "max": "2026-05-25T15:40:15.175+00:00",
+          "nonNull": 7
+        },
+        "updatedAt": {
+          "min": "2026-05-25 13:45:34",
+          "max": "2026-05-25T15:40:15.175+00:00",
+          "nonNull": 7
+        }
+      }
+    },
+    "AiOrgSettings": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-05-25T15:40:14.565+00:00",
+          "max": "2026-05-25T15:40:14.565+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "AiPromptLog": {
+      "rows": 8,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-25T15:40:16.055+00:00",
+          "max": "2026-06-07T19:10:18.898+00:00",
+          "nonNull": 8
+        }
+      }
+    },
+    "AuditLog": {
+      "rows": 844,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-10T11:40:09.326+00:00",
+          "max": "2026-07-08T11:04:37.250+00:00",
+          "nonNull": 844
+        }
+      }
+    },
+    "BankAccount": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "BankTransaction": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "BillingEvent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Branch": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-25 11:10:00",
+          "max": "2026-05-25 11:10:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-25 11:10:00",
+          "max": "2026-05-25 11:10:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "BranchNumberingSettings": {
+      "rows": 1,
+      "sums": {
+        "nextJobSequence": {
+          "sum": 1,
+          "nonNull": 1
+        },
+        "nextSaleSequence": {
+          "sum": 1,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-05-25 11:10:00",
+          "max": "2026-05-25 11:10:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "BranchOperatingHours": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Campaign": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "scheduledAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "startedAt": {
+          "min": "2026-05-21T11:10:05.026+00:00",
+          "max": "2026-05-21T11:10:05.026+00:00",
+          "nonNull": 1
+        },
+        "completedAt": {
+          "min": "2026-05-21T11:28:02.823+00:00",
+          "max": "2026-05-21T11:28:02.823+00:00",
+          "nonNull": 1
+        },
+        "createdAt": {
+          "min": "2026-05-21T11:09:01.062+00:00",
+          "max": "2026-05-21T11:09:01.062+00:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-21T11:28:12.106+00:00",
+          "max": "2026-05-21T11:28:12.106+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "CampaignContact": {
+      "rows": 45,
+      "sums": {},
+      "ranges": {
+        "sentAt": {
+          "min": "2026-05-21T11:14:03.886+00:00",
+          "max": "2026-05-21T19:13:46.798+00:00",
+          "nonNull": 45
+        },
+        "openedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "repliedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-05-21T11:09:15.604+00:00",
+          "max": "2026-05-21T11:09:27.888+00:00",
+          "nonNull": 45
+        }
+      }
+    },
+    "CashierShift": {
+      "rows": 2,
+      "sums": {
+        "openingCash": {
+          "sum": 0,
+          "nonNull": 2
+        },
+        "closingCash": {
+          "sum": null,
+          "nonNull": 0
+        }
+      },
+      "ranges": {
+        "openedAt": {
+          "min": "2026-06-07T07:42:53.726+00:00",
+          "max": "2026-07-07T13:56:16.756+00:00",
+          "nonNull": 2
+        },
+        "closedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        }
+      }
+    },
+    "ChartOfAccount": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Client": {
+      "rows": 77,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-10T11:40:09.103+00:00",
+          "max": "2026-07-09T08:43:21.569+00:00",
+          "nonNull": 77
+        },
+        "updatedAt": {
+          "min": "2026-04-10T11:40:09.103+00:00",
+          "max": "2026-07-09T08:43:21.569+00:00",
+          "nonNull": 77
+        }
+      }
+    },
+    "ClientMergeRecord": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ClientNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CommunicationPolicy": {
+      "rows": 8,
+      "sums": {
+        "nudge1Hours": {
+          "sum": 24,
+          "nonNull": 1
+        },
+        "nudge2Hours": {
+          "sum": 72,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-28T20:42:36.948+00:00",
+          "max": "2026-04-28T20:45:54.794+00:00",
+          "nonNull": 8
+        },
+        "updatedAt": {
+          "min": "2026-05-21T21:04:29.131+00:00",
+          "max": "2026-05-21T21:04:30.403+00:00",
+          "nonNull": 8
+        }
+      }
+    },
+    "CommunicationTemplate": {
+      "rows": 11,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-28T20:16:14.394+00:00",
+          "max": "2026-04-28T20:16:15.528+00:00",
+          "nonNull": 11
+        },
+        "updatedAt": {
+          "min": "2026-05-21T21:13:03.844+00:00",
+          "max": "2026-05-21T21:13:04.888+00:00",
+          "nonNull": 11
+        }
+      }
+    },
+    "CommunicationTemplateVersion": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Complaint": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Conversation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ConversationMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CreditNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CreditNoteItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CustomerApproval": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CustomerConsent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DeliveryNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DeliveryNoteItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Department": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Device": {
+      "rows": 56,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-12T05:51:41.509+00:00",
+          "max": "2026-07-07T15:40:08.597+00:00",
+          "nonNull": 56
+        },
+        "updatedAt": {
+          "min": "2026-04-12T05:51:41.509+00:00",
+          "max": "2026-07-07T15:40:08.597+00:00",
+          "nonNull": 56
+        }
+      }
+    },
+    "DeviceSpecification": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DiagnosisReport": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DocumentBrandingSettings": {
+      "rows": 2,
+      "sums": {
+        "quoteValidityDays": {
+          "sum": 60,
+          "nonNull": 2
+        },
+        "sequencePadLength": {
+          "sum": 8,
+          "nonNull": 2
+        },
+        "vatRatePercent": {
+          "sum": 36,
+          "nonNull": 2
+        }
+      },
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-04-11T15:49:38.809+00:00",
+          "max": "2026-06-06 20:29:19",
+          "nonNull": 2
+        }
+      }
+    },
+    "DocumentTaxLine": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Expense": {
+      "rows": 14,
+      "sums": {
+        "amount": {
+          "sum": 2246000,
+          "nonNull": 14
+        },
+        "exchangeRateToBase": {
+          "sum": null,
+          "nonNull": 0
+        }
+      },
+      "ranges": {
+        "paidAt": {
+          "min": "2026-06-01T00:00:00.000+00:00",
+          "max": "2026-06-09T00:00:00.000+00:00",
+          "nonNull": 14
+        },
+        "createdAt": {
+          "min": "2026-06-05T15:23:54.598+00:00",
+          "max": "2026-06-09T13:54:17.020+00:00",
+          "nonNull": 14
+        }
+      }
+    },
+    "FieldVisit": {
+      "rows": 1,
+      "sums": {
+        "gpsLat": {
+          "sum": null,
+          "nonNull": 0
+        },
+        "gpsLng": {
+          "sum": null,
+          "nonNull": 0
+        }
+      },
+      "ranges": {
+        "scheduledAt": {
+          "min": "2026-05-28T20:08:00.000+00:00",
+          "max": "2026-05-28T20:08:00.000+00:00",
+          "nonNull": 1
+        },
+        "startedAt": {
+          "min": "2026-05-28T20:10:12.924+00:00",
+          "max": "2026-05-28T20:10:12.924+00:00",
+          "nonNull": 1
+        },
+        "arrivedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "completedAt": {
+          "min": "2026-05-28T20:11:16.428+00:00",
+          "max": "2026-05-28T20:11:16.428+00:00",
+          "nonNull": 1
+        },
+        "signoffAt": {
+          "min": "2026-05-28T20:11:16.428+00:00",
+          "max": "2026-05-28T20:11:16.428+00:00",
+          "nonNull": 1
+        },
+        "createdAt": {
+          "min": "2026-05-28T20:09:14.615+00:00",
+          "max": "2026-05-28T20:09:14.615+00:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-28T20:11:16.429+00:00",
+          "max": "2026-05-28T20:11:16.429+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "FileAsset": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "GoodsReceived": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "GoodsReceivedItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "InboundMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "InventoryCategory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Invoice": {
+      "rows": 56,
+      "sums": {
+        "totalAmount": {
+          "sum": 18160000,
+          "nonNull": 56
+        },
+        "paidAmount": {
+          "sum": 16630000,
+          "nonNull": 56
+        }
+      },
+      "ranges": {
+        "dueDate": {
+          "min": "2026-07-04T00:00:00.000+00:00",
+          "max": "2026-07-24T00:00:00.000+00:00",
+          "nonNull": 3
+        },
+        "issuedAt": {
+          "min": "2026-05-05T14:45:37.356+00:00",
+          "max": "2026-07-09T08:44:44.906+00:00",
+          "nonNull": 56
+        },
+        "paidAt": {
+          "min": "2026-06-01T13:14:40.762+00:00",
+          "max": "2026-07-08T11:04:37.069+00:00",
+          "nonNull": 51
+        },
+        "createdAt": {
+          "min": "2026-05-29T20:28:51.441+00:00",
+          "max": "2026-07-09T08:44:44.906+00:00",
+          "nonNull": 56
+        },
+        "updatedAt": {
+          "min": "2026-06-01T13:14:40.763+00:00",
+          "max": "2026-07-09T08:44:44.906+00:00",
+          "nonNull": 56
+        }
+      }
+    },
+    "InvoiceLine": {
+      "rows": 6,
+      "sums": {
+        "quantity": {
+          "sum": 8,
+          "nonNull": 6
+        },
+        "unitPrice": {
+          "sum": 890000,
+          "nonNull": 6
+        },
+        "discountAmount": {
+          "sum": 0,
+          "nonNull": 6
+        },
+        "taxAmount": {
+          "sum": 0,
+          "nonNull": 6
+        },
+        "lineTotal": {
+          "sum": 1030000,
+          "nonNull": 6
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-24T10:53:18.920+00:00",
+          "max": "2026-07-09T08:44:44.906+00:00",
+          "nonNull": 6
+        }
+      }
+    },
+    "Job": {
+      "rows": 75,
+      "sums": {
+        "costEstimate": {
+          "sum": 11420000,
+          "nonNull": 67
+        },
+        "finalCost": {
+          "sum": 20910000,
+          "nonNull": 69
+        },
+        "externalTechFee": {
+          "sum": 1060000,
+          "nonNull": 26
+        },
+        "timelineMinMinutes": {
+          "sum": 60,
+          "nonNull": 1
+        },
+        "timelineMaxMinutes": {
+          "sum": 120,
+          "nonNull": 1
+        },
+        "softwareOsInstall": {
+          "sum": 6,
+          "nonNull": 75
+        },
+        "softwareDriversUpdates": {
+          "sum": 0,
+          "nonNull": 75
+        },
+        "softwareDataBackupRestore": {
+          "sum": 1,
+          "nonNull": 75
+        },
+        "softwareAccountSetup": {
+          "sum": 1,
+          "nonNull": 75
+        },
+        "softwarePerformanceTune": {
+          "sum": 0,
+          "nonNull": 75
+        },
+        "softwareThirdPartyApps": {
+          "sum": 2,
+          "nonNull": 75
+        },
+        "softwareLicenseAttested": {
+          "sum": 9,
+          "nonNull": 75
+        },
+        "clientPaid": {
+          "sum": 56,
+          "nonNull": 75
+        }
+      },
+      "ranges": {
+        "lastClientContactAt": {
+          "min": "2026-04-10T12:14:24.636+00:00",
+          "max": "2026-07-08T08:22:11.818+00:00",
+          "nonNull": 25
+        },
+        "externalPaidAt": {
+          "min": "2026-04-13T16:24:25.902+00:00",
+          "max": "2026-06-09T11:28:02.920+00:00",
+          "nonNull": 22
+        },
+        "approvalDate": {
+          "min": "2026-04-10T16:05:55.112+00:00",
+          "max": "2026-05-07T14:13:34.884+00:00",
+          "nonNull": 3
+        },
+        "quotedAt": {
+          "min": "2026-04-27T11:09:02.122+00:00",
+          "max": "2026-06-10T12:55:46.713+00:00",
+          "nonNull": 10
+        },
+        "receivedAt": {
+          "min": "2026-04-04T13:46:00.000+00:00",
+          "max": "2026-07-07T15:40:38.293+00:00",
+          "nonNull": 75
+        },
+        "completedAt": {
+          "min": "2026-04-10T15:36:39.373+00:00",
+          "max": "2026-07-08T11:00:51.567+00:00",
+          "nonNull": 57
+        },
+        "closedAt": {
+          "min": "2026-06-16T13:18:12.047+00:00",
+          "max": "2026-07-08T08:23:33.479+00:00",
+          "nonNull": 3
+        },
+        "updatedAt": {
+          "min": "2026-04-14T12:16:15.312+00:00",
+          "max": "2026-07-08T11:04:37.161+00:00",
+          "nonNull": 75
+        },
+        "deliveredAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "clientPaidAt": {
+          "min": "2026-05-06T15:34:34.598+00:00",
+          "max": "2026-07-08T11:04:37.160+00:00",
+          "nonNull": 56
+        },
+        "invoiceIssuedAt": {
+          "min": "2026-05-04T12:03:46.050+00:00",
+          "max": "2026-07-08T11:04:35.950+00:00",
+          "nonNull": 56
+        }
+      }
+    },
+    "JobAssignmentHistory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JobStatusHistory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JournalEntry": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JournalLine": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Lead": {
+      "rows": 10,
+      "sums": {
+        "estimatedValue": {
+          "sum": 54200000,
+          "nonNull": 5
+        },
+        "score": {
+          "sum": 0,
+          "nonNull": 10
+        }
+      },
+      "ranges": {
+        "convertedAt": {
+          "min": "2026-06-10T13:43:24.928+00:00",
+          "max": "2026-06-10T13:43:24.928+00:00",
+          "nonNull": 1
+        },
+        "closedAt": {
+          "min": "2026-06-05T16:30:51.305+00:00",
+          "max": "2026-06-10T13:44:14.542+00:00",
+          "nonNull": 4
+        },
+        "followUpAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-06-01T13:40:21.257+00:00",
+          "max": "2026-06-05T16:36:02.956+00:00",
+          "nonNull": 10
+        },
+        "updatedAt": {
+          "min": "2026-06-01T13:56:59.703+00:00",
+          "max": "2026-06-25T14:08:01.607+00:00",
+          "nonNull": 10
+        }
+      }
+    },
+    "LeadActivity": {
+      "rows": 29,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-01T13:40:21.370+00:00",
+          "max": "2026-06-25T14:08:01.941+00:00",
+          "nonNull": 29
+        }
+      }
+    },
+    "Notification": {
+      "rows": 690,
+      "sums": {
+        "isRead": {
+          "sum": 433,
+          "nonNull": 690
+        }
+      },
+      "ranges": {
+        "readAt": {
+          "min": "2026-04-13T16:22:59.008+00:00",
+          "max": "2026-07-08T08:24:02.652+00:00",
+          "nonNull": 433
+        },
+        "createdAt": {
+          "min": "2026-04-12T05:53:36.025+00:00",
+          "max": "2026-07-08T11:04:38.437+00:00",
+          "nonNull": 690
+        }
+      }
+    },
+    "NotificationPreferences": {
+      "rows": 2,
+      "sums": {
+        "notifyStatusChange": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyApprovalNeeded": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyJobAssigned": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyEstimateSubmitted": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyPaymentReceived": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyPayoutGenerated": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyTimelineUpdated": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyDelayNote": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "whatsappEnabled": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "emailEnabled": {
+          "sum": 0,
+          "nonNull": 2
+        },
+        "notifyStockAlert": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyJobCreated": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyRepairRequest": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyQuotationStatus": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyLeadStatus": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyPurchaseRequest": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyStockMovement": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyFieldVisit": {
+          "sum": 2,
+          "nonNull": 2
+        },
+        "notifyCreditNote": {
+          "sum": 2,
+          "nonNull": 2
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-11T15:04:56.252+00:00",
+          "max": "2026-04-13T08:43:54.237+00:00",
+          "nonNull": 2
+        },
+        "updatedAt": {
+          "min": "2026-04-11T15:24:16.287+00:00",
+          "max": "2026-04-13T08:43:54.237+00:00",
+          "nonNull": 2
+        }
+      }
+    },
+    "OneTimeExternalTechAssignment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgFeatureEntitlement": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgModuleGrant": {
+      "rows": 10,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgSecurityPolicy": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgSubscriptionEvent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgUsageSnapshot": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgWhatsAppConfig": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Organization": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "trialEndsAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "planRenewsAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "planCancelledAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-05-23 15:46:03",
+          "max": "2026-05-23 15:46:03",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-23 15:46:03",
+          "max": "2026-05-23 15:46:03",
+          "nonNull": 1
+        }
+      }
+    },
+    "OutboundMessage": {
+      "rows": 221,
+      "sums": {
+        "attemptCount": {
+          "sum": 255,
+          "nonNull": 221
+        }
+      },
+      "ranges": {
+        "lastAttemptAt": {
+          "min": "2026-04-12T17:06:00.639+00:00",
+          "max": "2026-07-08T11:00:55.935+00:00",
+          "nonNull": 188
+        },
+        "nextAttemptAt": {
+          "min": "1970-01-01T00:00:00.000+00:00",
+          "max": "2026-07-08T11:00:53.518+00:00",
+          "nonNull": 221
+        },
+        "sentAt": {
+          "min": "2026-04-15T07:30:01.302+00:00",
+          "max": "2026-07-08T11:00:55.935+00:00",
+          "nonNull": 165
+        },
+        "lockedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-04-12T16:28:50.745+00:00",
+          "max": "2026-07-08T11:00:53.519+00:00",
+          "nonNull": 221
+        },
+        "updatedAt": {
+          "min": "2026-04-12T17:06:00.640+00:00",
+          "max": "2026-07-08T11:00:55.936+00:00",
+          "nonNull": 221
+        },
+        "providerDeliveryAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        }
+      }
+    },
+    "Part": {
+      "rows": 68,
+      "sums": {
+        "unitCost": {
+          "sum": 48334400,
+          "nonNull": 68
+        },
+        "qtyOnHand": {
+          "sum": 23599,
+          "nonNull": 68
+        },
+        "reorderLevel": {
+          "sum": 305,
+          "nonNull": 68
+        },
+        "qtyReserved": {
+          "sum": 0,
+          "nonNull": 68
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-28T20:16:58.586+00:00",
+          "max": "2026-07-04T09:17:28.044+00:00",
+          "nonNull": 68
+        },
+        "updatedAt": {
+          "min": "2026-05-29T10:49:51.366+00:00",
+          "max": "2026-07-09T13:37:12.226+00:00",
+          "nonNull": 68
+        }
+      }
+    },
+    "PartLocationStock": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PartReservation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PartStockTransaction": {
+      "rows": 94,
+      "sums": {
+        "quantity": {
+          "sum": 24479,
+          "nonNull": 94
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-28T20:17:54.825+00:00",
+          "max": "2026-07-09T13:37:12.294+00:00",
+          "nonNull": 94
+        }
+      }
+    },
+    "Payment": {
+      "rows": 64,
+      "sums": {
+        "exchangeRateToBase": {
+          "sum": null,
+          "nonNull": 0
+        },
+        "amount": {
+          "sum": 20348100,
+          "nonNull": 64
+        }
+      },
+      "ranges": {
+        "receivedAt": {
+          "min": "2026-06-01T13:14:40.624+00:00",
+          "max": "2026-07-09T13:38:29.924+00:00",
+          "nonNull": 64
+        },
+        "createdAt": {
+          "min": "2026-06-01T13:14:40.624+00:00",
+          "max": "2026-07-09T13:38:29.924+00:00",
+          "nonNull": 64
+        }
+      }
+    },
+    "PaymentAllocation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Photo": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PlatformSetting": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PosSession": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseOrder": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseOrderItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseRequest": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseRequestItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "QualityCheck": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Quotation": {
+      "rows": 6,
+      "sums": {
+        "subtotal": {
+          "sum": 62400000,
+          "nonNull": 6
+        },
+        "discountAmount": {
+          "sum": 0,
+          "nonNull": 6
+        },
+        "vatAmount": {
+          "sum": 990000,
+          "nonNull": 6
+        },
+        "totalAmount": {
+          "sum": 63390000,
+          "nonNull": 6
+        },
+        "taxRate": {
+          "sum": 18,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "validUntil": {
+          "min": "2026-06-02T00:00:00.000+00:00",
+          "max": "2026-07-25T00:00:00.000+00:00",
+          "nonNull": 6
+        },
+        "sentAt": {
+          "min": "2026-06-01T14:07:43.194+00:00",
+          "max": "2026-06-01T14:07:43.194+00:00",
+          "nonNull": 1
+        },
+        "acceptedAt": {
+          "min": "2026-06-01T14:08:39.261+00:00",
+          "max": "2026-06-01T14:08:39.261+00:00",
+          "nonNull": 1
+        },
+        "rejectedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-06-01T14:06:46.797+00:00",
+          "max": "2026-07-07T08:00:22.345+00:00",
+          "nonNull": 6
+        },
+        "updatedAt": {
+          "min": "2026-06-01T14:08:39.263+00:00",
+          "max": "2026-07-07T08:00:22.345+00:00",
+          "nonNull": 6
+        }
+      }
+    },
+    "QuotationItem": {
+      "rows": 13,
+      "sums": {
+        "quantity": {
+          "sum": 31,
+          "nonNull": 13
+        },
+        "unitPrice": {
+          "sum": 39000000,
+          "nonNull": 13
+        },
+        "discount": {
+          "sum": 0,
+          "nonNull": 13
+        },
+        "lineTotal": {
+          "sum": 62400000,
+          "nonNull": 13
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-01T14:06:46.797+00:00",
+          "max": "2026-07-07T08:00:22.345+00:00",
+          "nonNull": 13
+        }
+      }
+    },
+    "Receipt": {
+      "rows": 1,
+      "sums": {
+        "amount": {
+          "sum": 600000,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "issuedAt": {
+          "min": "2026-06-09T13:50:12.024+00:00",
+          "max": "2026-06-09T13:50:12.024+00:00",
+          "nonNull": 1
+        },
+        "voidedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        }
+      }
+    },
+    "RecurringInvoice": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RecurringInvoiceItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Refund": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ReorderRule": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RepairRequest": {
+      "rows": 16,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-10T11:25:29.126+00:00",
+          "max": "2026-07-07T15:01:35.652+00:00",
+          "nonNull": 16
+        },
+        "updatedAt": {
+          "min": "2026-04-25T18:36:07.868+00:00",
+          "max": "2026-07-07T15:40:38.884+00:00",
+          "nonNull": 16
+        }
+      }
+    },
+    "RepairRequestSequence": {
+      "rows": 1,
+      "sums": {
+        "year": {
+          "sum": 2026,
+          "nonNull": 1
+        },
+        "value": {
+          "sum": 30,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-07-07 15:01:35",
+          "max": "2026-07-07 15:01:35",
+          "nonNull": 1
+        }
+      }
+    },
+    "RepairTask": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Sale": {
+      "rows": 4,
+      "sums": {
+        "subtotal": {
+          "sum": 4080000,
+          "nonNull": 4
+        },
+        "discountAmount": {
+          "sum": 0,
+          "nonNull": 4
+        },
+        "vatAmount": {
+          "sum": 734400,
+          "nonNull": 4
+        },
+        "totalAmount": {
+          "sum": 4814400,
+          "nonNull": 4
+        },
+        "paidAmount": {
+          "sum": 3718100,
+          "nonNull": 4
+        }
+      },
+      "ranges": {
+        "invoicedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "paidAt": {
+          "min": "2026-07-09T13:33:59.043+00:00",
+          "max": "2026-07-09T13:38:30.083+00:00",
+          "nonNull": 2
+        },
+        "createdAt": {
+          "min": "2026-06-05T15:19:15.111+00:00",
+          "max": "2026-07-09T13:35:32.803+00:00",
+          "nonNull": 4
+        },
+        "updatedAt": {
+          "min": "2026-06-05T15:20:35.185+00:00",
+          "max": "2026-07-09T13:38:30.084+00:00",
+          "nonNull": 4
+        }
+      }
+    },
+    "SaleItem": {
+      "rows": 12,
+      "sums": {
+        "quantity": {
+          "sum": 17,
+          "nonNull": 12
+        },
+        "unitPrice": {
+          "sum": 3980000,
+          "nonNull": 12
+        },
+        "lineTotal": {
+          "sum": 4080000,
+          "nonNull": 12
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-05T15:20:34.793+00:00",
+          "max": "2026-07-09T13:37:12.363+00:00",
+          "nonNull": 12
+        }
+      }
+    },
+    "SalesTarget": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Session": {
+      "rows": 195,
+      "sums": {},
+      "ranges": {
+        "expiresAt": {
+          "min": "2026-04-12T13:11:04.649+00:00",
+          "max": "2026-07-11T20:20:55.956+00:00",
+          "nonNull": 195
+        },
+        "createdAt": {
+          "min": "2026-04-10T09:37:45.287+00:00",
+          "max": "2026-07-10T20:20:55.959+00:00",
+          "nonNull": 195
+        },
+        "updatedAt": {
+          "min": "2026-04-10T09:37:45.287+00:00",
+          "max": "2026-07-10T20:20:55.959+00:00",
+          "nonNull": 195
+        }
+      }
+    },
+    "StockCount": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockCountItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockLocation": {
+      "rows": 2,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-28T20:14:15.715+00:00",
+          "max": "2026-05-28T20:19:59.136+00:00",
+          "nonNull": 2
+        },
+        "updatedAt": {
+          "min": "2026-06-05T16:58:10.136+00:00",
+          "max": "2026-06-05T16:58:14.922+00:00",
+          "nonNull": 2
+        }
+      }
+    },
+    "StockTransfer": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "requestedAt": {
+          "min": "2026-05-28T20:20:31.981+00:00",
+          "max": "2026-05-28T20:20:31.981+00:00",
+          "nonNull": 1
+        },
+        "approvedAt": {
+          "min": "2026-05-28T20:20:43.409+00:00",
+          "max": "2026-05-28T20:20:43.409+00:00",
+          "nonNull": 1
+        },
+        "dispatchedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "receivedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "cancelledAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "2026-05-28T20:20:31.981+00:00",
+          "max": "2026-05-28T20:20:31.981+00:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-28T20:20:43.410+00:00",
+          "max": "2026-05-28T20:20:43.410+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "StockTransferItem": {
+      "rows": 1,
+      "sums": {
+        "quantity": {
+          "sum": 50,
+          "nonNull": 1
+        },
+        "qtyDispatched": {
+          "sum": 0,
+          "nonNull": 1
+        },
+        "qtyReceived": {
+          "sum": 0,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-28T20:20:31.981+00:00",
+          "max": "2026-05-28T20:20:31.981+00:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-05-28T20:20:31.981+00:00",
+          "max": "2026-05-28T20:20:31.981+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "Supplier": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-07T08:40:53.031+00:00",
+          "max": "2026-06-07T08:40:53.031+00:00",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "2026-06-07T08:40:53.031+00:00",
+          "max": "2026-06-07T08:40:53.031+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "SupplierBill": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierBillItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierPayment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierPrice": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SystemAuditEvent": {
+      "rows": 60,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-06-05T15:23:54.842+00:00",
+          "max": "2026-07-09T08:44:45.301+00:00",
+          "nonNull": 60
+        }
+      }
+    },
+    "TaxRate": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "User": {
+      "rows": 10,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-10T00:12:35.956+00:00",
+          "max": "2026-07-02T12:07:31.831+00:00",
+          "nonNull": 10
+        },
+        "updatedAt": {
+          "min": "2026-04-10T00:21:54.315+00:00",
+          "max": "2026-07-02T12:07:31.831+00:00",
+          "nonNull": 10
+        }
+      }
+    },
+    "UserAccessAudit": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-05-22T10:51:39.532+00:00",
+          "max": "2026-05-22T10:51:39.532+00:00",
+          "nonNull": 1
+        }
+      }
+    },
+    "UserGroup": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserGroupMember": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserGroupPermission": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserInvite": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserPermission": {
+      "rows": 38,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "2026-04-10T00:22:08.803+00:00",
+          "max": "2026-05-22T10:51:39.344+00:00",
+          "nonNull": 38
+        }
+      }
+    },
+    "Verification": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "WarrantyClaim": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    }
+  },
+  "skipped": [
+    "Job_restore_backup_20260426",
+    "Organisation"
+  ]
+}

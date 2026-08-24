@@ -1,0 +1,1124 @@
+{
+  "source": "prisma/dev.db",
+  "capturedAt": "2026-08-24T19:08:26.995Z",
+  "totals": {
+    "tables": 112,
+    "rows": 369
+  },
+  "tables": {
+    "Account": {
+      "rows": 14,
+      "sums": {},
+      "ranges": {
+        "accessTokenExpiresAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "refreshTokenExpiresAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1784127993844",
+          "max": "1784127994560",
+          "nonNull": 14
+        },
+        "updatedAt": {
+          "min": "1784127993844",
+          "max": "1784127994560",
+          "nonNull": 14
+        }
+      }
+    },
+    "AiFeedback": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "AiKnowledgeArticle": {
+      "rows": 6,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994572",
+          "max": "1784127994575",
+          "nonNull": 6
+        },
+        "updatedAt": {
+          "min": "1784127994572",
+          "max": "1784127994575",
+          "nonNull": 6
+        }
+      }
+    },
+    "AiOrgSettings": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "updatedAt": {
+          "min": "1785348643593",
+          "max": "1785348643593",
+          "nonNull": 1
+        }
+      }
+    },
+    "AiPromptLog": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "AuditLog": {
+      "rows": 63,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994745",
+          "max": "1784127994785",
+          "nonNull": 63
+        }
+      }
+    },
+    "BankAccount": {
+      "rows": 2,
+      "sums": {
+        "openingBalance": {
+          "sum": 6000000,
+          "nonNull": 2
+        },
+        "currentBalance": {
+          "sum": 15700000,
+          "nonNull": 2
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994834",
+          "max": "1784127994835",
+          "nonNull": 2
+        },
+        "updatedAt": {
+          "min": "1784127994834",
+          "max": "1784127994835",
+          "nonNull": 2
+        }
+      }
+    },
+    "BankTransaction": {
+      "rows": 8,
+      "sums": {
+        "amount": {
+          "sum": 6100000,
+          "nonNull": 8
+        }
+      },
+      "ranges": {
+        "date": {
+          "min": "1781535994835",
+          "max": "1783868794835",
+          "nonNull": 8
+        },
+        "reconciledAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1784127994835",
+          "max": "1784127994841",
+          "nonNull": 8
+        }
+      }
+    },
+    "Branch": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "BranchNumberingSettings": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "BranchOperatingHours": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Campaign": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "scheduledAt": {
+          "min": "1785432000000",
+          "max": "1785432000000",
+          "nonNull": 1
+        },
+        "startedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "completedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1785345622798",
+          "max": "1785345622798",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "1785345622798",
+          "max": "1785345622798",
+          "nonNull": 1
+        }
+      }
+    },
+    "CampaignContact": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CashierShift": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ChartOfAccount": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Client": {
+      "rows": 15,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994577",
+          "max": "1784127994608",
+          "nonNull": 15
+        },
+        "updatedAt": {
+          "min": "1784127994577",
+          "max": "1784127994608",
+          "nonNull": 15
+        }
+      }
+    },
+    "ClientMergeRecord": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ClientNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CommunicationPolicy": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CommunicationTemplate": {
+      "rows": 9,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994562",
+          "max": "1784127994569",
+          "nonNull": 9
+        },
+        "updatedAt": {
+          "min": "1784127994562",
+          "max": "1784127994569",
+          "nonNull": 9
+        }
+      }
+    },
+    "CommunicationTemplateVersion": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Complaint": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Conversation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ConversationMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CreditNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CreditNoteItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CustomerApproval": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "CustomerConsent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DeliveryNote": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DeliveryNoteItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Department": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Device": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DeviceSpecification": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DiagnosisReport": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "DocumentBrandingSettings": {
+      "rows": 1,
+      "sums": {
+        "quoteValidityDays": {
+          "sum": 30,
+          "nonNull": 1
+        },
+        "sequencePadLength": {
+          "sum": 4,
+          "nonNull": 1
+        },
+        "vatRatePercent": {
+          "sum": 18,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-07-18 17:24:12",
+          "max": "2026-07-18 17:24:12",
+          "nonNull": 1
+        }
+      }
+    },
+    "DocumentTaxLine": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Expense": {
+      "rows": 12,
+      "sums": {
+        "amount": {
+          "sum": 4010000,
+          "nonNull": 12
+        },
+        "exchangeRateToBase": {
+          "sum": null,
+          "nonNull": 0
+        }
+      },
+      "ranges": {
+        "paidAt": {
+          "min": "1781535994841",
+          "max": "1783868794841",
+          "nonNull": 12
+        },
+        "createdAt": {
+          "min": "1784127994841",
+          "max": "1784127994850",
+          "nonNull": 12
+        }
+      }
+    },
+    "FieldVisit": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "FileAsset": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "GoodsReceived": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "GoodsReceivedItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "InboundMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "InventoryCategory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Invoice": {
+      "rows": 10,
+      "sums": {
+        "totalAmount": {
+          "sum": 4280000,
+          "nonNull": 10
+        },
+        "paidAmount": {
+          "sum": 3780000,
+          "nonNull": 10
+        }
+      },
+      "ranges": {
+        "dueDate": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "issuedAt": {
+          "min": "1776611194640",
+          "max": "1783695994825",
+          "nonNull": 10
+        },
+        "paidAt": {
+          "min": "1776611194640",
+          "max": "1783868794825",
+          "nonNull": 9
+        },
+        "createdAt": {
+          "min": "1784127994811",
+          "max": "1784127994826",
+          "nonNull": 10
+        },
+        "updatedAt": {
+          "min": "1784127994811",
+          "max": "1784127994826",
+          "nonNull": 10
+        }
+      }
+    },
+    "InvoiceAttachment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "InvoiceLine": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Job": {
+      "rows": 33,
+      "sums": {
+        "costEstimate": {
+          "sum": 10670000,
+          "nonNull": 27
+        },
+        "finalCost": {
+          "sum": 13305000,
+          "nonNull": 25
+        },
+        "externalTechFee": {
+          "sum": 1515000,
+          "nonNull": 4
+        },
+        "timelineMinMinutes": {
+          "sum": 43620,
+          "nonNull": 22
+        },
+        "timelineMaxMinutes": {
+          "sum": 67860,
+          "nonNull": 22
+        }
+      },
+      "ranges": {
+        "lastClientContactAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "externalPaidAt": {
+          "min": "1776783994640",
+          "max": "1781535994640",
+          "nonNull": 3
+        },
+        "clientPaidAt": {
+          "min": "1776611194640",
+          "max": "1781363194640",
+          "nonNull": 8
+        },
+        "invoiceIssuedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "approvalDate": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "quotedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "receivedAt": {
+          "min": "1776351994640",
+          "max": "1784041594639",
+          "nonNull": 33
+        },
+        "completedAt": {
+          "min": "1776611194640",
+          "max": "1781103994640",
+          "nonNull": 8
+        },
+        "deliveredAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "closedAt": {
+          "min": "1780153594640",
+          "max": "1782831994640",
+          "nonNull": 5
+        },
+        "updatedAt": {
+          "min": "1784127994645",
+          "max": "1784127994678",
+          "nonNull": 33
+        }
+      }
+    },
+    "JobAssignmentHistory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JobStatusHistory": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JournalEntry": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "JournalLine": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Lead": {
+      "rows": 1,
+      "sums": {
+        "estimatedValue": {
+          "sum": 100000,
+          "nonNull": 1
+        },
+        "score": {
+          "sum": 0,
+          "nonNull": 1
+        }
+      },
+      "ranges": {
+        "convertedAt": {
+          "min": "1785343052493",
+          "max": "1785343052493",
+          "nonNull": 1
+        },
+        "closedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "followUpAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1785343033876",
+          "max": "1785343033876",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "1785343052494",
+          "max": "1785343052494",
+          "nonNull": 1
+        }
+      }
+    },
+    "LeadActivity": {
+      "rows": 5,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1785343033880",
+          "max": "1785343052495",
+          "nonNull": 5
+        }
+      }
+    },
+    "Notification": {
+      "rows": 81,
+      "sums": {},
+      "ranges": {
+        "readAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1783728394864",
+          "max": "1785343052511",
+          "nonNull": 81
+        }
+      }
+    },
+    "NotificationPreferences": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1785348634828",
+          "max": "1785348634828",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "1785348634828",
+          "max": "1785348634828",
+          "nonNull": 1
+        }
+      }
+    },
+    "OneTimeExternalTechAssignment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgFeatureEntitlement": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgModuleGrant": {
+      "rows": 10,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgSecurityPolicy": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgSubscriptionEvent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "OrgUsageSnapshot": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Organization": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "trialEndsAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "planRenewsAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "planCancelledAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "createdAt": {
+          "min": "1784127993772",
+          "max": "1784127993772",
+          "nonNull": 1
+        },
+        "updatedAt": {
+          "min": "1784127993772",
+          "max": "1784127993772",
+          "nonNull": 1
+        }
+      }
+    },
+    "OutboundMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Part": {
+      "rows": 12,
+      "sums": {
+        "unitCost": {
+          "sum": 1550000,
+          "nonNull": 12
+        },
+        "qtyOnHand": {
+          "sum": 95,
+          "nonNull": 12
+        },
+        "qtyReserved": {
+          "sum": 0,
+          "nonNull": 12
+        },
+        "reorderLevel": {
+          "sum": 31,
+          "nonNull": 12
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994786",
+          "max": "1784127994790",
+          "nonNull": 12
+        },
+        "updatedAt": {
+          "min": "1784127994786",
+          "max": "1784127994790",
+          "nonNull": 12
+        }
+      }
+    },
+    "PartLocationStock": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PartReservation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PartStockTransaction": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Payment": {
+      "rows": 15,
+      "sums": {
+        "exchangeRateToBase": {
+          "sum": null,
+          "nonNull": 0
+        },
+        "amount": {
+          "sum": 4850000,
+          "nonNull": 15
+        }
+      },
+      "ranges": {
+        "receivedAt": {
+          "min": "1776611194640",
+          "max": "1784041594851",
+          "nonNull": 15
+        },
+        "createdAt": {
+          "min": "1784127994827",
+          "max": "1784127994864",
+          "nonNull": 15
+        }
+      }
+    },
+    "PaymentAllocation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Photo": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PosSession": {
+      "rows": 1,
+      "sums": {
+        "openingFloat": {
+          "sum": 200000,
+          "nonNull": 1
+        },
+        "closingCash": {
+          "sum": 850000,
+          "nonNull": 1
+        },
+        "cashTotal": {
+          "sum": 650000,
+          "nonNull": 1
+        },
+        "cardTotal": {
+          "sum": 0,
+          "nonNull": 1
+        },
+        "mobileTotal": {
+          "sum": 420000,
+          "nonNull": 1
+        },
+        "totalSales": {
+          "sum": 1070000,
+          "nonNull": 1
+        },
+        "salesCount": {
+          "sum": 5,
+          "nonNull": 1
+        },
+        "actualClosingBalance": {
+          "sum": null,
+          "nonNull": 0
+        }
+      },
+      "ranges": {
+        "openedAt": {
+          "min": "1783868794851",
+          "max": "1783868794851",
+          "nonNull": 1
+        },
+        "closedAt": {
+          "min": "1783868794851",
+          "max": "1783868794851",
+          "nonNull": 1
+        }
+      }
+    },
+    "PurchaseOrder": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseOrderItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseRequest": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "PurchaseRequestItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "QualityCheck": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Quotation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "QuotationItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Receipt": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RecurringInvoice": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RecurringInvoiceItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Refund": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "ReorderRule": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RepairRequest": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RepairRequestSequence": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "RepairTask": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Sale": {
+      "rows": 5,
+      "sums": {
+        "subtotal": {
+          "sum": 820000,
+          "nonNull": 5
+        },
+        "discountAmount": {
+          "sum": 0,
+          "nonNull": 5
+        },
+        "vatAmount": {
+          "sum": 0,
+          "nonNull": 5
+        },
+        "totalAmount": {
+          "sum": 820000,
+          "nonNull": 5
+        },
+        "paidAmount": {
+          "sum": 820000,
+          "nonNull": 5
+        }
+      },
+      "ranges": {
+        "invoicedAt": {
+          "min": null,
+          "max": null,
+          "nonNull": 0
+        },
+        "paidAt": {
+          "min": "1783868794851",
+          "max": "1784041594851",
+          "nonNull": 5
+        },
+        "createdAt": {
+          "min": "1784127994852",
+          "max": "1784127994862",
+          "nonNull": 5
+        },
+        "updatedAt": {
+          "min": "1784127994852",
+          "max": "1784127994862",
+          "nonNull": 5
+        }
+      }
+    },
+    "SaleItem": {
+      "rows": 7,
+      "sums": {
+        "quantity": {
+          "sum": 7,
+          "nonNull": 7
+        },
+        "unitPrice": {
+          "sum": 820000,
+          "nonNull": 7
+        },
+        "lineTotal": {
+          "sum": 820000,
+          "nonNull": 7
+        }
+      },
+      "ranges": {
+        "createdAt": {
+          "min": "1784127994853",
+          "max": "1784127994863",
+          "nonNull": 7
+        }
+      }
+    },
+    "SalesTarget": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Session": {
+      "rows": 41,
+      "sums": {},
+      "ranges": {
+        "expiresAt": {
+          "min": "1784415041601",
+          "max": "1785398984002",
+          "nonNull": 41
+        },
+        "createdAt": {
+          "min": "1784380040009",
+          "max": "1785356437890",
+          "nonNull": 41
+        },
+        "updatedAt": {
+          "min": "1784380040009",
+          "max": "1785356437890",
+          "nonNull": 41
+        }
+      }
+    },
+    "StockCount": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockCountItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockLocation": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockTransfer": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "StockTransferItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Supplier": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierBill": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierBillItem": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierPayment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SupplierPrice": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "SystemAuditEvent": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "TaxRate": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "TechnicianPayout": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "User": {
+      "rows": 14,
+      "sums": {},
+      "ranges": {
+        "createdAt": {
+          "min": "1784127993784",
+          "max": "1784127994509",
+          "nonNull": 14
+        },
+        "updatedAt": {
+          "min": "1784127993784",
+          "max": "1784127994509",
+          "nonNull": 14
+        }
+      }
+    },
+    "UserAccessAudit": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserGroup": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserGroupMember": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserGroupPermission": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserInvite": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "UserPermission": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "Verification": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
+    "WarrantyClaim": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    }
+  },
+  "skipped": []
+}

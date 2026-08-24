@@ -1,0 +1,59 @@
+# Local development database only — the app still runs on the host via
+# `bun run dev`. The full application stack (app + worker + redis + scheduler)
+# arrives in Phase 5's docker-compose.yml.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down          # keeps data
+#   docker compose -f docker-compose.dev.yml down -v       # wipes data
+#
+# Port 5433, not 5432: a host Postgres (Postgres.app) commonly holds 5432 and
+# the collision is silent and confusing — you connect to the wrong server.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: mrms-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mrms
+      POSTGRES_PASSWORD: mrms_dev_password
+      POSTGRES_DB: mrms
+      # Deterministic collation so ORDER BY matches production regardless of
+      # the host locale.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - mrms-pgdata-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mrms -d mrms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Scratch database for the import rehearsals in Phase 4, so a failed dry run
+  # never leaves the working dev database half-populated.
+  postgres-scratch:
+    image: postgres:18-alpine
+    container_name: mrms-postgres-scratch
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mrms
+      POSTGRES_PASSWORD: mrms_dev_password
+      POSTGRES_DB: mrms_scratch
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5434:5432"
+    volumes:
+      - mrms-pgdata-scratch:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mrms -d mrms_scratch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mrms-pgdata-dev:
+  mrms-pgdata-scratch:
