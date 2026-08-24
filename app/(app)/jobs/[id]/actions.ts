@@ -42,6 +42,7 @@ import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
+import { isMissingTableError } from "@/lib/db-errors";
 
 const workflowReasonValues = [
   "NONE",
@@ -1283,7 +1284,7 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("onetimeexternaltechassignment")) {
+    if (isMissingTableError(error) || message.toLowerCase().includes("onetimeexternaltechassignment")) {
       return { error: "One-time external assignments are not yet deployed to this database. Apply the latest schema changes and try again." };
     }
     return { error: "Failed to save one-time external assignment" };

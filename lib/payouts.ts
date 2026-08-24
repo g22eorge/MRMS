@@ -15,32 +15,23 @@ export type TechnicianPayoutTotal = {
   paidAmount: number;
 };
 
-let payoutColumnsPresentCache: boolean | null = null;
-
+/**
+ * Whether the Job payout columns exist.
+ *
+ * Kept as a function, and kept awaited at its call sites, but it no longer
+ * inspects the database. It used to run `PRAGMA table_info("Job")` because some
+ * deployed databases predated externalTechFee / externalPaid / externalPaidAt /
+ * externalPaymentRef, and reading them would throw. Those columns are part of
+ * the baseline migration now, so a database that lacks them is one that has not
+ * been migrated — which is a deployment failure to surface, not a condition for
+ * feature code to tiptoe around.
+ */
 export async function hasJobPayoutColumns() {
-  if (payoutColumnsPresentCache !== null) {
-    return payoutColumnsPresentCache;
-  }
-
-  try {
-    const columns = await prisma.$queryRaw<Array<{ name: string }>>`
-      PRAGMA table_info("Job")
-    `;
-    const names = new Set(columns.map((column) => column.name));
-    payoutColumnsPresentCache =
-      names.has("externalTechFee") &&
-      names.has("externalPaid") &&
-      names.has("externalPaidAt") &&
-      names.has("externalPaymentRef");
-  } catch {
-    payoutColumnsPresentCache = false;
-  }
-
-  return payoutColumnsPresentCache;
+  return true;
 }
 
 export async function getJobPayoutsByIds(jobIds: string[]) {
-  if (jobIds.length === 0 || !(await hasJobPayoutColumns())) {
+  if (jobIds.length === 0) {
     return new Map<string, JobPayoutSnapshot>();
   }
 

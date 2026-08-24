@@ -1,4 +1,5 @@
 import { getAuditRetentionDays } from "@/lib/commercial/audit-retention";
+import { tableExists } from "@/lib/db-introspect";
 import { prisma } from "@/lib/prisma";
 
 export const PLATFORM_CRON_ENDPOINTS = [
@@ -8,14 +9,7 @@ export const PLATFORM_CRON_ENDPOINTS = [
 ] as const;
 
 export async function platformTableExists(name: string) {
-  try {
-    const rows = await prisma.$queryRaw<Array<{ name: string }>>`
-      SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${name}
-    `;
-    return rows.length > 0;
-  } catch {
-    return false;
-  }
+  return tableExists(name);
 }
 
 export async function getLastAuditPruneEvent() {

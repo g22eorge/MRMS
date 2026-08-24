@@ -115,7 +115,7 @@ export default async function PlatformAuditPage({
         getRowKey={(event) => event.id}
         empty={
           <>
-            No audit events found. If the table is missing, run <span className="mono">/api/admin/db-fix</span> or deploy the latest schema.
+            No audit events found. If the table is missing, the release&apos;s migration step did not run — see <span className="mono">/api/admin/db-health</span>.
           </>
         }
         columns={[

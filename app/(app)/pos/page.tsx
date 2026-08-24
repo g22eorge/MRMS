@@ -24,6 +24,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
+import { isMissingTableError } from "@/lib/db-errors";
 
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
@@ -241,7 +242,7 @@ export default async function PosPage({
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    if (isMissingTableError(err) && msg.includes("sale")) dbNeedsFix = true;
     sales = [];
   }
 
@@ -314,10 +315,11 @@ export default async function PosPage({
             <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
               <p className="font-semibold text-amber-50">POS database tables are missing.</p>
               <p className="mt-1 text-amber-100/90">
-                Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
+                The <span className="mono">Sale</span> tables have not been created, which means the release&apos;s
+                migration step did not run. Check the database health report, then redeploy.
               </p>
-              <Button href="/api/admin/db-fix" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
-                Open DB Fix
+              <Button href="/api/admin/db-health" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
+                Open DB Health
               </Button>
             </section>
           ) : null}

@@ -11,6 +11,7 @@ import {
 } from "@/lib/notifications/whatsapp";
 import { sendEmail } from "@/lib/notifications/email";
 import { prisma } from "@/lib/prisma";
+import { isMissingTableError } from "@/lib/db-errors";
 
 export const WHATSAPP_PDF_DOCUMENT_KEY = "WHATSAPP_PDF_DOCUMENT";
 
@@ -273,7 +274,7 @@ export async function enqueueWhatsAppDocument(input: {
     })
     .catch(async (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("outboundmessage")) {
+      if (isMissingTableError(error) || message.toLowerCase().includes("outboundmessage")) {
         const direct = await deliverWhatsAppPdfDocument({
           id: "",
           orgId: input.orgId,
@@ -330,7 +331,7 @@ export async function enqueueEmailDocument(input: {
     })
     .catch(async (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("outboundmessage")) {
+      if (isMissingTableError(error) || message.toLowerCase().includes("outboundmessage")) {
         const direct = await deliverEmailPdfDocument({
           id: "",
           orgId: input.orgId,

@@ -10,6 +10,7 @@ import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
+import { isMissingColumnError } from "@/lib/db-errors";
 
 function supportsCommsTemplates() {
   return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
@@ -254,7 +255,7 @@ export default async function NotificationTemplatesPage({
       saved = true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const isMissingColumn = msg.includes("no such column") || msg.includes("unknown column") || msg.includes("has no column");
+      const isMissingColumn = isMissingColumnError(error) || msg.includes("unknown column") || msg.includes("has no column");
       if (isMissingColumn) {
         // Schema not migrated yet — update without meta fields, flag that migration is needed.
         try {

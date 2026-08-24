@@ -474,7 +474,7 @@ export default async function UsersPage({
 
     // Platform-admin identity is decided by email alone (lib/platform-admin.ts),
     // so letting a tenant admin type that address here would hand them the
-    // platform console and the raw-SQL db-fix endpoint. The unique index blocks
+    // platform console. The unique index blocks
     // it only while that account actually exists.
     if (isPlatformAdminEmail(parsed.data.email) && !isPlatformAdminEmail(existing.email)) {
       return { error: "That email address is reserved." };

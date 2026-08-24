@@ -4,6 +4,7 @@ import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { whatsappConfigSummary } from "@/lib/notifications/whatsapp";
 import { emailIsConfigured } from "@/lib/notifications/email";
+import { listTables, tableColumns } from "@/lib/db-introspect";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +41,7 @@ export async function GET() {
   };
 
   // Baseline connectivity
-  await run("db:tables", async () =>
-    prisma.$queryRaw<Array<{ name: string }>>`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`,
-  );
+  await run("db:tables", async () => listTables());
 
   // Core reads used by dashboard/jobs
   await run("job:count", async () => prisma.job.count());
@@ -204,9 +203,7 @@ export async function GET() {
     return { delegate: true, hasRow: Boolean(row) };
   });
 
-  await run("branding:pragmaColumns", async () =>
-    prisma.$queryRaw<Array<{ name: string }>>`PRAGMA table_info('DocumentBrandingSettings')`,
-  );
+  await run("branding:columns", async () => tableColumns("DocumentBrandingSettings"));
 
   // Session user lookup path
   await run("user:current", async () =>

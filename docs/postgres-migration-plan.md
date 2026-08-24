@@ -359,17 +359,34 @@ distinct `Decimal` instances and failing with `Expected: 38, Received: 38`. The
 helpers now hand tests the application's client, so the suite covers the
 boundary it is supposed to protect.
 
-### Phase 3 — Replace SQLite introspection and retire the healing machinery
+### Phase 3 — Retire the SQLite introspection and the healing machinery — **DONE**
 
-| # | Task | Verify |
+| # | Task | Result |
 | --- | --- | --- |
-| 3.1 | `app/api/admin/db-health/route.ts`: `sqlite_master` / `PRAGMA table_info` → `information_schema.tables` / `information_schema.columns` | Health page renders |
-| 3.2 | `lib/platform-health.ts`, `lib/payouts.ts`, `app/api/admin/probe/route.ts`: same substitution | Pages render |
-| 3.3 | `app/api/admin/db-fix/route.ts` (2,602 lines, 312 raw calls): reduce to a read-only reporter over `prisma migrate status` + `information_schema`. Its entire purpose — patching drift at runtime — is now handled by migrations. Do this in two steps: make it a no-op behind a flag, then delete the DDL bodies | Route returns a report; no DDL is executed |
-| 3.4 | Delete or port the SQLite-only scripts: `sync-schema-to-db.mjs`, `prod-job-column-safety.mjs`, `reconcile-empty-schema.mjs`, `schema-drift-check.mjs` | `bun run predeploy:check` passes |
-| 3.5 | Fix the pre-existing `lib/queue` bullmq/ioredis type error (needed for the worker container) | `tsc` clean, worker starts |
+| 3.1 | `lib/db-introspect.ts` — one place for schema introspection, on `information_schema` | `listTables`, `tableExists`, `tableColumns`, `columnNames`, `columnExists`, `appliedMigrations` |
+| 3.2 | `app/api/admin/db-health` rewritten | **218 → 141 lines.** It no longer checks a hardcoded list of tables and columns that had to be edited as the schema grew. It diffs the **entire datamodel** (via `Prisma.dmmf`) against the live schema, and reports migration state — the mechanism that now keeps them in step |
+| 3.3 | `app/api/admin/db-fix` retired | **2,602 → 63 lines.** Read-only; `POST` returns 410 Gone. Kept reachable because admin screens link to it, and whoever follows that link deserves an explanation rather than a 404 |
+| 3.4 | `lib/platform-health.ts`, `lib/payouts.ts`, `app/api/admin/probe` ported | `payouts.hasJobPayoutColumns()` no longer probes `PRAGMA table_info("Job")` — those columns are in the baseline, so a database without them is a failed deployment to surface, not a condition for feature code to tiptoe around |
+| 3.5 | `app/api/admin/runtime-db` rewritten | Reports host/database/user/sslmode/pool from the parsed connection string (never the password) plus the live server version, instead of Turso-vs-SQLite mode |
+| 3.6 | Four UI references to "DB Fix" repointed to DB Health | `/pos`, `/platform/orgs/[id]`, `/platform/audit`, and a stale comment in `/settings/users` |
+| 3.7 | The bullmq/ioredis type error | Already resolved by the dependency reinstall; `lib/queue` is in scope and typechecks |
+| — | Gate | `tsc` 0 errors, `lint` 0 errors, 508 unit tests pass, 14 introspection/error assertions pass |
 
-Exit: no SQLite idiom remains in application code.
+**Raw SQL call sites: 393 → 47.** Every remaining mention of `sqlite_master`,
+`PRAGMA` or `date('now')` in the repo is inside a comment explaining what used to
+be there.
+
+#### A migration bug this phase caught before it shipped
+
+Seven call sites degraded gracefully when a relation was missing — the POS screen
+shows a setup banner, the WhatsApp outbox falls back to sending without logging —
+and each detected that condition by matching the string `"no such table"`. That
+is SQLite's wording. Postgres says `relation "Sale" does not exist`.
+
+Every one of those checks would have silently stopped matching, turning a handled
+condition into an unhandled exception in front of a user. `lib/db-errors.ts` now
+keys off Prisma's error codes (`P2021`, `P2022`) with both dialects' wording as
+fallback, and is verified against errors raised by the real database.
 
 ### Phase 4 — The data export/import tool
 

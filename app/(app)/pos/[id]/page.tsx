@@ -27,6 +27,7 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
+import { isMissingTableError } from "@/lib/db-errors";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
@@ -205,7 +206,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    if (isMissingTableError(err) && msg.includes("sale")) dbNeedsFix = true;
     sale = null;
   }
 

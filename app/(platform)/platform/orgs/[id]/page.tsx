@@ -124,11 +124,11 @@ export default async function OrgDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <a
-            href="/api/admin/db-fix"
+            href="/api/admin/db-health"
             target="_blank"
             className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:border-amber-400/60 hover:text-amber-600"
           >
-            DB Fix
+            DB Health
           </a>
         </div>
       </div>

@@ -16,6 +16,7 @@ import {
   isEmailPdfDocumentRow,
 } from "@/lib/notifications/whatsapp-document-outbox";
 import { RepairRequestAlertEmail } from "@/emails/RepairRequestAlertEmail";
+import { isMissingTableError } from "@/lib/db-errors";
 
 const MAX_ATTEMPTS = 8;
 const LOCK_TTL_MS = 2 * 60 * 1000;
@@ -112,7 +113,7 @@ export async function enqueueWhatsAppMessage(input: {
     .catch(async (error) => {
       // If the outbox table hasn't been deployed yet, fall back to best-effort send.
       const message = error instanceof Error ? error.message : String(error);
-      if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("outboundmessage")) {
+      if (isMissingTableError(error) || message.toLowerCase().includes("outboundmessage")) {
         const cfg = await getWhatsAppConfigForOrg(input.orgId);
         const direct = input.metaTemplateName
           ? await sendWhatsAppTemplateMessage(
