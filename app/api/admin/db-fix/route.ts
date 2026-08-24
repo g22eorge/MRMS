@@ -1127,7 +1127,8 @@ async function runDbFix() {
       CREATE TABLE IF NOT EXISTS "CreditNote" (
         "id" TEXT NOT NULL PRIMARY KEY,
         "orgId" TEXT NOT NULL,
-        "saleId" TEXT NOT NULL,
+        "saleId" TEXT,
+        "invoiceId" TEXT,
         "creditNoteNumber" TEXT NOT NULL,
         "currency" TEXT NOT NULL DEFAULT 'UGX',
         "totalAmount" REAL NOT NULL,
@@ -1140,6 +1141,7 @@ async function runDbFix() {
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE,
         FOREIGN KEY ("saleId") REFERENCES "Sale"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE,
         FOREIGN KEY ("itemsReceivedBackById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
         FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
       )
@@ -1148,7 +1150,20 @@ async function runDbFix() {
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "CreditNote_orgId_issuedAt_idx" ON "CreditNote"("orgId", "issuedAt")');
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "CreditNote_saleId_idx" ON "CreditNote"("saleId")');
     changes.push({ kind: "create_table", detail: "Created CreditNote + indexes" });
+  } else {
+    // A credit note can now be raised against an invoice as well as a sale.
+    // Adding the column is enough for every READ path; making saleId nullable
+    // needs a full table rebuild (SQLite cannot relax NOT NULL in place), which
+    // is scripted separately under scripts/migrations. Until that runs, reading
+    // credit notes works and creating an INVOICE-sourced one is what fails —
+    // rather than the whole page 500ing on a missing column.
+    const creditNoteCols = await tableColumns("CreditNote");
+    if (!creditNoteCols.has("invoiceId")) {
+      await prisma.$executeRawUnsafe('ALTER TABLE "CreditNote" ADD COLUMN "invoiceId" TEXT');
+      changes.push({ kind: "alter_table", detail: "Added CreditNote.invoiceId" });
+    }
   }
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "CreditNote_invoiceId_idx" ON "CreditNote"("invoiceId")');
 
   const hasCreditNoteItem = await tableExists("CreditNoteItem");
   if (!hasCreditNoteItem) {

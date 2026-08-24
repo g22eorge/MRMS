@@ -58,3 +58,27 @@ parent table did not cascade into its dependents) before being applied for real.
 Verified afterwards on both: row counts unchanged, index counts unchanged,
 `foreign_key_check` clean, per-tenant client counts unchanged, and the live app
 reading and writing normally.
+
+---
+
+## `creditnote-invoice-parent` — pending
+
+Makes `CreditNote.saleId` nullable and adds `CreditNote.invoiceId`, so a credit
+note can be raised against an invoice as well as a POS sale.
+
+`app/api/admin/db-fix` adds the `invoiceId` column on its own, which is enough
+for every READ path — the credit-note and refund screens keep working. What
+still needs this rebuild is relaxing `saleId` from `NOT NULL`, which SQLite
+cannot do in place. Until it runs, creating an **invoice-sourced** credit note
+is the only thing that fails.
+
+```bash
+turso db export <db> --output-file backup.db --overwrite
+python3 creditnote-invoice-parent.py backup.db > migration.sql
+turso db shell <db> < migration.sql
+```
+
+Rehearsed against the 19 Aug production snapshots of both databases: row counts
+held (`CreditNote`, `CreditNoteItem`, `Refund`), `integrity_check` ok,
+`foreign_key_check` clean, and afterwards both an invoice-sourced and a
+sale-sourced credit note insert successfully with foreign keys enforced.
