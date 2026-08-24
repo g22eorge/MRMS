@@ -54,6 +54,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         select: {
           creditNoteNumber: true,
           sale: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+          invoice: {
+            select: {
+              client: { select: { fullName: true, phone: true, email: true, organization: true } },
+              job: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+            },
+          },
         },
       },
       createdBy: { select: { name: true } },
@@ -72,7 +78,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const recipient = refund.invoice?.job?.client
     ?? refund.invoice?.client
     ?? refund.sale?.client
-    ?? refund.creditNote?.sale.client
+    ?? refund.creditNote?.sale?.client
+    ?? refund.creditNote?.invoice?.client
+    ?? refund.creditNote?.invoice?.job?.client
     ?? null;
   const source = refund.invoice?.invoiceNumber
     ?? refund.sale?.saleNumber

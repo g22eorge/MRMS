@@ -4,6 +4,7 @@ import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { prisma } from "@/lib/prisma";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
 export type DocumentShareChannel = "whatsapp" | "email";
 
@@ -183,15 +184,25 @@ export async function shareCreditNoteDocument(params: {
       totalAmount: true,
       currency: true,
       sale: { select: linkedSaleSelect },
+      invoice: { select: linkedInvoiceSelect },
     },
   });
   if (!creditNote) return false;
 
-  const recipient = resolveLinkedDocumentRecipient({ saleClient: creditNote.sale.client });
+  // Either parent can carry the customer, and a repair invoice usually carries
+  // it on the job rather than on itself.
+  const parent = creditNoteParent(creditNote);
+  const recipient = resolveLinkedDocumentRecipient({
+    saleClient: creditNote.sale?.client ?? null,
+    invoiceClient: creditNote.invoice?.client ?? null,
+    jobClient: creditNote.invoice?.job?.client ?? null,
+  });
   if (!recipient) return false;
 
   const amountLine = `Amount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}`;
-  const intro = `Your credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.`;
+  const intro = parent.reference
+    ? `Your credit note ${creditNote.creditNoteNumber} for ${parent.reference} is ready.`
+    : `Your credit note ${creditNote.creditNoteNumber} is ready.`;
 
   return dispatchDocumentShare({
     orgId: params.orgId,
@@ -230,7 +241,7 @@ export async function shareRefundDocument(params: {
     jobClient: refund.invoice?.job?.client ?? null,
     invoiceClient: refund.invoice?.client ?? null,
     saleClient: refund.sale?.client ?? null,
-    creditNoteSaleClient: refund.creditNote?.sale.client ?? null,
+    creditNoteSaleClient: refund.creditNote?.sale?.client ?? null,
   });
   if (!recipient) return false;
 

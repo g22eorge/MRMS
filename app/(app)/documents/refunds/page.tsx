@@ -22,6 +22,7 @@ import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
 import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/DocumentSourcePicker";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
@@ -117,6 +118,7 @@ export default async function RefundsPage({
         select: {
           id: true,
           saleId: true,
+          invoiceId: true,
           totalAmount: true,
           currency: true,
           refunds: { select: { amount: true, currency: true, exchangeRateToBase: true } },
@@ -124,7 +126,10 @@ export default async function RefundsPage({
       });
       if (!creditNote) return;
       creditNoteId = creditNote.id;
+      // Inherit whichever parent the credit note hangs off, so refunding an
+      // invoice-sourced credit note reduces that invoice rather than nothing.
       saleId = creditNote.saleId;
+      invoiceId = creditNote.invoiceId;
       currency = creditNote.currency;
       // A credit note carries no paidAmount and stores no rate of its own, so
       // its total stays in document currency until the form's rate is read.
@@ -387,7 +392,18 @@ export default async function RefundsPage({
     creditNoteId: true,
     invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
     sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
-    creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } } } },
+    creditNote: {
+      select: {
+        creditNoteNumber: true,
+        sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } },
+        invoice: {
+          select: {
+            client: { select: { fullName: true, phone: true, email: true } },
+            job: { select: { client: { select: { fullName: true, phone: true, email: true } } } },
+          },
+        },
+      },
+    },
     createdBy: { select: { name: true } },
   } satisfies Prisma.RefundSelect;
 
@@ -443,6 +459,13 @@ export default async function RefundsPage({
         totalAmount: true,
         currency: true,
         sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            client: { select: { fullName: true, phone: true } },
+            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+          },
+        },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -520,12 +543,12 @@ export default async function RefundsPage({
     {
       label: "Credit notes",
       options: refundableCreditNotes.map((cn) => {
-        const who = cn.sale?.client?.fullName ?? "Walk-in";
+        const parent = creditNoteParent(cn);
         return {
           value: `creditNote:${cn.id}`,
-          label: `${who} — ${cn.creditNoteNumber}`,
-          hint: `${cn.sale.saleNumber} · refundable ${formatMoney(cn.refundableAmount, cn.currency)}`,
-          search: [who, cn.creditNoteNumber, cn.sale.saleNumber].filter(Boolean).join(" "),
+          label: `${parent.clientName} — ${cn.creditNoteNumber}`,
+          hint: `${parent.reference ? parent.reference + " · " : ""}refundable ${formatMoney(cn.refundableAmount, cn.currency)}`,
+          search: [parent.clientName, cn.creditNoteNumber, parent.reference].filter(Boolean).join(" "),
         };
       }),
     },
@@ -551,19 +574,25 @@ export default async function RefundsPage({
       r.invoice?.job?.client?.fullName ??
       r.invoice?.client?.fullName ??
       r.sale?.client?.fullName ??
-      r.creditNote?.sale.client?.fullName ??
+      r.creditNote?.sale?.client?.fullName ??
+      r.creditNote?.invoice?.client?.fullName ??
+      r.creditNote?.invoice?.job?.client?.fullName ??
       "—";
     const recipientPhone =
       r.invoice?.job?.client?.phone ??
       r.invoice?.client?.phone ??
       r.sale?.client?.phone ??
-      r.creditNote?.sale.client?.phone ??
+      r.creditNote?.sale?.client?.phone ??
+      r.creditNote?.invoice?.client?.phone ??
+      r.creditNote?.invoice?.job?.client?.phone ??
       null;
     const recipientEmail =
       r.invoice?.job?.client?.email ??
       r.invoice?.client?.email ??
       r.sale?.client?.email ??
-      r.creditNote?.sale.client?.email ??
+      r.creditNote?.sale?.client?.email ??
+      r.creditNote?.invoice?.client?.email ??
+      r.creditNote?.invoice?.job?.client?.email ??
       null;
     const refundUrl = `${appUrl}/api/refunds/${r.id}`;
     const refundShareText = encodeURIComponent(`Your refund document is ready.\n\n${sourceLabel}\nAmount: ${formatMoney(r.amount, refundCurrency)}\nPDF: ${refundUrl}`);

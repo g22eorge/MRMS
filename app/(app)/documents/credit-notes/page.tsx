@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { type PaymentMethod } from "@prisma/client";
 
 import { formatMoney, formatMoneyCompact, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -15,7 +14,9 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
+import { creditNoteParent, creditValueForReturn } from "@/lib/commercial/credit-note-parent";
+import { creditedSoFar, loadCreditNoteSource, parseCreditNoteSourceKey } from "@/lib/commercial/credit-note-source";
+import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
@@ -31,30 +32,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
-
-/**
- * What a returned set of lines is actually worth to the customer.
- *
- * The gross line value (qty x unit price) is NOT it: the sale's total is net of
- * any document discount and inclusive of VAT, so crediting gross both refuses to
- * fully return a discounted sale (gross > total, so the cap rejects it) and
- * over-refunds a partial return of one. Pro-rating the sale total by the share
- * of gross being returned carries the discount and the VAT along with it, and a
- * full return lands exactly on the sale total.
- */
-function creditValueForReturn(params: {
-  grossReturned: number;
-  saleSubtotal: number;
-  saleTotal: number;
-  currency: string;
-}): number {
-  const { grossReturned, saleSubtotal, saleTotal, currency } = params;
-  if (grossReturned <= 0) return 0;
-  // No usable subtotal (legacy/zero row) — fall back to gross rather than zero.
-  if (!Number.isFinite(saleSubtotal) || saleSubtotal <= 0) return roundMoney(grossReturned, currency);
-  const share = Math.min(1, grossReturned / saleSubtotal);
-  return roundMoney(saleTotal * share, currency);
-}
 
 export default async function CreditNotesPage({
   searchParams,
@@ -91,7 +68,7 @@ export default async function CreditNotesPage({
     const note = String(formData.get("note") ?? "").trim();
     if (!creditNoteId) return;
 
-    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, creditNoteNumber: true, saleId: true, itemsReceivedBackAt: true } });
+    const cn = await prisma.creditNote.findFirst({ where: { id: creditNoteId, orgId }, select: { id: true, creditNoteNumber: true, saleId: true, invoiceId: true, itemsReceivedBackAt: true } });
     if (!cn || cn.itemsReceivedBackAt) return;
 
     await prisma.$transaction(async (tx) => {
@@ -108,7 +85,9 @@ export default async function CreditNotesPage({
           data: {
             partId: part.id,
             orgId,
-            saleId: cn.saleId,
+            // Only a sale-sourced return can point the stock movement at a sale;
+            // an invoice-sourced one records the reason instead.
+            ...(cn.saleId ? { saleId: cn.saleId } : {}),
             type: "IN",
             quantity: baseQty,
             reason: `Return (${cn.creditNoteNumber}) ${it.description || part.name}`,
@@ -151,7 +130,7 @@ export default async function CreditNotesPage({
 
     const cn = await prisma.creditNote.findFirst({
       where: { id: creditNoteId, orgId },
-      select: { id: true, saleId: true, totalAmount: true, currency: true, creditNoteNumber: true, refunds: { select: { amount: true } } },
+      select: { id: true, saleId: true, invoiceId: true, totalAmount: true, currency: true, creditNoteNumber: true, refunds: { select: { amount: true } } },
     });
     if (!cn) return;
 
@@ -194,7 +173,10 @@ export default async function CreditNotesPage({
       const created = await tx.refund.create({
         data: {
           orgId,
-          saleId: cn.saleId,
+          // The refund inherits whichever parent the credit note hangs off, so
+          // an invoice-sourced credit note reduces the invoice, not a sale.
+          ...(cn.saleId ? { saleId: cn.saleId } : {}),
+          ...(cn.invoiceId ? { invoiceId: cn.invoiceId } : {}),
           creditNoteId: cn.id,
           currency: cn.currency,
           exchangeRateToBase,
@@ -211,6 +193,8 @@ export default async function CreditNotesPage({
       // collected (was skipped, letting the refundable amount be double-drawn).
       if (cn.saleId) {
         await syncSalePaymentState(tx, { orgId, saleId: cn.saleId });
+      } else if (cn.invoiceId) {
+        await syncInvoicePaymentState(tx, { orgId, invoiceId: cn.invoiceId, baseCurrency: org.baseCurrency, actorUserId: user.id });
       }
       // C5: cash-basis ledger post — reverse revenue, pay out cash. This mirrors
       // the refunds page; without it, refunds issued from a credit note never hit
@@ -277,77 +261,73 @@ export default async function CreditNotesPage({
     if (!["ADMIN", "OPS", "MANAGER"].includes(user.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
-    const saleId = String(formData.get("saleId") ?? "").trim();
+    // The picker posts "sale:<id>" or "invoice:<id>". The bare saleId form is
+    // still accepted so an older cached page keeps working.
+    const rawSource = String(formData.get("sourceKey") ?? "").trim() || `sale:${String(formData.get("saleId") ?? "").trim()}`;
+    const source = parseCreditNoteSourceKey(rawSource);
     const reason = String(formData.get("reason") ?? "").trim();
     const itemIds = formData.getAll("itemId").map((value) => String(value)).filter(Boolean);
-    if (!saleId) return;
+    if (!source) return;
     if (!reason) {
       redirect(`/documents/credit-notes?error=${encodeURIComponent("Give a reason for the return — it appears on the credit note.")}`);
     }
-    if (!itemIds.length) return;
+    if (!itemIds.length) {
+      redirect(`/documents/credit-notes?error=${encodeURIComponent("Pick at least one item to return.")}`);
+    }
 
-    const sale = await prisma.sale.findFirst({
-      where: { id: saleId, orgId },
-      select: {
-        id: true,
-        currency: true,
-        saleNumber: true,
-        items: {
-          where: { id: { in: itemIds } },
-          select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, saleUomFactor: true },
-        },
-      },
-    });
-    if (!sale || sale.items.length === 0) return;
+    const parent = await loadCreditNoteSource(prisma, { orgId, kind: source.kind, id: source.id, lineIds: itemIds });
+    if (!parent || parent.lines.length === 0) return;
+    if (!parent.settled) {
+      redirect(
+        `/documents/credit-notes?error=${encodeURIComponent(
+          `${parent.reference} has not been paid, so there is nothing to credit back yet.`,
+        )}`,
+      );
+    }
+    const parentCurrency = normalizeCurrency(parent.currency, org.baseCurrency);
 
-    const items = sale.items
-      .map((item) => {
-        const requestedQuantity = Number(String(formData.get(`quantity:${item.id}`) ?? item.quantity).trim());
-        const quantity = Math.max(1, Math.min(item.quantity, Math.floor(Number.isFinite(requestedQuantity) ? requestedQuantity : item.quantity)));
+    const items = parent.lines
+      .map((line) => {
+        const requested = Number(String(formData.get(`quantity:${line.id}`) ?? line.quantity).trim());
+        const quantity = Math.max(0, Math.min(line.quantity, Number.isFinite(requested) ? requested : line.quantity));
         return {
-          partId: item.partId,
-          description: item.description,
+          partId: line.partId,
+          description: line.description,
           quantity,
-          unitPrice: item.unitPrice,
-          saleUomFactor: item.saleUomFactor,
+          unitPrice: line.unitPrice,
+          saleUomFactor: line.saleUomFactor,
         };
       })
       .filter((item) => item.quantity > 0);
     if (!items.length) return;
 
-    const grossReturned = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-
-    // Cumulative-return cap: existing credit notes for this sale plus this one
-    // must not exceed the sale total (prevents unlimited over-refund).
-    const saleTotal = await prisma.sale.findFirst({
-      where: { id: saleId, orgId },
-      select: { totalAmount: true, subtotal: true, currency: true },
-    });
-    if (!saleTotal) return;
+    const grossReturned = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
     const totalAmount = creditValueForReturn({
       grossReturned,
-      saleSubtotal: saleTotal.subtotal,
-      saleTotal: saleTotal.totalAmount,
-      currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
+      parentSubtotal: parent.subtotal,
+      parentTotal: parent.total,
+      round: (v) => roundMoney(v, parentCurrency),
     });
     if (totalAmount <= 0) {
       redirect(`/documents/credit-notes?error=${encodeURIComponent("Those quantities come to nothing to credit. Check the amounts and try again.")}`);
     }
-    const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-    const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
-    if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
-      // Was a bare return: the dialog closed and nothing happened, with no hint
-      // that the sale had already been credited.
-      const left = Math.max(0, saleTotal.totalAmount - alreadyCredited);
+
+    // Cumulative-return cap: existing credit notes for this parent plus this one
+    // must not exceed what the customer was billed.
+    const alreadyCredited = await creditedSoFar(prisma, { orgId, kind: parent.kind, id: parent.id });
+    if (alreadyCredited + totalAmount > parent.total) {
+      const left = Math.max(0, parent.total - alreadyCredited);
       redirect(
         `/documents/credit-notes?error=${encodeURIComponent(
-          `This sale has already been credited down to ${formatMoney(left, normalizeCurrency(saleTotal.currency, org.baseCurrency))}. Reduce the quantities and try again.`,
+          `${parent.reference} has already been credited down to ${formatMoney(left, parentCurrency)}. Reduce the quantities and try again.`,
         )}`,
       );
     }
 
-    // Double-submit guard: an identical credit note for this sale landed seconds ago.
-    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, saleId, totalAmount });
+    const parentLink = parent.kind === "sale" ? { saleId: parent.id } : { invoiceId: parent.id };
+
+    // Double-submit guard: an identical credit note for this parent landed seconds ago.
+    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, ...parentLink, totalAmount });
     if (dupCn) {
       revalidatePath("/documents/credit-notes");
       redirect("/documents/credit-notes");
@@ -360,9 +340,9 @@ export default async function CreditNotesPage({
       const created = await tx.creditNote.create({
         data: {
           orgId,
-          saleId,
+          ...parentLink,
           creditNoteNumber,
-          currency: sale.currency,
+          currency: parentCurrency,
           totalAmount,
           reason,
           createdById: user.id,
@@ -383,14 +363,18 @@ export default async function CreditNotesPage({
       // Re-check the cumulative cap INSIDE the transaction. The aggregate above
       // runs before the transaction opens, so two credit notes for different
       // amounts submitted at the same moment both read the same prior total and
-      // both commit, crediting more than the sale was worth. The duplicate guard
-      // only catches identical amounts within ten seconds.
-      const committed = await tx.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-      if ((committed._sum.totalAmount ?? 0) - saleTotal.totalAmount > 0.005) {
-        throw new Error("This sale has already been credited in full. Reload and try again.");
+      // both commit. The duplicate guard only catches identical amounts within
+      // ten seconds.
+      const committed = await creditedSoFar(tx, { orgId, kind: parent.kind, id: parent.id });
+      if (committed - parent.total > 0.005) {
+        throw new Error(`${parent.reference} has already been credited in full. Reload and try again.`);
       }
-      // M10: reflect the return on the sale (PARTIALLY_RETURNED / RETURNED).
-      await syncSalePaymentState(tx, { orgId, saleId });
+      // Reflect the return on a sale (PARTIALLY_RETURNED / RETURNED). Invoices
+      // deliberately have no returned status: the credit note is the record, and
+      // the invoice stays paid because the money genuinely did change hands.
+      if (parent.kind === "sale") {
+        await syncSalePaymentState(tx, { orgId, saleId: parent.id });
+      }
     });
     await writeSystemAuditEvent({
       orgId,
@@ -398,12 +382,12 @@ export default async function CreditNotesPage({
       entityType: "CreditNote",
       entityId: creditNoteId,
       action: "CREDIT_NOTE_CREATED",
-      summary: `Credit note ${creditNoteNumber} for sale ${sale.saleNumber} (${formatMoney(totalAmount, sale.currency)})`,
+      summary: `Credit note ${creditNoteNumber} for ${parent.reference} (${formatMoney(totalAmount, parentCurrency)})`,
     });
     notifyCreditNoteIssued({
       orgId,
       creditNoteNumber,
-      clientName: `Sale ${sale.saleNumber}`,
+      clientName: parent.reference,
       amount: totalAmount,
       actorName: user.name ?? user.email ?? "Unknown",
     }).catch(() => {});
@@ -423,12 +407,13 @@ export default async function CreditNotesPage({
     if (!["ADMIN", "OPS", "MANAGER"].includes(user.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
 
-    const saleId = String(formData.get("saleId") ?? "").trim();
+    const rawSource = String(formData.get("sourceKey") ?? "").trim() || `sale:${String(formData.get("saleId") ?? "").trim()}`;
+    const source = parseCreditNoteSourceKey(rawSource);
     const reason = String(formData.get("reason") ?? "").trim();
     const itemIds = formData.getAll("itemId").map((value) => String(value)).filter(Boolean);
     const methodRaw = String(formData.get("method") ?? "CASH").trim();
     const reference = String(formData.get("reference") ?? "").trim();
-    if (!saleId) return;
+    if (!source) return;
     if (!reason) {
       redirect(`/documents/credit-notes?error=${encodeURIComponent("Give a reason for the return — it appears on the credit note.")}`);
     }
@@ -436,61 +421,53 @@ export default async function CreditNotesPage({
       redirect(`/documents/credit-notes?error=${encodeURIComponent("Pick at least one item to return.")}`);
     }
 
-    const sale = await prisma.sale.findFirst({
-      where: { id: saleId, orgId },
-      select: {
-        id: true,
-        currency: true,
-        saleNumber: true,
-        items: {
-          where: { id: { in: itemIds } },
-          select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, saleUomFactor: true },
-        },
-      },
-    });
-    if (!sale || sale.items.length === 0) return;
+    const parent = await loadCreditNoteSource(prisma, { orgId, kind: source.kind, id: source.id, lineIds: itemIds });
+    if (!parent || parent.lines.length === 0) return;
+    if (!parent.settled) {
+      redirect(
+        `/documents/credit-notes?error=${encodeURIComponent(
+          `${parent.reference} has not been paid, so there is nothing to credit back yet.`,
+        )}`,
+      );
+    }
+    const parentCurrency = normalizeCurrency(parent.currency, org.baseCurrency);
 
-    const items = sale.items
-      .map((item) => {
-        const requestedQuantity = Number(String(formData.get(`quantity:${item.id}`) ?? item.quantity).trim());
-        const quantity = Math.max(1, Math.min(item.quantity, Math.floor(Number.isFinite(requestedQuantity) ? requestedQuantity : item.quantity)));
-        return { partId: item.partId, description: item.description, quantity, unitPrice: item.unitPrice, saleUomFactor: item.saleUomFactor };
+    const items = parent.lines
+      .map((line) => {
+        const requested = Number(String(formData.get(`quantity:${line.id}`) ?? line.quantity).trim());
+        const quantity = Math.max(0, Math.min(line.quantity, Number.isFinite(requested) ? requested : line.quantity));
+        return { partId: line.partId, description: line.description, quantity, unitPrice: line.unitPrice, saleUomFactor: line.saleUomFactor };
       })
       .filter((item) => item.quantity > 0);
     if (!items.length) return;
 
-    const grossReturned = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    const grossReturned = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
     if (grossReturned <= 0) return;
 
-    // Same cumulative-return cap as createCreditNoteAction.
-    const saleTotal = await prisma.sale.findFirst({
-      where: { id: saleId, orgId },
-      select: { totalAmount: true, subtotal: true, currency: true },
-    });
-    if (!saleTotal) return;
     const totalAmount = creditValueForReturn({
       grossReturned,
-      saleSubtotal: saleTotal.subtotal,
-      saleTotal: saleTotal.totalAmount,
-      currency: normalizeCurrency(saleTotal.currency, org.baseCurrency),
+      parentSubtotal: parent.subtotal,
+      parentTotal: parent.total,
+      round: (v) => roundMoney(v, parentCurrency),
     });
     if (totalAmount <= 0) {
       redirect(`/documents/credit-notes?error=${encodeURIComponent("Those quantities come to nothing to credit. Check the amounts and try again.")}`);
     }
-    const priorCredited = await prisma.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-    const alreadyCredited = priorCredited._sum.totalAmount ?? 0;
-    if (alreadyCredited + totalAmount > saleTotal.totalAmount) {
-      const left = Math.max(0, saleTotal.totalAmount - alreadyCredited);
+
+    // Same cumulative-return cap as createCreditNoteAction.
+    const alreadyCredited = await creditedSoFar(prisma, { orgId, kind: parent.kind, id: parent.id });
+    if (alreadyCredited + totalAmount > parent.total) {
+      const left = Math.max(0, parent.total - alreadyCredited);
       redirect(
         `/documents/credit-notes?error=${encodeURIComponent(
-          `This sale has already been credited down to ${formatMoney(left, normalizeCurrency(saleTotal.currency, org.baseCurrency))}. Reduce the quantities and try again.`,
+          `${parent.reference} has already been credited down to ${formatMoney(left, parentCurrency)}. Reduce the quantities and try again.`,
         )}`,
       );
     }
 
     // FX handling mirrors issueRefundFromCreditNoteAction — a foreign refund must
     // carry a rate so the ledger posts the base value, not the document amount.
-    const refundCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
+    const refundCurrency = parentCurrency;
     const rawRate = String(formData.get("exchangeRateToBase") ?? "").replace(/,/g, "").trim();
     const exchangeRateToBase = refundCurrency === org.baseCurrency ? null : (rawRate ? Number(rawRate) : null);
     if (refundCurrency !== org.baseCurrency && (!exchangeRateToBase || !Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
@@ -498,9 +475,10 @@ export default async function CreditNotesPage({
     }
 
     const method = parsePaymentMethod(methodRaw, "CASH");
+    const parentLink = parent.kind === "sale" ? { saleId: parent.id } : { invoiceId: parent.id };
 
-    // Double-submit guard: an identical credit note for this sale landed seconds ago.
-    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, saleId, totalAmount });
+    // Double-submit guard: an identical credit note for this parent landed seconds ago.
+    const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, ...parentLink, totalAmount });
     if (dupCn) { revalidatePath("/documents/credit-notes"); redirect("/documents/credit-notes"); }
 
     await ensureMoneySchema();
@@ -512,9 +490,9 @@ export default async function CreditNotesPage({
       const cn = await tx.creditNote.create({
         data: {
           orgId,
-          saleId,
+          ...parentLink,
           creditNoteNumber,
-          currency: sale.currency,
+          currency: parentCurrency,
           totalAmount,
           reason,
           createdById: user.id,
@@ -539,12 +517,14 @@ export default async function CreditNotesPage({
       // Same in-transaction re-check as createCreditNoteAction: the cap read
       // before this transaction opened cannot see a concurrent credit note for
       // a different amount, and both would otherwise commit.
-      const committed = await tx.creditNote.aggregate({ where: { orgId, saleId }, _sum: { totalAmount: true } });
-      if ((committed._sum.totalAmount ?? 0) - saleTotal.totalAmount > 0.005) {
-        throw new Error("This sale has already been credited in full. Reload and try again.");
+      const committed = await creditedSoFar(tx, { orgId, kind: parent.kind, id: parent.id });
+      if (committed - parent.total > 0.005) {
+        throw new Error(`${parent.reference} has already been credited in full. Reload and try again.`);
       }
 
-      // Restock the returned units (mirror markItemsReceivedAction).
+      // Restock the returned units (mirror markItemsReceivedAction). Only lines
+      // that came from stock carry a partId, so labour on a repair invoice
+      // credits money without touching inventory.
       for (const it of items) {
         if (!it.partId) continue;
         const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, name: true } });
@@ -552,7 +532,7 @@ export default async function CreditNotesPage({
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
         await tx.partStockTransaction.create({
-          data: { partId: part.id, orgId, saleId, type: "IN", quantity: baseQty, reason: `Return (${creditNoteNumber}) ${it.description || part.name}`, createdById: user.id },
+          data: { partId: part.id, orgId, ...(parent.kind === "sale" ? { saleId: parent.id } : {}), type: "IN", quantity: baseQty, reason: `Return (${creditNoteNumber}) ${it.description || part.name}`, createdById: user.id },
         });
       }
 
@@ -560,9 +540,9 @@ export default async function CreditNotesPage({
       const refund = await tx.refund.create({
         data: {
           orgId,
-          saleId,
+          ...parentLink,
           creditNoteId,
-          currency: sale.currency,
+          currency: parentCurrency,
           exchangeRateToBase,
           amount: totalAmount,
           method,
@@ -574,8 +554,12 @@ export default async function CreditNotesPage({
       });
       refundId = refund.id;
 
-      // Recompute the sale's paid/return state once, after both writes land.
-      await syncSalePaymentState(tx, { orgId, saleId });
+      // Recompute the parent's paid state once, after both writes land.
+      if (parent.kind === "sale") {
+        await syncSalePaymentState(tx, { orgId, saleId: parent.id });
+      } else {
+        await syncInvoicePaymentState(tx, { orgId, invoiceId: parent.id, baseCurrency: org.baseCurrency, actorUserId: user.id });
+      }
 
       const baseRefund = refundCurrency === org.baseCurrency
         ? totalAmount
@@ -589,9 +573,9 @@ export default async function CreditNotesPage({
       });
     });
 
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "CreditNote", entityId: creditNoteId, action: "CREDIT_NOTE_CREATED", summary: `Credit note ${creditNoteNumber} for sale ${sale.saleNumber} — returned & refunded (${formatMoney(totalAmount, sale.currency)})` });
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Refund", entityId: refundId, action: "REFUND_CREATED", summary: `Refund ${formatMoney(totalAmount, sale.currency)} from credit note ${creditNoteNumber}` });
-    notifyCreditNoteIssued({ orgId, creditNoteNumber, clientName: `Sale ${sale.saleNumber}`, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "CreditNote", entityId: creditNoteId, action: "CREDIT_NOTE_CREATED", summary: `Credit note ${creditNoteNumber} for ${parent.reference} — returned & refunded (${formatMoney(totalAmount, parentCurrency)})` });
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Refund", entityId: refundId, action: "REFUND_CREATED", summary: `Refund ${formatMoney(totalAmount, parentCurrency)} from credit note ${creditNoteNumber}` });
+    notifyCreditNoteIssued({ orgId, creditNoteNumber, clientName: parent.reference, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
     notifyRefundIssued({ orgId, creditNoteNumber, clientName: `CN ${creditNoteNumber}`, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
     revalidatePath("/documents/credit-notes");
     revalidatePath("/documents/refunds");
@@ -650,16 +634,22 @@ export default async function CreditNotesPage({
     ...(periodFilter === "last_month" ? { issuedAt: { gte: cnLastMonthStart, lte: cnLastMonthEnd } } : {}),
     ...(q
       ? {
+          // Search by who as well as by number, across both kinds of parent —
+          // people look for "Omega", not for INV-EIS-05/2025/0008.
           OR: [
             { creditNoteNumber: { contains: q } },
             { reason: { contains: q } },
             { sale: { saleNumber: { contains: q } } },
+            { sale: { client: { fullName: { contains: q } } } },
+            { invoice: { invoiceNumber: { contains: q } } },
+            { invoice: { client: { fullName: { contains: q } } } },
+            { invoice: { job: { client: { fullName: { contains: q } } } } },
           ],
         }
       : {}),
   };
 
-  const [creditNotesTotal, statsRows, creditNotes, eligibleSales] = await Promise.all([
+  const [creditNotesTotal, statsRows, creditNotes, eligibleSales, eligibleInvoices] = await Promise.all([
     prisma.creditNote.count({ where: creditNotesWhere }).catch(() => 0),
     // Whole-dataset KPIs (value/pending/refunded) computed from every matching row.
     prisma.creditNote.findMany({
@@ -670,6 +660,13 @@ export default async function CreditNotesPage({
       where: creditNotesWhere,
       include: {
         sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            client: { select: { fullName: true, phone: true, email: true } },
+            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+          },
+        },
         items: { select: { description: true, quantity: true, unitPrice: true, lineTotal: true } },
         refunds: { select: { amount: true, method: true, refundedAt: true } },
         itemsReceivedBackBy: { select: { name: true } },
@@ -691,11 +688,26 @@ export default async function CreditNotesPage({
       orderBy: { createdAt: "desc" },
       take: 50,
     }).catch(() => []),
+    // Invoices are creditable too — a repair or service that has to be given
+    // back. Only settled ones, matching the rule sales already follow.
+    prisma.invoice.findMany({
+      where: { orgId, status: "PAID" },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        currency: true,
+        client: { select: { fullName: true, phone: true } },
+        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+        lines: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }).catch(() => []),
   ]);
 
   const totalValue = statsRows.reduce((s, cn) => s + cn.totalAmount, 0);
   const pendingReturn = statsRows.filter((cn) => !cn.itemsReceivedBackAt).length;
-  const totalRefunded = statsRows.reduce((s, cn) => s + cn.refunds.reduce((r, rf) => r + rf.amount, 0), 0);
   const currency = org.baseCurrency;
   const pageView = paginationView(page, creditNotesTotal);
   const creditNotesHref = pageHrefBuilder("/documents/credit-notes", {
@@ -712,10 +724,11 @@ export default async function CreditNotesPage({
   const creditNoteDerived = (cn: CreditNoteRow) => {
     const refundedTotal = cn.refunds.reduce((s, r) => s + r.amount, 0);
     const outstanding = cn.totalAmount - refundedTotal;
-    const recipientPhone = cn.sale?.client?.phone ?? null;
-    const recipientEmail = cn.sale?.client?.email ?? null;
+    const parent = creditNoteParent(cn);
+    const recipientPhone = parent.client?.phone ?? null;
+    const recipientEmail = parent.client?.email ?? null;
     const creditNoteUrl = `${appUrl}/api/credit-notes/${cn.id}`;
-    const creditNoteShareText = encodeURIComponent(`Your credit note is ready.\n\n${cn.creditNoteNumber}\nSale: ${cn.sale?.saleNumber ?? "-"}\nAmount: ${formatMoney(cn.totalAmount, cn.currency)}\nPDF: ${creditNoteUrl}`);
+    const creditNoteShareText = encodeURIComponent(`Your credit note is ready.\n\n${cn.creditNoteNumber}\n${parent.label || "—"}\nAmount: ${formatMoney(cn.totalAmount, cn.currency)}\nPDF: ${creditNoteUrl}`);
     const creditNoteWaPhone = recipientPhone?.replace(/\D/g, "").replace(/^0/, "256");
     return { refundedTotal, outstanding, recipientPhone, recipientEmail, creditNoteShareText, creditNoteWaPhone };
   };
@@ -827,7 +840,7 @@ export default async function CreditNotesPage({
       <PageHeader
         eyebrow="Documents"
         title="Credit Notes"
-        description="For POS sale returns — credits the customer and restocks the items. To pay money back, use Refunds."
+        description="Credit a paid sale or invoice back to the customer and restock what returns. To pay the money out, use Refunds."
         actions={
           <>
             {pendingReturn > 0 && (
@@ -835,7 +848,27 @@ export default async function CreditNotesPage({
             )}
             {["ADMIN", "OPS", "MANAGER"].includes(user.role) && (
               <CreateCreditNoteDialog
-                eligibleSales={eligibleSales}
+                eligibleSources={[
+                  ...eligibleSales.map((sale) => ({
+                    key: `sale:${sale.id}`,
+                    kind: "sale" as const,
+                    reference: sale.saleNumber,
+                    totalAmount: sale.totalAmount,
+                    currency: sale.currency,
+                    client: sale.client,
+                    items: sale.items,
+                  })),
+                  ...eligibleInvoices.map((inv) => ({
+                    key: `invoice:${inv.id}`,
+                    kind: "invoice" as const,
+                    reference: inv.invoiceNumber,
+                    totalAmount: inv.totalAmount,
+                    currency: inv.currency,
+                    // A repair invoice usually carries the customer on its job.
+                    client: inv.client ?? inv.job?.client ?? null,
+                    items: inv.lines,
+                  })),
+                ]}
                 action={createCreditNoteAction}
                 returnAndRefundAction={returnAndRefundAction}
                 baseCurrency={org.baseCurrency}
@@ -859,7 +892,7 @@ export default async function CreditNotesPage({
         period={periodFilter}
         periodOptions={DOCUMENT_PERIOD_OPTIONS_SHORT}
         extraQuery={{ filter }}
-        searchPlaceholder="Search credit note, sale, reason…"
+        searchPlaceholder="Search customer, credit note, sale or invoice…"
       >
         <div className="flex gap-1">
           {(["all", "pending", "received"] as const).map((f) => (
@@ -878,9 +911,10 @@ export default async function CreditNotesPage({
       <DataTable
         rows={creditNotes}
         getRowKey={(cn) => cn.id}
-        empty={q || filter !== "all" ? "No credit notes match the filter." : "No credit notes yet. Create one from a completed sale."}
+        empty={q || filter !== "all" ? "No credit notes match the filter." : "No credit notes yet. Create one from a paid sale or invoice."}
         renderMobileCard={(cn) => {
           const { refundedTotal } = creditNoteDerived(cn);
+          const parent = creditNoteParent(cn);
           return (
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-2">
@@ -892,8 +926,13 @@ export default async function CreditNotesPage({
                 )}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[var(--ink-muted)]">
-                {cn.sale?.saleNumber && <span>Sale: <span className="mono text-[var(--accent)]">{cn.sale.saleNumber}</span></span>}
-                <span>Client: <span className="text-[var(--ink)]">{cn.sale?.client?.fullName ?? "Walk-in"}</span></span>
+                {parent.reference && (
+                  <span>
+                    {parent.kind === "invoice" ? "Invoice" : "Sale"}:{" "}
+                    <span className="mono text-[var(--accent)]">{parent.reference}</span>
+                  </span>
+                )}
+                <span>Client: <span className="text-[var(--ink)]">{parent.clientName}</span></span>
               </div>
               <p className="mt-1 line-clamp-2 text-[var(--ink-muted)]">{cn.reason}</p>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
@@ -917,15 +956,18 @@ export default async function CreditNotesPage({
           },
           {
             key: "sale",
-            header: "Sale",
+            header: "Source",
             className: "text-[var(--ink-muted)]",
-            cell: (cn) => cn.sale?.saleNumber ?? "—",
+            cell: (cn) => creditNoteParent(cn).reference || "—",
           },
           {
             key: "client",
             header: "Client",
             className: "text-[var(--ink)]",
-            cell: (cn) => cn.sale?.client?.fullName ?? <span className="text-[var(--ink-muted)]">Walk-in</span>,
+            cell: (cn) => {
+              const p = creditNoteParent(cn);
+              return p.client?.fullName ?? <span className="text-[var(--ink-muted)]">{p.clientName}</span>;
+            },
           },
           {
             key: "reason",

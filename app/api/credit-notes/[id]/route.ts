@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDocument";
 import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +40,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           client: { select: { fullName: true, phone: true, email: true, organization: true } },
         },
       },
+      invoice: {
+        select: {
+          invoiceNumber: true,
+          client: { select: { fullName: true, phone: true, email: true, organization: true } },
+          job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        },
+      },
       items: {
         select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
         orderBy: { createdAt: "asc" },
@@ -57,6 +65,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   ]);
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
   const currency = creditNote.currency;
+  const parent = creditNoteParent(creditNote);
   const refundedTotal = creditNote.refunds.reduce((sum, refund) => sum + refund.amount, 0);
   const outstandingCredit = Math.max(0, creditNote.totalAmount - refundedTotal);
   const lineItems: EagleInfoLineItem[] = creditNote.items.length > 0
@@ -84,10 +93,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     docDate: formatEATDocDate(creditNote.issuedAt),
     terms: "Sales return / adjustment",
     dueDate: null,
-    clientName: creditNote.sale.client?.fullName ?? "Walk-in",
-    clientEmail: creditNote.sale.client?.email ?? null,
-    clientPhone: creditNote.sale.client?.phone ?? null,
-    clientLocation: creditNote.sale.client?.organization ?? null,
+    clientName: parent.clientName,
+    clientEmail: parent.client?.email ?? null,
+    clientPhone: parent.client?.phone ?? null,
+    clientLocation: parent.client?.organization ?? null,
     lineItems,
     subTotal: formatMoney(creditNote.totalAmount, currency),
     totalLabel: "Credit Total",
@@ -95,7 +104,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     paymentMade: formatMoney(refundedTotal, currency),
     balanceDue: formatMoney(outstandingCredit, currency),
     notes: [
-      `Sale: ${creditNote.sale.saleNumber}`,
+      parent.label || null,
       creditNote.reason ? `Reason: ${creditNote.reason}` : null,
       creditNote.itemsReceivedBackAt ? `Items received back: ${formatEATDocDate(creditNote.itemsReceivedBackAt)}` : "Items return pending",
       creditNote.itemsReceivedBackNote ? `Return note: ${creditNote.itemsReceivedBackNote}` : null,

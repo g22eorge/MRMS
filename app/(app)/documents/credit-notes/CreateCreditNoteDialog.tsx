@@ -6,7 +6,7 @@ import { CheckboxField } from "@/components/forms";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { DocumentSourcePicker } from "@/components/documents/DocumentSourcePicker";
 
-type SaleLine = {
+type SourceLine = {
   id: string;
   description: string;
   quantity: number;
@@ -14,17 +14,24 @@ type SaleLine = {
   lineTotal: number;
 };
 
-type SaleOption = {
-  id: string;
-  saleNumber: string;
+/**
+ * A credit note can be raised against a POS sale or an invoice. Both arrive
+ * here flattened to the same shape so the picker, the line list and the totals
+ * do not have to care which one is selected — `key` is what the action reads.
+ */
+type SourceOption = {
+  /** "sale:<id>" or "invoice:<id>" — posted as sourceKey. */
+  key: string;
+  kind: "sale" | "invoice";
+  reference: string;
   totalAmount: number;
   currency: string;
   client: { fullName: string; phone: string | null } | null;
-  items: SaleLine[];
+  items: SourceLine[];
 };
 
 type Props = {
-  eligibleSales: SaleOption[];
+  eligibleSources: SourceOption[];
   action: (formData: FormData) => Promise<void>;
   returnAndRefundAction: (formData: FormData) => Promise<void>;
   baseCurrency: string;
@@ -35,14 +42,24 @@ function money(value: number, currency: string) {
   return `${currency} ${new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
-export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundAction, baseCurrency, paymentMethods }: Props) {
+export function CreateCreditNoteDialog({ eligibleSources, action, returnAndRefundAction, baseCurrency, paymentMethods }: Props) {
   const [open, setOpen] = useState(false);
-  const [saleId, setSaleId] = useState(eligibleSales[0]?.id ?? "");
-  const selectedSale = useMemo(
-    () => eligibleSales.find((sale) => sale.id === saleId) ?? eligibleSales[0] ?? null,
-    [eligibleSales, saleId],
+  const [sourceKey, setSourceKey] = useState(eligibleSources[0]?.key ?? "");
+  const selected = useMemo(
+    () => eligibleSources.find((s) => s.key === sourceKey) ?? eligibleSources[0] ?? null,
+    [eligibleSources, sourceKey],
   );
-  const isForeign = selectedSale ? selectedSale.currency !== baseCurrency : false;
+  const isForeign = selected ? selected.currency !== baseCurrency : false;
+
+  const sales = eligibleSources.filter((s) => s.kind === "sale");
+  const invoices = eligibleSources.filter((s) => s.kind === "invoice");
+  const toOption = (s: SourceOption) => ({
+    value: s.key,
+    label: `${s.client?.fullName ?? "Walk-in"} — ${s.reference}`,
+    hint: money(s.totalAmount, s.currency),
+    // Customer name first: people search by who, not by document number.
+    search: [s.client?.fullName ?? "Walk-in", s.client?.phone, s.reference].filter(Boolean).join(" "),
+  });
 
   return (
     <>
@@ -57,33 +74,26 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
       <Modal open={open} onClose={() => setOpen(false)} size="xl" ariaLabel="Create Credit Note">
         <ModalHeader
           title="Create Credit Note"
-          subtitle="Select the sale and return lines."
+          subtitle="Pick the sale or invoice, then the lines coming back."
           onClose={() => setOpen(false)}
         />
 
-        {eligibleSales.length > 0 && selectedSale ? (
+        {eligibleSources.length > 0 && selected ? (
           <form action={action} className="space-y-3 p-4">
             <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
               <label className="space-y-1">
-                <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Sale</span>
+                <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Sale or invoice</span>
                 <DocumentSourcePicker
-                  name="saleId"
+                  name="sourceKey"
                   required
-                  defaultValue={selectedSale.id}
-                  onSelect={setSaleId}
+                  defaultValue={selected.key}
+                  onSelect={setSourceKey}
                   groups={[
-                    {
-                      label: "Returnable sales",
-                      options: eligibleSales.map((sale) => ({
-                        value: sale.id,
-                        label: `${sale.client?.fullName ?? "Walk-in"} — ${sale.saleNumber}`,
-                        hint: money(sale.totalAmount, sale.currency),
-                        search: [sale.client?.fullName ?? "Walk-in", sale.client?.phone, sale.saleNumber].filter(Boolean).join(" "),
-                      })),
-                    },
-                  ]}
-                  placeholder="Search sales by customer or number…"
-                  emptyLabel="No returnable sale matches that"
+                    { label: "Returnable sales", options: sales.map(toOption) },
+                    { label: "Invoices", options: invoices.map(toOption) },
+                  ].filter((g) => g.options.length > 0)}
+                  placeholder="Search by customer name or number…"
+                  emptyLabel="Nothing matches that"
                 />
               </label>
               <label className="space-y-1">
@@ -98,7 +108,13 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
             </div>
 
             <div className="max-h-[360px] overflow-y-auto rounded-xl border border-[var(--line)]">
-              {selectedSale.items.map((item) => (
+              {selected.items.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-[var(--ink-muted)]">
+                  {selected.reference} has no itemised lines, so there is nothing to pick.
+                  Refund it directly from Refunds instead.
+                </p>
+              ) : null}
+              {selected.items.map((item) => (
                 <label key={item.id} className="grid gap-3 border-b border-[var(--line)] px-3 py-2.5 last:border-0 sm:grid-cols-[auto_1fr_90px_110px] sm:items-center">
                   <CheckboxField
                     name="itemId"
@@ -108,19 +124,20 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-[var(--ink)]">{item.description}</span>
-                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{money(item.lineTotal, selectedSale.currency)}</span>
+                    <span className="text-[0.75rem] text-[var(--ink-muted)]">{money(item.lineTotal, selected.currency)}</span>
                   </span>
                   <input
                     name={`quantity:${item.id}`}
                     type="number"
-                    min="1"
+                    min="0"
+                    step="any"
                     max={item.quantity}
                     defaultValue={item.quantity}
                     className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm"
                     aria-label={`Quantity for ${item.description}`}
                   />
                   <span className="text-right text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                    @ {money(item.unitPrice, selectedSale.currency)}
+                    @ {money(item.unitPrice, selected.currency)}
                   </span>
                 </label>
               ))}
@@ -151,7 +168,7 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
                   <input
                     name="exchangeRateToBase"
                     inputMode="decimal"
-                    placeholder={`1 ${selectedSale.currency} = ? ${baseCurrency}`}
+                    placeholder={`1 ${selected.currency} = ? ${baseCurrency}`}
                     className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm text-[var(--ink)]"
                   />
                 </label>
@@ -169,21 +186,26 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
               >
                 Cancel
               </button>
-              <button type="submit" className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50">
+              <button
+                type="submit"
+                disabled={selected.items.length === 0}
+                className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Create only
               </button>
               <button
                 type="submit"
+                disabled={selected.items.length === 0}
                 formAction={returnAndRefundAction}
                 onClick={(e) => { if (!window.confirm("Create the credit note, restock the selected items, and refund them in full now?")) e.preventDefault(); }}
-                className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold"
+                className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Return &amp; refund now
               </button>
             </div>
           </form>
         ) : (
-          <div className="p-4 text-sm text-[var(--ink-muted)]">No paid sales are available for credit notes.</div>
+          <div className="p-4 text-sm text-[var(--ink-muted)]">No settled sale or invoice is available to credit yet.</div>
         )}
       </Modal>
     </>

@@ -727,6 +727,7 @@ model Invoice {
   payments      Payment[]
   refunds       Refund[]
   deliveryNotes DeliveryNote[]
+  creditNotes   CreditNote[]
   attachments   InvoiceAttachment[]
   receipts      Receipt[]
   createdAt     DateTime            @default(now())
@@ -844,9 +845,15 @@ model CreditNote {
   orgId String
   org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  // Credit notes are for merchandise sales only (Sale-based).
-  saleId String
-  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  // A credit note hangs off EXACTLY ONE parent: a POS sale or an invoice.
+  // Both are nullable because SQLite has no way to express "one or the other"
+  // as a column constraint, and a CHECK cannot be added to an existing table.
+  // The invariant is enforced in application code — see creditNoteParent().
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   creditNoteNumber String   @unique
   currency         String   @default("UGX")
@@ -869,6 +876,7 @@ model CreditNote {
 
   @@index([orgId, issuedAt])
   @@index([saleId])
+  @@index([invoiceId])
 }
 
 model CreditNoteItem {
@@ -879,7 +887,10 @@ model CreditNoteItem {
   partId      String?
   part        Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
   description String
-  quantity    Int
+  // Float, like InvoiceLine.quantity: an invoice line can legitimately be
+  // fractional (a UoM factor of 0.5), and an Int here would silently truncate
+  // the returned amount when crediting one.
+  quantity    Float
   unitPrice   Float
   lineTotal   Float
   // Base stock units per 1 sale unit, snapshot at credit-note time so the
