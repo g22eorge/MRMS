@@ -1,59 +1,52 @@
 import { prisma } from "@/lib/prisma";
 
-let tableEnsured = false;
-
-async function ensureTable() {
-  if (tableEnsured) return;
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "PlatformSetting" (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  tableEnsured = true;
-}
+/**
+ * Platform-wide operator settings (payment credentials, plan prices, SMS
+ * config, audit retention).
+ *
+ * Previously this module owned its own table via `CREATE TABLE IF NOT EXISTS`
+ * on every call. `PlatformSetting` is now a real model, so reads and writes go
+ * through Prisma and the table is created by migrations like everything else.
+ * The reads stay fault-tolerant — a settings lookup must never take down a page
+ * — but they no longer swallow a missing table as a normal condition.
+ */
 
 export async function getPlatformSetting(key: string): Promise<string | null> {
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
-      SELECT value FROM "PlatformSetting" WHERE key = ${key} LIMIT 1
-    `;
-    return rows[0]?.value ?? null;
+    const row = await prisma.platformSetting.findUnique({
+      where: { key },
+      select: { value: true },
+    });
+    return row?.value ?? null;
   } catch {
     return null;
   }
 }
 
 export async function setPlatformSetting(key: string, value: string): Promise<void> {
-  await ensureTable();
-  await prisma.$executeRaw`
-    INSERT INTO "PlatformSetting" (key, value, updatedAt)
-    VALUES (${key}, ${value}, CURRENT_TIMESTAMP)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = CURRENT_TIMESTAMP
-  `;
+  await prisma.platformSetting.upsert({
+    where: { key },
+    create: { key, value },
+    update: { value },
+  });
 }
 
 export async function deletePlatformSetting(key: string): Promise<void> {
-  await ensureTable();
-  await prisma.$executeRaw`DELETE FROM "PlatformSetting" WHERE key = ${key}`;
+  await prisma.platformSetting.deleteMany({ where: { key } });
 }
 
 export async function getPlatformSettings(keys: string[]): Promise<Record<string, string>> {
-  const result: Record<string, string> = {};
+  if (keys.length === 0) return {};
   try {
-    await ensureTable();
-    for (const key of keys) {
-      const rows = await prisma.$queryRaw<Array<{ value: string }>>`
-        SELECT value FROM "PlatformSetting" WHERE key = ${key} LIMIT 1
-      `;
-      if (rows[0]) result[key] = rows[0].value;
-    }
+    // One query instead of the previous loop of one query per key.
+    const rows = await prisma.platformSetting.findMany({
+      where: { key: { in: keys } },
+      select: { key: true, value: true },
+    });
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   } catch {
-    // return partial result
+    return {};
   }
-  return result;
 }
 
 // ── Pesapal ──────────────────────────────────────────────────────────────────

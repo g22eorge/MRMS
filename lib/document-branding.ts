@@ -47,11 +47,21 @@ export const defaultBranding = {
 
 type BrandingSettings = typeof defaultBranding;
 
-let rawTableEnsured = false;
+/**
+ * Reads and writes the per-organisation document branding row.
+ *
+ * This module used to own the table: it ran `CREATE TABLE IF NOT EXISTS` on
+ * every call, then inspected `PRAGMA table_info` and issued conditional
+ * `ALTER TABLE` statements for fourteen columns that newer code expected. That
+ * existed because production schema and datamodel had drifted apart and there
+ * was no migration path. Migrations now guarantee the shape, so this is plain
+ * Prisma.
+ *
+ * `coerceRow` is kept: callers rely on every field being a non-null primitive
+ * with a default substituted, which is not what the nullable columns give back.
+ */
 
-function hasDelegate() {
-  return Boolean((prisma as unknown as { documentBrandingSettings?: unknown }).documentBrandingSettings);
-}
+const SINGLETON_ID = "singleton";
 
 function coerceRow(row: Record<string, unknown>): BrandingSettings {
   return {
@@ -92,202 +102,81 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
   };
 }
 
-async function ensureRawTable() {
-  if (rawTableEnsured) return;
 
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "DocumentBrandingSettings" (
-      id TEXT PRIMARY KEY,
-      companyName TEXT NOT NULL,
-      companyTagline TEXT,
-      companyAddressLine1 TEXT NOT NULL,
-      companyAddressLine2 TEXT NOT NULL,
-      companyContacts TEXT NOT NULL,
-      companyEmail TEXT,
-      companyWebsite TEXT,
-      documentTitle TEXT NOT NULL,
-      quotePrefix TEXT NOT NULL,
-      quoteFormat TEXT NOT NULL,
-      quoteValidityDays INTEGER NOT NULL,
-      sequencePadLength INTEGER NOT NULL,
-      vatDefaultApplicable BOOLEAN NOT NULL,
-      vatRatePercent REAL NOT NULL,
-      vatInclusive BOOLEAN NOT NULL DEFAULT 0,
-      vatLabel TEXT NOT NULL,
-      termsText TEXT NOT NULL,
-      footerText TEXT NOT NULL,
-      signatureCompanyLabel TEXT NOT NULL,
-      signatureClientLabel TEXT NOT NULL,
-      invoiceTemplateKey TEXT NOT NULL DEFAULT 'invoice_classic',
-      quotationTemplateKey TEXT NOT NULL DEFAULT 'quote_classic',
-      jobCardTemplateKey TEXT NOT NULL DEFAULT 'job_card_classic',
-      receiptTemplateKey TEXT NOT NULL DEFAULT 'receipt_classic',
-      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Older installs may have the table without the newer template columns.
-  // Keep this local to branding to avoid hard dependency on /api/admin/db-fix.
-  const cols = await prisma.$queryRaw<Array<{ name: string }>>`
-    PRAGMA table_info('DocumentBrandingSettings')
-  `.catch(() => []);
-  const colSet = new Set(cols.map((c) => c.name));
-
-  // Allowlist guards against accidental SQL injection if call sites ever change.
-  const ADDABLE_COLUMNS: ReadonlySet<string> = new Set([
-    "invoiceTemplateKey", "quotationTemplateKey", "jobCardTemplateKey", "receiptTemplateKey",
-    "primaryColor", "secondaryColor", "accentColor", "backgroundColor", "surfaceColor", "borderColor",
-    "orgId", "vatInclusive", "paymentInstructions", "paymentAccounts",
-  ]);
-  const addColumn = async (name: string, dflt: string, type = "TEXT") => {
-    if (!ADDABLE_COLUMNS.has(name)) return;
-    if (colSet.has(name)) return;
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE "DocumentBrandingSettings" ADD COLUMN "${name}" ${type} DEFAULT ${dflt}`,
-    ).catch(() => {/* ignore if already exists in concurrent request */});
-    colSet.add(name);
-  };
-  await addColumn("invoiceTemplateKey", "'invoice_classic'");
-  await addColumn("quotationTemplateKey", "'quote_classic'");
-  await addColumn("jobCardTemplateKey", "'job_card_classic'");
-  await addColumn("receiptTemplateKey", "'receipt_classic'");
-  await addColumn("primaryColor",   "'#000000'");
-  await addColumn("secondaryColor", "'#D4AF37'");
-  await addColumn("accentColor",    "'#D4AF37'");
-  await addColumn("backgroundColor","'#FFFFFF'");
-  await addColumn("surfaceColor",   "'#F5F5F5'");
-  await addColumn("borderColor",    "'#E5E5E5'");
-  await addColumn("orgId",          "NULL");
-  await addColumn("vatInclusive",   "0", "BOOLEAN");
-  await addColumn("paymentInstructions", "''");
-  await addColumn("paymentAccounts", "''");
-
-  rawTableEnsured = true;
-}
-
-async function getViaRaw(orgId?: string) {
+/**
+ * Branding for an org, falling back to the legacy `singleton` row and finally
+ * to the built-in defaults.
+ *
+ * Historically the row id was the literal string `singleton`; per-org rows use
+ * the org id as their own id and also set `orgId`. Both shapes are still read so
+ * an install that predates multi-tenancy keeps its branding.
+ */
+export async function getDocumentBrandingSettings(orgId?: string): Promise<BrandingSettings> {
   try {
-    await ensureRawTable();
+    const row = orgId
+      ? (await prisma.documentBrandingSettings.findFirst({
+          where: { OR: [{ id: orgId }, { orgId }] },
+        })) ?? (await prisma.documentBrandingSettings.findUnique({ where: { id: SINGLETON_ID } }))
+      : await prisma.documentBrandingSettings.findUnique({ where: { id: SINGLETON_ID } });
 
-    // Try org-specific row first (id = orgId), then legacy singleton
-    const rows = orgId
-      ? await prisma.$queryRaw<Array<Record<string, unknown>>>`
-          SELECT *
-          FROM "DocumentBrandingSettings"
-          WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
-          ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
-          LIMIT 1
-        `
-      : await prisma.$queryRaw<Array<Record<string, unknown>>>`
-          SELECT * FROM "DocumentBrandingSettings" WHERE id = 'singleton' LIMIT 1
-        `;
+    if (row) return coerceRow(row as unknown as Record<string, unknown>);
 
-    if (!rows[0]) {
-      await prisma.$executeRaw`
-        INSERT INTO "DocumentBrandingSettings" (
-          id, companyName, companyTagline, companyAddressLine1, companyAddressLine2,
-          companyContacts, companyEmail, companyWebsite, documentTitle,
-          quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
-          vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
-          footerText, signatureCompanyLabel, signatureClientLabel,
-          invoiceTemplateKey, quotationTemplateKey, jobCardTemplateKey, receiptTemplateKey,
-          updatedAt
-        ) VALUES (
-          ${defaultBranding.id}, ${defaultBranding.companyName}, ${defaultBranding.companyTagline},
-          ${defaultBranding.companyAddressLine1}, ${defaultBranding.companyAddressLine2},
-          ${defaultBranding.companyContacts}, ${defaultBranding.companyEmail}, ${defaultBranding.companyWebsite},
-          ${defaultBranding.documentTitle}, ${defaultBranding.quotePrefix}, ${defaultBranding.quoteFormat},
-          ${defaultBranding.quoteValidityDays}, ${defaultBranding.sequencePadLength},
-          ${defaultBranding.vatDefaultApplicable}, ${defaultBranding.vatRatePercent}, ${defaultBranding.vatInclusive}, ${defaultBranding.vatLabel},
-          ${defaultBranding.termsText}, ${defaultBranding.footerText},
-          ${defaultBranding.signatureCompanyLabel}, ${defaultBranding.signatureClientLabel},
-          ${defaultBranding.invoiceTemplateKey}, ${defaultBranding.quotationTemplateKey}, ${defaultBranding.jobCardTemplateKey}, ${defaultBranding.receiptTemplateKey},
-          CURRENT_TIMESTAMP
-        )
-        ON CONFLICT(id) DO NOTHING
-      `;
-      return defaultBranding;
-    }
-
-    return coerceRow(rows[0]);
+    // Nothing configured yet: seed the legacy singleton so the settings screen
+    // has a row to edit, and hand back the defaults either way. An upsert
+    // rather than createMany+skipDuplicates, which SQLite does not support.
+    await prisma.documentBrandingSettings.upsert({
+      where: { id: SINGLETON_ID },
+      create: { id: SINGLETON_ID },
+      update: {},
+    });
+    return defaultBranding;
   } catch {
     return defaultBranding;
   }
 }
 
 export async function saveDocumentBrandingSettings(orgId: string, data: BrandingSettings) {
-  // Always use raw SQL — handles both SQLite and Turso, and is immune to schema drift
-  // because ensureRawTable() adds any missing columns before we write.
-  await ensureRawTable();
+  // The org id doubles as the row id, so each org owns one row and never
+  // collides with the legacy singleton.
+  const fields = {
+    orgId,
+    companyName: data.companyName,
+    companyTagline: data.companyTagline,
+    companyAddressLine1: data.companyAddressLine1,
+    companyAddressLine2: data.companyAddressLine2,
+    companyContacts: data.companyContacts,
+    companyEmail: data.companyEmail,
+    companyWebsite: data.companyWebsite,
+    documentTitle: data.documentTitle,
+    quotePrefix: data.quotePrefix,
+    quoteFormat: data.quoteFormat,
+    quoteValidityDays: data.quoteValidityDays,
+    sequencePadLength: data.sequencePadLength,
+    vatDefaultApplicable: data.vatDefaultApplicable,
+    vatRatePercent: data.vatRatePercent,
+    vatInclusive: data.vatInclusive,
+    vatLabel: data.vatLabel,
+    termsText: data.termsText,
+    footerText: data.footerText,
+    paymentInstructions: data.paymentInstructions,
+    paymentAccounts: data.paymentAccounts,
+    signatureCompanyLabel: data.signatureCompanyLabel,
+    signatureClientLabel: data.signatureClientLabel,
+    primaryColor: data.primaryColor,
+    secondaryColor: data.secondaryColor,
+    accentColor: data.accentColor,
+    backgroundColor: data.backgroundColor,
+    surfaceColor: data.surfaceColor,
+    borderColor: data.borderColor,
+    invoiceTemplateKey: data.invoiceTemplateKey,
+    quotationTemplateKey: data.quotationTemplateKey,
+    jobCardTemplateKey: data.jobCardTemplateKey,
+    receiptTemplateKey: data.receiptTemplateKey,
+  };
 
-  // Use orgId as the row id so each org gets its own row without conflicting with 'singleton'
-  const rowId = orgId;
-
-  await prisma.$executeRaw`
-    INSERT INTO "DocumentBrandingSettings" (
-      id, orgId,
-      companyName, companyTagline, companyAddressLine1, companyAddressLine2,
-      companyContacts, companyEmail, companyWebsite, documentTitle,
-      quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
-      vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
-      footerText, paymentInstructions, paymentAccounts, signatureCompanyLabel, signatureClientLabel,
-      primaryColor, secondaryColor, accentColor, backgroundColor, surfaceColor, borderColor,
-      invoiceTemplateKey, quotationTemplateKey, jobCardTemplateKey, receiptTemplateKey,
-      updatedAt
-    ) VALUES (
-      ${rowId}, ${orgId},
-      ${data.companyName}, ${data.companyTagline},
-      ${data.companyAddressLine1}, ${data.companyAddressLine2},
-      ${data.companyContacts}, ${data.companyEmail}, ${data.companyWebsite},
-      ${data.documentTitle}, ${data.quotePrefix}, ${data.quoteFormat},
-      ${data.quoteValidityDays}, ${data.sequencePadLength},
-      ${data.vatDefaultApplicable}, ${data.vatRatePercent}, ${data.vatInclusive}, ${data.vatLabel},
-      ${data.termsText}, ${data.footerText}, ${data.paymentInstructions}, ${data.paymentAccounts}, ${data.signatureCompanyLabel},
-      ${data.signatureClientLabel},
-      ${data.primaryColor}, ${data.secondaryColor}, ${data.accentColor},
-      ${data.backgroundColor}, ${data.surfaceColor}, ${data.borderColor},
-      ${data.invoiceTemplateKey}, ${data.quotationTemplateKey},
-      ${data.jobCardTemplateKey}, ${data.receiptTemplateKey},
-      CURRENT_TIMESTAMP
-    )
-    ON CONFLICT(id) DO UPDATE SET
-      orgId = excluded.orgId,
-      companyName = excluded.companyName,
-      companyTagline = excluded.companyTagline,
-      companyAddressLine1 = excluded.companyAddressLine1,
-      companyAddressLine2 = excluded.companyAddressLine2,
-      companyContacts = excluded.companyContacts,
-      companyEmail = excluded.companyEmail,
-      companyWebsite = excluded.companyWebsite,
-      documentTitle = excluded.documentTitle,
-      quotePrefix = excluded.quotePrefix,
-      quoteFormat = excluded.quoteFormat,
-      quoteValidityDays = excluded.quoteValidityDays,
-      sequencePadLength = excluded.sequencePadLength,
-      vatDefaultApplicable = excluded.vatDefaultApplicable,
-      vatRatePercent = excluded.vatRatePercent,
-      vatInclusive = excluded.vatInclusive,
-      vatLabel = excluded.vatLabel,
-      termsText = excluded.termsText,
-      footerText = excluded.footerText,
-      paymentInstructions = excluded.paymentInstructions,
-      paymentAccounts = excluded.paymentAccounts,
-      signatureCompanyLabel = excluded.signatureCompanyLabel,
-      signatureClientLabel = excluded.signatureClientLabel,
-      primaryColor = excluded.primaryColor,
-      secondaryColor = excluded.secondaryColor,
-      accentColor = excluded.accentColor,
-      backgroundColor = excluded.backgroundColor,
-      surfaceColor = excluded.surfaceColor,
-      borderColor = excluded.borderColor,
-      invoiceTemplateKey = excluded.invoiceTemplateKey,
-      quotationTemplateKey = excluded.quotationTemplateKey,
-      jobCardTemplateKey = excluded.jobCardTemplateKey,
-      receiptTemplateKey = excluded.receiptTemplateKey,
-      updatedAt = CURRENT_TIMESTAMP
-  `;
-}
-
-export async function getDocumentBrandingSettings(orgId?: string): Promise<BrandingSettings> {
-  return getViaRaw(orgId);
+  await prisma.documentBrandingSettings.upsert({
+    where: { id: orgId },
+    create: { id: orgId, ...fields },
+    update: fields,
+  });
 }

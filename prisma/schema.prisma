@@ -3309,3 +3309,68 @@ model RepairMessage {
   @@index([jobId, createdAt])
   @@index([orgId, jobId])
 }
+
+// ── Raw-SQL legacy tables, promoted to models ────────────────────────────────
+//
+// These three tables were created and maintained entirely by hand-written DDL
+// (`CREATE TABLE IF NOT EXISTS` inside the lib modules that read them) and were
+// never part of the datamodel. That worked only because SQLite tolerates a
+// schema the ORM does not know about; a schema-driven Postgres migration would
+// silently drop them. Column shapes match the live production tables exactly so
+// the data import is a straight copy.
+//
+// Intentionally without Prisma relations to `Organization`: the production
+// tables carry no foreign key, and inventing one here would also invent cascade
+// semantics for billing history. Adding them is a separate, deliberate change.
+
+/// Platform-wide key/value settings (Pesapal credentials, plan prices,
+/// Africa's Talking SMS config, audit retention). Not org-scoped — this is
+/// operator configuration, read via lib/platform-settings.ts.
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Per-organisation WhatsApp/SMS provider credentials. Resolved by orgId so a
+/// tenant's messages never go out through another tenant's number.
+model OrgWhatsAppConfig {
+  orgId             String  @id
+  businessNumber    String
+  phoneNumberId     String
+  accessToken       String
+  businessAccountId String?
+  provider          String  @default("meta")
+
+  // Africa's Talking SMS fallback, added after the table was first created.
+  atApiKey    String?
+  atUsername  String?
+  atSenderId  String?
+  smsFallback Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Inbound webhooks arrive keyed by phone number id and must resolve to an org.
+  @@index([phoneNumberId])
+}
+
+/// Subscription billing events from the payment provider (Pesapal; the
+/// `flwTxId` column name is a leftover from the Flutterwave era and is kept so
+/// the production rows import without transformation).
+model BillingEvent {
+  id       String @id
+  orgId    String
+  event    String
+  amount   Float  @default(0)
+  currency String @default("UGX")
+  status   String
+  flwTxId  String?
+  txRef    String?
+  plan     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([status, event])
+}

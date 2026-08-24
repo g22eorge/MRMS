@@ -261,20 +261,39 @@ columns over existing rows. The `PartStockTransaction.orgId` concern raised in
 the first analysis pass was wrong; the field is `String?`. That removes the
 highest-severity item from the risk register.
 
-### Phase 1 — Make `schema.prisma` the single source of truth (still SQLite)
+### Phase 1 — Make `schema.prisma` the single source of truth — **DONE**
 
-The highest-value phase. It removes the reason `db-fix` exists.
-
-| # | Task | Verify |
+| # | Task | Result |
 | --- | --- | --- |
-| 1.1 | Add the 6 raw-SQL-only tables as real Prisma models, matching prod column shapes exactly (`BranchNumberingSettings`, `OrgWhatsAppConfig`, `PlatformSetting`, `BillingEvent`, `OrgSecurityPolicy`, `BranchOperatingHours`) | drift report: unknown tables 8 → 2 (the two junk ones) |
-| 1.2 | Resolve the 16 unknown columns one at a time — promote to schema or mark for drop. Start with the ones holding data: `OutboundMessage.campaignContactId` (221 rows) | drift report: unknown columns 16 → 0 |
-| 1.3 | Resolve the 51 schema-only columns: confirm each is genuinely additive-with-default, so an import can leave them empty. Flag any `NOT NULL`-without-default (notably `PartStockTransaction.orgId`) and decide its backfill rule | Written per-column decision list |
-| 1.4 | Convert raw-SQL reads of the now-modelled tables to Prisma calls: `lib/org-whatsapp-config.ts`, `lib/platform-settings.ts`, `lib/billing-events.ts`, `lib/document-branding.ts`, `lib/commercial/org-number.ts` | ~30 raw call sites and their `PRAGMA` guards deleted |
-| 1.5 | Delete the two junk tables from the dump path (never imported): `Organisation`, `Job_restore_backup_20260426` | Import manifest excludes them |
-| 1.6 | Gate: `bunx tsc --noEmit`, `bun run lint`, `bun run db:push` to a scratch SQLite, `bun run test:unit` | All green |
+| 1.1 | Promote the raw-SQL-only tables to models | 3 promoted: `PlatformSetting`, `OrgWhatsAppConfig`, `BillingEvent`. Column shapes copied from the live tables so the import is a straight copy. Intentionally no Prisma relation to `Organization` — the production tables carry no FK and inventing one would also invent cascade semantics for billing history |
+| 1.2 | Retire the tables that turned out to be dead | 3 retired: `BranchNumberingSettings`, `BranchOperatingHours`, `OrgSecurityPolicy`. All three have **zero** references anywhere in `app/`, `lib/`, `components/` or `scripts/` — not even in `db-fix`, which created them. Contents preserved in `docs/pg-migration/retired-tables.md` |
+| 1.3 | Resolve the 16 unknown columns | All 16 dropped, recorded with per-column reasoning in `docs/pg-migration/import-map.json`. Every one is either zero-row or 100% NULL with no code references — including `OutboundMessage.campaignContactId`, which spans 221 rows but is **entirely null** |
+| 1.4 | Confirm the 51 schema-only columns are safe to default | Confirmed: the drift report finds zero required-without-default columns over existing rows |
+| 1.5 | Convert the raw-SQL reads to Prisma | 4 modules, **26 raw call sites removed** (393 → 367). `lib/platform-settings.ts` 70→62, `lib/billing-events.ts` 137→158, `lib/org-whatsapp-config.ts` 137→128, `lib/document-branding.ts` **293→180** |
+| 1.6 | Gate | `prisma validate` OK, `tsc` 0 errors, `lint` 0 errors, **508 unit tests pass / 0 fail**, plus 27 hand-written functional assertions against a real database |
 
-Exit: `schema.prisma` describes reality. Drift report reads 0/0.
+Drift is now: **0 unknown tables, 0 unknown columns.** The 51 schema-only columns
+remain by design — migrations create them in Postgres.
+
+Three defects were fixed incidentally, because moving to Prisma made them
+visible:
+
+1. **`recordBillingEvent` was not idempotent.** It ran a bare `INSERT` while
+   documenting an `idempotencyKey` parameter, so a redelivered Pesapal webhook
+   would either duplicate a payment record or throw on the primary key. Now an
+   `upsert`, verified by asserting that a repeated delivery leaves one row.
+2. **`getMonthlyRevenue` used `date('now', 'start of month')`** — SQLite-only
+   syntax that would have thrown on Postgres. The boundary is now computed in JS.
+3. **`getPlatformSettings` ran one query per key** in a loop. Now a single
+   `IN` query.
+
+Two hidden couplings surfaced that Phase 2 removes:
+
+- `prisma.config.ts` silently overrides `DATABASE_URL`. Pushing to an explicit
+  scratch path wrote to `prisma/dev.db` instead, and `bun run test:unit`
+  advertises `prisma/test.db` while actually using `dev.db`.
+- `createMany({ skipDuplicates })` is unsupported on SQLite, so the seeding path
+  had to use `upsert`. On Postgres either would work.
 
 ### Phase 2 — Provider cutover (schema, client, auth, build)
 

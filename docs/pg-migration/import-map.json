@@ -1,0 +1,37 @@
+{
+  "note": "Consumed by scripts/pg/import-postgres.mjs. Every dropped column was verified to be either zero-row or 100% NULL, with no code references, at the time of the decision. The importer re-verifies this and refuses to run if a dropped column turns out to hold data.",
+  "decidedAt": "2026-08-24",
+  "droppedColumns": {
+    "OutboundMessage": {
+      "campaignContactId": "221 rows in table, 0 non-null. Zero code references. Added by DDL for a campaign-message link that was never built."
+    },
+    "InboundMessage": {
+      "campaignContactId": "0 rows. Zero code references. Same abandoned link as OutboundMessage."
+    },
+    "FileAsset": {
+      "entityType": "0 rows. Superseded by ownerType in the datamodel.",
+      "entityId": "0 rows. Superseded by ownerId in the datamodel."
+    },
+    "QualityCheck": {
+      "passed": "0 rows. Superseded by the status field."
+    },
+    "OrgFeatureEntitlement": {
+      "grantedAt": "0 rows. Legacy shape; current datamodel uses startsAt/endsAt.",
+      "expiresAt": "0 rows. Legacy shape; current datamodel uses endsAt."
+    },
+    "OrgSubscriptionEvent": {
+      "event": "0 rows. Legacy shape; current datamodel uses eventType.",
+      "detail": "0 rows. Legacy shape; current datamodel uses payloadJson."
+    },
+    "OrgUsageSnapshot": {
+      "period": "0 rows. Legacy wide shape; current datamodel is periodKey/metric/value.",
+      "userCount": "0 rows. Legacy wide shape.",
+      "jobCount": "0 rows. Legacy wide shape.",
+      "partCount": "0 rows. Legacy wide shape.",
+      "smsCount": "0 rows. Legacy wide shape.",
+      "storageBytes": "0 rows. Legacy wide shape.",
+      "snapshotAt": "0 rows. Legacy wide shape; current datamodel uses capturedAt."
+    }
+  },
+  "missingColumnsPolicy": "The 51 columns the datamodel declares but the production database lacks are all nullable or defaulted (verified by scripts/pg/drift-report.mjs, which reports zero required-without-default columns over existing rows). The importer simply omits them and Postgres applies the default."
+}
