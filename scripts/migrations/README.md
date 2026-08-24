@@ -61,7 +61,7 @@ reading and writing normally.
 
 ---
 
-## `creditnote-invoice-parent` — pending
+## `creditnote-invoice-parent` — applied 2026-08-25
 
 Makes `CreditNote.saleId` nullable and adds `CreditNote.invoiceId`, so a credit
 note can be raised against an invoice as well as a POS sale.
@@ -78,7 +78,17 @@ python3 creditnote-invoice-parent.py backup.db > migration.sql
 turso db shell <db> < migration.sql
 ```
 
-Rehearsed against the 19 Aug production snapshots of both databases: row counts
-held (`CreditNote`, `CreditNoteItem`, `Refund`), `integrity_check` ok,
-`foreign_key_check` clean, and afterwards both an invoice-sourced and a
-sale-sourced credit note insert successfully with foreign keys enforced.
+Rehearsed on exact copies of both databases and then on a `turso db branch` of
+`repairmanager` (the harder case — it holds a live credit note and had no
+`invoiceId` column). Applied to both.
+
+| Database | Deployment | Before | After |
+|---|---|---|---|
+| `mrms-prod` | care.eagleinfosolutions.com | 0 credit notes, `invoiceId` already added by db-fix | `saleId` nullable |
+| `repairmanager` | app.eagleinfosolutions.com | 1 credit note + 1 item, no `invoiceId` | `saleId` nullable, `invoiceId` added |
+
+Verified after: row counts unchanged on `CreditNote`, `CreditNoteItem` and
+`Refund`; `foreign_key_check` clean on both; the list query and picker query the
+app actually runs both succeed against the migrated schema; and on the branch, a
+new invoice-sourced credit note inserts while the existing sale-sourced one
+still resolves its parent.
