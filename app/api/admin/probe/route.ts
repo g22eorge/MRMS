@@ -86,9 +86,9 @@ export async function GET() {
       take: 3,
       where: {
         OR: [
-          { jobNumber: { contains: "EIS" } },
-          { client: { fullName: { contains: "a" } } },
-          { client: { phone: { contains: "7" } } },
+          { jobNumber: { contains: "EIS" , mode: "insensitive" as const} },
+          { client: { fullName: { contains: "a" , mode: "insensitive" as const} } },
+          { client: { phone: { contains: "7" , mode: "insensitive" as const} } },
         ],
       },
       include: { client: true, assignedTo: true },

@@ -84,9 +84,9 @@ export default async function ComplaintsPage({
     ...(filterStatus ? { status: filterStatus } : {}),
     ...(qSearch ? {
       OR: [
-        { clientName: { contains: qSearch } },
-        { description: { contains: qSearch } },
-        { complaintNumber: { contains: qSearch } },
+        { clientName: { contains: qSearch , mode: "insensitive" as const} },
+        { description: { contains: qSearch , mode: "insensitive" as const} },
+        { complaintNumber: { contains: qSearch , mode: "insensitive" as const} },
       ],
     } : {}),
   };

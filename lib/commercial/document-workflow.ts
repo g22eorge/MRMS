@@ -13,16 +13,16 @@ type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "credit
  * sequence continues smoothly through the org-tag transition. */
 async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
   const numbers: string[] = countModel === "quotation"
-    ? (await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner } }, select: { quoteNumber: true } })).map((r) => r.quoteNumber)
+    ? (await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner , mode: "insensitive" as const} }, select: { quoteNumber: true } })).map((r) => r.quoteNumber)
     : countModel === "invoice"
-      ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner } }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
+      ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner , mode: "insensitive" as const} }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
       : countModel === "deliveryNote"
-        ? (await tx.deliveryNote.findMany({ where: { orgId, deliveryNoteNumber: { contains: inner } }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
+        ? (await tx.deliveryNote.findMany({ where: { orgId, deliveryNoteNumber: { contains: inner , mode: "insensitive" as const} }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
         : countModel === "creditNote"
-          ? (await tx.creditNote.findMany({ where: { orgId, creditNoteNumber: { contains: inner } }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
+          ? (await tx.creditNote.findMany({ where: { orgId, creditNoteNumber: { contains: inner , mode: "insensitive" as const} }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
           : countModel === "complaint"
-            ? (await tx.complaint.findMany({ where: { orgId, complaintNumber: { contains: inner } }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
-            : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner } }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
+            ? (await tx.complaint.findMany({ where: { orgId, complaintNumber: { contains: inner , mode: "insensitive" as const} }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
+            : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner , mode: "insensitive" as const} }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
   return maxNumberSequence(inner, numbers.filter(Boolean));
 }
 

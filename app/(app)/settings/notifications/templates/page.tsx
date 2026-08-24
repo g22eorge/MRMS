@@ -81,10 +81,10 @@ export default async function NotificationTemplatesPage({
       where: {
         orgId: replaceOrgId,
         OR: [
-          { body: { contains: "Eagle Info Solutions" } },
-          { body: { contains: "Your Repair Team" } },
-          { subject: { contains: "Eagle Info Solutions" } },
-          { subject: { contains: "Your Repair Team" } },
+          { body: { contains: "Eagle Info Solutions" , mode: "insensitive" as const} },
+          { body: { contains: "Your Repair Team" , mode: "insensitive" as const} },
+          { subject: { contains: "Eagle Info Solutions" , mode: "insensitive" as const} },
+          { subject: { contains: "Your Repair Team" , mode: "insensitive" as const} },
         ],
       },
       select: { id: true, body: true, subject: true },

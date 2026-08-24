@@ -41,7 +41,7 @@ async function nextSaleNumber(db: ReturnType<typeof orgDb>, orgId: string) {
   const [tag, rows] = await Promise.all([
     orgTagFor(orgId),
     db.sale.findMany({
-      where: { saleNumber: { contains: inner } },
+      where: { saleNumber: { contains: inner , mode: "insensitive" as const} },
       select: { saleNumber: true },
     }),
   ]);
@@ -83,9 +83,9 @@ export default async function PosPage({
   const searchFilter: Prisma.SaleWhereInput = q
     ? {
         OR: [
-          { saleNumber: { contains: q } },
-          { notes: { contains: q } },
-          { client: { fullName: { contains: q } } },
+          { saleNumber: { contains: q , mode: "insensitive" as const} },
+          { notes: { contains: q , mode: "insensitive" as const} },
+          { client: { fullName: { contains: q , mode: "insensitive" as const} } },
         ],
       }
     : {};

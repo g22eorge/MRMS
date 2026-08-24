@@ -127,9 +127,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { quoteNumber: { contains: searchQ } },
-            { lead:   { fullName: { contains: searchQ } } },
-            { client: { fullName: { contains: searchQ } } },
+            { quoteNumber: { contains: searchQ , mode: "insensitive" as const} },
+            { lead:   { fullName: { contains: searchQ , mode: "insensitive" as const} } },
+            { client: { fullName: { contains: searchQ , mode: "insensitive" as const} } },
           ],
         }
       : {}),
@@ -148,9 +148,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { fullName: { contains: searchQ } },
-            { phone:    { contains: searchQ } },
-            { organization: { contains: searchQ } },
+            { fullName: { contains: searchQ , mode: "insensitive" as const} },
+            { phone:    { contains: searchQ , mode: "insensitive" as const} },
+            { organization: { contains: searchQ , mode: "insensitive" as const} },
           ],
         }
       : {}),

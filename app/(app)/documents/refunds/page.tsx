@@ -361,13 +361,13 @@ export default async function RefundsPage({
   else if (periodFilter === "last_month") baseWhere.refundedAt = { gte: lastMonthStart, lte: lastMonthEnd };
   if (q) {
     baseWhere.OR = [
-      { reference: { contains: q } },
-      { note: { contains: q } },
-      { invoice: { is: { invoiceNumber: { contains: q } } } },
-      { invoice: { is: { job: { is: { client: { is: { fullName: { contains: q } } } } } } } },
-      { sale: { is: { saleNumber: { contains: q } } } },
-      { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
-      { creditNote: { is: { creditNoteNumber: { contains: q } } } },
+      { reference: { contains: q , mode: "insensitive" as const} },
+      { note: { contains: q , mode: "insensitive" as const} },
+      { invoice: { is: { invoiceNumber: { contains: q , mode: "insensitive" as const} } } },
+      { invoice: { is: { job: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } } } },
+      { sale: { is: { saleNumber: { contains: q , mode: "insensitive" as const} } } },
+      { sale: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } },
+      { creditNote: { is: { creditNoteNumber: { contains: q , mode: "insensitive" as const} } } },
     ];
   }
 

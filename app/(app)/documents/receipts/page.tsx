@@ -191,7 +191,7 @@ export default async function ReceiptsPage({
       // Post a balanced adjusting entry for the amount change so the ledger tracks
       // the new receipt amount (unique per edit, so repeated edits each adjust).
       if (Math.abs(ledgerDelta) > 0.005) {
-        const adjCount = await tx.journalEntry.count({ where: { orgId, reference: { startsWith: `pay:${paymentId}:adj:` } } });
+        const adjCount = await tx.journalEntry.count({ where: { orgId, reference: { startsWith: `pay:${paymentId}:adj:` , mode: "insensitive" as const} } });
         await postJournalEntry(tx, {
           orgId,
           userId: user.id,
@@ -307,10 +307,10 @@ export default async function ReceiptsPage({
   const searchWhere = q
     ? {
         OR: [
-          { reference: { contains: q } },
-          { note: { contains: q } },
-          { invoice: { invoiceNumber: { contains: q } } },
-          { sale: { saleNumber: { contains: q } } },
+          { reference: { contains: q , mode: "insensitive" as const} },
+          { note: { contains: q , mode: "insensitive" as const} },
+          { invoice: { invoiceNumber: { contains: q , mode: "insensitive" as const} } },
+          { sale: { saleNumber: { contains: q , mode: "insensitive" as const} } },
         ],
       }
     : {};

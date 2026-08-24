@@ -136,9 +136,9 @@ export default async function TechniciansPage({
       ...(filters.q
         ? {
             OR: [
-              { jobNumber: { contains: filters.q } },
-              { brand: { contains: filters.q } },
-              { model: { contains: filters.q } },
+              { jobNumber: { contains: filters.q , mode: "insensitive" as const} },
+              { brand: { contains: filters.q , mode: "insensitive" as const} },
+              { model: { contains: filters.q , mode: "insensitive" as const} },
             ],
           }
         : {}),

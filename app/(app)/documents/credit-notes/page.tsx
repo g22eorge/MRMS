@@ -649,9 +649,9 @@ export default async function CreditNotesPage({
     ...(q
       ? {
           OR: [
-            { creditNoteNumber: { contains: q } },
-            { reason: { contains: q } },
-            { sale: { saleNumber: { contains: q } } },
+            { creditNoteNumber: { contains: q , mode: "insensitive" as const} },
+            { reason: { contains: q , mode: "insensitive" as const} },
+            { sale: { saleNumber: { contains: q , mode: "insensitive" as const} } },
           ],
         }
       : {}),

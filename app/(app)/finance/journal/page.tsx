@@ -107,7 +107,7 @@ export default async function JournalPage({
     // Per-year sequence (was a lifetime count, so year-stamped numbers desynced).
     const entryYear   = new Date(dateStr).getFullYear();
     const inner       = `JE-${entryYear}-`;
-    const existingNumbers = await db.journalEntry.findMany({ where: { entryNumber: { contains: inner } }, select: { entryNumber: true } });
+    const existingNumbers = await db.journalEntry.findMany({ where: { entryNumber: { contains: inner , mode: "insensitive" as const} }, select: { entryNumber: true } });
     const entryNumber = `${inner}${String(maxNumberSequence(inner, existingNumbers.map((e) => e.entryNumber)) + 1).padStart(4, "0")}`;
 
     const entry = await db.journalEntry.create({
@@ -187,9 +187,9 @@ export default async function JournalPage({
   const searchWhere = searchQ
     ? {
         OR: [
-          { description: { contains: searchQ } },
-          { reference:   { contains: searchQ } },
-          { entryNumber: { contains: searchQ } },
+          { description: { contains: searchQ , mode: "insensitive" as const} },
+          { reference:   { contains: searchQ , mode: "insensitive" as const} },
+          { entryNumber: { contains: searchQ , mode: "insensitive" as const} },
         ],
       }
     : {};

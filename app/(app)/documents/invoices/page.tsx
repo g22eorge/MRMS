@@ -353,11 +353,11 @@ export default async function InvoicesPage({
   // Search in the DB, not in-memory over the top-150, so older invoices are findable.
   if (q) {
     where.OR = [
-      { invoiceNumber: { contains: q } },
-      { subject: { contains: q } },
-      { job: { jobNumber: { contains: q } } },
-      { job: { client: { fullName: { contains: q } } } },
-      { client: { fullName: { contains: q } } },
+      { invoiceNumber: { contains: q , mode: "insensitive" as const} },
+      { subject: { contains: q , mode: "insensitive" as const} },
+      { job: { jobNumber: { contains: q , mode: "insensitive" as const} } },
+      { job: { client: { fullName: { contains: q , mode: "insensitive" as const} } } },
+      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
     ];
   }
 

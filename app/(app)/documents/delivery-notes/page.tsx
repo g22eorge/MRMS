@@ -266,20 +266,20 @@ export default async function DeliveryNotesPage({
 
   const searchOrPrimary: Prisma.DeliveryNoteWhereInput[] | undefined = q
     ? [
-        { deliveryNoteNumber: { contains: q } },
-        { invoice: { is: { invoiceNumber: { contains: q } } } },
-        { invoice: { is: { client: { is: { fullName: { contains: q } } } } } },
-        { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { deliveryNoteNumber: { contains: q , mode: "insensitive" as const} },
+        { invoice: { is: { invoiceNumber: { contains: q , mode: "insensitive" as const} } } },
+        { invoice: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } },
+        { sale: { is: { saleNumber: { contains: q , mode: "insensitive" as const} } } },
+        { sale: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } },
       ]
     : undefined;
   // Legacy deployments whose Prisma client predates DeliveryNote.invoice can't
   // filter on that relation — drop the invoice clauses for the fallback path.
   const searchOrFallback: Prisma.DeliveryNoteWhereInput[] | undefined = q
     ? [
-        { deliveryNoteNumber: { contains: q } },
-        { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { deliveryNoteNumber: { contains: q , mode: "insensitive" as const} },
+        { sale: { is: { saleNumber: { contains: q , mode: "insensitive" as const} } } },
+        { sale: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } },
       ]
     : undefined;
 

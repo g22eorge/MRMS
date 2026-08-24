@@ -22,7 +22,7 @@ async function generateRequestNumber(orgId: string): Promise<string> {
   const inner = `PR-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
     orgTagFor(orgId),
-    prisma.purchaseRequest.findMany({ where: { orgId, requestNumber: { contains: inner } }, select: { requestNumber: true } }),
+    prisma.purchaseRequest.findMany({ where: { orgId, requestNumber: { contains: inner , mode: "insensitive" as const} }, select: { requestNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.requestNumber)) + 1;
   return composeOrgNumber(tag, inner, next);

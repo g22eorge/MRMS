@@ -61,7 +61,7 @@ async function nextEntryNumber(tx: Tx, orgId: string, year: number): Promise<str
   const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
   if (!existing) {
     const rows = await tx.journalEntry.findMany({
-      where: { orgId, entryNumber: { startsWith: prefix } },
+      where: { orgId, entryNumber: { startsWith: prefix , mode: "insensitive" as const} },
       select: { entryNumber: true },
     });
     const seed = rows.reduce((m, r) => {

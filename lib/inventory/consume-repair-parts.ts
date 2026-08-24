@@ -25,7 +25,7 @@ export async function consumeRepairPartsForJob(params: {
 
   await prisma.$transaction(async (tx) => {
     const already = await tx.partStockTransaction.findFirst({
-      where: { jobId, reason: { startsWith: "REPAIR_CONSUME" } },
+      where: { jobId, reason: { startsWith: "REPAIR_CONSUME" , mode: "insensitive" as const} },
       select: { id: true },
     });
     if (already) return;

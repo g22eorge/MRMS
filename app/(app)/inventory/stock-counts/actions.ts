@@ -22,7 +22,7 @@ async function generateCountNumber(orgId: string) {
   const inner = `SC-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
     orgTagFor(orgId),
-    prisma.stockCount.findMany({ where: { orgId, countNumber: { contains: inner } }, select: { countNumber: true } }),
+    prisma.stockCount.findMany({ where: { orgId, countNumber: { contains: inner , mode: "insensitive" as const} }, select: { countNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.countNumber)) + 1;
   return composeOrgNumber(tag, inner, next);

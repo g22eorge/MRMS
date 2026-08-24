@@ -104,10 +104,10 @@ export default async function JobCardsPage({
     ...(q
       ? {
           OR: [
-            { jobNumber: { contains: q } },
-            { client: { fullName: { contains: q } } },
-            { brand: { contains: q } },
-            { model: { contains: q } },
+            { jobNumber: { contains: q , mode: "insensitive" as const} },
+            { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+            { brand: { contains: q , mode: "insensitive" as const} },
+            { model: { contains: q , mode: "insensitive" as const} },
           ],
         }
       : {}),

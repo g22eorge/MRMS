@@ -22,7 +22,7 @@ async function generateBillNumber(orgId: string): Promise<string> {
   const inner = `SB-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
     orgTagFor(orgId),
-    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner } }, select: { billNumber: true } }),
+    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner , mode: "insensitive" as const} }, select: { billNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.billNumber)) + 1;
   return composeOrgNumber(tag, inner, next);

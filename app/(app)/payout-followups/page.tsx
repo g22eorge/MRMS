@@ -40,9 +40,9 @@ function buildJobSearch(q?: string): Prisma.JobWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { jobNumber: { contains: q } },
-      { client: { fullName: { contains: q } } },
-      { assignedTo: { is: { name: { contains: q } } } },
+      { jobNumber: { contains: q , mode: "insensitive" as const} },
+      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+      { assignedTo: { is: { name: { contains: q , mode: "insensitive" as const} } } },
     ],
   };
 }
@@ -51,9 +51,9 @@ function buildInvoiceSearch(q?: string): Prisma.InvoiceWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { invoiceNumber: { contains: q } },
-      { client: { fullName: { contains: q } } },
-      { subject: { contains: q } },
+      { invoiceNumber: { contains: q , mode: "insensitive" as const} },
+      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+      { subject: { contains: q , mode: "insensitive" as const} },
     ],
   };
 }
@@ -62,8 +62,8 @@ function buildBillSearch(q?: string): Prisma.SupplierBillWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { billNumber: { contains: q } },
-      { supplier: { name: { contains: q } } },
+      { billNumber: { contains: q , mode: "insensitive" as const} },
+      { supplier: { name: { contains: q , mode: "insensitive" as const} } },
     ],
   };
 }

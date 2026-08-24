@@ -21,7 +21,7 @@ async function generateGrnNumber(orgId: string): Promise<string> {
   const inner = `GRN-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
     orgTagFor(orgId),
-    prisma.goodsReceived.findMany({ where: { orgId, grnNumber: { contains: inner } }, select: { grnNumber: true } }),
+    prisma.goodsReceived.findMany({ where: { orgId, grnNumber: { contains: inner , mode: "insensitive" as const} }, select: { grnNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.grnNumber)) + 1;
   return composeOrgNumber(tag, inner, next);

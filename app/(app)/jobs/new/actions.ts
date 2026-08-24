@@ -99,7 +99,7 @@ export async function generateJobNumber(orgId?: string) {
   //    form) continues the org's sequence instead of restarting at 0001.
   const [globalRows, orgRows] = await Promise.all([
     prisma.job.findMany({
-      where: { jobNumber: { startsWith: `${prefix}/${year}/` } },
+      where: { jobNumber: { startsWith: `${prefix}/${year}/` , mode: "insensitive" as const} },
       select: { jobNumber: true },
     }),
     orgId
@@ -107,8 +107,8 @@ export async function generateJobNumber(orgId?: string) {
           where: {
             orgId,
             OR: [
-              { jobNumber: { contains: `/${year}/` } },
-              { jobNumber: { contains: `-${year}-` } },
+              { jobNumber: { contains: `/${year}/` , mode: "insensitive" as const} },
+              { jobNumber: { contains: `-${year}-` , mode: "insensitive" as const} },
             ],
           },
           select: { jobNumber: true },

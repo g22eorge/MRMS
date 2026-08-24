@@ -20,7 +20,7 @@ type StockTxnType = "IN" | "OUT" | "ADJUST";
  */
 async function generatePartSku(orgId: string): Promise<string> {
   const rows = await prisma.part.findMany({
-    where: { orgId, sku: { startsWith: "SKU-" } },
+    where: { orgId, sku: { startsWith: "SKU-" , mode: "insensitive" as const} },
     select: { sku: true },
   });
   let max = 0;

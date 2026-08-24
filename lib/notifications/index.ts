@@ -921,7 +921,7 @@ export async function notifyStockAlert({
     where: {
       orgId,
       type: { in: [NotificationType.STOCK_OUT, NotificationType.STOCK_LOW] },
-      message: { contains: partId },
+      message: { contains: partId , mode: "insensitive" as const},
     },
     orderBy: { createdAt: "desc" },
     select: { type: true },

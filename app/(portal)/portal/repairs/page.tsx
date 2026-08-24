@@ -31,10 +31,10 @@ export default async function PortalRepairsPage({
       ...(query
         ? {
             OR: [
-              { jobNumber: { contains: query } },
-              { brand: { contains: query } },
-              { model: { contains: query } },
-              { serialOrImei: { contains: query } },
+              { jobNumber: { contains: query , mode: "insensitive" as const} },
+              { brand: { contains: query , mode: "insensitive" as const} },
+              { model: { contains: query , mode: "insensitive" as const} },
+              { serialOrImei: { contains: query , mode: "insensitive" as const} },
             ],
           }
         : {}),

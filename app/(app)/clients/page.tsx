@@ -63,11 +63,11 @@ export default async function ClientsPage({
     ...(filters.q
       ? {
           OR: [
-            { fullName: { contains: filters.q } },
-            { phone: { contains: filters.q } },
-            { email: { contains: filters.q } },
-            { organization: { contains: filters.q } },
-            { address: { contains: filters.q } },
+            { fullName: { contains: filters.q , mode: "insensitive" as const} },
+            { phone: { contains: filters.q , mode: "insensitive" as const} },
+            { email: { contains: filters.q , mode: "insensitive" as const} },
+            { organization: { contains: filters.q , mode: "insensitive" as const} },
+            { address: { contains: filters.q , mode: "insensitive" as const} },
           ],
         }
       : {}),

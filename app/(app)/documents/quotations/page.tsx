@@ -59,15 +59,15 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   if (statusFilter !== "ALL") where.status = statusFilter as QuotationStatus;
   if (q) {
     where.OR = [
-      { quoteNumber: { contains: q } },
-      { client: { fullName: { contains: q } } },
+      { quoteNumber: { contains: q , mode: "insensitive" as const} },
+      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
     ];
   }
 
   // KPI band reflects the whole org (all statuses), respecting only the search —
   // so the summary numbers stay stable as you flip the status filter.
   const kpiWhere: Prisma.QuotationWhereInput = { orgId: user.orgId };
-  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q } }, { client: { fullName: { contains: q } } }];
+  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q , mode: "insensitive" as const} }, { client: { fullName: { contains: q , mode: "insensitive" as const} } }];
 
   const [quotations, totalItems, statusGroups] = await Promise.all([
     db.quotation.findMany({

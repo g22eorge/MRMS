@@ -223,13 +223,13 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q } },
+                  { jobNumber: { contains: q , mode: "insensitive" as const} },
                   // External techs can still search by device details.
-                  { brand: { contains: q } },
-                  { model: { contains: q } },
-                  { device: { brand: { contains: q } } },
-                  { device: { model: { contains: q } } },
-                  { serialOrImei: { contains: q } },
+                  { brand: { contains: q , mode: "insensitive" as const} },
+                  { model: { contains: q , mode: "insensitive" as const} },
+                  { device: { brand: { contains: q , mode: "insensitive" as const} } },
+                  { device: { model: { contains: q , mode: "insensitive" as const} } },
+                  { serialOrImei: { contains: q , mode: "insensitive" as const} },
                 ],
               }
             : {}),
@@ -239,16 +239,16 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q } },
-                  { client: { fullName: { contains: q } } },
-                  { client: { phone: { contains: q } } },
+                  { jobNumber: { contains: q , mode: "insensitive" as const} },
+                  { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+                  { client: { phone: { contains: q , mode: "insensitive" as const} } },
                   // Support both the legacy Job.brand/model fields and the newer Device relation.
-                  { brand: { contains: q } },
-                  { model: { contains: q } },
-                  { device: { brand: { contains: q } } },
-                  { device: { model: { contains: q } } },
-                  { serialOrImei: { contains: q } },
-                  { issueDescription: { contains: q } },
+                  { brand: { contains: q , mode: "insensitive" as const} },
+                  { model: { contains: q , mode: "insensitive" as const} },
+                  { device: { brand: { contains: q , mode: "insensitive" as const} } },
+                  { device: { model: { contains: q , mode: "insensitive" as const} } },
+                  { serialOrImei: { contains: q , mode: "insensitive" as const} },
+                  { issueDescription: { contains: q , mode: "insensitive" as const} },
                 ],
               }
             : {}),

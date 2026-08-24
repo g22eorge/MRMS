@@ -165,10 +165,10 @@ export default async function FieldPage({
     ...(!isManager ? { assignedToId: user.id } : {}),
     ...(q ? {
       OR: [
-        { visitNumber: { contains: q } },
-        { job: { jobNumber: { contains: q } } },
-        { job: { client: { fullName: { contains: q } } } },
-        { assignedTo: { name: { contains: q } } },
+        { visitNumber: { contains: q , mode: "insensitive" as const} },
+        { job: { jobNumber: { contains: q , mode: "insensitive" as const} } },
+        { job: { client: { fullName: { contains: q , mode: "insensitive" as const} } } },
+        { assignedTo: { name: { contains: q , mode: "insensitive" as const} } },
       ],
     } : {}),
   };

@@ -68,7 +68,7 @@ async function allocateRequestNumber(orgId?: string | null): Promise<string> {
 
   const getMaxExisting = async () => {
     const last = await prisma.repairRequest.findFirst({
-      where: { requestNumber: { startsWith: prefix } },
+      where: { requestNumber: { startsWith: prefix , mode: "insensitive" as const} },
       orderBy: { requestNumber: "desc" },
       select: { requestNumber: true },
     });

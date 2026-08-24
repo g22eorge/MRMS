@@ -20,22 +20,22 @@ function buildJobWhere(params: {
   const phoneVariants = phoneLookupVariants(q);
 
   const textOr: Prisma.JobWhereInput[] = [
-    { jobNumber: { contains: q } },
-    { brand: { contains: q } },
-    { model: { contains: q } },
-    { serialOrImei: { contains: q } },
-    { device: { brand: { contains: q } } },
-    { device: { model: { contains: q } } },
+    { jobNumber: { contains: q , mode: "insensitive" as const} },
+    { brand: { contains: q , mode: "insensitive" as const} },
+    { model: { contains: q , mode: "insensitive" as const} },
+    { serialOrImei: { contains: q , mode: "insensitive" as const} },
+    { device: { brand: { contains: q , mode: "insensitive" as const} } },
+    { device: { model: { contains: q , mode: "insensitive" as const} } },
   ];
 
   if (user.role !== "TECHNICIAN_EXTERNAL") {
     textOr.push(
-      { client: { fullName: { contains: q } } },
-      { client: { phone: { contains: q } } },
-      { issueDescription: { contains: q } },
+      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+      { client: { phone: { contains: q , mode: "insensitive" as const} } },
+      { issueDescription: { contains: q , mode: "insensitive" as const} },
     );
     for (const phone of phoneVariants) {
-      textOr.push({ client: { phone: { contains: phone } } });
+      textOr.push({ client: { phone: { contains: phone , mode: "insensitive" as const} } });
     }
   }
 
@@ -129,13 +129,13 @@ export async function searchCommandPalette(params: {
   if (can.viewClientInfo(params.user)) {
     const phoneVariants = phoneLookupVariants(q);
     const clientOr: Prisma.ClientWhereInput[] = [
-      { fullName: { contains: q } },
-      { phone: { contains: q } },
-      { email: { contains: q } },
-      { organization: { contains: q } },
+      { fullName: { contains: q , mode: "insensitive" as const} },
+      { phone: { contains: q , mode: "insensitive" as const} },
+      { email: { contains: q , mode: "insensitive" as const} },
+      { organization: { contains: q , mode: "insensitive" as const} },
     ];
     for (const phone of phoneVariants) {
-      clientOr.push({ phone: { contains: phone } });
+      clientOr.push({ phone: { contains: phone , mode: "insensitive" as const} });
     }
 
     const clients = await prisma.client.findMany({
@@ -161,11 +161,11 @@ export async function searchCommandPalette(params: {
       where: {
         orgId: params.orgId,
         OR: [
-          { invoiceNumber: { contains: q } },
-          { subject: { contains: q } },
-          { client: { fullName: { contains: q } } },
-          { client: { phone: { contains: q } } },
-          { job: { jobNumber: { contains: q } } },
+          { invoiceNumber: { contains: q , mode: "insensitive" as const} },
+          { subject: { contains: q , mode: "insensitive" as const} },
+          { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+          { client: { phone: { contains: q , mode: "insensitive" as const} } },
+          { job: { jobNumber: { contains: q , mode: "insensitive" as const} } },
         ],
       },
       select: {
@@ -195,9 +195,9 @@ export async function searchCommandPalette(params: {
       where: {
         orgId: params.orgId,
         OR: [
-          { quoteNumber: { contains: q } },
-          { client: { fullName: { contains: q } } },
-          { job: { jobNumber: { contains: q } } },
+          { quoteNumber: { contains: q , mode: "insensitive" as const} },
+          { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+          { job: { jobNumber: { contains: q , mode: "insensitive" as const} } },
         ],
       },
       select: { id: true, quoteNumber: true, status: true, client: { select: { fullName: true } }, job: { select: { jobNumber: true } } },
@@ -218,13 +218,13 @@ export async function searchCommandPalette(params: {
   if (can.manageInventory(params.user)) {
     const [products, suppliers] = await Promise.all([
       prisma.part.findMany({
-        where: { orgId: params.orgId, isActive: true, OR: [{ sku: { contains: q } }, { name: { contains: q } }] },
+        where: { orgId: params.orgId, isActive: true, OR: [{ sku: { contains: q , mode: "insensitive" as const} }, { name: { contains: q , mode: "insensitive" as const} }] },
         select: { id: true, sku: true, name: true, qtyOnHand: true },
         orderBy: { name: "asc" },
         take: RESULT_LIMIT,
       }),
       prisma.supplier.findMany({
-        where: { orgId: params.orgId, OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] },
+        where: { orgId: params.orgId, OR: [{ name: { contains: q , mode: "insensitive" as const} }, { phone: { contains: q , mode: "insensitive" as const} }, { email: { contains: q , mode: "insensitive" as const} }] },
         select: { id: true, name: true, phone: true },
         orderBy: { name: "asc" },
         take: RESULT_LIMIT,

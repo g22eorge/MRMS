@@ -25,7 +25,7 @@ async function nextTransferNumber(tx: TxClient, orgId: string) {
     // Pass `tx` — orgTagFor on the global client would deadlock this interactive
     // transaction (same bug that hung payments; see getOrgNumberConfig).
     orgTagFor(orgId, tx),
-    tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
+    tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner , mode: "insensitive" as const} }, select: { transferNumber: true } }),
   ]);
   const next = maxNumberSequence(inner, rows.map((r) => r.transferNumber)) + 1;
   return composeOrgNumber(tag, inner, next);

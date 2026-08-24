@@ -99,10 +99,10 @@ export default async function OutboxPage({
     ...(q
       ? {
           OR: [
-            { id: { contains: q } },
-            { to: { contains: q } },
-            { providerMessageId: { contains: q } },
-            { lastError: { contains: q } },
+            { id: { contains: q , mode: "insensitive" as const} },
+            { to: { contains: q , mode: "insensitive" as const} },
+            { providerMessageId: { contains: q , mode: "insensitive" as const} },
+            { lastError: { contains: q , mode: "insensitive" as const} },
           ],
         }
       : {}),

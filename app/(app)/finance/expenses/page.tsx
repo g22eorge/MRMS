@@ -100,9 +100,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ...(q
       ? {
           OR: [
-            { description: { contains: q } },
-            { expenseNumber: { contains: q } },
-            { reference: { contains: q } },
+            { description: { contains: q , mode: "insensitive" as const} },
+            { expenseNumber: { contains: q , mode: "insensitive" as const} },
+            { reference: { contains: q , mode: "insensitive" as const} },
           ],
         }
       : {}),
@@ -244,7 +244,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const inner = `EXP-${new Date().getFullYear()}-`;
     const [tag, existingNumbers] = await Promise.all([
       orgTagFor(orgId),
-      db.expense.findMany({ where: { expenseNumber: { contains: inner } }, select: { expenseNumber: true } }),
+      db.expense.findMany({ where: { expenseNumber: { contains: inner , mode: "insensitive" as const} }, select: { expenseNumber: true } }),
     ]);
     const expenseSeq = maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1;
     const expenseNumber = composeOrgNumber(tag, inner, expenseSeq);

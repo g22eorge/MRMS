@@ -20,11 +20,11 @@ export async function GET(req: NextRequest) {
       where: {
         orgId,
         OR: [
-          { fullName: { contains: q } },
-          { phone: { contains: q } },
-          { email: { contains: q } },
-          { organization: { contains: q } },
-          { address: { contains: q } },
+          { fullName: { contains: q , mode: "insensitive" as const} },
+          { phone: { contains: q , mode: "insensitive" as const} },
+          { email: { contains: q , mode: "insensitive" as const} },
+          { organization: { contains: q , mode: "insensitive" as const} },
+          { address: { contains: q , mode: "insensitive" as const} },
         ],
       },
       orderBy: { updatedAt: "desc" },
