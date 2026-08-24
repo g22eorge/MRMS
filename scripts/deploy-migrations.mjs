@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 
-const databaseUrl = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  console.error("Missing DATABASE_URL or TURSO_DATABASE_URL. Refusing to run migrations against local fallback DB.");
+  console.error("Missing DATABASE_URL. Refusing to run migrations without an explicit target.");
   process.exit(1);
 }
 

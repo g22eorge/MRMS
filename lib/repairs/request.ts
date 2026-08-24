@@ -48,7 +48,7 @@ async function allocateRequestNumber(orgId?: string | null): Promise<string> {
   if (!orgId) throw new Error("Missing orgId for repair requests. Provide orgId or set DEFAULT_ORG_ID.");
 
   const ensureSequenceTable = async () => {
-    // Some environments (e.g. Turso drift) may be missing this table.
+    // Older databases predating this table may not have it.
     // This is safe to run repeatedly.
     // Keep this aligned with prisma/schema.prisma model RepairRequestSequence.
     // This also makes the code resilient to DB drift in production.

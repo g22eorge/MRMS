@@ -1,31 +1,25 @@
 /**
- * rate-limit.ts
+ * Fixed-window rate limiter.
  *
- * Fixed-window rate limiter. In production (Turso/libSQL) it uses a shared
- * `RateLimit` table via an atomic upsert, so counts aggregate across all
- * serverless instances — a per-instance in-memory Map is useless on Vercel.
- * Locally (no Turso) it falls back to an in-memory Map. On any DB error it also
- * falls back to memory so a hiccup never breaks a request path.
+ * Counts live in a shared `RateLimit` table so they aggregate across every app
+ * instance — a per-process Map is useless behind more than one container. On any
+ * database error it falls back to an in-memory window rather than failing the
+ * request.
+ *
+ * Previously this used a raw `@libsql/client/web` connection, justified as being
+ * "edge-safe, unlike the Prisma libsql adapter". There is no edge middleware in
+ * this app: every call site is a node route handler or server action, so plain
+ * Prisma is fine and the second database driver is gone.
  *
  * `checkRateLimit` is async; every call site must `await` it.
  */
 
-import { createClient, type Client } from "@libsql/client/web";
+import { prisma } from "@/lib/prisma";
 
 type Entry = { count: number; resetAt: number };
 type Result = { allowed: boolean; retryAfterMs: number };
 
 const store = new Map<string, Entry>();
-let tableReady = false;
-let db: Client | null = null;
-// Edge-safe (fetch-based) libsql client — works in both the middleware (edge)
-// and node route handlers, unlike the Prisma libsql adapter.
-function getDb(): Client | null {
-  const url = process.env.TURSO_DATABASE_URL;
-  if (!url) return null;
-  if (!db) db = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
-  return db;
-}
 
 function checkMemory(key: string, opts: { limit: number; windowMs: number }): Result {
   const now = Date.now();
@@ -45,30 +39,30 @@ export async function checkRateLimit(
   key: string,
   opts: { limit: number; windowMs: number },
 ): Promise<Result> {
-  const client = getDb();
-  if (!client) return checkMemory(key, opts);
+  const now = new Date();
+  const resetNew = new Date(now.getTime() + opts.windowMs);
+
   try {
-    if (!tableReady) {
-      await client.execute(
-        `CREATE TABLE IF NOT EXISTS "RateLimit" ("key" TEXT NOT NULL PRIMARY KEY, "count" INTEGER NOT NULL, "resetAt" INTEGER NOT NULL)`,
-      );
-      tableReady = true;
-    }
-    const now = Date.now();
-    const resetNew = now + opts.windowMs;
-    // Atomic upsert: reset the window if expired, else increment; return the new state.
-    const rs = await client.execute({
-      sql: `INSERT INTO "RateLimit" ("key","count","resetAt") VALUES (?, 1, ?)
-        ON CONFLICT("key") DO UPDATE SET
-          "count"   = CASE WHEN "RateLimit"."resetAt" <= ? THEN 1 ELSE "RateLimit"."count" + 1 END,
-          "resetAt" = CASE WHEN "RateLimit"."resetAt" <= ? THEN ? ELSE "RateLimit"."resetAt" END
-        RETURNING "count" AS count, "resetAt" AS resetAt`,
-      args: [key, resetNew, now, now, resetNew],
-    });
-    const row = rs.rows[0] as { count?: number | bigint; resetAt?: number | bigint } | undefined;
+    // One atomic statement: start a new window if the old one has expired,
+    // otherwise increment. Expressed as raw SQL because the "reset or
+    // increment" branch cannot be written as a Prisma upsert — `update` has no
+    // access to the existing row's values.
+    const rows = await prisma.$queryRaw<Array<{ count: number; resetAt: Date }>>`
+      INSERT INTO "RateLimit" ("key", "count", "resetAt")
+      VALUES (${key}, 1, ${resetNew})
+      ON CONFLICT ("key") DO UPDATE SET
+        "count"   = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN 1 ELSE "RateLimit"."count" + 1 END,
+        "resetAt" = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN ${resetNew} ELSE "RateLimit"."resetAt" END
+      RETURNING "count", "resetAt"
+    `;
+
+    const row = rows[0];
     const count = Number(row?.count ?? 1);
-    const resetAt = Number(row?.resetAt ?? resetNew);
-    if (count > opts.limit) return { allowed: false, retryAfterMs: Math.max(0, resetAt - now) };
+    const resetAt = row?.resetAt ? new Date(row.resetAt).getTime() : resetNew.getTime();
+
+    if (count > opts.limit) {
+      return { allowed: false, retryAfterMs: Math.max(0, resetAt - now.getTime()) };
+    }
     return { allowed: true, retryAfterMs: 0 };
   } catch {
     // Fail open to the in-memory limiter rather than breaking the request.
@@ -89,7 +83,7 @@ export function rateLimitHeaders(retryAfterMs: number) {
  * Profiles — pick the one that matches the sensitivity of the endpoint.
  *
  * Usage:
- *   const result = rateLimit.auth(ip);
+ *   const result = await rateLimit.auth(ip);
  *   if (!result.allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
  */
 export const rateLimit = {

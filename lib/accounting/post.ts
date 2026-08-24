@@ -1,6 +1,7 @@
-import type { Prisma } from "@prisma/client";
+
 
 import { currencyDecimals, normalizeCurrency, roundMoney } from "@/lib/currency";
+import type { TxClient } from "@/lib/prisma";
 
 /**
  * Cash-basis double-entry posting service (C5).
@@ -16,7 +17,7 @@ import { currencyDecimals, normalizeCurrency, roundMoney } from "@/lib/currency"
  * retries and one-off backfills safe.
  */
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 
 // Standard cash-basis chart of accounts. Seeded per-org on first post.
 const CORE_ACCOUNTS = [
@@ -86,7 +87,7 @@ async function nextEntryNumber(tx: Tx, orgId: string, year: number): Promise<str
  * The org's base currency, for rounding ledger lines to a real minor unit.
  *
  * Read on the caller's `tx` — this runs inside interactive write transactions,
- * and on Turso/libSQL a read issued on the global client while such a
+ * and a read issued on the global client while such a
  * transaction holds the connection deadlocks it.
  */
 async function ledgerCurrency(tx: Tx, orgId: string): Promise<string> {

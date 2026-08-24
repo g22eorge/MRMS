@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { formatMoney, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
@@ -61,7 +61,6 @@ export default async function ReceiptsPage({
     const baseCurrency = org.baseCurrency;
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
     // Payment + receipt + C5 ledger post run inside the txn below; ensure schema first.
-    await ensureMoneySchema();
 
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
     const legacyInvoiceId = String(formData.get("invoiceId") ?? "").trim();
@@ -137,7 +136,6 @@ export default async function ReceiptsPage({
     const db = orgDb(orgId);
     const baseCurrency = org.baseCurrency;
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
-    await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     const amount = Number(String(formData.get("amount") ?? "").trim());
@@ -231,7 +229,6 @@ export default async function ReceiptsPage({
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const baseCurrency = org.baseCurrency;
     if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
-    await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     if (!paymentId) return;

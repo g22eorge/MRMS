@@ -25,7 +25,7 @@ export function orgNumberTag(slug: string | null | undefined) {
  *
  * Accepts an optional client so callers INSIDE an interactive `$transaction` can
  * pass `tx` — issuing this read on the global `prisma` client while a tx holds
- * the connection deadlocks on Turso/libSQL (same class as getOrgNumberConfig).
+ * the query escapes the caller's transaction (same class as getOrgNumberConfig).
  * Out-of-transaction callers keep the default global client.
  */
 export async function orgTagFor(orgId: string, db: Pick<typeof prisma, "organization"> = prisma) {
@@ -130,12 +130,12 @@ export async function getOrgNumberConfig(orgId?: string, db: NumberConfigDb = pr
     // Deliberately a minimal read of only the two columns we need — NOT
     // getDocumentBrandingSettings(), which runs ensureRawTable() (CREATE/ALTER
     // TABLE DDL). This function runs inside interactive write-transactions during
-    // document-number allocation, and on Turso/libSQL a DDL statement issued
+    // document-number allocation, and a DDL statement issued
     // while such a transaction is open can deadlock it until it times out. Both
     // columns are original, so this SELECT never needs a migration.
     //
     // Just as important: run the read on the caller's `db` (the transaction
-    // client when called from nextDocumentNumber). On Turso/libSQL the interactive
+    // client when called from nextDocumentNumber). The interactive
     // transaction holds the single connection, so issuing this SELECT on the GLOBAL
     // client instead would wait for a connection the open tx never releases —
     // a deadlock that only surfaces on a cache miss (a fresh org's first payment,

@@ -1,8 +1,9 @@
-import { Prisma } from "@prisma/client";
+
 
 import { toBaseAmount } from "@/lib/currency";
+import type { TxClient } from "@/lib/prisma";
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 
 export type InvoicePaymentSyncResult = {
   paidAmount: number;

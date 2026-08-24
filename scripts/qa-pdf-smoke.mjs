@@ -23,8 +23,6 @@ const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? process.env.E2E_ADMIN_EMAIL 
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? process.env.E2E_PASSWORD ?? "Admin123!";
 
 process.env.DATABASE_URL ??= "file:./dev.db";
-process.env.TURSO_DATABASE_URL = "";
-process.env.TURSO_AUTH_TOKEN = "";
 
 const prisma = new PrismaClient({ log: [] });
 
@@ -70,10 +68,7 @@ async function startServerIfNeeded() {
     env: {
       ...process.env,
       PORT: port,
-      ALLOW_SQLITE_PRODUCTION: "1",
       DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
-      TURSO_DATABASE_URL: "",
-      TURSO_AUTH_TOKEN: "",
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",
       BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? BASE_URL,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? BASE_URL,

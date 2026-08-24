@@ -1,117 +1,106 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { Prisma, PrismaClient } from "@prisma/client";
+import type { Operation } from "@prisma/client/runtime/library";
+
+import { decimalToNumberExtension } from "./prisma-decimal";
+
+/**
+ * The Prisma client.
+ *
+ * This module used to be 382 lines, almost all of it working around SQLite:
+ * a libsql/Turso driver adapter, `file:` URL normalisation for three different
+ * working directories, a stale-client guard listing nineteen model names by
+ * hand, four query extensions that caught `"no such column"` errors and issued
+ * `ALTER TABLE` mid-query, and `ensureMoneySchema()` — 90 lines of SQLite DDL
+ * run before every money write because production databases predated the
+ * accounting tables. Migrations replace all of it.
+ */
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-const DEFAULT_LOCAL_DATABASE_URL = (() => {
-  const cwd = process.cwd();
-  // Support running from `.next/standalone` where relative paths break.
-  if (cwd.includes(".next/standalone")) {
-    return `file:${cwd}/../../prisma/dev.db`;
-  }
-  return `file:${cwd}/prisma/dev.db`;
-})();
 
-function toSqliteAbsoluteUrl(url: string) {
-  if (!url.startsWith("file:")) return url;
-  const rawPath = url.slice("file:".length);
-  if (!rawPath || rawPath.startsWith("/") || rawPath.startsWith("..")) return url;
-
-  // Avoid path/process.cwd() here to prevent Turbopack over-tracing.
-  // Dev scripts already run prisma db push/generate before dev/build.
-  if (rawPath === "dev.db" || rawPath === "./dev.db" || rawPath === "prisma/dev.db" || rawPath === "./prisma/dev.db") {
-    return DEFAULT_LOCAL_DATABASE_URL;
-  }
-
-  return url;
-}
-
-// Interactive transactions here bundle several queries (document-number
-// allocation scans, cash-basis ledger posts, receipt/invoice creation). Over
-// Turso/libSQL every round-trip carries network latency, so Prisma's default
-// 5000 ms transaction ceiling is too tight and trips "Transaction already
-// closed" errors. Give the whole class more headroom centrally.
+/**
+ * Interactive transactions here bundle several queries (document-number
+ * allocation scans, cash-basis ledger posts, receipt/invoice creation). Prisma's
+ * default 5000 ms ceiling is too tight for that class, so raise it centrally.
+ */
 const TRANSACTION_OPTIONS = {
   maxWait: 10_000,
   timeout: 30_000,
 } as const;
 
-function createPrismaClient() {
-  // Use TURSO_DATABASE_URL to detect production mode
-  const isProduction = !!process.env.TURSO_DATABASE_URL;
+function isDecimal(value: unknown): value is Prisma.Decimal {
+  return Prisma.Decimal.isDecimal(value);
+}
 
-  // GitHub Actions/CI runs Next in production mode but uses local sqlite.
-  const isCi = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+/**
+ * Converts every `Decimal` in a query result to a plain number, in place.
+ *
+ * Money is stored as exact `numeric` in Postgres, but the application reads it
+ * as `number`. That boundary is deliberate. Prisma hands back `Prisma.Decimal`
+ * objects, and in JavaScript `decimalA + decimalB` concatenates their string
+ * forms instead of throwing — so a single missed arithmetic site among the ~3150
+ * money references in this codebase would produce a plausible wrong total with
+ * no exception and no failing test. Converting once, here, makes that class of
+ * bug impossible rather than merely unlikely.
+ *
+ * What this keeps: exact storage, and exact arithmetic for any SUM/AVG Postgres
+ * performs. What it does not claim: exact arithmetic in JavaScript. For UGX,
+ * whose amounts are whole shillings well inside float64's exact integer range,
+ * that is precise; computed fractions (VAT, percentage discounts) are rounded
+ * for display anyway.
+ *
+ * Mutates rather than rebuilding: query results are freshly allocated per call
+ * and owned by the caller, so there is nothing to preserve.
+ */
+function decimalsToNumbers(value: unknown, depth = 0): unknown {
+  // Guards against a pathological cycle; Prisma results are trees in practice.
+  if (value === null || value === undefined || depth > 12) return value;
+  if (isDecimal(value)) return value.toNumber();
+  if (typeof value !== "object") return value;
+  // Leave the opaque types alone.
+  if (value instanceof Date || value instanceof Uint8Array) return value;
 
-  // When Next runs `next build`, NODE_ENV is production; allow local sqlite during build.
-  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
-  if (
-    process.env.NODE_ENV === "production" &&
-    !isProduction &&
-    !isBuildPhase &&
-    !isCi &&
-    process.env.ALLOW_SQLITE_PRODUCTION !== "1"
-  ) {
-    // Prefer a clear error over a noisy sqlite "unable to open" failure on serverless.
-    throw new Error("Missing TURSO_DATABASE_URL (set Turso env vars for production runtime)");
-  }
-
-  if (!isProduction) {
-    const databaseUrl = process.env.DATABASE_URL?.trim();
-
-    if (!databaseUrl) {
-      process.env.DATABASE_URL = toSqliteAbsoluteUrl(DEFAULT_LOCAL_DATABASE_URL);
-    } else {
-      process.env.DATABASE_URL = toSqliteAbsoluteUrl(databaseUrl);
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      value[i] = decimalsToNumbers(value[i], depth + 1);
     }
-
-    return new PrismaClient({
-      log: ["error", "warn"],
-      transactionOptions: TRANSACTION_OPTIONS,
-    });
+    return value;
   }
 
-  const url = process.env.TURSO_DATABASE_URL;
-  if (!url) {
-    throw new Error("Missing TURSO_DATABASE_URL");
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    record[key] = decimalsToNumbers(record[key], depth + 1);
   }
+  return record;
+}
 
-  const adapter = new PrismaLibSql({
-    url,
-    ...(process.env.TURSO_AUTH_TOKEN ? { authToken: process.env.TURSO_AUTH_TOKEN } : {}),
-  });
+function createPrismaClient() {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    // Prefer a clear message over Prisma's generic initialisation error.
+    throw new Error("Missing DATABASE_URL (set the Postgres connection string)");
+  }
 
   return new PrismaClient({
-    adapter,
     log: ["error", "warn"],
     transactionOptions: TRANSACTION_OPTIONS,
   });
 }
 
-// If a cached singleton is missing recently-added models (stale hot-reload cache),
-// discard it so a fresh client is created with the current generated schema.
+/**
+ * Next's dev server re-imports modules while the process lives on, so a client
+ * generated before a schema change can survive in the module global and then
+ * fail on a model it does not know about. Comparing the cached client's
+ * delegates against the current datamodel catches that generically — the
+ * previous version of this check listed nineteen model names by hand and had to
+ * be edited every time a model was added.
+ */
 function isStaleSingleton(client: PrismaClient | undefined): boolean {
   if (!client) return false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const c = client as any;
-  return !c.complaint
-    || !c.userGroup
-    || !c.branch
-    || !c.supplier
-    || !c.salesTarget
-    || !c.stockLocation
-    || !c.stockTransfer
-    || !c.purchaseRequest
-    || !c.goodsReceived
-    || !c.supplierBill
-    || !c.supplierPayment
-    || !c.stockCount
-    || !c.taxRate
-    || !c.expense
-    || !c.recurringInvoice
-    || !c.chartOfAccount
-    || !c.journalEntry
-    || !c.bankAccount
-    || !c.campaign;
+  const delegates = client as unknown as Record<string, unknown>;
+  return Prisma.dmmf.datamodel.models.some((model) => {
+    const key = model.name.charAt(0).toLowerCase() + model.name.slice(1);
+    return !delegates[key];
+  });
 }
 
 if (isStaleSingleton(globalForPrisma.prisma)) {
@@ -119,264 +108,65 @@ if (isStaleSingleton(globalForPrisma.prisma)) {
   globalForPrisma.prisma = undefined;
 }
 
-const basePrisma =
-  globalForPrisma.prisma ??
-  createPrismaClient();
+const basePrisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = basePrisma;
 }
 
-let paymentKindRepair: Promise<void> | null = null;
-let leadLostReasonRepair: Promise<void> | null = null;
-let clientAddressRepair: Promise<void> | null = null;
-let quotationTaxRepair: Promise<void> | null = null;
-
-function isMissingPaymentKindError(error: unknown) {
-  return String(error).includes("no such column: main.Payment.kind")
-    || String(error).includes("no such column: Payment.kind");
-}
-
-function isMissingLeadLostReasonError(error: unknown) {
-  return String(error).includes("no such column: main.Lead.lostReason")
-    || String(error).includes("no such column: Lead.lostReason")
-    || String(error).includes("no such column: lostReason");
-}
-
-function isMissingClientAddressError(error: unknown) {
-  return String(error).includes("no such column: main.Client.address")
-    || String(error).includes("no such column: Client.address")
-    || String(error).includes("no such column: address");
-}
-
-function isMissingQuotationTaxError(error: unknown) {
-  return String(error).includes("no such column: main.Quotation.taxLabel")
-    || String(error).includes("no such column: Quotation.taxLabel")
-    || String(error).includes("no such column: taxLabel")
-    || String(error).includes("no such column: main.Quotation.taxRate")
-    || String(error).includes("no such column: Quotation.taxRate")
-    || String(error).includes("no such column: taxRate");
-}
-
-function isDuplicateColumnError(error: unknown) {
-  const message = String(error).toLowerCase();
-  return message.includes("duplicate column name") || message.includes("already exists");
-}
-
-async function ensurePaymentKindColumn() {
-  paymentKindRepair ??= basePrisma.$executeRawUnsafe(
-    `ALTER TABLE "Payment" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'PAYMENT'`,
-  ).then(
-    () => undefined,
-    (error) => {
-      if (isDuplicateColumnError(error)) return undefined;
-      paymentKindRepair = null;
-      throw error;
+/**
+ * Two layers, because they cover different things.
+ *
+ * The `result` extension is the important one: it changes each Decimal field's
+ * *declared type* as well as its value, so the generated types and the code
+ * agree that money is a `number`. It only applies to model reads, though.
+ *
+ * The `query` extension catches what the first cannot see: aggregate results
+ * (`_sum`, `_avg`, `_min`, `_max`), `groupBy`, and `$queryRaw`, all of which
+ * hand back Decimals that no field mapping covers.
+ */
+export const prisma = basePrisma
+  .$extends({
+    query: {
+      async $allOperations({ args, query }) {
+        return decimalsToNumbers(await query(args));
+      },
     },
-  );
+  })
+  .$extends(decimalToNumberExtension);
 
-  return paymentKindRepair;
-}
-
-async function ensureLeadLostReasonColumn() {
-  leadLostReasonRepair ??= basePrisma.$executeRawUnsafe(
-    `ALTER TABLE "Lead" ADD COLUMN "lostReason" TEXT`,
-  ).then(
-    () => undefined,
-    (error) => {
-      if (isDuplicateColumnError(error)) return undefined;
-      leadLostReasonRepair = null;
-      throw error;
-    },
-  );
-
-  return leadLostReasonRepair;
-}
-
-async function ensureClientAddressColumn() {
-  clientAddressRepair ??= basePrisma.$executeRawUnsafe(
-    `ALTER TABLE "Client" ADD COLUMN "address" TEXT`,
-  ).then(
-    () => undefined,
-    (error) => {
-      if (isDuplicateColumnError(error)) return undefined;
-      clientAddressRepair = null;
-      throw error;
-    },
-  );
-
-  return clientAddressRepair;
-}
-
-async function ensureQuotationTaxColumns() {
-  quotationTaxRepair ??= (async () => {
-    for (const statement of [
-      `ALTER TABLE "Quotation" ADD COLUMN "taxLabel" TEXT`,
-      `ALTER TABLE "Quotation" ADD COLUMN "taxRate" REAL`,
-    ]) {
-      try {
-        await basePrisma.$executeRawUnsafe(statement);
-      } catch (error) {
-        if (!isDuplicateColumnError(error)) throw error;
-      }
-    }
-  })().catch((error) => {
-    quotationTaxRepair = null;
-    throw error;
-  });
-
-  return quotationTaxRepair;
-}
-
-let moneySchemaRepair: Promise<void> | null = null;
+// Eagerly start the connection so it is ready before the first request.
+// Without this, Prisma's lazy initialiser races incoming requests (especially
+// better-auth session checks) and throws "Engine is not yet connected".
+void basePrisma.$connect().catch(() => {/* errors surface on first query */});
 
 /**
- * Proactively ensure every table/column the money-write transaction touches
- * exists BEFORE the transaction opens. This is deliberately NOT part of the
- * reactive query extension below: those repairs fire *inside* the failing
- * query, but on SQLite/libSQL the first failed statement aborts the whole
- * enclosing $transaction, so an in-transaction ALTER can neither recover the
- * payment nor run DDL against a connection that is holding a write lock
- * (Turso deadlocks on that). Recording a client/invoice payment now also posts
- * to the C5 cash-basis ledger (ChartOfAccount / JournalEntry / JournalLine) and
- * writes an FX rate (Payment.exchangeRateToBase) — columns/tables added after
- * some production DBs were provisioned. When any of those is missing the entire
- * payment fails with a bare "no such column/table" schema error. Running these
- * idempotent, non-transactional DDLs first keeps money-receiving working on
- * databases that predate the accounting/FX schema. Memoized: runs once per
- * process, and only re-arms on a genuine failure so a transient error can retry.
+ * The application's client type, and the transaction-scoped variant.
+ *
+ * Helpers that accept "either the global client or a transaction client" must
+ * be typed against these rather than `PrismaClient` / `Prisma.TransactionClient`:
+ * an extended client is a structurally different type, so the generated
+ * built-ins do not accept it.
  */
-export async function ensureMoneySchema(): Promise<void> {
-  moneySchemaRepair ??= (async () => {
-    const statements = [
-      // Payment columns added after the original table (kind + FX + links).
-      `ALTER TABLE "Payment" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'PAYMENT'`,
-      `ALTER TABLE "Payment" ADD COLUMN "exchangeRateToBase" REAL`,
-      `ALTER TABLE "Payment" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'UGX'`,
-      `ALTER TABLE "Payment" ADD COLUMN "saleId" TEXT`,
-      `ALTER TABLE "Payment" ADD COLUMN "createdById" TEXT`,
-      `ALTER TABLE "Payment" ADD COLUMN "note" TEXT`,
-      // Shared document/journal counter (RCT + JE numbers).
-      `CREATE TABLE IF NOT EXISTS "DocumentSequence" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "orgId" TEXT,
-        "type" TEXT NOT NULL,
-        "year" INTEGER NOT NULL,
-        "value" INTEGER NOT NULL DEFAULT 0,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS "DocumentSequence_orgId_type_year_key" ON "DocumentSequence"("orgId","type","year")`,
-      // C5 cash-basis ledger tables the payment/refund post depends on.
-      `CREATE TABLE IF NOT EXISTS "ChartOfAccount" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "orgId" TEXT NOT NULL,
-        "code" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "type" TEXT NOT NULL,
-        "parentId" TEXT,
-        "description" TEXT,
-        "isSystem" INTEGER NOT NULL DEFAULT 0,
-        "isActive" INTEGER NOT NULL DEFAULT 1,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS "ChartOfAccount_orgId_code_key" ON "ChartOfAccount"("orgId","code")`,
-      `CREATE INDEX IF NOT EXISTS "ChartOfAccount_orgId_type_idx" ON "ChartOfAccount"("orgId","type")`,
-      `CREATE TABLE IF NOT EXISTS "JournalEntry" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "orgId" TEXT NOT NULL,
-        "entryNumber" TEXT NOT NULL,
-        "date" DATETIME NOT NULL,
-        "description" TEXT NOT NULL,
-        "reference" TEXT,
-        "status" TEXT NOT NULL DEFAULT 'DRAFT',
-        "totalAmount" REAL NOT NULL DEFAULT 0,
-        "createdById" TEXT NOT NULL,
-        "postedAt" DATETIME,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS "JournalEntry_orgId_entryNumber_key" ON "JournalEntry"("orgId","entryNumber")`,
-      `CREATE INDEX IF NOT EXISTS "JournalEntry_orgId_date_idx" ON "JournalEntry"("orgId","date")`,
-      `CREATE INDEX IF NOT EXISTS "JournalEntry_orgId_status_idx" ON "JournalEntry"("orgId","status")`,
-      `CREATE TABLE IF NOT EXISTS "JournalLine" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "journalEntryId" TEXT NOT NULL,
-        "accountId" TEXT NOT NULL,
-        "debit" REAL NOT NULL DEFAULT 0,
-        "credit" REAL NOT NULL DEFAULT 0,
-        "description" TEXT
-      )`,
-      `CREATE INDEX IF NOT EXISTS "JournalLine_journalEntryId_idx" ON "JournalLine"("journalEntryId")`,
-      `CREATE INDEX IF NOT EXISTS "JournalLine_accountId_idx" ON "JournalLine"("accountId")`,
-    ];
-    for (const statement of statements) {
-      try {
-        await basePrisma.$executeRawUnsafe(statement);
-      } catch (error) {
-        // Column/table/index already there — the steady-state path.
-        if (isDuplicateColumnError(error)) continue;
-        throw error;
-      }
-    }
-  })().catch((error) => {
-    moneySchemaRepair = null;
-    throw error;
-  });
+export type Db = typeof prisma;
 
-  return moneySchemaRepair;
-}
+export type TxClient = Omit<
+  Db,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
 
-export const prisma = basePrisma.$extends({
-  query: {
-    payment: {
-      async $allOperations({ args, query }) {
-        try {
-          return await query(args);
-        } catch (error) {
-          if (!isMissingPaymentKindError(error)) throw error;
-          await ensurePaymentKindColumn();
-          return query(args);
-        }
-      },
-    },
-    lead: {
-      async $allOperations({ args, query }) {
-        try {
-          return await query(args);
-        } catch (error) {
-          if (!isMissingLeadLostReasonError(error)) throw error;
-          await ensureLeadLostReasonColumn();
-          return query(args);
-        }
-      },
-    },
-    client: {
-      async $allOperations({ args, query }) {
-        try {
-          return await query(args);
-        } catch (error) {
-          if (!isMissingClientAddressError(error)) throw error;
-          await ensureClientAddressColumn();
-          return query(args);
-        }
-      },
-    },
-    quotation: {
-      async $allOperations({ args, query }) {
-        try {
-          return await query(args);
-        } catch (error) {
-          if (!isMissingQuotationTaxError(error)) throw error;
-          await ensureQuotationTaxColumns();
-          return query(args);
-        }
-      },
-    },
-  },
-}) as unknown as PrismaClient;
-
-// Eagerly start the engine connection so it's ready before the first request.
-// Without this, Prisma 6's lazy initializer races against incoming requests
-// (especially better-auth session checks) and throws "Engine is not yet connected".
-void basePrisma.$connect().catch(() => {/* errors will surface on first query */});
+/**
+ * Extension-aware row type.
+ *
+ * `Prisma.JobGetPayload<...>` and friends are generated from the datamodel and
+ * know nothing about client extensions, so they still describe money as
+ * `Decimal` even though every read goes through the conversion above. Deriving
+ * the row type from the delegate keeps the declared type and the value in step.
+ *
+ *   type JobRow = Row<typeof prisma.job, { select: typeof jobListSelect }>;
+ */
+export type Row<
+  Delegate,
+  Args,
+  Op extends Operation = "findFirstOrThrow",
+> = Prisma.Result<Delegate, Args, Op>;

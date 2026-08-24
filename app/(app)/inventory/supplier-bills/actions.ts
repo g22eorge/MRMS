@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postSupplierPayment } from "@/lib/accounting/post";
@@ -184,7 +184,6 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   }
 
   // postSupplierPayment writes to the C5 ledger inside the txn — ensure schema first.
-  await ensureMoneySchema();
 
   const paid = await prisma.$transaction(async (tx) => {
     const bill = await tx.supplierBill.findFirst({

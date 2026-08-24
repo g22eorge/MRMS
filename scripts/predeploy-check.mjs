@@ -25,10 +25,9 @@ if (!process.env.PROD) {
 }
 
 if (process.env.PROD !== "true") {
-  process.env.DATABASE_URL = process.env.PREDEPLOY_DATABASE_URL ?? "file:./dev.db";
-  process.env.TURSO_DATABASE_URL = "";
-  process.env.TURSO_AUTH_TOKEN = "";
-  process.env.ALLOW_SQLITE_PRODUCTION = "1";
+  process.env.DATABASE_URL =
+    process.env.PREDEPLOY_DATABASE_URL
+    ?? "postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public";
   process.env.BETTER_AUTH_SECRET ??= "predeploy-local-better-auth-secret-32-chars";
   process.env.NEXT_PUBLIC_APP_URL ??= "http://127.0.0.1:4020";
   process.env.BETTER_AUTH_URL ??= process.env.NEXT_PUBLIC_APP_URL;
@@ -57,17 +56,17 @@ if (publicUrl.includes("localhost") || authUrl.includes("localhost")) {
   process.env.PROD = "false";
 }
 
-// Prod schema reaches Turso via the reconciler (scripts/sync-schema-to-db.mjs),
-// NOT Prisma Migrate — so we gate on the reconciler, not `prisma migrate status`.
+// The schema now reaches every environment the same way: Prisma Migrate. The
+// old gate ran scripts/sync-schema-to-db.mjs, a reconciler that diffed the
+// datamodel against a live SQLite database and issued the missing DDL. That
+// script is gone.
 if (process.env.PROD !== "true") {
-  // Apply the schema to the local check DB the same way prod gets it, then seed.
-  // Clear TURSO so this local apply can never touch the production database.
-  run("node", ["scripts/sync-schema-to-db.mjs"], { TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "" });
+  run("bunx", ["prisma", "migrate", "deploy"]);
   run("bun", ["run", process.env.PREDEPLOY_DEMO_SEED === "1" ? "seed" : "seed:base"]);
 }
-// Drift gate: the target DB (local after apply, or the live DB when PROD) must
-// match prisma/schema.prisma. Read-only dry-run — exits non-zero on any drift.
-run("node", ["scripts/sync-schema-to-db.mjs", "--check"]);
+// Drift gate: the target database must have every migration applied. Exits
+// non-zero when any migration is pending or the history has diverged.
+run("bunx", ["prisma", "migrate", "status"]);
 run("bun", ["run", "lint"]);
 run("bun", ["run", "build"]);
 run("bun", ["run", "qa:data-integrity"]);

@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ── MULTI-TENANCY ────────────────────────────────────────────────────────────
@@ -626,10 +626,10 @@ model Job {
   lastClientContactAt    DateTime?
   partsNeeded            String?
 
-  externalTechBill   Float?    @map("costEstimate")
-  clientBill         Float?    @map("finalCost")
+  externalTechBill   Decimal? @db.Decimal(18, 2)    @map("costEstimate")
+  clientBill         Decimal? @db.Decimal(18, 2)    @map("finalCost")
   vatApplicable      Boolean   @default(true)
-  externalTechFee    Float?
+  externalTechFee    Decimal? @db.Decimal(18, 2)
   externalPaid       Boolean   @default(false)
   externalPaidAt     DateTime?
   externalPaidById   String?
@@ -716,9 +716,9 @@ model Invoice {
   currency      String        @default("UGX")
   status        InvoiceStatus @default(ISSUED)
   issuedAt      DateTime      @default(now())
-  totalAmount   Float
+  totalAmount   Decimal @db.Decimal(18, 2)
 
-  paidAmount Float     @default(0)
+  paidAmount Decimal @db.Decimal(18, 2)     @default(0)
   paidAt     DateTime?
 
   notes String?
@@ -769,9 +769,9 @@ model Payment {
   sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   currency           String @default("UGX")
-  exchangeRateToBase Float? // when currency != org.baseCurrency
+  exchangeRateToBase Decimal? @db.Decimal(12, 6) // when currency != org.baseCurrency
 
-  amount     Float
+  amount     Decimal @db.Decimal(18, 2)
   method     PaymentMethod @default(CASH)
   kind       String        @default("PAYMENT")
   reference  String?
@@ -796,7 +796,7 @@ model TechnicianPayout {
   orgId        String
   jobId        String
   job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  amount       Float
+  amount       Decimal @db.Decimal(18, 2)
   method       PaymentMethod @default(CASH)
   reference    String?
   note         String?
@@ -823,8 +823,8 @@ model Refund {
   creditNote   CreditNote? @relation(fields: [creditNoteId], references: [id], onDelete: SetNull)
 
   currency           String        @default("UGX")
-  exchangeRateToBase Float?
-  amount             Float
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  amount             Decimal @db.Decimal(18, 2)
   method             PaymentMethod @default(CASH)
   reference          String?
   refundedAt         DateTime      @default(now())
@@ -850,7 +850,7 @@ model CreditNote {
 
   creditNoteNumber String   @unique
   currency         String   @default("UGX")
-  totalAmount      Float
+  totalAmount      Decimal @db.Decimal(18, 2)
   issuedAt         DateTime @default(now())
   reason           String?
 
@@ -880,11 +880,11 @@ model CreditNoteItem {
   part        Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
   description String
   quantity    Int
-  unitPrice   Float
-  lineTotal   Float
+  unitPrice   Decimal @db.Decimal(18, 2)
+  lineTotal   Decimal @db.Decimal(18, 2)
   // Base stock units per 1 sale unit, snapshot at credit-note time so the
   // return-to-stock uses the same factor even if the product's changes later.
-  saleUomFactor Float?
+  saleUomFactor Decimal? @db.Decimal(18, 6)
 
   createdAt DateTime @default(now())
 
@@ -915,12 +915,12 @@ model Sale {
 
   currency String @default("UGX")
 
-  subtotal       Float     @default(0)
-  discountAmount Float     @default(0)
-  vatAmount      Float     @default(0)
+  subtotal       Decimal @db.Decimal(18, 2)     @default(0)
+  discountAmount Decimal @db.Decimal(18, 2)     @default(0)
+  vatAmount      Decimal @db.Decimal(18, 2)     @default(0)
   taxApplicable  Boolean   @default(false)
-  totalAmount    Float     @default(0)
-  paidAmount     Float     @default(0)
+  totalAmount    Decimal @db.Decimal(18, 2)     @default(0)
+  paidAmount     Decimal @db.Decimal(18, 2)     @default(0)
   paidAt         DateTime?
 
   notes String?
@@ -1006,13 +1006,13 @@ model SaleItem {
 
   description String
   quantity    Int    @default(1)
-  unitPrice   Float
-  lineTotal   Float
+  unitPrice   Decimal @db.Decimal(18, 2)
+  lineTotal   Decimal @db.Decimal(18, 2)
   // Base stock units per 1 sale unit, snapshot at sale time so stock reverses
   // by the same factor even if the product's saleUomFactor later changes.
-  saleUomFactor Float?
+  saleUomFactor Decimal? @db.Decimal(18, 6)
   // Product cost per base unit at sale time, snapshot for stable historical COGS.
-  costAtSale    Float?
+  costAtSale    Decimal? @db.Decimal(18, 2)
 
   createdAt DateTime @default(now())
 
@@ -1027,26 +1027,26 @@ model Part {
   sku          String
   name         String
   manufacturer String?
-  unitCost     Float?
-  sellingPrice Float?
+  unitCost     Decimal? @db.Decimal(18, 2)
+  sellingPrice Decimal? @db.Decimal(18, 2)
   category     String?
   description  String?
   taxable      Boolean       @default(true)
-  taxRate      Float?
+  taxRate      Decimal? @db.Decimal(12, 6)
   baseUom      String?
   saleUom      String?
   purchaseUom  String?
   // Base stock units per 1 sale/purchase unit (null = 1:1). qtyOnHand is in
   // base units; sales multiply by saleUomFactor, receipts by purchaseUomFactor.
-  saleUomFactor     Float?
-  purchaseUomFactor Float?
+  saleUomFactor     Decimal? @db.Decimal(18, 6)
+  purchaseUomFactor Decimal? @db.Decimal(18, 6)
   // Float, not Int: qtyOnHand is in BASE units and every write derives it by
   // multiplying a sale/purchase quantity by a Float UoM factor, so a factor like
   // 0.5 (half-metre, half-litre) produces a fractional base quantity. Declaring
   // it Int did not stop SQLite storing the fraction — it only made Prisma hand
   // back a non-integer typed as Int, so stock totals, reorder comparisons and
   // the negative-stock guard all read a value the type said was impossible.
-  qtyOnHand    Float         @default(0)
+  qtyOnHand    Decimal @db.Decimal(18, 3)         @default(0)
   qtyReserved  Int           @default(0)
   reorderLevel Int           @default(0)
   isActive     Boolean       @default(true)
@@ -1080,7 +1080,7 @@ model PartReservation {
   part             Part                  @relation(fields: [partId], references: [id], onDelete: Restrict)
   quantity         Int
   status           PartReservationStatus @default(RESERVED)
-  unitCostSnapshot Float?
+  unitCostSnapshot Decimal? @db.Decimal(18, 2)
   reservedById     String?
   reservedBy       User?                 @relation("PartReservedBy", fields: [reservedById], references: [id], onDelete: SetNull)
   reservedAt       DateTime              @default(now())
@@ -1098,13 +1098,13 @@ model PartStockTransaction {
   part        Part                 @relation(fields: [partId], references: [id], onDelete: Cascade)
   type        StockTransactionType
   // Base units, derived via a Float UoM factor — see Part.qtyOnHand.
-  quantity    Float
+  quantity    Decimal @db.Decimal(18, 3)
   reason      String?
   // M6: org scope, location, unit cost, and the source document that caused the
   // movement — so a stock ledger row can be reconciled and valued.
   orgId       String?
   locationId  String?
-  unitCost    Float? // cost per unit at the time of the movement
+  unitCost    Decimal? @db.Decimal(18, 2) // cost per unit at the time of the movement
   sourceType  String? // GRN | PO | ADJUSTMENT | TRANSFER | SALE | REPAIR | CREDIT_NOTE
   sourceId    String? // id of the causing document
   jobId       String?
@@ -1130,9 +1130,9 @@ model OneTimeExternalTechAssignment {
   phone          String
   specialization String?
 
-  agreedRepairCost  Float?
+  agreedRepairCost  Decimal? @db.Decimal(18, 2)
   partsNotes        String?
-  expectedPartsCost Float?
+  expectedPartsCost Decimal? @db.Decimal(18, 2)
 
   assignedAt       DateTime
   expectedReturnAt DateTime?
@@ -1418,7 +1418,7 @@ model DocumentBrandingSettings {
   quoteValidityDays     Int           @default(30)
   sequencePadLength     Int           @default(4)
   vatDefaultApplicable  Boolean       @default(false)
-  vatRatePercent        Float         @default(18)
+  vatRatePercent        Decimal @db.Decimal(12, 6)         @default(18)
   vatInclusive          Boolean       @default(false)
   vatLabel              String        @default("VAT")
   termsText             String        @default("Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.")
@@ -1745,7 +1745,7 @@ model PurchaseRequestItem {
   part              Part?           @relation(fields: [partId], references: [id], onDelete: SetNull)
   description       String
   quantity          Int
-  estimatedUnitCost Float?
+  estimatedUnitCost Decimal? @db.Decimal(18, 2)
   createdAt         DateTime        @default(now())
 
   @@index([requestId])
@@ -1785,7 +1785,7 @@ model PurchaseOrderItem {
   description String
   qtyOrdered  Int
   qtyReceived Int           @default(0)
-  unitCost    Float
+  unitCost    Decimal @db.Decimal(18, 2)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -1829,7 +1829,7 @@ model GoodsReceivedItem {
   part        Part?         @relation(fields: [partId], references: [id], onDelete: SetNull)
   description String
   quantity    Int
-  unitCost    Float
+  unitCost    Decimal @db.Decimal(18, 2)
   createdAt   DateTime      @default(now())
 
   @@index([grnId])
@@ -1851,10 +1851,10 @@ model SupplierBill {
   grnId       String?
   grn         GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
   currency    String             @default("UGX")
-  subtotal    Float
-  taxAmount   Float              @default(0)
-  totalAmount Float
-  paidAmount  Float              @default(0)
+  subtotal    Decimal @db.Decimal(18, 2)
+  taxAmount   Decimal @db.Decimal(18, 2)              @default(0)
+  totalAmount Decimal @db.Decimal(18, 2)
+  paidAmount  Decimal @db.Decimal(18, 2)              @default(0)
   issuedAt    DateTime           @default(now())
   dueAt       DateTime?
   notes       String?
@@ -1879,8 +1879,8 @@ model SupplierBillItem {
   bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
   description String
   quantity    Int
-  unitCost    Float
-  lineTotal   Float
+  unitCost    Decimal @db.Decimal(18, 2)
+  lineTotal   Decimal @db.Decimal(18, 2)
   createdAt   DateTime     @default(now())
 
   @@index([billId])
@@ -1893,7 +1893,7 @@ model SupplierPayment {
   billId      String
   bill        SupplierBill  @relation(fields: [billId], references: [id], onDelete: Cascade)
   currency    String        @default("UGX")
-  amount      Float
+  amount      Decimal @db.Decimal(18, 2)
   method      PaymentMethod @default(CASH)
   reference   String?
   paidAt      DateTime      @default(now())
@@ -1990,7 +1990,7 @@ model OrgSubscriptionEvent {
   providerEventId String?
   plan            String?
   status          String?
-  amount          Float?
+  amount          Decimal? @db.Decimal(18, 2)
   currency        String?
   payloadJson     String?
   occurredAt      DateTime @default(now())
@@ -2129,7 +2129,7 @@ model CustomerApproval {
   jobId           String
   approvalType    String
   status          String    @default("PENDING")
-  amount          Float?
+  amount          Decimal? @db.Decimal(18, 2)
   currency        String?
   requestedById   String?
   respondedByName String?
@@ -2274,7 +2274,7 @@ model SupplierPrice {
   partId       String?
   sku          String?
   description  String
-  unitCost     Float
+  unitCost     Decimal @db.Decimal(18, 2)
   currency     String    @default("UGX")
   minQuantity  Int?
   leadTimeDays Int?
@@ -2310,16 +2310,16 @@ model InvoiceLine {
   sourceType     String?
   sourceId       String?
   description    String
-  quantity       Float    @default(1)
-  unitPrice      Float
-  discountAmount Float    @default(0)
-  taxAmount      Float    @default(0)
-  lineTotal      Float
+  quantity       Decimal @db.Decimal(18, 3)    @default(1)
+  unitPrice      Decimal @db.Decimal(18, 2)
+  discountAmount Decimal @db.Decimal(18, 2)    @default(0)
+  taxAmount      Decimal @db.Decimal(18, 2)    @default(0)
+  lineTotal      Decimal @db.Decimal(18, 2)
   // Base stock units per 1 sale unit, snapshot so voids restore the same base
   // amount even if the product's saleUomFactor later changes.
-  saleUomFactor  Float?
+  saleUomFactor  Decimal? @db.Decimal(18, 6)
   // Product cost per base unit at issue time, snapshot for stable historical COGS.
-  costAtSale     Float?
+  costAtSale     Decimal? @db.Decimal(18, 2)
   createdAt      DateTime @default(now())
 
   @@index([orgId, invoiceId])
@@ -2332,7 +2332,7 @@ model TaxRate {
   org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name               String
   code               String
-  rate               Float
+  rate               Decimal @db.Decimal(12, 6)
   isDefault          Boolean      @default(false)
   isActive           Boolean      @default(true)
   appliesToSales     Boolean      @default(true)
@@ -2351,9 +2351,9 @@ model Expense {
   expenseNumber      String          @unique
   category           ExpenseCategory @default(OTHER)
   description        String
-  amount             Float
+  amount             Decimal @db.Decimal(18, 2)
   currency           String          @default("UGX")
-  exchangeRateToBase Float?
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
   paidAt             DateTime?
   method             PaymentMethod?
   supplierId         String?
@@ -2403,10 +2403,10 @@ model RecurringInvoiceItem {
   recurringInvoiceId String
   recurringInvoice   RecurringInvoice @relation(fields: [recurringInvoiceId], references: [id], onDelete: Cascade)
   description        String
-  quantity           Float            @default(1)
-  unitPrice          Float
-  discountAmount     Float            @default(0)
-  lineTotal          Float
+  quantity           Decimal @db.Decimal(18, 3)            @default(1)
+  unitPrice          Decimal @db.Decimal(18, 2)
+  discountAmount     Decimal @db.Decimal(18, 2)            @default(0)
+  lineTotal          Decimal @db.Decimal(18, 2)
 
   @@index([recurringInvoiceId])
 }
@@ -2417,9 +2417,9 @@ model DocumentTaxLine {
   documentType  String
   documentId    String
   taxLabel      String
-  taxRate       Float
-  taxableAmount Float
-  taxAmount     Float
+  taxRate       Decimal @db.Decimal(12, 6)
+  taxableAmount Decimal @db.Decimal(18, 2)
+  taxAmount     Decimal @db.Decimal(18, 2)
   createdAt     DateTime @default(now())
 
   @@index([orgId, documentType, documentId])
@@ -2439,7 +2439,7 @@ model Receipt {
   branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  amount        Float
+  amount        Decimal @db.Decimal(18, 2)
   currency      String    @default("UGX")
   issuedAt      DateTime  @default(now())
   issuedById    String?
@@ -2464,7 +2464,7 @@ model PaymentAllocation {
   payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   targetType  String
   targetId    String
-  amount      Float
+  amount      Decimal @db.Decimal(18, 2)
   allocatedAt DateTime @default(now())
   note        String?
 
@@ -2480,8 +2480,8 @@ model CashierShift {
   cashierId    String
   status       String    @default("OPEN")
   shiftPin     String?
-  openingCash  Float     @default(0)
-  closingCash  Float?
+  openingCash  Decimal @db.Decimal(18, 2)     @default(0)
+  closingCash  Decimal? @db.Decimal(18, 2)
   openedAt     DateTime  @default(now())
   closedAt     DateTime?
   notes        String?
@@ -2696,7 +2696,7 @@ model SalesTarget {
   periodLabel String?
 
   // Legacy commercial target fields remain for dashboard/report compatibility.
-  targetRevenue Float @default(0)
+  targetRevenue Decimal @db.Decimal(18, 2) @default(0)
   targetJobs    Int   @default(0)
 
   targetValue Float   @default(0)
@@ -2749,7 +2749,7 @@ model Lead {
   interest       String?
   source         LeadSource @default(WALK_IN)
   status         LeadStatus @default(NEW)
-  estimatedValue Float?
+  estimatedValue Decimal? @db.Decimal(18, 2)
   score          Int        @default(0) // 0-100 lead quality score
   notes          String?
   lostReason     String? // e.g. "Price", "Competitor", "No Budget", "Timing", "Other"
@@ -2816,12 +2816,12 @@ model Quotation {
   jobId    String?
   job      Job?    @relation("JobQuotation", fields: [jobId], references: [id], onDelete: SetNull)
 
-  subtotal       Float     @default(0)
-  discountAmount Float     @default(0)
-  vatAmount      Float     @default(0)
+  subtotal       Decimal @db.Decimal(18, 2)     @default(0)
+  discountAmount Decimal @db.Decimal(18, 2)     @default(0)
+  vatAmount      Decimal @db.Decimal(18, 2)     @default(0)
   taxLabel       String?
-  taxRate        Float?
-  totalAmount    Float     @default(0)
+  taxRate        Decimal? @db.Decimal(12, 6)
+  totalAmount    Decimal @db.Decimal(18, 2)     @default(0)
   notes          String?
   issueDate      DateTime?
   validUntil     DateTime?
@@ -2855,9 +2855,9 @@ model QuotationItem {
   part        Part?     @relation("PartQuotationItems", fields: [partId], references: [id], onDelete: SetNull)
   description String
   quantity    Int
-  unitPrice   Float
-  discount    Float     @default(0)
-  lineTotal   Float
+  unitPrice   Decimal @db.Decimal(18, 2)
+  discount    Decimal @db.Decimal(18, 2)     @default(0)
+  lineTotal   Decimal @db.Decimal(18, 2)
   createdAt   DateTime  @default(now())
 
   @@index([quotationId])
@@ -2878,14 +2878,14 @@ model PosSession {
   operatorId           String
   operator             User             @relation("PosSessionOperator", fields: [operatorId], references: [id], onDelete: Cascade)
   status               PosSessionStatus @default(OPEN)
-  openingFloat         Float            @default(0)
-  closingCash          Float?
-  cashTotal            Float            @default(0)
-  cardTotal            Float            @default(0)
-  mobileTotal          Float            @default(0)
-  totalSales           Float            @default(0)
+  openingFloat         Decimal @db.Decimal(18, 2)            @default(0)
+  closingCash          Decimal? @db.Decimal(18, 2)
+  cashTotal            Decimal @db.Decimal(18, 2)            @default(0)
+  cardTotal            Decimal @db.Decimal(18, 2)            @default(0)
+  mobileTotal          Decimal @db.Decimal(18, 2)            @default(0)
+  totalSales           Decimal @db.Decimal(18, 2)            @default(0)
   salesCount           Int              @default(0)
-  actualClosingBalance Float?
+  actualClosingBalance Decimal? @db.Decimal(18, 2)
   openedAt             DateTime         @default(now())
   closedAt             DateTime?
   notes                String?
@@ -3001,7 +3001,7 @@ model JournalEntry {
   description String
   reference   String? // invoice/expense/etc ref
   status      JournalEntryStatus @default(DRAFT)
-  totalAmount Float              @default(0)
+  totalAmount Decimal @db.Decimal(18, 2)              @default(0)
   createdById String
   createdBy   User               @relation("JournalEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   postedAt    DateTime?
@@ -3025,8 +3025,8 @@ model JournalLine {
   journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   accountId      String
   account        ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  debit          Float          @default(0)
-  credit         Float          @default(0)
+  debit          Decimal @db.Decimal(18, 2)          @default(0)
+  credit         Decimal @db.Decimal(18, 2)          @default(0)
   description    String?
 
   @@index([journalEntryId])
@@ -3041,8 +3041,8 @@ model BankAccount {
   accountNumber  String?
   bankName       String
   currency       String       @default("UGX")
-  openingBalance Float        @default(0)
-  currentBalance Float        @default(0)
+  openingBalance Decimal @db.Decimal(18, 2)        @default(0)
+  currentBalance Decimal @db.Decimal(18, 2)        @default(0)
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -3065,7 +3065,7 @@ model BankTransaction {
   org           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   date          DateTime
   description   String
-  amount        Float // positive always; type distinguishes direction
+  amount        Decimal @db.Decimal(18, 2) // positive always; type distinguishes direction
   type          BankTransactionType
   reference     String?
   reconciledAt  DateTime?
@@ -3362,7 +3362,7 @@ model BillingEvent {
   id       String @id
   orgId    String
   event    String
-  amount   Float  @default(0)
+  amount   Decimal @db.Decimal(18, 2)  @default(0)
   currency String @default("UGX")
   status   String
   flwTxId  String?
@@ -3373,4 +3373,20 @@ model BillingEvent {
 
   @@index([orgId, createdAt])
   @@index([status, event])
+}
+
+/// Shared fixed-window rate-limit counters.
+///
+/// Another table that was created by hand at runtime rather than declared —
+/// lib/rate-limit.ts issued `CREATE TABLE IF NOT EXISTS` on first use, which is
+/// why it appears in no database snapshot. Counts must be shared across app
+/// instances, so this cannot be a per-process Map.
+model RateLimit {
+  key     String @id
+  count   Int
+  /// Epoch milliseconds. Kept as a bigint-free Int-compatible value by storing
+  /// the window end as a DateTime instead of a raw ms number.
+  resetAt DateTime
+
+  @@index([resetAt])
 }

@@ -1,5 +1,5 @@
 import type { PaymentMethod } from "@prisma/client";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -73,7 +73,6 @@ export async function POST(request: Request) {
 
   // The receipt post writes to the C5 ledger inside the transaction; make sure
   // those tables/columns exist first so a stale prod schema can't abort payment.
-  await ensureMoneySchema();
 
   try {
     await prisma.$transaction(async (tx) => {

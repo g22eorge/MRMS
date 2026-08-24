@@ -295,24 +295,69 @@ Two hidden couplings surfaced that Phase 2 removes:
 - `createMany({ skipDuplicates })` is unsupported on SQLite, so the seeding path
   had to use `upsert`. On Postgres either would work.
 
-### Phase 2 — Provider cutover (schema, client, auth, build)
+### Phase 2 — Provider cutover — **DONE**
 
-Done on a branch; the app runs on local Docker Postgres by the end.
-
-| # | Task | Verify |
+| # | Task | Result |
 | --- | --- | --- |
-| 2.1 | `datasource db { provider = "postgresql"; url = env("DATABASE_URL") }` | `bunx prisma validate` |
-| 2.2 | Archive the 48 SQLite migrations to `prisma/migrations-sqlite-archive/`; generate one baseline: `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` → `prisma/migrations/0_init/migration.sql` | `prisma migrate deploy` on an empty PG creates all 121 tables + 59 enum types |
-| 2.3 | Rewrite `lib/prisma.ts`: drop `PrismaLibSql`, drop the 4 reactive column-repair extensions, drop `ensureMoneySchema()` (~200 lines of SQLite DDL), drop the `file:` URL normalisation and the stale-singleton guard. Keep `transactionOptions` | File shrinks from 382 lines to well under 100 |
-| 2.4 | `lib/auth.ts`: `provider: "postgresql"` | Login works against PG |
-| 2.5 | Simplify `prisma.config.ts` — delete all `file:` resolution | Config is ~10 lines |
-| 2.6 | Simplify `scripts/vercel-build.mjs` — delete the build-time `DATABASE_URL` override, the Turso clearing, and both schema-heal steps | `bun run build` passes with a PG URL in env |
-| 2.7 | Remove `ALLOW_SQLITE_PRODUCTION` / `TURSO_*` from env handling, `.env.example`, `render.yaml`, and the ~20 npm scripts that clear Turso vars | `grep -ri turso` returns only the archive |
-| 2.8 | Apply `numeric-classification.json` to the schema: 92 fields become `Decimal` with explicit `@db.Decimal` precision, 6 stay `Float` | `prisma validate`; baseline migration shows `numeric(18,2)` etc. |
-| 2.9 | Add the Decimal-to-number query extension in `lib/prisma.ts` (section 2.1) with unit tests covering model reads, nested includes, `_sum` aggregates and nulls | Existing finance tests pass untouched |
-| 2.10 | Gate: `tsc`, `lint`, `bun run test:unit` against a PG test database | All green |
+| 2.1 | `provider = "postgresql"`, `url = env("DATABASE_URL")` | `prisma validate` OK |
+| 2.2 | Archive the 48 SQLite migrations, generate a Postgres baseline | `prisma/migrations-sqlite-archive/` + `prisma/migrations/0_init` — **119 tables, 59 native enum types, 308 indexes, 203 foreign keys, 93 numeric columns**. Applied to the container; `_prisma_migrations` now exists for the first time in this project's history |
+| 2.3 | Rewrite `lib/prisma.ts` | **382 → 175 lines.** Gone: the libsql adapter, `file:` URL normalisation, the hand-listed 19-model stale-client check (now derived from `Prisma.dmmf`), the four reactive `"no such column"` → `ALTER TABLE` extensions, and `ensureMoneySchema()` — plus its **16 call sites** across 9 files |
+| 2.4 | `prismaAdapter(prisma, { provider: "postgresql" })` | Login verified |
+| 2.5 | Simplify `prisma.config.ts` | 57 → 24 lines of intent + a small env loader. The old version silently rewrote `DATABASE_URL` to `prisma/dev.db`, which is why `bun run test:unit` had been running against the development database |
+| 2.6 | Replace `scripts/vercel-build.mjs` with `scripts/build.mjs` | 101 → 45 lines. The build no longer needs a database at all |
+| 2.7 | Purge Turso/SQLite coupling | `@libsql/client` moved to devDependencies (the migration tooling reads the dump with it), `@prisma/adapter-libsql` removed, ~20 npm scripts de-prefixed, `render.yaml` deleted (SQLite-on-a-disk), 11 stale code comments corrected, and 4 schema-healing scripts deleted: `sync-schema-to-db.mjs`, `prod-job-column-safety.mjs`, `schema-drift-check.mjs`, `reconcile-empty-schema.mjs` |
+| 2.8 | Apply the numeric classification | 93 fields → `Decimal` with explicit precision; 6 stay `Float`. The apply script refuses to run if the schema and the classification file disagree — which is how it caught `BillingEvent.amount`, added in Phase 1 after the classification was generated |
+| 2.9 | The Decimal boundary | See below — this was the substantial piece |
+| 2.10 | Gate | `tsc` **0 errors**, `lint` 0 errors, **508 unit tests pass / 0 fail**, production build succeeds, 13 hand-written Decimal assertions pass |
 
-Exit: the app boots and serves against local Postgres with an empty database.
+#### What the Decimal work actually took
+
+The plan predicted the danger was silent string concatenation. **That prediction was
+wrong**, and in a useful direction: with generated Decimal types, TypeScript
+flags every arithmetic site. Turning on `Decimal` produced **781 compile errors
+across 131 files** — nothing silent about it.
+
+That made a better solution available than the one originally planned. Prisma's
+`result` extension can override a scalar field's *declared type* as well as its
+value (verified by probe before committing to it), so one generated file maps all
+93 Decimal columns to `number` at the boundary. Types and runtime then agree,
+and no call site can receive a `Decimal`.
+
+Progress in three steps, each measured:
+
+| Step | Errors | Files |
+| --- | --- | --- |
+| `Decimal` applied, no boundary | 781 | 131 |
+| + generated `result` extension (`lib/prisma-decimal.ts`, 93 fields / 41 models) | 196 | 11 |
+| + `Db` / `TxClient` / `Row` types replacing `PrismaClient` / `Prisma.TransactionClient` / `Prisma.*GetPayload` | **0** | 0 |
+
+The third step is the part worth remembering: 64 of the remaining 196 errors came
+from just **6** declaration sites typed `Prisma.TransactionClient`, which an
+extended client is not assignable to. `Prisma.JobGetPayload<...>` had the same
+blind spot — generated payload types ignore extensions and still described money
+as `Decimal`. `lib/prisma.ts` now exports `Db`, `TxClient` and `Row<Delegate, Args>`
+for exactly this.
+
+Two layers are needed, because they cover different ground:
+
+- the **`result` extension** fixes model reads, and is what makes the *types*
+  right;
+- a **`query` extension** catches what field mapping cannot see — `aggregate`,
+  `groupBy` and `$queryRaw` all return Decimals that belong to no model field.
+
+What this buys, demonstrated in the verification: ten payments of `0.10` sum to
+exactly `1` in Postgres, where naive JS accumulation gives
+`0.9999999999999999`. Storage is `numeric(18,2)`; an unextended client still
+returns `Decimal`, which proves the extension is what converts.
+
+#### A real gap the migration exposed
+
+`tests/unit/helpers.ts` constructed a bare `new PrismaClient()`, so the whole
+suite exercised a **different client than production** — no extensions, no
+`orgDb` behaviour. With money as `numeric` that surfaced as a test comparing two
+distinct `Decimal` instances and failing with `Expected: 38, Received: 38`. The
+helpers now hand tests the application's client, so the suite covers the
+boundary it is supposed to protect.
 
 ### Phase 3 — Replace SQLite introspection and retire the healing machinery
 

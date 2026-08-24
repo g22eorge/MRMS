@@ -1,35 +1,37 @@
 /**
  * Shared test helpers for unit tests.
  *
- * DATABASE_URL must point to a SQLite file that has the main schema applied.
+ * DATABASE_URL must point to a Postgres database with the schema applied
+ * (`bun run test:setup` does this against the scratch container).
  * Run `bun run test:setup` on a new machine before `bun run test:unit`.
  */
 
-import { PrismaClient } from "@prisma/client";
-export type { PrismaClient };
+import { prisma, type Db } from "@/lib/prisma";
 
-process.env.TURSO_DATABASE_URL = "";
-process.env.TURSO_AUTH_TOKEN = "";
-process.env.ALLOW_SQLITE_PRODUCTION = "1";
+/**
+ * Tests run against the *application's* client, extensions included.
+ *
+ * They used to construct a bare `new PrismaClient()`, which meant the suite
+ * exercised a different client than production. That hid a whole class of
+ * behaviour: with money stored as `numeric`, an unextended client returns
+ * `Decimal` objects, so `expect(a).toBe(b)` compared two distinct Decimal
+ * instances and failed with the memorable message "Expected: 38, Received: 38".
+ */
+export type { Db };
+/** @deprecated Use `Db`. Kept so existing test signatures keep compiling. */
+export type PrismaClient = Db;
 
-let _testPrisma: PrismaClient | null = null;
-
-export function getTestPrisma(): PrismaClient {
-  if (!_testPrisma) {
-    _testPrisma = new PrismaClient({ log: [] });
-  }
-  return _testPrisma;
+export function getTestPrisma(): Db {
+  return prisma;
 }
 
-export async function setupTestDb(): Promise<PrismaClient> {
-  const db = getTestPrisma();
-  await db.$connect();
-  return db;
+export async function setupTestDb(): Promise<Db> {
+  await prisma.$connect();
+  return prisma;
 }
 
 export async function teardownTestDb(): Promise<void> {
-  await _testPrisma?.$disconnect();
-  _testPrisma = null;
+  await prisma.$disconnect();
 }
 
 export async function createOrg(db: PrismaClient, slug: string) {

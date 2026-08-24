@@ -24,7 +24,11 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - mrms-pgdata-dev:/var/lib/postgresql/data
+      # Postgres 18+ wants a single mount at /var/lib/postgresql, not at
+      # .../data — the image places the cluster in a version-named subdirectory
+      # so `pg_upgrade --link` does not cross a mount boundary. Mounting
+      # .../data makes the 18 image refuse to start.
+      - mrms-pgdata-dev:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mrms -d mrms"]
       interval: 5s
@@ -46,7 +50,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - mrms-pgdata-scratch:/var/lib/postgresql/data
+      - mrms-pgdata-scratch:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mrms -d mrms_scratch"]
       interval: 5s

@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, TxClient } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import type { Prisma } from "@prisma/client";
+
 import { notifyStockTransferUpdated } from "@/lib/notifications";
 
 async function requireInventoryManager() {
@@ -19,11 +19,11 @@ async function requireInventoryManager() {
   return ctx;
 }
 
-async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
+async function nextTransferNumber(tx: TxClient, orgId: string) {
   const inner = `ST-${new Date().getFullYear()}-`;
   const [tag, rows] = await Promise.all([
     // Pass `tx` — orgTagFor on the global client would deadlock this interactive
-    // transaction on Turso (same bug that hung payments; see getOrgNumberConfig).
+    // transaction (same bug that hung payments; see getOrgNumberConfig).
     orgTagFor(orgId, tx),
     tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
   ]);
@@ -31,7 +31,7 @@ async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
   return composeOrgNumber(tag, inner, next);
 }
 
-async function loadTransfer(tx: Prisma.TransactionClient, id: string, orgId: string) {
+async function loadTransfer(tx: TxClient, id: string, orgId: string) {
   return tx.stockTransfer.findFirst({
     where: { id, orgId },
     include: { items: true },

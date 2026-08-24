@@ -2,11 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import type { PaymentMethod } from "@prisma/client";
-import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma, TxClient } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -41,7 +40,7 @@ function posReject(saleId: string, message: string): never {
 }
 
 async function recalcSaleTotals(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   saleId: string,
   orgId: string,
   overrideTaxApplicable?: boolean,
@@ -52,7 +51,7 @@ async function recalcSaleTotals(
   const currency = normalizeCurrency(current?.currency, "UGX");
   // VAT config: read the three fields we need on the SAME transaction connection
   // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
-  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this libSQL write
+  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this write
   // transaction is open, can deadlock checkout on cold start. Falls back to safe
   // defaults (VAT off, exclusive, 18%) if the row/columns aren't present.
   let vatDefaultApplicable = false;
@@ -587,7 +586,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       : "OTHER" as PaymentMethod;
 
     // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
-    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       // Double-submit guard: an identical till payment landed seconds ago — reuse
@@ -866,7 +864,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
     // ensure the ledger/FX schema exists before opening the txn.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {

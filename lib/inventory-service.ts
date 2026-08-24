@@ -12,7 +12,6 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { PartStockTransaction } from "@prisma/client";
 
 // ── Error class ───────────────────────────────────────────────────────────────
 
@@ -550,7 +549,7 @@ export async function getAvailableQty(partId: string, locationId: string): Promi
 export async function getMovementHistory(
   partId: string,
   limit = 100,
-): Promise<PartStockTransaction[]> {
+) {
   return prisma.partStockTransaction.findMany({
     where: { partId },
     orderBy: { createdAt: "desc" },

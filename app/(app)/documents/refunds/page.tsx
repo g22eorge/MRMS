@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 
 import { formatMoney, formatMoneyCompact, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -197,7 +197,6 @@ export default async function RefundsPage({
     }
 
     // Refund write + ledger reversal run inside the txn; ensure schema first.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {
@@ -302,7 +301,6 @@ export default async function RefundsPage({
     const refund = await prisma.refund.findFirst({ where: { id: refundId, orgId }, select: { id: true, amount: true, currency: true, invoiceId: true, saleId: true } });
     if (!refund) return;
 
-    await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
       await tx.refund.deleteMany({ where: { id: refundId, orgId } });
       // Reverse the refund's ledger post ("refund:<id>") and reopen the source's

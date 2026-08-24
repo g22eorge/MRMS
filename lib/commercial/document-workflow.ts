@@ -1,10 +1,11 @@
-import type { Prisma } from "@prisma/client";
+
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { getOrgNumberConfig, composeDocumentNumber, maxNumberSequence } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
+import type { TxClient } from "@/lib/prisma";
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
 /** Highest existing sequence for `inner` (e.g. "INV-2026-") within one org,
@@ -39,7 +40,7 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
   const year = new Date().getFullYear();
   const inner = `${type}-${year}-`;
   // Pass `tx` so the branding read runs on the transaction's own connection.
-  // Using the global client here deadlocks the interactive tx on Turso/libSQL
+  // Using the global client here escapes the interactive transaction
   // (see getOrgNumberConfig) — the bug that silently hung repair/POS payments
   // for fresh orgs and cold serverless instances.
   const { prefix, pad } = await getOrgNumberConfig(orgId, tx);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T19:07:18.341Z",
+  "generatedAt": "2026-08-24T19:48:18.663Z",
   "classes": {
     "money": {
       "prismaType": "Decimal",
@@ -898,6 +898,15 @@
     },
     {
       "model": "BankTransaction",
+      "field": "amount",
+      "column": "amount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "BillingEvent",
       "field": "amount",
       "column": "amount",
       "optional": false,

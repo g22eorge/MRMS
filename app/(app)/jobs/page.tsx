@@ -13,7 +13,7 @@ import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, type Row } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
@@ -66,12 +66,12 @@ const jobListSelectExternalTech = {
   device:     { select: { id: true, deviceType: true, brand: true, model: true } },
 } as const;
 
-type JobWithClient = Prisma.JobGetPayload<{
+type JobWithClient = Row<typeof prisma.job, {
   select: typeof jobListSelect;
 }> & {
   oneTimeExternalAssignment?: { technicianName: string } | null;
 };
-type JobWithoutClient = Prisma.JobGetPayload<{
+type JobWithoutClient = Row<typeof prisma.job, {
   select: typeof jobListSelectExternalTech;
 }> & {
   oneTimeExternalAssignment?: { technicianName: string } | null;
