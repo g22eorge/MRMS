@@ -41,10 +41,15 @@ const nextConfig: NextConfig = {
   // Don't advertise the framework in a response header. It tells an attacker
   // which CVEs to try and buys us nothing.
   poweredByHeader: false,
-  // Build output dir. Defaults to .next (what `next dev` and Vercel use). The
-  // local commit gate (scripts/vercel-build.mjs, off-Vercel) sets NEXT_DIST_DIR
-  // to a separate dir so `next build` never cleans the running dev server's
-  // .next out from under it. Vercel leaves it unset → .next.
+  // Self-contained server bundle. The deployment target is a Docker image on a
+  // VPS, so the runtime stage copies .next/standalone and needs no node_modules
+  // of its own. Note the previous Dockerfile already copied .next/standalone
+  // while this option was absent, so it was copying a directory that `next
+  // build` never produced.
+  output: "standalone",
+  // Build output dir. Defaults to .next. The local commit gate
+  // (scripts/build.mjs, off-CI) sets NEXT_DIST_DIR to a separate dir so
+  // `next build` never cleans the running dev server's .next out from under it.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   turbopack: { root: process.cwd() },
   experimental: {

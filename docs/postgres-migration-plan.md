@@ -458,21 +458,52 @@ All three appear in the same column in places.
 Each bug lived in a different script's private copy of the parsing, which is why
 `scripts/pg/coerce.mjs` now exists and all three use it.
 
-### Phase 5 — Docker deployment
+### Phase 5 — Docker deployment — **DONE**
 
-| # | Task | Verify |
+Everything containerised, database included, on one VPS. Full runbook in
+`docs/deployment.md`.
+
+| # | Task | Result |
 | --- | --- | --- |
-| 5.1 | Rewrite `Dockerfile`: bun deps stage → build stage (`prisma generate` + `next build`, `output: "standalone"`) → slim runner. Copy Prisma engines + `prisma/`, run as a **non-root** user, add `HEALTHCHECK` against `/api/health` | Image builds; container serves |
-| 5.2 | Rewrite `docker-compose.yml`: `postgres:16-alpine` (named volume, healthcheck, `POSTGRES_*` from `.env`), `app` with `depends_on: condition: service_healthy`, named volume for `UPLOADS_DIR` | `docker compose up` serves a working app |
-| 5.3 | Migration on deploy: a one-shot `migrate` service (or entrypoint step) running `prisma migrate deploy` before `app` starts, guarded by a PG advisory lock so concurrent replicas cannot race | Fresh `up` on an empty volume creates the schema once |
-| 5.4 | Add `redis:7-alpine` + a `worker` service (`bun lib/queue/worker.ts`) with `REDIS_URL` set | Worker connects; jobs process |
-| 5.5 | **Replace the 4 Vercel crons** — they do not run under Docker. Either a small scheduler container hitting the routes with `CRON_SECRET`, or `node-cron` inside the worker | All 4 routes fire on schedule; verified via `OutboundMessage` retries |
-| 5.6 | `pg_dump` backup sidecar writing to a mounted volume on a schedule, plus a documented restore drill | A restore into a scratch DB succeeds |
-| 5.7 | Update `.dockerignore` (currently ignores `prisma/dev.db` — now irrelevant); add `docker-compose.prod.yml` with pinned image tags and no bind mounts | Prod compose starts clean |
-| 5.8 | Update `AGENTS.md`: the Prisma/Turso runbook sections, the build-script explanation, and the "Common production DB errors" table all describe SQLite behaviour that no longer exists | Docs match reality |
+| 5.1 | `Dockerfile` | Seven stages, five runtime images: `runner` (618MB), `migrator`, `worker`, `scheduler` (346MB), `backup`. Debian-based on purpose — Prisma's default engine is `debian-openssl-3.0.x` and an Alpine runtime needs a musl target declared in `binaryTargets`, a footgun with no payoff here |
+| 5.2 | `docker-compose.yml` | postgres, migrate, app, redis, worker, scheduler, backup. Postgres is `expose`d, never published — an open Postgres port on a VPS is scanned within hours |
+| 5.3 | Migrations on release | A one-shot `migrate` service; `app` depends on `service_completed_successfully`, so a failed migration leaves the previous container serving instead of starting a new one against a schema it does not match. Prisma's own advisory lock serialises concurrent replicas |
+| 5.4 | Redis + worker | `redis:7-alpine` with append-only persistence so a restart does not lose queued jobs |
+| 5.5 | **Replacing Vercel Cron** | `scripts/scheduler.mjs` — the same four jobs, same schedules, calling each route with `Authorization: Bearer $CRON_SECRET`. Its cron matcher is unit-tested against all four expressions, and all four routes were confirmed returning 200 with the secret and 403 without |
+| 5.6 | Backups + restore drill | `pg_dump -Fc` on a schedule; written to a `.partial` name and moved on success, so an interrupted dump cannot be mistaken for a usable one. **Drill run:** dump → restore into a scratch database → 75 jobs and 20,348,100.00 in payments in both |
+| 5.7 | `.dockerignore`, `.env.docker.example` | Compose fails fast on missing required values rather than starting half-configured. `docs/pg-migration` is deliberately *not* ignored — `import-map.json` is operational input the migrator image runs |
+| 5.8 | `AGENTS.md` rewritten | Its Prisma/Turso runbook, error table, build instructions and troubleshooting steps all described a database that no longer exists |
+| — | `vercel.json` and `render.yaml` deleted | The former held only the crons the scheduler now owns; the latter deployed SQLite on a mounted disk |
 
-Exit: `docker compose up` gives Postgres + app + worker + redis + scheduler with
-migrations applied automatically.
+#### Verified by running it, not by reading it
+
+- All five images build; the full stack comes up with `app` reporting **healthy**
+- Migrations applied by the one-shot service: **120 tables, 59 enums**
+- The app runs as **uid 1000 (non-root)**; `/` and `/login` return 200
+- The production snapshot imported **into the containerised database** (2,777
+  rows) via `docker compose run` with the dump mounted read-only, then verified
+  with both the fingerprint comparison and the 17 business assertions — inside
+  the stack
+- Backup taken, restored into a scratch database, counts and money totals
+  identical
+
+#### Two problems this phase found
+
+**`next.config.ts` had no `output: "standalone"`,** while the existing Dockerfile
+copied `.next/standalone` — a directory `next build` was never producing. The
+image could not have worked.
+
+**`/api/health` was session-gated,** so it redirected to `/login` (307). The
+container healthcheck was therefore meaningless: `curl -fsS` saw a redirect and
+passed, proving only that the server answered. It is now in `PUBLIC_PATHS`, and
+the healthcheck was tested for real — stopping `postgres` gives HTTP 503
+immediately, Docker marks the container `unhealthy` after its retries (~75s), and
+restarting `postgres` returns it to `healthy` within 30s.
+
+Also fixed: `docker-compose.dev.yml` had no compose project name, so it defaulted
+to the directory name and shared a project with the application stack — `docker
+compose ps` on production listed the development database as part of it. It now
+declares `name: mrms-dev`.
 
 ### Phase 6 — Production cutover
 

@@ -1,9 +1,29 @@
 .git
-.next
+.github
 node_modules
+.next
+.next-gate
 coverage
+test-results
+playwright-report
 *.log
 .DS_Store
+
+# Never bake secrets or local state into an image layer.
 .env
-.env.local
-prisma/dev.db
+.env.*
+!.env.example
+
+# SQLite artefacts from before the Postgres migration.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/dev.db*
+mrms-prod.db
+
+# Documentation is not needed at runtime. docs/pg-migration is the exception:
+# import-map.json is operational input to the importer (dropped columns,
+# duplicate-resolution policies), not prose, and the migrator stage runs it.
+docs
+!docs/pg-migration

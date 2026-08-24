@@ -9,6 +9,11 @@
 # Port 5433, not 5432: a host Postgres (Postgres.app) commonly holds 5432 and
 # the collision is silent and confusing — you connect to the wrong server.
 
+# Own project name: docker-compose.yml declares `name: mrms`, and without this
+# the two files would share a project — `docker compose ps` on the application
+# stack would list these development containers as part of it.
+name: mrms-dev
+
 services:
   postgres:
     image: postgres:18-alpine

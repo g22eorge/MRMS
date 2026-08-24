@@ -18,7 +18,10 @@ const PUBLIC_PATHS = [
   "/api/webhooks",
   "/api/repair-requests",
   "/api/billing/callback", // Pesapal payment redirect (arrives without session)
-  "/api/cron",             // Scheduled jobs triggered by Vercel cron
+  "/api/cron",             // Scheduled jobs — authorised by CRON_SECRET, not a session
+  "/api/health",           // Container healthcheck. Reports only {ok, db, uptime};
+                           // it must be reachable without a session or Docker
+                           // cannot tell a wedged container from a healthy one.
   "/api/portal",           // Client-portal APIs — self-guarded by the portal session
   "/api/photos",           // Private repair photos — self-guarded (staff OR portal session)
 

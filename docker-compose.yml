@@ -1,16 +1,171 @@
-version: "3.9"
+# The full application stack, for a single VPS.
+#
+#   cp .env.docker.example .env      # then fill it in
+#   docker compose up -d --build
+#   docker compose logs -f app
+#
+# Everything runs in a container, database included. The database lives in the
+# named volume `pgdata`; losing that volume loses the data, which is why the
+# `backup` service is part of the default stack rather than an optional extra.
+
+name: mrms
+
+x-postgres-env: &postgres-env
+  POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+  POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+
+# Every service that talks to Postgres or the app shares these.
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+  NODE_ENV: production
+  NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?set NEXT_PUBLIC_APP_URL in .env}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${NEXT_PUBLIC_APP_URL}}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env (32+ random chars)}
+  BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
+  CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET in .env (32+ random chars)}
+  PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+  UPLOADS_DIR: /data/uploads
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  APP_CURRENCY: ${APP_CURRENCY:-UGX}
+  # Messaging and payments — absent values disable the feature rather than crash.
+  WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-}
+  WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+  WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+  WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:-}
+  WHATSAPP_WEBHOOK_APP_SECRET: ${WHATSAPP_WEBHOOK_APP_SECRET:-}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  RESEND_FROM: ${RESEND_FROM:-}
+  PESAPAL_CONSUMER_KEY: ${PESAPAL_CONSUMER_KEY:-}
+  PESAPAL_CONSUMER_SECRET: ${PESAPAL_CONSUMER_SECRET:-}
+  PESAPAL_ENV: ${PESAPAL_ENV:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
 services:
-  mrms:
-    build: .
-    container_name: mrms
-    ports:
-      - "3000:3000"
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
     environment:
-      DATABASE_URL: "file:./prisma/dev.db"
-      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-      BETTER_AUTH_URL: "http://localhost:3000"
-      BETTER_AUTH_SECRET: "change-me-for-production"
+      <<: *postgres-env
+      # Deterministic collation, so ORDER BY does not depend on the host locale.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
-      - ./prisma:/app/prisma
-      - ./public/uploads:/app/public/uploads
+      # Postgres 18 wants a single mount at /var/lib/postgresql, not at
+      # .../data: the image places the cluster in a version-named subdirectory
+      # so `pg_upgrade --link` does not cross a mount boundary. Mounting
+      # .../data makes the image refuse to start.
+      - pgdata:/var/lib/postgresql
+    # Not published to the host. Nothing outside this network needs it, and an
+    # exposed Postgres port on a VPS is scanned within hours.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # One-shot: applies migrations, then exits. `app` waits for it to succeed, so a
+  # failed migration keeps the old container serving instead of starting a new
+  # one against a schema it does not match.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    command: ["bunx", "prisma", "migrate", "deploy"]
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - uploads:/data/uploads
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Append-only so a restart does not lose queued jobs.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - uploads:/data/uploads
+
+  # Replaces Vercel Cron. Without this the WhatsApp retry queue stops draining,
+  # subscriptions stop advancing, data healing stops and audit logs grow without
+  # bound — all silently.
+  scheduler:
+    build:
+      context: .
+      target: scheduler
+    restart: unless-stopped
+    environment:
+      APP_URL: http://app:3000
+      CRON_SECRET: ${CRON_SECRET}
+    depends_on:
+      app:
+        condition: service_started
+
+  backup:
+    build:
+      context: .
+      target: backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backups:/backups
+
+volumes:
+  pgdata:
+  uploads:
+  redisdata:
+  # Dumps live here. Copy them off the host as well — a backup on the same
+  # machine does not survive losing the machine.
+  backups:
