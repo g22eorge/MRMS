@@ -43,7 +43,10 @@
     "test:unit:watch": "bun test tests/unit --watch",
     "worker:start": "bun lib/queue/worker.ts",
     "db:migrate": "bunx prisma migrate dev",
-    "db:drift-check": "node scripts/pg/drift-report.mjs"
+    "db:drift-check": "node scripts/pg/drift-report.mjs",
+    "pg:import": "node scripts/pg/import.mjs",
+    "pg:verify": "node scripts/pg/verify-import.mjs",
+    "pg:verify-business": "bun scripts/pg/verify-business.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

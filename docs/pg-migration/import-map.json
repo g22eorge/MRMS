@@ -33,5 +33,35 @@
       "snapshotAt": "0 rows. Legacy wide shape; current datamodel uses capturedAt."
     }
   },
-  "missingColumnsPolicy": "The 51 columns the datamodel declares but the production database lacks are all nullable or defaulted (verified by scripts/pg/drift-report.mjs, which reports zero required-without-default columns over existing rows). The importer simply omits them and Postgres applies the default."
+  "missingColumnsPolicy": "The 51 columns the datamodel declares but the production database lacks are all nullable or defaulted (verified by scripts/pg/drift-report.mjs, which reports zero required-without-default columns over existing rows). The importer simply omits them and Postgres applies the default.",
+  "duplicatePolicy": {
+    "Job.invoiceNumber": {
+      "resolver": "job-invoice-number",
+      "finding": "13 invoice numbers appear on more than one Job (15 surplus rows). Production has no Job_invoiceNumber_key index, so the duplicates were never rejected. The job numbers involved come from different months (EIS-4/2026/0020, EIS-5/2026/0020, EI-2026-0020), which points at a document-numbering sequence collision rather than genuine duplicate invoicing.",
+      "resolution": "Job.invoiceNumber is a denormalised copy; the Invoice table is authoritative and its own invoiceNumber values are unique with no duplicates. For each duplicated number there is exactly one Invoice row and it references exactly one Job. Keep the value on that job; set it to NULL on the others. No Invoice, Payment or Receipt row is touched."
+    },
+    "DocumentBrandingSettings.orgId": {
+      "resolver": "branding-singleton",
+      "finding": "Two branding rows carry orgId=org_eis_01: the legacy id='singleton' row (updated 2026-04-11) and the per-org id='org_eis_01' row (updated 2026-06-06).",
+      "resolution": "Keep orgId on the per-org row, which is authoritative and newer. Set orgId to NULL on the legacy singleton, which keeps it readable as the fallback that lib/document-branding.ts still looks for by id."
+    }
+  },
+  "verificationDeltas": {
+    "BranchNumberingSettings": {
+      "rowsNotImported": 1,
+      "why": "retired table \u2014 see docs/pg-migration/retired-tables.md"
+    },
+    "Job": {
+      "columnsCleared": [
+        "invoiceNumber"
+      ],
+      "why": "15 surplus duplicates cleared by the job-invoice-number resolver; invoiceNumber is not numeric so no sum is affected"
+    },
+    "DocumentBrandingSettings": {
+      "columnsCleared": [
+        "orgId"
+      ],
+      "why": "legacy singleton's orgId cleared by the branding-singleton resolver"
+    }
+  }
 }

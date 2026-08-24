@@ -388,21 +388,75 @@ condition into an unhandled exception in front of a user. `lib/db-errors.ts` now
 keys off Prisma's error codes (`P2021`, `P2022`) with both dialects' wording as
 fallback, and is verified against errors raised by the real database.
 
-### Phase 4 — The data export/import tool
+### Phase 4 — The data export/import tool — **DONE**
 
-Written and rehearsed **before** it is pointed at production.
+Built as one schema-aware importer rather than the planned export/import pair. A
+generic table-to-table copier can only match columns by name and hope; this one
+reads the datamodel, so it knows which columns exist, which are enums, which are
+dates, and — from the foreign-key graph — what order the tables must be written
+in now that Postgres actually enforces those keys.
 
-| # | Task | Verify |
+| # | Task | Result |
 | --- | --- | --- |
-| 4.1 | `scripts/pg/export-sqlite.mjs`: every table → newline-delimited JSON, with coercion (integer 0/1 → boolean, ISO text → `Date`, `REAL` → number), excluding the junk tables | One `.ndjson` per table; counts match `baseline.json` |
-| 4.2 | `scripts/pg/validate-enums.mjs`: for all 59 enums, assert every distinct value present in the dump is a valid schema label; fail loudly with the offending rows. (Spot-checked already: `Job.status` is clean) | Zero invalid labels, or an explicit remap list |
-| 4.3 | `scripts/pg/import-postgres.mjs`: insert in FK-safe topological order, batched `createMany`, one transaction per table, applying the Phase 1.3 defaults for the 51 new columns and dropping the resolved unknown columns | Import completes on empty PG |
-| 4.4 | `scripts/pg/verify-import.mjs`: per-table row-count equality, money control totals, FK spot-joins (`Job→Client`, `Payment→Invoice`, `SaleItem→Sale`), and a sample of round-tripped timestamps | All equal to `baseline.json` |
-| 4.5 | Dry run A: `prisma/dev.db` → local PG (small, safe) | Verified |
-| 4.6 | Dry run B: fresh Turso dump → local PG, twice (idempotency check) | Verified, repeatable |
-| 4.7 | Manual UI pass on the imported data: jobs list, a job detail, invoices, payments, dashboard KPIs, outbox | Numbers match the live app |
+| 4.1 | `scripts/pg/import.mjs` | Topological table order derived from the FK graph (119 tables, no cycles); the one self-reference, `ChartOfAccount.parentId`, is written null and filled in a second pass |
+| 4.2 | Pre-flight validation, six checks | Enum labels, dropped-column emptiness, orphan foreign keys, unknown tables, unknown columns, **and unique-constraint violations** |
+| 4.3 | `scripts/pg/coerce.mjs` | Shared date/boolean coercion — see below |
+| 4.4 | `scripts/pg/verify-import.mjs` | Row counts, the sum of every numeric column, and the min/max of every timestamp, against the baseline; intended differences declared in `import-map.json` rather than waved through |
+| 4.5 | `scripts/pg/verify-business.ts` | 17 assertions that the result is *usable*: relationships resolve, enums are valid native labels, money reads as numbers, resolutions did what they claimed |
+| 4.6 | Rehearsals | Production snapshot **and** dev database, each imported and verified; production imported twice to confirm idempotency; a re-run without `--truncate` is refused so a mistyped URL cannot silently merge two datasets |
 
-Exit: a repeatable, verified import. Rehearsed at least twice end to end.
+Result on the production snapshot: **2,777 rows across 46 tables**, and
+`row counts, numeric sums and timestamp ranges all match`.
+
+#### Two real data problems, found before the cutover
+
+**`Job.invoiceNumber` had 13 duplicated values over 15 surplus rows.** The
+datamodel declares it `@unique`; production has no such index, so the duplicates
+were never rejected. The job numbers involved span different months
+(`EIS-4/2026/0020`, `EIS-5/2026/0020`, `EI-2026-0020`), which points at a
+document-numbering sequence collision rather than genuine duplicate invoicing.
+
+This surfaced the hard way and is worth recording: the first import run used
+`createMany({ skipDuplicates: true })`, which **silently dropped 15 Job rows**,
+and the import then failed on `Invoice_jobId_fkey` because invoices referenced
+jobs that had quietly vanished. `skipDuplicates` is gone — a row that cannot be
+written is a finding, not something to drop, and dropping a parent cascades.
+
+The resolution is not "keep the first row". `Invoice` is authoritative and its
+own numbers are unique; for each duplicated number there is exactly one Invoice
+row referencing exactly one Job. The value is kept on **that** job and cleared on
+the others — verified afterwards by asserting that no kept number sits on a job
+its Invoice does not reference. Nothing in `Invoice`, `Payment` or `Receipt` is
+touched. Resolutions require `--resolve-duplicates`, are declared in
+`import-map.json` with their reasoning, and every single change is printed.
+
+**`DocumentBrandingSettings` had two rows claiming the same `orgId`** — the legacy
+`id='singleton'` row and the per-org row. The per-org row keeps the `orgId`; the
+singleton's is cleared, which leaves it readable by id as the fallback
+`lib/document-branding.ts` still looks for.
+
+#### The dates were the hard part
+
+Three separate bugs, all from the same root: **these databases do not agree on
+how to store a timestamp.** The production snapshot holds ISO-8601 text,
+`prisma/dev.db` holds integer epoch milliseconds, and rows written by the old
+hand-written DDL hold `"YYYY-MM-DD HH:MM:SS"` from SQLite's `CURRENT_TIMESTAMP`.
+All three appear in the same column in places.
+
+1. **A three-hour shift.** `CURRENT_TIMESTAMP` is UTC, but `new Date("2026-05-25 11:10:00")`
+   reads a space-separated string as *local* time — on this machine (EAT, UTC+3)
+   every such row would have moved three hours. Confirmed against the dump:
+   SQLite's `datetime('now')` returned 20:22 while local was 23:22.
+2. **Truncated milliseconds.** Reported as data loss; it was the verifier
+   stringifying a `Date` before parsing it, and `String(date)` has no
+   milliseconds. The stored value was exact all along.
+3. **An inverted min/max.** SQLite orders INTEGER before TEXT *regardless of
+   value*, so `MIN`/`MAX` on a mixed-format column returns the first integer and
+   the last string — not the earliest and latest instant. The baseline now reads
+   the values and compares them as instants.
+
+Each bug lived in a different script's private copy of the parsing, which is why
+`scripts/pg/coerce.mjs` now exists and all three use it.
 
 ### Phase 5 — Docker deployment
 

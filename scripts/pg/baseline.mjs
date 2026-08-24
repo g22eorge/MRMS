@@ -17,6 +17,7 @@ import path from "node:path";
 
 import { parseSchema } from "./schema-model.mjs";
 import { JUNK_TABLES } from "./junk-tables.mjs";
+import { toEpochMs } from "./coerce.mjs";
 
 const args = process.argv.slice(2);
 const dbArg = args.find((a) => !a.startsWith("--")) ?? "prisma/dev.db";
@@ -90,13 +91,22 @@ for (const table of tables) {
       return model?.columns.get(c.name)?.type === "DateTime";
     });
     for (const c of temporal) {
+      // Deliberately not SQLite's MIN/MAX. SQLite orders INTEGER before TEXT
+      // regardless of value, and these columns genuinely hold both — epoch
+      // milliseconds from Prisma alongside ISO text and `CURRENT_TIMESTAMP`
+      // strings from the hand-written DDL. MIN/MAX on such a column returns the
+      // first integer and the last string, which is not the earliest and latest
+      // instant. Read the values and compare them as instants.
       const r = await client.execute(
-        `SELECT MIN(${q(c.name)}) AS lo, MAX(${q(c.name)}) AS hi, COUNT(${q(c.name)}) AS n FROM ${q(table)}`,
+        `SELECT ${q(c.name)} AS v FROM ${q(table)} WHERE ${q(c.name)} IS NOT NULL`,
       );
+      const instants = r.rows
+        .map((row) => toEpochMs(row.v, `${table}.${c.name}`))
+        .filter((ms) => ms !== null);
       entry.ranges[c.name] = {
-        min: r.rows[0].lo === null ? null : String(r.rows[0].lo),
-        max: r.rows[0].hi === null ? null : String(r.rows[0].hi),
-        nonNull: Number(r.rows[0].n),
+        min: instants.length ? new Date(Math.min(...instants)).toISOString() : null,
+        max: instants.length ? new Date(Math.max(...instants)).toISOString() : null,
+        nonNull: instants.length,
       };
     }
   }
