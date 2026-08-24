@@ -505,50 +505,60 @@ to the directory name and shared a project with the application stack — `docke
 compose ps` on production listed the development database as part of it. It now
 declares `name: mrms-dev`.
 
-### Phase 6 — Production cutover
+### Phase 6 — Production cutover — **PREPARED, blocked on a fresh dump**
 
-| # | Task |
-| --- | --- |
-| 6.1 | Provision production Postgres; store credentials; confirm TLS and backups |
-| 6.2 | Announce a maintenance window; enable a write freeze |
-| 6.3 | Fresh Turso dump (Phase 0.2) — this is the authoritative snapshot |
-| 6.4 | `prisma migrate deploy` → import (Phase 4.3) → verify (Phase 4.4). Abort on any mismatch |
-| 6.5 | Deploy the Docker stack pointed at PG; run `bun run smoke:prod` and `bun run predeploy:check` |
-| 6.6 | Manual smoke: login, create a job, record a payment, send a WhatsApp message, generate an invoice PDF |
-| 6.7 | Lift the freeze. Keep Turso **read-only** for at least 7 days as the rollback path; keep the dump archived |
-| 6.8 | Decommission Turso; delete `mrms-prod.db` and the SQLite archive once confidence holds |
+Every step is rehearsed and written up in `docs/cutover-runbook.md`. Two steps
+need the live systems and cannot be done from here:
 
-### Phase 7 — Postgres-native follow-ups (optional, after stability)
+- **taking the final dump** inside the write freeze — `scripts/pg/dump-turso.mjs`
+  is written and rehearsed against a local source (2,780 rows, 115 tables, row
+  counts matched, and the resulting fingerprint is byte-identical per table to
+  the original), but it has never run against live Turso credentials;
+- **switching traffic** to the new stack.
 
-| # | Task | Why |
+The snapshot in the repo is from 2026-07-14 with its newest row on 2026-07-10, so
+it is too old to cut over from. Rehearsed duration for the data steps: under two
+minutes.
+
+The runbook is deliberately ordered so that everything reversible happens first:
+the stack is proven healthy while empty, the import is validated before it writes,
+and verification happens **before** traffic moves. Up to that point rollback is
+"stop the new stack".
+
+One thing to watch at step 8: `--check` will report the same two duplicate-key
+findings as the rehearsal, plus anything created since July. **A new finding means
+stop** — the resolvers cover only what was analysed.
+
+### Phase 7 — Postgres-native follow-ups
+
+| # | Task | Status |
 | --- | --- | --- |
-| 7.1 | `Float` → `Decimal(18, 2)` for the 101 money columns | Removes float rounding from finance totals |
-| 7.2 | Adopt `mode: "insensitive"` in client/job/part search (0 uses today — it is unsupported on SQLite) | Better search, no `LOWER()` workarounds |
-| 7.3 | Review indexes for real query plans; `CREATE INDEX CONCURRENTLY` | SQLite index choices were never plan-verified |
-| 7.4 | Connection pooling (pgbouncer) if concurrency grows | Prisma opens a pool per instance |
-| 7.5 | Replace the remaining raw-SQL guard clauses now that drift cannot recur | Simplification |
+| 7.1 | `Float` → `Decimal` for money | **Done in Phase 2**, not deferred. 93 columns, with the boundary described in section 2.1 |
+| 7.2 | Case-insensitive search | **Done — and it was a correctness fix, not an enhancement.** SQLite's `LIKE` is case-insensitive for ASCII; Postgres's is not, so all 171 `contains`/`startsWith` filters silently became case-sensitive. Searching "ibra" stopped finding "Ibra". Fixed and verified against the imported data |
+| 7.3 | Trigram indexes for search at scale | **Not done.** `ILIKE '%x%'` cannot use a btree index. Irrelevant at 2,777 rows; when client or job counts reach the tens of thousands, add `pg_trgm` and GIN indexes on the searched columns |
+| 7.4 | Connection pooling | **Not needed yet.** One app container with Prisma's default pool is appropriate. Add pgbouncer if the app is scaled to several replicas, and set `connection_limit` in `DATABASE_URL` |
+| 7.5 | Remaining raw SQL | 47 call sites remain, down from 393. They are legitimate — aggregates, the rate-limiter's atomic upsert, `information_schema` introspection — not schema-probing guards |
 
----
+## 6. Where things stand
 
-## 4. Risk register
-
-| Risk | Severity | Mitigation |
+| | Before | After |
 | --- | --- | --- |
-| Prod columns missing from the schema cause silent data loss on import | **High** | Phase 1.2 resolves all 16 explicitly; the import manifest is column-exact and fails on unmapped columns |
-| The 6 raw-SQL tables are forgotten and dropped | **High** | Phase 1.1 promotes them to real models before anything moves |
-| ~~`PartStockTransaction.orgId` NOT NULL over 94 rows~~ — **retired**: measured, the field is `String?`. `scripts/pg/drift-report.mjs` reports **zero** required-without-default columns over existing rows across all 51 | Low | Drift report re-checks this on every run and warns loudly if a future schema change introduces one |
-| Decimal conversion silently concatenates strings at a missed arithmetic site | **High** | Avoided by construction: the query extension means no call site ever receives a `Decimal` (section 2.1) |
-| Decimal precision chosen wrongly for a field (e.g. a rate truncated to 2dp) | Medium | Classification is committed as reviewable data, not inferred at edit time; baseline control totals in Phase 4.4 compare exact sums before and after |
-| Enum labels in data that PG's native enums reject | Medium | Phase 4.2 validates all 59 enums before import; `Job.status` already spot-checked clean |
-| Timestamp/boolean coercion errors (ISO text, integer 0/1) | Medium | Phase 4.1 coerces explicitly; Phase 4.4 round-trip-verifies samples |
-| Vercel crons silently stop under Docker | Medium | Phase 5.5 is a named deliverable, not an afterthought |
-| Losing SQLite's trivial file-copy backups | Medium | Phase 5.6 `pg_dump` sidecar plus a rehearsed restore |
-| Stale snapshot used at cutover | Medium | Phase 6.3 re-dumps inside the freeze window |
-| `db-fix` removal leaves no emergency lever | Low | Migrations replace it; Phase 3.3 keeps a read-only reporter |
+| Database | SQLite file / Turso libSQL | PostgreSQL 18, containerised |
+| Schema management | `db push` + hand-written DDL at runtime | One baseline migration, `migrate deploy` |
+| Datamodel vs database | 51 columns missing, 16 unknown, 6 undeclared tables | **Zero drift**, checked by tooling |
+| Money | `Float` (`REAL`) | `numeric(18,2)`, `number` at the app boundary |
+| Raw SQL call sites | 393 | 47 |
+| `lib/prisma.ts` | 382 lines | 175 |
+| `app/api/admin/db-fix` | 2,602 lines of runtime DDL | 63 lines, read-only |
+| Migration history | none, in any environment | `_prisma_migrations`, applied |
+| Deployment | Vercel + Turso | `docker compose up -d` on a VPS |
+| Scheduled jobs | Vercel Cron | `scheduler` service |
+| Backups | copy the SQLite file | `pg_dump` sidecar, restore drill rehearsed |
 
-## 5. Sequencing note
-
-Phases 0 and 1 are safe on `main` today and carry standalone value: they make
-the schema honest and delete ~30 raw SQL sites regardless of what database sits
-underneath. Phases 2–4 belong on a single feature branch. Phase 5 can proceed in
-parallel with Phase 4, since Docker work does not depend on the import tool.
+Bugs found and fixed along the way that had nothing to do with SQLite:
+`recordBillingEvent` was not idempotent despite documenting an idempotency key;
+`getPlatformSettings` ran one query per key; `next.config.ts` was missing
+`output: "standalone"` while the Dockerfile copied a directory the build never
+produced; `/api/health` was session-gated, making the container healthcheck
+decorative; and the unit test suite exercised a different Prisma client than
+production.

@@ -4,7 +4,7 @@
  * Start it alongside the Next.js server:
  *   bun lib/queue/worker.ts
  *
- * Or add to render.yaml / Dockerfile as a separate service.
+ * In production it is the `worker` service in docker-compose.yml.
  * When Redis is absent the process exits cleanly (no-op).
  */
 import { Worker } from "bullmq";
