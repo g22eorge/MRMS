@@ -21,6 +21,7 @@ import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
+import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
@@ -414,8 +415,8 @@ export default async function RefundsPage({
         invoiceNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true } },
-        job: { select: { jobNumber: true, client: { select: { fullName: true } } } },
+        client: { select: { fullName: true, phone: true } },
+        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -428,7 +429,7 @@ export default async function RefundsPage({
         saleNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true } },
+        client: { select: { fullName: true, phone: true } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -441,7 +442,7 @@ export default async function RefundsPage({
         creditNoteNumber: true,
         totalAmount: true,
         currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true } } } },
+        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -488,6 +489,47 @@ export default async function RefundsPage({
     }))
     .filter((creditNote) => creditNote.refundableAmount > 0);
   const hasRefundSources = refundableInvoices.length > 0 || refundableSales.length > 0 || refundableCreditNotes.length > 0;
+
+  // Customer first — a job-linked invoice was labelled with its job number, so
+  // searching for the person who is owed money found nothing.
+  const refundSourceGroups: SourceGroup[] = [
+    {
+      label: "Invoices",
+      options: refundableInvoices.map((invoice) => {
+        const who = invoice.client?.fullName ?? invoice.job?.client?.fullName ?? "No customer";
+        return {
+          value: `invoice:${invoice.id}`,
+          label: `${who} — ${invoice.invoiceNumber}`,
+          hint: `${invoice.job?.jobNumber ? invoice.job.jobNumber + " · " : ""}refundable ${formatMoney(invoice.refundableAmount, invoice.currency)}`,
+          search: [who, invoice.client?.phone, invoice.job?.client?.phone, invoice.invoiceNumber, invoice.job?.jobNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+    {
+      label: "Sales",
+      options: refundableSales.map((sale) => {
+        const who = sale.client?.fullName ?? "Walk-in";
+        return {
+          value: `sale:${sale.id}`,
+          label: `${who} — ${sale.saleNumber}`,
+          hint: `refundable ${formatMoney(sale.refundableAmount, sale.currency)}`,
+          search: [who, sale.client?.phone, sale.saleNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+    {
+      label: "Credit notes",
+      options: refundableCreditNotes.map((cn) => {
+        const who = cn.sale?.client?.fullName ?? "Walk-in";
+        return {
+          value: `creditNote:${cn.id}`,
+          label: `${who} — ${cn.creditNoteNumber}`,
+          hint: `${cn.sale.saleNumber} · refundable ${formatMoney(cn.refundableAmount, cn.currency)}`,
+          search: [who, cn.creditNoteNumber, cn.sale.saleNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+  ].filter((g) => g.options.length > 0);
 
   type RefundRow = (typeof pageRows)[number];
 
@@ -629,40 +671,13 @@ export default async function RefundsPage({
               <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Refund Source
               </label>
-              <select
+              <DocumentSourcePicker
                 name="sourceKey"
                 required
-                className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm"
-              >
-                <option value="">Select invoice, sale, or credit note...</option>
-                {refundableInvoices.length > 0 ? (
-                  <optgroup label="Invoices">
-                    {refundableInvoices.map((invoice) => (
-                      <option key={invoice.id} value={`invoice:${invoice.id}`}>
-                        {invoice.invoiceNumber} - {invoice.job?.jobNumber ?? invoice.job?.client?.fullName ?? invoice.client?.fullName ?? "Invoice"} - refundable {formatMoney(invoice.refundableAmount, invoice.currency)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {refundableSales.length > 0 ? (
-                  <optgroup label="POS sales">
-                    {refundableSales.map((sale) => (
-                      <option key={sale.id} value={`sale:${sale.id}`}>
-                        {sale.saleNumber} - {sale.client?.fullName ?? "Walk-in"} - refundable {formatMoney(sale.refundableAmount, sale.currency)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {refundableCreditNotes.length > 0 ? (
-                  <optgroup label="Credit notes">
-                    {refundableCreditNotes.map((creditNote) => (
-                      <option key={creditNote.id} value={`creditNote:${creditNote.id}`}>
-                        {creditNote.creditNoteNumber} - {creditNote.sale.saleNumber} - refundable {formatMoney(creditNote.refundableAmount, creditNote.currency)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-              </select>
+                groups={refundSourceGroups}
+                placeholder="Search by customer, number or job…"
+                emptyLabel="Nothing refundable matches that"
+              />
             </div>
             <div className="space-y-1">
               <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">

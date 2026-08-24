@@ -29,6 +29,7 @@ import {
 } from "@/components/documents";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
 
@@ -387,8 +388,8 @@ export default async function ReceiptsPage({
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
-    job: { jobNumber: string } | null;
-    client: { fullName: string } | null;
+    job: { jobNumber: string; client: { fullName: string; phone: string | null } | null } | null;
+    client: { fullName: string; phone: string | null } | null;
   };
 
   type SaleOption = {
@@ -397,7 +398,7 @@ export default async function ReceiptsPage({
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
-    client: { fullName: string } | null;
+    client: { fullName: string; phone: string | null } | null;
   };
 
   const [invoiceOptions, saleOptions]: [InvoiceOption[], SaleOption[]] = await Promise.all([
@@ -405,25 +406,42 @@ export default async function ReceiptsPage({
       where: { status: { not: "VOID" } },
       orderBy: { issuedAt: "desc" },
       take: 80,
-      select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, job: { select: { jobNumber: true } }, client: { select: { fullName: true } } },
+      select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } },
     }).then((rows: InvoiceOption[]) => rows.filter((invoice) => invoice.paidAmount < invoice.totalAmount)),
     prisma.sale.findMany({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true } } },
+      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true } } },
     }).then((rows: SaleOption[]) => rows.filter((sale) => sale.paidAmount < sale.totalAmount)),
   ]);
-  const paymentSourceOptions = [
-    ...invoiceOptions.map((inv) => ({
-      key: `invoice:${inv.id}`,
-      label: `${inv.invoiceNumber} - ${inv.job?.jobNumber ?? inv.client?.fullName ?? "Invoice"} - due ${formatMoney(inv.totalAmount - inv.paidAmount, normalizeCurrency(inv.currency, baseCurrency))}`,
-    })),
-    ...saleOptions.map((sale) => ({
-      key: `sale:${sale.id}`,
-      label: `${sale.saleNumber} - ${sale.client?.fullName ?? "Walk-in"} - due ${formatMoney(sale.totalAmount - sale.paidAmount, normalizeCurrency(sale.currency, baseCurrency))}`,
-    })),
-  ];
+  // Customer first, so the person paying is what you search for and read.
+  const paymentSourceGroups: SourceGroup[] = [
+    {
+      label: "Invoices",
+      options: invoiceOptions.map((inv) => {
+        const who = inv.client?.fullName ?? inv.job?.client?.fullName ?? "No customer";
+        return {
+          value: `invoice:${inv.id}`,
+          label: `${who} — ${inv.invoiceNumber}`,
+          hint: `${inv.job?.jobNumber ? inv.job.jobNumber + " · " : ""}due ${formatMoney(inv.totalAmount - inv.paidAmount, normalizeCurrency(inv.currency, baseCurrency))}`,
+          search: [who, inv.client?.phone, inv.job?.client?.phone, inv.invoiceNumber, inv.job?.jobNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+    {
+      label: "Sales",
+      options: saleOptions.map((sale) => {
+        const who = sale.client?.fullName ?? "Walk-in";
+        return {
+          value: `sale:${sale.id}`,
+          label: `${who} — ${sale.saleNumber}`,
+          hint: `due ${formatMoney(sale.totalAmount - sale.paidAmount, normalizeCurrency(sale.currency, baseCurrency))}`,
+          search: [who, sale.client?.phone, sale.saleNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+  ].filter((g) => g.options.length > 0);
 
   function methodBadge(method: string) {
     switch (method) {
@@ -457,9 +475,9 @@ export default async function ReceiptsPage({
       <DocumentPageHeader
         title="Receipts"
         action={
-          paymentSourceOptions.length > 0 ? (
+          paymentSourceGroups.length > 0 ? (
             <CreateReceiptDialog
-              sourceOptions={paymentSourceOptions}
+              sourceGroups={paymentSourceGroups}
               baseCurrency={baseCurrency}
               paymentMethods={[...PAYMENT_METHODS]}
               action={createReceiptAction}

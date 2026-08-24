@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import { revalidatePath } from "next/cache";
 import { type DeliveryMethod, Prisma } from "@prisma/client";
 
 import { can } from "@/lib/permissions";
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
@@ -36,7 +37,7 @@ export default async function DeliveryNotesPage({
 }: {
   searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; error?: string }>;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const periodFilter = sp.period ?? "all";
@@ -374,16 +375,50 @@ export default async function DeliveryNotesPage({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { issuedAt: "desc" },
       take: 80,
-      select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, job: { select: { jobNumber: true, client: { select: { fullName: true } } } }, client: { select: { fullName: true } } },
+      select: { id: true, invoiceNumber: true, totalAmount: true, currency: true, paidAmount: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } },
     }).then((rows) => rows.filter((invoice) => invoice.paidAmount >= invoice.totalAmount)),
     prisma.sale.findMany({
       where: { orgId, status: "PAID" },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, client: { select: { fullName: true } } },
+      select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true } } },
     }).catch(() => []),
   ]);
   const hasDeliverySources = invoiceOptions.length > 0 || saleOptions.length > 0;
+
+  // Lead with the customer. A job-linked invoice used to be labelled with its
+  // JOB number and nothing else, so the name being searched for was not even on
+  // screen. `search` carries the phone and job number too, so any of them find
+  // the row.
+  const deliverySourceGroups: SourceGroup[] = [
+    {
+      label: "Paid invoices",
+      options: invoiceOptions.map((invoice) => {
+        const who = invoice.client?.fullName ?? invoice.job?.client?.fullName ?? "No customer";
+        const phone = invoice.client?.phone ?? invoice.job?.client?.phone ?? "";
+        return {
+          value: `invoice:${invoice.id}`,
+          label: `${who} — ${invoice.invoiceNumber}`,
+          hint: [invoice.job?.jobNumber, formatMoney(invoice.totalAmount, normalizeCurrency(invoice.currency, org.baseCurrency))]
+            .filter(Boolean)
+            .join(" · "),
+          search: [who, phone, invoice.invoiceNumber, invoice.job?.jobNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+    {
+      label: "Paid sales",
+      options: saleOptions.map((sale) => {
+        const who = sale.client?.fullName ?? "Walk-in";
+        return {
+          value: `sale:${sale.id}`,
+          label: `${who} — ${sale.saleNumber}`,
+          hint: formatMoney(sale.totalAmount, normalizeCurrency(sale.currency, org.baseCurrency)),
+          search: [who, sale.client?.phone, sale.saleNumber].filter(Boolean).join(" "),
+        };
+      }),
+    },
+  ].filter((g) => g.options.length > 0);
 
   return (
     <Disclosure>
@@ -413,23 +448,15 @@ export default async function DeliveryNotesPage({
             Create Delivery Note from paid invoice or sale
           </div>
           <form action={createDeliveryNoteAction} className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            <select name="sourceKey" required className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm sm:col-span-2">
-              <option value="">Select paid invoice or sale...</option>
-              {invoiceOptions.length > 0 ? (
-                <optgroup label="Paid invoices">
-                  {invoiceOptions.map((invoice) => (
-                    <option key={invoice.id} value={`invoice:${invoice.id}`}>{invoice.invoiceNumber} - {invoice.job?.jobNumber ?? invoice.client?.fullName ?? "Invoice"}</option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {saleOptions.length > 0 ? (
-                <optgroup label="Paid POS sales">
-                  {saleOptions.map((sale) => (
-                    <option key={sale.id} value={`sale:${sale.id}`}>{sale.saleNumber} - {sale.client?.fullName ?? "Walk-in"} - {formatMoney(sale.totalAmount, "UGX")}</option>
-                  ))}
-                </optgroup>
-              ) : null}
-            </select>
+            <div className="sm:col-span-2">
+              <DocumentSourcePicker
+                name="sourceKey"
+                required
+                groups={deliverySourceGroups}
+                placeholder="Search paid invoices and sales by customer, number or job…"
+                emptyLabel="No paid invoice or sale matches that"
+              />
+            </div>
             <input name="deliveredByName" required placeholder="Delivered by" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm" />
             <input name="receivedByName" required placeholder="Received by" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm" />
             <select name="deliveryMethod" defaultValue="" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm">

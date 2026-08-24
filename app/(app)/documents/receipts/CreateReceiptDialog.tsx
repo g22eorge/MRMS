@@ -3,6 +3,7 @@
 import { useRef, useActionState, useState } from "react";
 
 import { Modal, ModalHeader } from "@/components/ui/Modal";
+import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 
 type SourceOption = {
   key: string;
@@ -12,14 +13,14 @@ type SourceOption = {
 export type ReceiptFormState = { error?: string } | null;
 
 type Props = {
-  sourceOptions: SourceOption[];
+  sourceGroups: SourceGroup[];
   baseCurrency: string;
   paymentMethods: string[];
   action: (prev: ReceiptFormState, formData: FormData) => Promise<ReceiptFormState>;
   initialOpen?: boolean;
 };
 
-export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethods, action, initialOpen = false }: Props) {
+export function CreateReceiptDialog({ sourceGroups, baseCurrency, paymentMethods, action, initialOpen = false }: Props) {
   const [open, setOpen] = useState(initialOpen);
   const formRef = useRef<HTMLFormElement>(null);
   // Only close and clear on success. Doing it unconditionally meant a rejected
@@ -53,16 +54,13 @@ export function CreateReceiptDialog({ sourceOptions, baseCurrency, paymentMethod
               {state.error}
             </p>
           ) : null}
-          <select
+          <DocumentSourcePicker
             name="sourceKey"
             required
-            className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm text-[var(--ink)]"
-          >
-            <option value="">Select invoice or sale...</option>
-            {sourceOptions.map((inv) => (
-              <option key={inv.key} value={inv.key}>{inv.label}</option>
-            ))}
-          </select>
+            groups={sourceGroups}
+            placeholder="Search by customer, invoice or sale number…"
+            emptyLabel="Nothing outstanding matches that"
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-semibold text-[var(--ink-muted)]">

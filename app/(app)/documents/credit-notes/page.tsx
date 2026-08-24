@@ -685,7 +685,7 @@ export default async function CreditNotesPage({
         saleNumber: true,
         totalAmount: true,
         currency: true,
-        client: { select: { fullName: true } },
+        client: { select: { fullName: true, phone: true } },
         items: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
       },
       orderBy: { createdAt: "desc" },

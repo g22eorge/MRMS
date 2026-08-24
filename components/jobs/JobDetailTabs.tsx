@@ -1558,7 +1558,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               name="partsNeeded"
               defaultValue={job.partsNeeded ?? ""}
               placeholder="Parts needed"
-              readOnly={isTerminal}
+              readOnly={isTerminal && !canAssignJobs}
               className={areaClass}
             />
 
@@ -1728,14 +1728,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         >
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Work done</label>
-            <textarea name="workDone" readOnly={isTerminal} defaultValue={job.workDone ?? ""} placeholder="Describe the work carried out…" className={areaClass} />
+            <textarea name="workDone" readOnly={isTerminal && !canAssignJobs} defaultValue={job.workDone ?? ""} placeholder="Describe the work carried out…" className={areaClass} />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Parts replaced</label>
-            <textarea name="partsReplaced" readOnly={isTerminal} defaultValue={job.partsReplaced ?? ""} placeholder="List parts replaced (if any)…" className={areaClass} />
+            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="List parts replaced (if any)…" className={areaClass} />
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <button disabled={isTerminal || isRepairPending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
+            <button disabled={(isTerminal && !canAssignJobs) || isRepairPending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
               {isRepairPending ? "Saving…" : "Save Repair Log"}
             </button>
             <button type="button" onClick={() => setActive("overview")} disabled={isRepairPending}

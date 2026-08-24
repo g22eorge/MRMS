@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { CheckboxField } from "@/components/forms";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
+import { DocumentSourcePicker } from "@/components/documents/DocumentSourcePicker";
 
 type SaleLine = {
   id: string;
@@ -18,7 +19,7 @@ type SaleOption = {
   saleNumber: string;
   totalAmount: number;
   currency: string;
-  client: { fullName: string } | null;
+  client: { fullName: string; phone: string | null } | null;
   items: SaleLine[];
 };
 
@@ -65,18 +66,25 @@ export function CreateCreditNoteDialog({ eligibleSales, action, returnAndRefundA
             <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
               <label className="space-y-1">
                 <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Sale</span>
-                <select
+                <DocumentSourcePicker
                   name="saleId"
-                  value={selectedSale.id}
-                  onChange={(event) => setSaleId(event.target.value)}
-                  className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm text-[var(--ink)]"
-                >
-                  {eligibleSales.map((sale) => (
-                    <option key={sale.id} value={sale.id}>
-                      {sale.saleNumber} - {sale.client?.fullName ?? "Walk-in"} - {money(sale.totalAmount, sale.currency)}
-                    </option>
-                  ))}
-                </select>
+                  required
+                  defaultValue={selectedSale.id}
+                  onSelect={setSaleId}
+                  groups={[
+                    {
+                      label: "Returnable sales",
+                      options: eligibleSales.map((sale) => ({
+                        value: sale.id,
+                        label: `${sale.client?.fullName ?? "Walk-in"} — ${sale.saleNumber}`,
+                        hint: money(sale.totalAmount, sale.currency),
+                        search: [sale.client?.fullName ?? "Walk-in", sale.client?.phone, sale.saleNumber].filter(Boolean).join(" "),
+                      })),
+                    },
+                  ]}
+                  placeholder="Search sales by customer or number…"
+                  emptyLabel="No returnable sale matches that"
+                />
               </label>
               <label className="space-y-1">
                 <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Reason</span>
