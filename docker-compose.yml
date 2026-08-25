@@ -15,32 +15,37 @@ x-postgres-env: &postgres-env
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
   POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
 
-# Every service that talks to Postgres or the app shares these.
+# .env is the single source of environment for this stack: every application
+# service loads it wholesale via `env_file`, so adding a variable there reaches
+# the containers without touching this file.
+#
+# What stays here is only what .env must NOT decide:
+#
+#   DATABASE_URL  the containers reach Postgres at the hostname `postgres` on the
+#                 compose network, never at localhost. Assembled from the
+#                 POSTGRES_* values so there is one place to change the password.
+#   UPLOADS_DIR   a path inside the container, backed by the `uploads` volume.
+#   REDIS_URL     defaults to the bundled service; .env can override it.
+#   NODE_ENV      always production in an image built for production.
+#
+# The four `:?` guards are deliberate: compose refuses to start a
+# half-configured stack rather than booting an app with no session secret. They
+# also mean these values are validated even though env_file would have supplied
+# them anyway.
 x-app-env: &app-env
-  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
   NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+  UPLOADS_DIR: /data/uploads
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?set NEXT_PUBLIC_APP_URL in .env}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${NEXT_PUBLIC_APP_URL}}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env (32+ random chars)}
-  BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
   CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET in .env (32+ random chars)}
-  PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
-  UPLOADS_DIR: /data/uploads
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-  APP_CURRENCY: ${APP_CURRENCY:-UGX}
-  # Messaging and payments — absent values disable the feature rather than crash.
-  WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-}
-  WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
-  WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
-  WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
-  WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:-}
-  WHATSAPP_WEBHOOK_APP_SECRET: ${WHATSAPP_WEBHOOK_APP_SECRET:-}
-  RESEND_API_KEY: ${RESEND_API_KEY:-}
-  RESEND_FROM: ${RESEND_FROM:-}
-  PESAPAL_CONSUMER_KEY: ${PESAPAL_CONSUMER_KEY:-}
-  PESAPAL_CONSUMER_SECRET: ${PESAPAL_CONSUMER_SECRET:-}
-  PESAPAL_ENV: ${PESAPAL_ENV:-}
-  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+# Loaded by every application service. Anything in .env that is not overridden
+# above is passed through as-is.
+x-env-file: &env-file
+  - .env
 
 services:
   postgres:
@@ -74,6 +79,7 @@ services:
     build:
       context: .
       target: migrator
+    env_file: *env-file
     environment: *app-env
     depends_on:
       postgres:
@@ -86,6 +92,7 @@ services:
       context: .
       target: runner
     restart: unless-stopped
+    env_file: *env-file
     environment: *app-env
     depends_on:
       postgres:
@@ -117,6 +124,7 @@ services:
       context: .
       target: worker
     restart: unless-stopped
+    env_file: *env-file
     environment: *app-env
     depends_on:
       postgres:
@@ -136,9 +144,13 @@ services:
       context: .
       target: scheduler
     restart: unless-stopped
+    # Deliberately no env_file: this service only ticks a clock and makes an
+    # authenticated HTTP call, so it has no reason to hold the database
+    # credentials or any provider API key.
     environment:
+      # Internal address; the scheduler never leaves the compose network.
       APP_URL: http://app:3000
-      CRON_SECRET: ${CRON_SECRET}
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET in .env (32+ random chars)}
     depends_on:
       app:
         condition: service_started

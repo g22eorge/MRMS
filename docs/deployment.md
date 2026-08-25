@@ -19,13 +19,35 @@ Everything runs in a container, database included. There is one compose file,
 
 ```bash
 git clone <repo> && cd MRMS
-cp .env.docker.example .env      # fill in every value marked required
+cp .env.docker.example .env
+# fill in the three secrets and the public URL:
+openssl rand -base64 36 | tr -d '/+=' | cut -c1-40   # POSTGRES_PASSWORD
+openssl rand -base64 48 | tr -d '/+=' | cut -c1-48   # BETTER_AUTH_SECRET
+openssl rand -base64 48 | tr -d '/+=' | cut -c1-48   # CRON_SECRET
+chmod 600 .env
 docker compose up -d --build
 docker compose logs -f app
 ```
 
-Compose fails fast on missing required values rather than starting a
-half-configured stack.
+`.env` is the single source of environment for the stack. Every application
+service loads it wholesale with `env_file`, so a variable added there reaches the
+containers without editing `docker-compose.yml`.
+
+Four things compose sets itself, because `.env` must not decide them:
+
+| | Why |
+| --- | --- |
+| `DATABASE_URL` | The containers reach Postgres at the hostname `postgres` on the compose network, never at `localhost`. Assembled from the `POSTGRES_*` values so the password lives in one place |
+| `UPLOADS_DIR` | A path inside the container, backed by the `uploads` volume |
+| `REDIS_URL` | Defaults to the bundled service; `.env` can override it to point elsewhere |
+| `NODE_ENV` | Always `production` in an image built for production |
+
+Compose fails fast on a missing `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_SECRET`,
+`CRON_SECRET` or `POSTGRES_*` rather than starting a half-configured stack.
+
+The `scheduler` service deliberately does **not** load `.env`: it only ticks a
+clock and makes one authenticated HTTP call, so it has no reason to hold the
+database credentials or any provider API key.
 
 The container speaks plain HTTP on `APP_PORT` (default 3000). Put a
 TLS-terminating reverse proxy in front of it (Caddy or nginx) and set

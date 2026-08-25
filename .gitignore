@@ -42,6 +42,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the committed template. `.env*` would otherwise hide it, and a
+# fresh clone would have nothing to copy from.
+!.env.docker.example
+!.env.example
 !.env.example
 
 # vercel
