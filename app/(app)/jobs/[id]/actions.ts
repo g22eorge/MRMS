@@ -42,6 +42,7 @@ import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
+import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
 const workflowReasonValues = [
   "NONE",
@@ -811,6 +812,18 @@ export async function recordClientPaymentAction(formData: FormData) {
       invoiceNumber: true,
       invoiceIssuedAt: true,
       externalTechBill: true,
+      // Everything the invoice lines are composed from.
+      brand: true,
+      model: true,
+      serviceType: true,
+      issueDescription: true,
+      vatApplicable: true,
+      softwareOsInstall: true,
+      softwareDriversUpdates: true,
+      softwareDataBackupRestore: true,
+      softwareAccountSetup: true,
+      softwarePerformanceTune: true,
+      softwareThirdPartyApps: true,
     },
   });
   if (!job) return { error: "Job not found" };
@@ -878,6 +891,18 @@ export async function recordClientPaymentAction(formData: FormData) {
             },
             select: { id: true, totalAmount: true },
           });
+
+      // Itemise the repair. Without lines the invoice is a bare total: it can't
+      // be credited line by line, and the PDF prints a subtotal nothing accounts
+      // for. Regenerated each time because clientBill can change before the job
+      // closes; the lines always sum back to the same total.
+      await syncJobInvoiceLines(tx, {
+        orgId,
+        invoiceId: invoice.id,
+        job,
+        clientBill: totalAmount,
+        currency: baseCurrency,
+      });
 
       if (job.invoiceNumber !== safeInvoiceNumber || !job.invoiceIssuedAt) {
         await tx.job.updateMany({

@@ -11,6 +11,7 @@ import { compactText, compactListText, prettyEnum, resolveInvoiceLogo } from "@/
 import type { PdfLineItem } from "@/lib/pdf/pdf-line-items";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
+import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
 export type GenerateInvoiceResult =
   | { ok: true; buffer: Buffer; filename: string; invoiceNumber: string; clientPhone: string }
@@ -42,6 +43,9 @@ export async function generateInvoiceBuffer(
       diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true,
       recommendationOption: true, clientConversationNote: true,
       partsNeeded: true, clientBill: true, vatApplicable: true,
+      serviceType: true, softwareOsInstall: true, softwareDriversUpdates: true,
+      softwareDataBackupRestore: true, softwareAccountSetup: true,
+      softwarePerformanceTune: true, softwareThirdPartyApps: true,
       workDone: true, partsReplaced: true,
       clientApproved: true, approvalDate: true, quotedAt: true,
       repairTimeline: true, timelineNote: true, technicianNotes: true, statusNote: true,
@@ -158,6 +162,23 @@ export async function generateInvoiceBuffer(
               totalAmount: invoiceTotal,
               status: invoiceTotal <= 0 ? "PAID" : "ISSUED",
             },
+          });
+        }
+
+        // Itemise the repair on whichever invoice row we just wrote, so the
+        // line-item block and the subtotal the PDF prints describe the same
+        // money — and so the invoice can be credited line by line.
+        const persisted = await tx.invoice.findFirst({
+          where: { orgId, jobId: job.id },
+          select: { id: true },
+        });
+        if (persisted) {
+          await syncJobInvoiceLines(tx, {
+            orgId,
+            invoiceId: persisted.id,
+            job,
+            clientBill: invoiceTotal,
+            currency,
           });
         }
 
