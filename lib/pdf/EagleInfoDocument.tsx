@@ -110,8 +110,7 @@ const s = StyleSheet.create({
   // ── Footer ──
   footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: 28, marginBottom: 14 },
   footer: { flexDirection: "row", gap: 32 },
-  footerLeft: { flex: 1 },
-  footerRight: { flex: 1 },
+  footerCol: { flex: 1 },
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
   footerTermHead: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK, marginTop: 5, marginBottom: 1.5 },
@@ -344,8 +343,17 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
         {/* ── Footer ── */}
         <View style={s.footerDivider} />
         <View style={s.footer}>
-          {/* Left: notes + payment to */}
-          <View style={s.footerLeft}>
+          {/* Left: terms sit first, where the eye lands */}
+          {termsText ? (
+            <View style={s.footerCol}>
+              <Text style={s.footerLabel}>Terms &amp; Conditions</Text>
+              {termsText.split("\n").map((l) => l.trim()).filter(Boolean).map((line, i) => (
+                <Text key={i} style={isTermsHeading(line) ? s.footerTermHead : s.footerTermLine}>{line}</Text>
+              ))}
+            </View>
+          ) : null}
+          {/* Right: notes + payment to */}
+          <View style={s.footerCol}>
             {notes ? (
               <>
                 <Text style={s.footerLabel}>Notes</Text>
@@ -367,16 +375,6 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
               </>
             ) : null}
           </View>
-
-          {/* Right: terms */}
-          {termsText ? (
-            <View style={s.footerRight}>
-              <Text style={s.footerLabel}>Terms &amp; Conditions</Text>
-              {termsText.split("\n").map((l) => l.trim()).filter(Boolean).map((line, i) => (
-                <Text key={i} style={isTermsHeading(line) ? s.footerTermHead : s.footerTermLine}>{line}</Text>
-              ))}
-            </View>
-          ) : null}
         </View>
 
         <QuotationPromoStrip promo={promo} />

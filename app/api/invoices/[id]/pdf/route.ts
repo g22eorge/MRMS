@@ -125,6 +125,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     currency,
     termsText: pickDocumentTerms(branding.termsText, invoice.jobId ? "REPAIR" : "SALE"),
     footerText: branding.footerText ?? "",
+    // Without this the Payment To block is missing, so an invoice downloaded from
+    // Documents carried no bank details while the same invoice generated from the
+    // job did. Customers cannot pay what they cannot see.
+    paymentInstructions: branding.paymentInstructions ?? "",
     signatureCompanyLabel: "Authorized Signatory",
     signatureClientLabel: "Client Signature",
     lineItems: invoice.lines.map((l) => ({
