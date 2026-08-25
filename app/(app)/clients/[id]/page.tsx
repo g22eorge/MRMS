@@ -12,7 +12,8 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { shareStatementDocument } from "@/lib/notifications/share-document";
-import { createPortalUserAction, togglePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
+import { createPortalUserAction, togglePortalUserAction, deletePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -420,13 +421,28 @@ export default async function ClientDetailPage({
                       <span className="ml-1.5 text-[var(--ink-muted)]">· {pu.email} · {pu.role.replaceAll("_", " ")}</span>
                       {!pu.isActive && <span className="ml-1.5 rounded bg-red-500/10 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-red-500">revoked</span>}
                     </div>
-                    <form action={togglePortalUserAction}>
-                      <input type="hidden" name="portalUserId" value={pu.id} />
-                      <input type="hidden" name="clientId" value={client.id} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
-                        {pu.isActive ? "Revoke" : "Restore"}
-                      </button>
-                    </form>
+                    <div className="flex items-center gap-1.5">
+                      <form action={togglePortalUserAction}>
+                        <input type="hidden" name="portalUserId" value={pu.id} />
+                        <input type="hidden" name="clientId" value={client.id} />
+                        <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
+                          {pu.isActive ? "Revoke" : "Restore"}
+                        </button>
+                      </form>
+                      {/* Revoking keeps the login so it can be restored; deleting
+                          removes it for good, for one created in error. */}
+                      <form action={deletePortalUserAction}>
+                        <input type="hidden" name="portalUserId" value={pu.id} />
+                        <input type="hidden" name="clientId" value={client.id} />
+                        <ConfirmSubmitButton
+                          message={`Delete the portal login for ${pu.email}? They lose access immediately and it cannot be restored. The client's repairs and documents are not affected.`}
+                          confirmLabel="Delete login"
+                          className="rounded-lg border border-red-500/30 px-2.5 py-1 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
+                      </form>
+                    </div>
                   </div>
                   {/* Multi-account: this login also manages these client accounts. */}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">

@@ -3256,6 +3256,12 @@ model PortalUser {
   role         PortalRole @default(IT_OFFICER)
   passwordHash String?
   isActive     Boolean    @default(true)
+  /**
+   * Set when an admin issues or resets a login, so the customer is made to
+   * replace the password they were handed before they can see anything. The
+   * admin knows that initial password; nobody should keep using it.
+   */
+  mustChangePassword Boolean @default(false)
   lastLoginAt  DateTime?
   createdById  String? // staff user who provisioned this portal login
   createdAt    DateTime   @default(now())

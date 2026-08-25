@@ -61,6 +61,9 @@ export async function createPortalUserAction(formData: FormData): Promise<void> 
       position,
       role,
       passwordHash: await hashPortalPassword(password),
+      // You know the password you just typed for them; they replace it the
+      // first time they sign in.
+      mustChangePassword: true,
       createdById: user.id,
     },
     select: { id: true },
@@ -166,4 +169,52 @@ export async function togglePortalUserAction(formData: FormData): Promise<void> 
   });
 
   if (clientId) revalidatePath(`/clients/${clientId}`);
+}
+
+/**
+ * Delete a portal login outright.
+ *
+ * Revoking (the toggle above) keeps the row so access can be restored, which is
+ * right for "this person is on leave" but wrong for "this person never should
+ * have had access" or a login created by mistake — there was no way to actually
+ * remove one. Sessions and linked accounts go with it: PortalSession and
+ * PortalUserClient both cascade from PortalUser.
+ *
+ * The client, its repairs and its documents are untouched; only the login is
+ * removed. The audit event survives the deletion because SystemAuditEvent holds
+ * ids as plain strings, so who deleted what stays on record.
+ */
+export async function deletePortalUserAction(formData: FormData): Promise<void> {
+  const { user, orgId, org } = await requireOrgSession();
+  if (!canManagePortal(user.role)) return;
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+  const id = String(formData.get("portalUserId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  if (!id) return;
+
+  const target = await prisma.portalUser.findFirst({
+    where: { id, orgId },
+    select: { id: true, name: true, email: true, _count: { select: { linkedClients: true } } },
+  });
+  if (!target) return;
+
+  await prisma.$transaction(async (tx) => {
+    // Explicit rather than relying on the cascade, so the intent is readable and
+    // it still holds if the foreign keys are ever loosened.
+    await tx.portalSession.deleteMany({ where: { portalUserId: id } });
+    await tx.portalUserClient.deleteMany({ where: { portalUserId: id } });
+    await tx.portalUser.delete({ where: { id } });
+  });
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: user.id,
+    entityType: "PortalUser",
+    entityId: id,
+    action: "PORTAL_USER_DELETED",
+    summary: `Portal login deleted for ${target.email} (${target.name})${target._count.linkedClients ? ` and its ${target._count.linkedClients} linked account(s)` : ""}`,
+  });
+
+  revalidatePath(`/clients/${clientId}`);
 }
