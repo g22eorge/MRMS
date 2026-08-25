@@ -309,70 +309,54 @@ body {
   font-family: var(--font-barlow-condensed), "Barlow Condensed", Impact, sans-serif;
   letter-spacing: 0.004em;
 }
+/* Booking-slip inputs (app/page.tsx, components/public/RepairRequestForm.tsx).
+   Declared here, unlayered, because the `:where(input, select, textarea)` rules
+   further down are unlayered too: anything in `@layer utilities` loses to them
+   regardless of specificity, and their dark form chrome inside a bone-coloured
+   slip renders white text on a near-white ground.
 
-/* The booking slip is a paper form, so its fields are ruled lines — no boxes,
-   no fills. Unlayered, because the `:where(input, select, textarea)` rules
-   further down are unlayered too and would otherwise paint the app's dark form
-   chrome inside a bone-coloured slip: white text on a near-white ground, which
-   the customer cannot read while typing.
+   Every colour is measured against its own surface rather than picked by eye,
+   because three earlier attempts failed exactly there:
 
-   Two earlier attempts are worth remembering. A #C4B99F hairline on #EDE6D6
-   paper is about 1.5:1 — invisible, and the slip read as empty space. Adding a
-   tinted fill fixed the contrast but made every field look disabled. A bare
-   ruled line at ~4:1 is both visible and obviously writable. */
+     #C4B99F rule on #EDE6D6 paper   1.5:1  — the fields were invisible
+     a tinted fill to force contrast        — every field looked disabled
+     #8F8571 placeholder on paper    2.9:1  — below the 4.5:1 text minimum
+
+   Inputs now sit on white, where a placeholder can be legible without being
+   mistaken for a value: #6E6656 on #FFFFFF is 5.7:1. The border carries 4.0:1
+   against the input and 3.2:1 against the card, so the field reads as a field
+   from either side. */
 .landing-shopfront :where(input:not([type="radio"]), textarea) {
-  border: 0;
-  border-bottom: 2px solid #6A6154;
-  border-radius: 0;
-  background: transparent;
-  color: #221E17;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.125rem;
+  border: 1px solid #8A7E64;
+  border-radius: 0.625rem;
+  background: #FFFFFF;
+  color: #1B1813;
   font-size: 1rem;
-  transition: border-color 120ms ease;
+  line-height: 1.45;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  box-shadow: none;
+  background-image: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea)::placeholder {
-  color: #8F8571;
-  font-size: 0.9375rem;
+  color: #6E6656;
+  font-size: 1rem;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea):hover {
-  border-bottom-color: #3D3729;
+  border-color: #5F574A;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus,
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus-visible {
   outline: none;
-  border-bottom-color: #221E17;
-  background: transparent;
-  box-shadow: inset 0 -2px 0 -1px #221E17;
+  border-color: #221E17;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(34, 30, 23, 0.16);
 }
-
-/* The note field is ruled like a pad, so it reads as somewhere to write a
-   sentence rather than a text box that happens to be tall. Lines are painted
-   with a gradient and `background-attachment: local`, so they scroll with the
-   text instead of staying pinned to the element. */
 .landing-shopfront textarea {
-  border-bottom: 0;
-  padding: 0.125rem 0.125rem 0;
-  line-height: 1.75rem;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 1.6875rem,
-    #C4B99F 1.6875rem,
-    #C4B99F 1.75rem
-  );
-  background-attachment: local;
-}
-.landing-shopfront textarea:focus,
-.landing-shopfront textarea:focus-visible {
-  box-shadow: none;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 1.6875rem,
-    #8F8571 1.6875rem,
-    #8F8571 1.75rem
-  );
+  min-height: 5.25rem;
+  resize: none;
+  background-image: none;
 }
 
 /* ── Glass & Shadows ─────────────────────────────────────────────────────── */

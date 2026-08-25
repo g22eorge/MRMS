@@ -177,7 +177,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
           <a
             href={`https://wa.me/${whatsappNumber}`}
             target="_blank" rel="noreferrer"
-            className="bg-[#221E17] px-5 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
+            className="rounded-[0.625rem] bg-[#221E17] px-5 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
           >
             Message us on WhatsApp
           </a>
@@ -199,9 +199,9 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
   const inputCls =
     "w-full border-b-[1.5px] border-[#C4B99F] bg-transparent px-0.5 py-1.5 text-[16px] text-[#221E17] outline-none transition placeholder:text-[#8A806E] focus:border-[#221E17]";
   const labelCls =
-    "mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6A6154]";
+    "mb-1.5 block text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[#5F574A]";
   const optionCls =
-    "flex min-h-10 cursor-pointer select-none items-center justify-center border-[1.5px] px-1 text-center text-[13.5px] leading-tight transition";
+    "flex min-h-11 cursor-pointer select-none items-center justify-center rounded-[0.625rem] border px-1 text-center text-[14px] font-medium leading-tight transition";
 
   /** Which fields each pane needs before it will let you move on. The server
    *  validates the whole payload regardless — this only avoids a pointless
@@ -301,8 +301,8 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                   <label
                     key={d.value}
                     className={`${optionCls} ${on
-                      ? "border-[#221E17] bg-[#221E17] text-[#EDE6D6]"
-                      : "border-[#C4B99F] text-[#4A4336] hover:border-[#6A6154] hover:bg-[#221E17]/[0.04]"}`}
+                      ? "border-[#221E17] bg-[#221E17] text-white shadow-[0_1px_2px_rgba(34,30,23,0.25)]"
+                      : "border-[#8A7E64] bg-white text-[#3B352A] hover:border-[#5F574A]"}`}
                   >
                     <input
                       type="radio" name="device_type" value={d.value} checked={on}
@@ -320,7 +320,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               <label className={labelCls} htmlFor="rr-brand">Make</label>
               <input
                 id="rr-brand" value={data.brand} onChange={(e) => set("brand", e.target.value)}
-                placeholder="Samsung, Apple…" className={inputCls}
+                placeholder="Samsung, Apple" className={inputCls}
               />
             </div>
             <div>
@@ -394,9 +394,9 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                 return (
                   <label
                     key={opt.value}
-                    className={`flex cursor-pointer items-baseline gap-3 border-[1.5px] px-3 py-2.5 transition ${on
-                      ? "border-[#221E17] bg-[#221E17]/6"
-                      : "border-[#C4B99F] hover:border-[#8A806E]"}`}
+                    className={`flex cursor-pointer items-baseline gap-3 rounded-[0.625rem] border bg-white px-3.5 py-3 transition ${on
+                      ? "border-[#221E17] shadow-[0_0_0_1px_#221E17]"
+                      : "border-[#8A7E64] hover:border-[#5F574A]"}`}
                   >
                     <input
                       type="radio" name="handover_method" value={opt.value} checked={on}
@@ -474,7 +474,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         {pane > 1 && (
           <button
             type="button" onClick={back}
-            className="border-[1.5px] border-[#C4B99F] px-4 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#5D5548] transition-colors hover:border-[#221E17] hover:text-[#221E17]"
+            className="rounded-[0.625rem] border border-[#8A7E64] px-4 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#5D5548] transition-colors hover:border-[#221E17] hover:text-[#221E17]"
           >
             Back
           </button>
@@ -482,14 +482,14 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         {pane < 3 ? (
           <button
             type="button" onClick={next}
-            className="flex-1 bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
+            className="flex-1 rounded-[0.625rem] bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
           >
             Continue
           </button>
         ) : (
           <button
             type="submit" disabled={busy}
-            className="flex flex-1 items-center justify-center gap-2 bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08] disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-[0.625rem] bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08] disabled:opacity-60"
           >
             {busy ? (
               <>

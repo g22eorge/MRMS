@@ -738,7 +738,7 @@ export default async function Page() {
                 and duplicated the name set beside it. */}
             <Image
               src="/eagle-info-logo-icon.png" alt="" width={224} height={224}
-              className="h-9 w-9 shrink-0 invert" priority
+              className="h-12 w-12 shrink-0 invert" priority
             />
             <span>
               <b className="block font-cond text-[25px] font-bold uppercase leading-none tracking-[0.02em]">
