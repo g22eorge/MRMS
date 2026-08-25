@@ -124,8 +124,15 @@ across 89), `InvoiceLine` rows 36 -> 102, zero job invoices left without lines,
 zero invoices whose lines disagree with their total, `foreign_key_check` clean.
 Creditable paid invoices went from 5 to 59.
 
-Not yet run on `repairmanager` — its 3 invoices are all unsettled, so there is
-nothing there to credit.
+**repairmanager result (2026-08-25):** 3 of 3 itemised, invoice sum unchanged at
+845,000 across 3, zero job invoices left without lines, zero mismatches,
+`foreign_key_check` clean. Two tenants affected — Eagle Info Solutions and
+Akimaathe Kyarumba Foundation — and the per-tenant VAT difference came through
+correctly: the two VAT-applicable jobs split into an ex-VAT line plus tax, while
+the third carried its full amount with zero tax.
+
+All three are still `ISSUED` and unpaid, so nothing is creditable there yet —
+the lines are in place for when they are settled.
 
 ### `EIS/INV/2026/0042` — corrected 2026-08-25
 
