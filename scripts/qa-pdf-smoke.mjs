@@ -20,7 +20,7 @@ import { PrismaClient } from "@prisma/client";
 import { applyQaEnv } from "./qa-env.mjs";
 
 // Build directory and database, shared with the other QA scripts.
-const { distDir: QA_DIST } = applyQaEnv();
+applyQaEnv();
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4041";
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";

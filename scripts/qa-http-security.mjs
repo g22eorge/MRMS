@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { applyQaEnv } from "./qa-env.mjs";
 
 // Build directory and database, shared with the other QA scripts.
-const { distDir: QA_DIST } = applyQaEnv();
+applyQaEnv();
 
 const base = process.env.QA_BASE_URL ?? "http://127.0.0.1:4030";
 

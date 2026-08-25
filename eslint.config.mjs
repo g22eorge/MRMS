@@ -9,8 +9,12 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
-    // Local commit-gate build output (scripts/vercel-build.mjs off-Vercel).
-    ".next-gate/**",
+    // Any alternate build output directory. scripts/build.mjs writes to
+    // .next-gate off-CI so it never cleans a running dev server's .next, and
+    // the QA scripts use .next-qa. Globbed rather than listed: an unignored
+    // build directory makes `bun run lint` report tens of thousands of problems
+    // in generated JavaScript, which is how the deploy gate failed.
+    ".next-*/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
