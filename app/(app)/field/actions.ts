@@ -12,6 +12,7 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
+import { flash } from "@/lib/flash";
 const scheduleVisitSchema = z.object({
   jobId: z.string().optional(),
   branchId: z.string().optional(),
@@ -74,7 +75,7 @@ export async function scheduleVisit(data: {
   });
 
   revalidatePath("/field");
-  redirect("/field");
+  redirect(flash("/field", "Saved"));
 }
 
 const managerStatuses: FieldVisitStatus[] = ["CANCELLED", "EN_ROUTE"];

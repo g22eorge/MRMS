@@ -12,6 +12,7 @@ import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pag
 import { createSupplierPaymentAction } from "./actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -172,7 +173,7 @@ export default async function SupplierBillsPage({
                       </select>
                       <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
                       <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</button>
+                      <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</SubmitButton>
                     </form>
                   </div>
                 </RowActionsMenu>

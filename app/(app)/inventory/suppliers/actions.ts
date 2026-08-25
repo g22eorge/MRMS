@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
+import { flash } from "@/lib/flash";
 async function requireAdmin() {
   const ctx = await requireOrgSession();
   if (!can.manageUsers(ctx.user)) redirect("/inventory");
@@ -86,7 +87,7 @@ export async function createSupplierPriceAction(formData: FormData): Promise<voi
   });
 
   revalidatePath(`/inventory/suppliers/${supplierId}`);
-  redirect(`/inventory/suppliers/${supplierId}?priceCreated=1`);
+  redirect(flash(`/inventory/suppliers/${supplierId}?priceCreated=1`, "Supplier price created"));
 }
 
 export async function updateSupplierPriceAction(formData: FormData): Promise<void> {
@@ -119,7 +120,7 @@ export async function updateSupplierPriceAction(formData: FormData): Promise<voi
   });
 
   revalidatePath(`/inventory/suppliers/${supplierId}`);
-  redirect(`/inventory/suppliers/${supplierId}?priceSaved=1`);
+  redirect(flash(`/inventory/suppliers/${supplierId}?priceSaved=1`, "Supplier price updated"));
 }
 
 export async function deleteSupplierPriceAction(formData: FormData): Promise<void> {

@@ -21,6 +21,7 @@ import { CollectPaymentButton } from "@/components/documents/CollectPaymentButto
 import { InvoiceMoreMenu } from "@/components/documents/InvoiceMoreMenu";
 import { InvoiceCreateDialog } from "../InvoiceCreateDialog";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const INVOICE_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   ISSUED: "sky",
@@ -250,12 +251,12 @@ export default async function InvoiceDetailPage({
     <>
       {canSend && invoice.client?.phone && (
         <form action={sendInvoiceWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && invoice.client?.email && (
         <form action={sendInvoiceEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       <Link href={`/api/invoices/${invoice.id}/pdf`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">PDF</Link>

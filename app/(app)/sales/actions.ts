@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
+import { findRecentDuplicate } from "@/lib/dedup";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { LeadSource, LeadStatus, QuotationStatus } from "@prisma/client";
@@ -15,7 +17,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyLeadStatus, notifyQuotationStatus } from "@/lib/notifications";
 import { createQuotationRecord, type CreateQuotationInput } from "@/lib/sales/quotation-service";
 
-import { isDoubleSubmit } from "@/lib/double-submit";
+import { flash } from "@/lib/flash";
 const createLeadSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
@@ -70,19 +72,20 @@ export async function createLead(data: {
   }
 
   // The same lead arriving twice is a double submission, not two customers.
-  // Return the row we already made rather than creating its twin.
+  // A minute is generous next to the 10s default, but re-keying the identical
+  // name and number for a second real person inside one minute does not happen,
+  // whereas a stalled request being retried does.
   const phone = sanitizeText(parsed.data.phone);
   const fullName = sanitizeText(parsed.data.fullName);
-  const recent = await prisma.lead.findFirst({
-    where: { orgId, phone, fullName, createdById: user.id },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, createdAt: true },
-  }).catch(() => null);
-  if (recent && isDoubleSubmit(recent.createdAt)) {
-    // Return the same shape as a fresh create, so a caller reading the result
-    // cannot tell -- and does not have to care -- which path it took.
+  const dup = await findRecentDuplicate(
+    prisma.lead,
+    { orgId, phone, fullName, createdById: user.id },
+    { windowMs: 60_000 },
+  ).catch(() => null);
+  if (dup) {
+    // Same shape as a fresh create, so no caller has to know which path ran.
     revalidatePath("/sales");
-    return prisma.lead.findUniqueOrThrow({ where: { id: recent.id } });
+    return dup;
   }
 
   const lead = await prisma.lead.create({
@@ -550,5 +553,5 @@ export async function deleteQuotation(quotationId: string) {
   await prisma.quotation.delete({ where: { id: quotationId } });
 
   revalidatePath("/sales");
-  redirect("/sales?tab=quotations");
+  redirect(flash("/sales?tab=quotations", "Quotation deleted"));
 }

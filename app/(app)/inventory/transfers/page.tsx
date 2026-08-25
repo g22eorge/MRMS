@@ -11,6 +11,7 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuSection, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   approveStockTransferAction,
   cancelStockTransferAction,
@@ -135,7 +136,7 @@ export default async function StockTransfersPage({
               </p>
               <form action={createLocationForTransferAction} className="flex flex-wrap gap-2">
                 <input name="name" required placeholder="e.g. Main Store, Warehouse B" className="min-w-[12rem] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-                <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add location</button>
+                <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add location</SubmitButton>
               </form>
             </div>
           ) : (
@@ -156,7 +157,7 @@ export default async function StockTransfersPage({
               </select>
               <input name="quantity" placeholder="Qty" inputMode="numeric" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="note" placeholder="Note" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</SubmitButton>
             </form>
           </div>
           )}

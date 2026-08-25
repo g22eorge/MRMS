@@ -10,6 +10,7 @@ import type { OrgModule } from "@prisma/client";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { setOrgModulesAction } from "./actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrgsPage() {
@@ -102,9 +103,9 @@ export default async function AdminOrgsPage() {
                   })}
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-xs">
+                  <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-xs">
                     Save changes
-                  </button>
+                  </SubmitButton>
                 </div>
               </form>
             </div>

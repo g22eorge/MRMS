@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { buttonClasses } from "@/components/ui/Button";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const input =
   "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
 const label = "mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]";
@@ -107,9 +108,9 @@ export function NewProductModal({
             <button type="button" onClick={() => setOpen(false)} className={buttonClasses("ghost", "sm", { className: "px-4" })}>
               Cancel
             </button>
-            <button type="submit" className={buttonClasses("primary", "sm", { className: "px-5 font-bold" })}>
+            <SubmitButton bare className={buttonClasses("primary", "sm", { className: "px-5 font-bold" })}>
               Save Product
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </Modal>

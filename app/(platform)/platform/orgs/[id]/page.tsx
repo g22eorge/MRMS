@@ -25,6 +25,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const STATUS_CHIP = PLATFORM_STATUS_CHIP;
@@ -175,9 +176,9 @@ export default async function OrgDetailPage({
               <option value="PREMIUM">Premium</option>
               <option value="ENTERPRISE">Enterprise</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
+            <SubmitButton bare className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Set Plan
-            </button>
+            </SubmitButton>
           </form>
 
           <div className="w-px bg-[var(--line)] self-stretch" />
@@ -192,9 +193,9 @@ export default async function OrgDetailPage({
               <option value="PAST_DUE">Past Due</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
+            <SubmitButton bare className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Set Status
-            </button>
+            </SubmitButton>
           </form>
 
           <div className="w-px bg-[var(--line)] self-stretch" />
@@ -210,9 +211,9 @@ export default async function OrgDetailPage({
               <option value="60">+60 days</option>
               <option value="90">+90 days</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
+            <SubmitButton bare className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Extend Trial
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>
@@ -235,9 +236,9 @@ export default async function OrgDetailPage({
               maxLength={11} pattern="[A-Za-z0-9]*"
               className="w-40 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 mono text-xs text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
-            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
+            <SubmitButton bare className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Save
-            </button>
+            </SubmitButton>
             {orgWaCfg?.atSenderId && (
               <span className="text-xs text-[var(--ink-muted)]">Current: <span className="mono font-semibold text-[var(--ink)]">{orgWaCfg.atSenderId}</span></span>
             )}
@@ -261,9 +262,9 @@ export default async function OrgDetailPage({
               <option value="claude-sonnet-4-6">Sonnet 4.6 — balanced</option>
               <option value="claude-opus-4-7">Opus 4.7 — most capable</option>
             </select>
-            <button type="submit" className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
+            <SubmitButton bare className="rounded-lg bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30">
               Save
-            </button>
+            </SubmitButton>
           </form>
           {org.aiModel && (
             <p className="text-xs text-[var(--ink-muted)]">Active: <span className="mono font-semibold text-[var(--ink)]">{org.aiModel}</span></p>
@@ -408,18 +409,15 @@ export default async function OrgDetailPage({
                 <input type="hidden" name="orgId" value={org.id} />
                 <input type="hidden" name="module" value={mod} />
                 <input type="hidden" name="currentlyEnabled" value={String(isGranted)} />
-                <button
-                  type="submit"
-                  className={`w-full rounded-xl border px-3 py-3 text-left transition-colors hover:opacity-80 ${
-                    enabled && isGranted
-                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
-                      : isGranted
-                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
-                      : enabledModuleSet.size === 0
-                      ? "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
-                      : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] opacity-60"
-                  }`}
-                >
+                <SubmitButton bare className={`w-full rounded-xl border px-3 py-3 text-left transition-colors hover:opacity-80 ${
+ enabled && isGranted
+ ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+ : isGranted
+ ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+ : enabledModuleSet.size === 0
+ ? "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
+ : "border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] opacity-60"
+ }`}>
                   <div className="flex items-center justify-between gap-1">
                     <ModuleIcon module={mod} className="h-4 w-4 text-[var(--accent)]" />
                     <span className={`h-2 w-2 rounded-full ${isGranted ? "bg-emerald-500" : enabledModuleSet.size === 0 ? "bg-[var(--ink-muted)]/30" : "bg-red-400"}`} />
@@ -428,7 +426,7 @@ export default async function OrgDetailPage({
                   <p className="mt-0.5 text-[0.75rem] font-semibold uppercase tracking-wide opacity-60">
                     {isGranted ? "ON — click to disable" : enabledModuleSet.size === 0 ? "default on" : "OFF — click to enable"}
                   </p>
-                </button>
+                </SubmitButton>
               </form>
             );
           })}
@@ -447,16 +445,13 @@ export default async function OrgDetailPage({
           <form action={toggleOrgActive}>
             <input type="hidden" name="orgId" value={org.id} />
             <input type="hidden" name="isActive" value={String(org.isActive)} />
-            <button
-              type="submit"
-              className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-colors ${
-                org.isActive
-                  ? "border-red-400/30 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-400"
-                  : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
-              }`}
-            >
+            <SubmitButton bare className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-colors ${
+ org.isActive
+ ? "border-red-400/30 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-400"
+ : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
+ }`}>
               {org.isActive ? "Deactivate Organisation" : "Reactivate Organisation"}
-            </button>
+            </SubmitButton>
           </form>
           <p className="text-xs text-red-600/70">
             {org.isActive

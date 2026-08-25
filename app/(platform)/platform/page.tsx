@@ -6,6 +6,7 @@ import { runCommercialSeedAction } from "./actions";
 import { OrgTable } from "./OrgTable";
 import type { OrgRow } from "./OrgTable";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
 export const dynamic = "force-dynamic";
@@ -101,9 +102,9 @@ export default async function PlatformPage() {
           <p className="mt-0.5 text-sm text-[var(--ink-muted)]">{orgs.length} registered</p>
         </div>
         <form action={runCommercialSeedAction}>
-          <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]">
+          <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]">
             + Seed Demo Data
-          </button>
+          </SubmitButton>
         </form>
       </div>
 

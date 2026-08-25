@@ -7,6 +7,7 @@ import { PLATFORM_PLAN_TONE, PLATFORM_ROUTES, PLATFORM_STATUS_TONE } from "@/lib
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor } from "@/components/ui/StatusBadge";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export type OrgRow = {
   id: string;
   name: string;
@@ -186,9 +187,9 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                     <option value="PREMIUM">Premium</option>
                     <option value="ENTERPRISE">Enterprise</option>
                   </select>
-                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]">
+                  <SubmitButton bare className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]">
                     Plan
-                  </button>
+                  </SubmitButton>
                 </form>
 
                 {/* Status */}
@@ -204,9 +205,9 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
                     <option value="PAST_DUE">Past Due</option>
                     <option value="CANCELLED">Cancelled</option>
                   </select>
-                  <button type="submit" className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
+                  <SubmitButton bare className="rounded border border-[var(--line)] bg-[var(--panel-strong)] px-1.5 py-0.5 font-semibold text-[var(--ink-muted)] hover:border-sky-400/60 hover:text-sky-600">
                     Status
-                  </button>
+                  </SubmitButton>
                 </form>
 
                 <Link

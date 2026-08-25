@@ -24,6 +24,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { parsePeriodInt } from "@/lib/date-eat";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
@@ -390,12 +391,9 @@ export default async function JournalPage({
           placeholder="Search description, reference…"
           className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         />
-        <button
-          type="submit"
-          className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold"
-        >
+        <SubmitButton bare className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold">
           Filter
-        </button>
+        </SubmitButton>
         {(month > 0 || statusFilter !== "all" || searchQ) && (
           <Link
             href="/finance/journal"
@@ -482,23 +480,17 @@ export default async function JournalPage({
                       {entry.status === "DRAFT" && (
                         <form action={postEntry}>
                           <input type="hidden" name="id" value={entry.id} />
-                          <button
-                            type="submit"
-                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
-                          >
+                          <SubmitButton bare className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]">
                             ✓ Post Entry
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                       {entry.status === "POSTED" && (
                         <form action={voidEntry}>
                           <input type="hidden" name="id" value={entry.id} />
-                          <button
-                            type="submit"
-                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
-                          >
+                          <SubmitButton bare className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]">
                             Void Entry
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                       {entry.status === "DRAFT" && (

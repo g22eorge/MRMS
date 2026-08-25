@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { buttonClasses, type ButtonSize, type ButtonVariant } from "@/components/ui/Button";
@@ -14,6 +14,19 @@ import { buttonClasses, type ButtonSize, type ButtonVariant } from "@/components
  * Must be rendered inside a <form> (server-action or otherwise). Styling matches
  * <Button> via the shared buttonClasses().
  */
+/**
+ * Everything a plain <button> accepts, minus the props this component owns.
+ *
+ * Submits in the wild carry `title`, `name`/`value`, `formAction` (which is how
+ * one form drives several server actions) and the odd `onClick`. Without these
+ * passed through, replacing a plain submit with this component silently drops
+ * behaviour, so the rest is forwarded verbatim.
+ */
+type NativeSubmitProps = Omit<
+  ComponentPropsWithoutRef<"button">,
+  "type" | "disabled" | "className" | "children"
+>;
+
 export function SubmitButton({
   children,
   pendingLabel = "Working…",
@@ -23,7 +36,8 @@ export function SubmitButton({
   className,
   disabled,
   bare,
-}: {
+  ...rest
+}: NativeSubmitProps & {
   children: ReactNode;
   pendingLabel?: ReactNode;
   variant?: ButtonVariant;
@@ -41,6 +55,7 @@ export function SubmitButton({
   const { pending } = useFormStatus();
   return (
     <button
+      {...rest}
       type="submit"
       disabled={pending || disabled}
       aria-busy={pending || undefined}

@@ -17,6 +17,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { clientDisplayName } from "@/lib/client-name";
+import { findRecentDuplicate } from "@/lib/dedup";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const FREQUENCIES = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
@@ -190,6 +192,14 @@ export default async function RecurringInvoicesPage({
     const nextDue = nextDueDateFromFrequency(new Date(), frequency);
 
     await prisma.$transaction(async (tx) => {
+      // Generating the same recurring invoice twice bills the client twice and
+      // burns a document number. Inside the transaction so a racing second
+      // request sees the first one's row.
+      const dup = await findRecentDuplicate(tx.invoice, {
+        orgId, clientId: rec.clientId, totalAmount, subject: rec.subject,
+      });
+      if (dup) return;
+
       const invoiceNumber = await nextDocumentNumber(tx, "INV", "invoice", orgId);
       const invoice = await tx.invoice.create({
         data: {
@@ -278,15 +288,15 @@ export default async function RecurringInvoicesPage({
       <div className="px-3 py-1">
         <form action={issueNowAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+          <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             Issue Invoice Now
-          </button>
+          </SubmitButton>
         </form>
         <form action={toggleRecurringAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+          <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             {rec.isActive ? "Pause" : "Resume"}
-          </button>
+          </SubmitButton>
         </form>
       </div>
       <MenuDestructiveRow>
@@ -390,9 +400,9 @@ export default async function RecurringInvoicesPage({
                 <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
                 <textarea name="notes" rows={2} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
               </div>
-              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
+              <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
                 Create Template
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </details>
@@ -403,7 +413,7 @@ export default async function RecurringInvoicesPage({
       <form method="GET" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search subject, client…"
           className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+        <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
         {q && <a href="/finance/recurring" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
       </form>
 

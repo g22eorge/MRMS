@@ -13,6 +13,7 @@ import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
 import { updateLeadStatus, addLeadActivity, updateLeadDetails } from "../../actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
@@ -195,7 +196,7 @@ export default async function LeadDetailPage({
                     ))}
                   </select>
                   <input name="note" placeholder="Optional note" className={field} />
-                  <Button type="submit" variant="secondary" size="sm">Update Stage</Button>
+                  <SubmitButton variant="secondary" size="sm">Update Stage</SubmitButton>
                 </div>
               </form>
             </section>
@@ -237,7 +238,7 @@ export default async function LeadDetailPage({
                   <textarea name="notes" rows={2} defaultValue={lead.notes ?? ""} placeholder="Notes" aria-label="Notes" className={`${field} sm:col-span-2 lg:col-span-3`} />
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <Button type="submit" size="sm" className="px-4 font-bold">Save Lead</Button>
+                  <SubmitButton size="sm" className="px-4 font-bold">Save Lead</SubmitButton>
                   <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
                 </div>
               </form>
@@ -279,7 +280,7 @@ export default async function LeadDetailPage({
                     <option value="MEETING">Meeting</option>
                   </select>
                   <input name="note" required placeholder="Activity note" className={field} />
-                  <Button type="submit" variant="secondary" size="sm">Add</Button>
+                  <SubmitButton variant="secondary" size="sm">Add</SubmitButton>
                 </div>
               </form>
             ) : null}

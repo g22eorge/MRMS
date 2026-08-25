@@ -15,6 +15,7 @@ import { SupplierActivityFeed, type SupplierActivityItem } from "./SupplierActiv
 import { createSupplierPriceAction, deleteSupplierPriceAction, updateSupplierPriceAction } from "../actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const PO_STATUS_TONES: Record<string, BadgeTone> = {
@@ -301,7 +302,7 @@ export default async function SupplierDetailPage({
               <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-semibold">Add</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-semibold">Add</SubmitButton>
             </form>
 
             <DataTable
@@ -343,12 +344,12 @@ export default async function SupplierDetailPage({
                         <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
                       </div>
                       <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 uppercase outline-none focus:border-[var(--accent)]/60" />
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Price</button>
+                      <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Price</SubmitButton>
                     </form>
                     <form action={deleteSupplierPriceAction} className="mt-2 border-t border-[var(--line)] pt-2">
                       <input type="hidden" name="id" value={price.id} />
                       <input type="hidden" name="supplierId" value={supplier.id} />
-                      <button type="submit" className="font-semibold text-red-600 hover:text-red-700">Delete</button>
+                      <SubmitButton bare className="font-semibold text-red-600 hover:text-red-700">Delete</SubmitButton>
                     </form>
                   </div>
                 </RowActionsMenu>

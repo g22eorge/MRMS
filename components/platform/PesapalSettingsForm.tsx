@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { savePesapalSettingsAction, clearPesapalKeyAction, registerIpnAction } from "@/app/(platform)/platform/settings/actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 type Configured = {
   PESAPAL_CONSUMER_KEY: boolean;
   PESAPAL_CONSUMER_SECRET: boolean;
@@ -66,9 +67,9 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
                 {isInDb && (
                   <form action={clearAction}>
                     <input type="hidden" name="key" value={f.key} />
-                    <button type="submit" className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
+                    <SubmitButton bare className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
                       Clear
-                    </button>
+                    </SubmitButton>
                   </form>
                 )}
               </div>
@@ -80,13 +81,10 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
         {saveState && !saveState.ok && <p className="text-xs text-red-600">{saveState.error ?? "Save failed"}</p>}
         {saveState?.ok && <p className="text-xs text-emerald-600">Settings saved successfully.</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-        >
+        <SubmitButton bare disabled={saving}
+ className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
           {saving ? "Saving…" : "Save Pesapal Settings"}
-        </button>
+        </SubmitButton>
       </form>
 
       {/* IPN registration */}
@@ -108,18 +106,15 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
             </p>
           </div>
           <form action={ipnAction}>
-            <button
-              type="submit"
-              disabled={registering}
-              className="rounded-md bg-[var(--accent)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors disabled:opacity-50"
-            >
+            <SubmitButton bare disabled={registering}
+ className="rounded-md bg-[var(--accent)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors disabled:opacity-50">
               {registering ? "Registering…" : (ipnState?.ipnId ?? ipnId) ? "Re-register IPN" : "Register IPN"}
-            </button>
+            </SubmitButton>
           </form>
           {configured.PESAPAL_IPN_ID_inDb && (
             <form action={clearAction}>
               <input type="hidden" name="key" value="PESAPAL_IPN_ID" />
-              <button type="submit" className="text-[0.75rem] text-red-500 underline underline-offset-2">Clear</button>
+              <SubmitButton bare className="text-[0.75rem] text-red-500 underline underline-offset-2">Clear</SubmitButton>
             </form>
           )}
         </div>

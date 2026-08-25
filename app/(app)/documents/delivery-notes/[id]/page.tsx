@@ -16,6 +16,8 @@ import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
 const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 const clientSelect = { fullName: true, phone: true, email: true, organization: true, address: true } as const;
@@ -64,7 +66,7 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
     if (!description) return;
     await prisma.deliveryNoteItem.create({ data: { deliveryNoteId: id, description, quantity } });
     revalidatePath(`/documents/delivery-notes/${id}`);
-    redirect(`/documents/delivery-notes/${id}?edit=1`);
+    redirect(flash(`/documents/delivery-notes/${id}?edit=1`, "Delivery item added"));
   }
 
   async function updateDeliveryItem(fd: FormData) {
@@ -79,7 +81,7 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
     const quantity = Math.max(1, Math.round(Number(fd.get("quantity")) || 1));
     await prisma.deliveryNoteItem.update({ where: { id: itemId }, data: { ...(description ? { description } : {}), quantity } });
     revalidatePath(`/documents/delivery-notes/${id}`);
-    redirect(`/documents/delivery-notes/${id}?edit=1`);
+    redirect(flash(`/documents/delivery-notes/${id}?edit=1`, "Delivery item updated"));
   }
 
   async function removeDeliveryItem(fd: FormData) {
@@ -92,7 +94,7 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
     if (!owned) return;
     await prisma.deliveryNoteItem.delete({ where: { id: itemId } });
     revalidatePath(`/documents/delivery-notes/${id}`);
-    redirect(`/documents/delivery-notes/${id}?edit=1`);
+    redirect(flash(`/documents/delivery-notes/${id}?edit=1`, "Delivery item removed"));
   }
 
   const client = note.invoice?.job?.client ?? note.invoice?.client ?? note.sale?.client ?? null;
@@ -126,12 +128,12 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
     <>
       {canSend && client?.phone && (
         <form action={sendDeliveryNoteWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && client?.email && (
         <form action={sendDeliveryNoteEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       <a href={`/api/delivery-notes/${note.id}`} target="_blank" rel="noreferrer" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</a>
@@ -192,11 +194,11 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
                       <label className="w-16 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                         <input name="quantity" type="number" min="1" step="1" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</button>
+                      <SubmitButton bare className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</SubmitButton>
                     </form>
                     <form action={removeDeliveryItem}>
                       <input type="hidden" name="itemId" value={item.id} />
-                      <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                      <SubmitButton bare className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</SubmitButton>
                     </form>
                   </div>
                 ))}
@@ -207,7 +209,7 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
                   <label className="w-16 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                     <input name="quantity" type="number" min="1" step="1" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                   </label>
-                  <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add</button>
+                  <SubmitButton bare className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add</SubmitButton>
                 </form>
               </div>
             ) : note.items.length ? (

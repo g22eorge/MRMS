@@ -55,6 +55,7 @@ import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export type JobRow = {
   id: string;
   jobNumber: string;
@@ -560,11 +561,10 @@ export function JobTable({
                 <form action={quickAdvanceAction} className="flex border-t border-[var(--line)]/50 lg:hidden">
                   <input type="hidden" name="jobId" value={job.id} />
                   <input type="hidden" name="toStatus" value="DIAGNOSING" />
-                  <button type="submit"
-                    className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[0.75rem] font-semibold text-sky-600 transition active:bg-sky-500/10">
+                  <SubmitButton bare className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2 text-[0.75rem] font-semibold text-sky-600 transition active:bg-sky-500/10">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     Start diagnosis
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : null}
 

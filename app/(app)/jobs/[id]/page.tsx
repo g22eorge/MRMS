@@ -17,6 +17,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export default async function JobDetailPage({
   params,
   searchParams,
@@ -342,7 +343,7 @@ export default async function JobDetailPage({
       <form action={staffReplyRepairMessageAction} className="flex gap-2">
         <input type="hidden" name="jobId" value={id} />
         <input name="body" required pattern=".*\S.*" title="Type a message before sending." maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</button>
+        <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</SubmitButton>
       </form>
     </div>
   ) : null;
@@ -362,7 +363,7 @@ export default async function JobDetailPage({
             {canAssess ? (
               <form action={generateAssessmentAction}>
                 <input type="hidden" name="jobId" value={id} />
-                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
+                <SubmitButton bare className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</SubmitButton>
               </form>
             ) : (
               <button type="button" disabled title="Add the diagnosis and repair details first" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] opacity-60"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
@@ -385,12 +386,12 @@ export default async function JobDetailPage({
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
                       <input type="hidden" name="visible" value={String(!visible)} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</button>
+                      <SubmitButton bare className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</SubmitButton>
                     </form>
                     <form action={deleteAssessmentAction}>
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
-                      <button type="submit" className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[0.75rem] font-semibold text-red-500 hover:bg-red-500/10">Delete</button>
+                      <SubmitButton bare className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[0.75rem] font-semibold text-red-500 hover:bg-red-500/10">Delete</SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -401,7 +402,7 @@ export default async function JobDetailPage({
                   <textarea name="findings" defaultValue={r.findings ?? ""} rows={2} placeholder="Inspection findings" className={ta} />
                   <textarea name="recommendedWork" defaultValue={r.recommendedWork ?? ""} rows={2} placeholder="Recommended / completed work" className={ta} />
                   <textarea name="riskNotes" defaultValue={r.riskNotes ?? ""} rows={2} placeholder="Notes / recommendations" className={ta} />
-                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Save report</button>
+                  <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Save report</SubmitButton>
                 </form>
               </div>
             );
@@ -419,7 +420,7 @@ export default async function JobDetailPage({
             <input type="hidden" name="jobId" value={id} />
             <input name="months" type="number" min={0} max={60} defaultValue={warrantyInfo?.warrantyMonths ?? 0} className="w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" />
             <span className="text-[0.8125rem] text-[var(--ink-muted)]">months</span>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</button>
+            <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</SubmitButton>
           </form>
         </div>
       </div>

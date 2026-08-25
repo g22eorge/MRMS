@@ -26,6 +26,7 @@ import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
@@ -147,7 +148,7 @@ export default async function PosPage({
     });
 
     revalidatePath("/pos");
-    redirect(`/pos/${sale.id}`);
+    redirect(flash(`/pos/${sale.id}`, "Sale created"));
   }
 
   async function deleteSaleAction(formData: FormData) {
@@ -475,7 +476,7 @@ export default async function PosPage({
             placeholder="Search by sale number, client or note..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
-          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {hasSaleFilters ? (
             <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}

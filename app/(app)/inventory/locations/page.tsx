@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { createStockLocationAction, toggleStockLocationAction, updateStockLocationAction } from "./actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function StockLocationsPage({
@@ -73,14 +74,14 @@ export default async function StockLocationsPage({
           <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink-muted)]">
             <input type="checkbox" name="isActive" value="1" defaultChecked={location.isActive} /> Active
           </label>
-          <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</SubmitButton>
         </form>
         <form action={toggleStockLocationAction} className="mt-2 border-t border-[var(--line)] pt-2">
           <input type="hidden" name="id" value={location.id} />
           <input type="hidden" name="isActive" value={location.isActive ? "0" : "1"} />
-          <button type="submit" className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
+          <SubmitButton bare className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             {location.isActive ? "Deactivate" : "Activate"}
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </RowActionsMenu>
@@ -113,7 +114,7 @@ export default async function StockLocationsPage({
                 <option value="">No branch</option>
                 {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
               </select>
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Create</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Create</SubmitButton>
             </form>
           </div>
         </>

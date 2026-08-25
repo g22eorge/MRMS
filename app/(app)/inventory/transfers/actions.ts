@@ -12,6 +12,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import type { Prisma } from "@prisma/client";
 import { notifyStockTransferUpdated } from "@/lib/notifications";
 
+import { flash } from "@/lib/flash";
 async function requireInventoryManager() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -72,7 +73,7 @@ export async function createStockTransferAction(formData: FormData): Promise<voi
   }).catch(() => redirect("/inventory/transfers?error=Failed+to+create+transfer"));
 
   revalidatePath("/inventory/transfers");
-  redirect("/inventory/transfers?created=1");
+  redirect(flash("/inventory/transfers?created=1", "Stock transfer created"));
 }
 
 // Inline location-create from the transfers page: a transfer needs two
@@ -88,7 +89,7 @@ export async function createLocationForTransferAction(formData: FormData): Promi
     redirect("/inventory/transfers?error=Failed+to+create+location");
   }
   revalidatePath("/inventory/transfers");
-  redirect("/inventory/transfers?created=location");
+  redirect(flash("/inventory/transfers?created=location", "Stock location created"));
 }
 
 export async function approveStockTransferAction(formData: FormData) {

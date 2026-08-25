@@ -14,6 +14,7 @@ import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsOutbox } from "@/lib/communications/revalidate";
 import { deliverOutboundMessageForOrg, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
@@ -277,16 +278,13 @@ export default async function OutboxPage({
             Preferences
           </Link>
           <form action={retryNowAction}>
-            <button
-              type="submit"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105"
-            >
+            <SubmitButton bare className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
               </svg>
               Run Retry
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>

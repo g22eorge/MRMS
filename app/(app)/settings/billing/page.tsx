@@ -13,6 +13,8 @@ import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { formatMoney } from "@/lib/currency";
 import { getPesapalConsumerKey, getPesapalConsumerSecret } from "@/lib/platform-settings";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 // ── Server actions ────────────────────────────────────────────────────────────
 
 async function startGrowthTrial() {
@@ -38,7 +40,7 @@ async function startGrowthTrial() {
   });
 
   revalidatePath("/settings/billing");
-  redirect("/dashboard");
+  redirect(flash("/dashboard", "Saved"));
 }
 
 async function subscribeToPlan(formData: FormData) {
@@ -291,25 +293,19 @@ export default async function BillingPage({
                 <div className="space-y-2">
                   <form action={subscribeToPlan}>
                     <input type="hidden" name="plan" value={key} />
-                    <button
-                      type="submit"
-                      className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                        highlight
-                          ? "btn-premium text-white"
-                          : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--accent)]/10"
-                      }`}
-                    >
+                    <SubmitButton bare className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+ highlight
+ ? "btn-premium text-white"
+ : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--accent)]/10"
+ }`}>
                       Subscribe to {PLAN_LABELS[key]}
-                    </button>
+                    </SubmitButton>
                   </form>
                   {key === "GROWTH" && canStartGrowthTrial && (
                     <form action={startGrowthTrial}>
-                      <button
-                        type="submit"
-                        className="w-full rounded-lg border border-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
-                      >
+                      <SubmitButton bare className="w-full rounded-lg border border-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors">
                         Try Growth free for 14 days
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                 </div>
@@ -492,12 +488,9 @@ export default async function BillingPage({
 
         {isAdmin && org.billingStatus === "ACTIVE" && (
           <form action={cancelPlan}>
-            <button
-              type="submit"
-              className="text-xs text-red-500 underline underline-offset-2 hover:text-red-600"
-            >
+            <SubmitButton bare className="text-xs text-red-500 underline underline-offset-2 hover:text-red-600">
               Cancel subscription
-            </button>
+            </SubmitButton>
           </form>
         )}
       </section>
@@ -576,12 +569,9 @@ export default async function BillingPage({
               {canSubscribe && (
                 <form action={subscribeToPlan}>
                   <input type="hidden" name="plan" value={key} />
-                  <button
-                    type="submit"
-                    className="btn-premium w-full rounded-lg py-2 text-sm font-semibold text-white"
-                  >
+                  <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-sm font-semibold text-white">
                     Upgrade to {PLAN_LABELS[key]}
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
 

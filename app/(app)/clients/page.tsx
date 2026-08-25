@@ -20,6 +20,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   formatPhoneDisplay,
   normalizePhoneForStorage,
@@ -28,6 +29,7 @@ import {
   phoneWhatsAppHref,
 } from "@/lib/phone";
 
+import { flash } from "@/lib/flash";
 const createClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
@@ -175,7 +177,7 @@ export default async function ClientsPage({
     revalidatePath("/clients");
 
     // Close the quick-create panel by returning to the base URL.
-    redirect("/clients");
+    redirect(flash("/clients", "Client created"));
   }
 
   async function deleteClientAction(formData: FormData) {
@@ -387,7 +389,7 @@ export default async function ClientsPage({
               placeholder="Search by name, phone, email, address..."
               className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
             />
-            <button type="submit" className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Search</button>
+            <SubmitButton bare className="btn-premium-secondary shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Search</SubmitButton>
             {hasClientFilters ? (
               <Link href="/clients" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
             ) : null}
@@ -411,9 +413,9 @@ export default async function ClientsPage({
                 <input name="address" placeholder="Address / location" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:col-span-2" />
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <button type="submit" className="btn-premium rounded-lg px-4 py-2.5 text-[0.8125rem] font-bold">
+                <SubmitButton bare className="btn-premium rounded-lg px-4 py-2.5 text-[0.8125rem] font-bold">
                   Create
-                </button>
+                </SubmitButton>
                 <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">
                   Cancel
                 </DisclosureClose>
@@ -479,10 +481,10 @@ export default async function ClientsPage({
                   {user.role === "ADMIN" && client._count.jobs === 0 ? (
                     <form action={deleteClientAction}>
                       <input type="hidden" name="id" value={client.id} />
-                      <button type="submit" aria-label="Delete client"
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]/50 active:text-red-500">
+                      <SubmitButton bare aria-label="Delete client"
+ className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]/50 active:text-red-500">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : null}
                 </div>
@@ -567,10 +569,10 @@ export default async function ClientsPage({
                 {user.role === "ADMIN" && client._count.jobs === 0 ? (
                   <form action={deleteClientAction} className="inline">
                     <input type="hidden" name="id" value={client.id} />
-                    <button type="submit" title="Delete client"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
+                    <SubmitButton bare title="Delete client"
+ className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </>

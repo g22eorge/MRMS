@@ -31,6 +31,7 @@ import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
 export default async function DeliveryNotesPage({
@@ -167,7 +168,7 @@ export default async function DeliveryNotesPage({
 
     revalidatePath("/documents/delivery-notes");
     revalidatePath("/documents/invoices");
-    redirect("/documents/delivery-notes");
+    redirect(flash("/documents/delivery-notes", "Delivery note created"));
   }
 
   async function updateDeliveryNoteAction(formData: FormData) {
@@ -200,7 +201,7 @@ export default async function DeliveryNotesPage({
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: deliveryNoteId, action: "DELIVERY_NOTE_UPDATED", summary: "Delivery note updated" });
 
     revalidatePath("/documents/delivery-notes");
-    redirect("/documents/delivery-notes");
+    redirect(flash("/documents/delivery-notes", "Delivery note updated"));
   }
 
   async function deleteDeliveryNoteAction(formData: FormData) {
@@ -215,7 +216,7 @@ export default async function DeliveryNotesPage({
     await prisma.deliveryNote.deleteMany({ where: { id: deliveryNoteId, orgId } });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: deliveryNoteId, action: "DELIVERY_NOTE_DELETED", summary: "Delivery note deleted" });
     revalidatePath("/documents/delivery-notes");
-    redirect("/documents/delivery-notes");
+    redirect(flash("/documents/delivery-notes", "Delivery note deleted"));
   }
 
   async function shareDeliveryNoteWhatsAppAction(formData: FormData) {
@@ -227,7 +228,7 @@ export default async function DeliveryNotesPage({
     if (!deliveryNoteId) return;
     await shareDeliveryNoteDocument({ orgId, deliveryNoteId, channel: "whatsapp" });
     revalidatePath("/documents/delivery-notes");
-    redirect("/documents/delivery-notes");
+    redirect(flash("/documents/delivery-notes", "Saved"));
   }
 
   async function shareDeliveryNoteEmailAction(formData: FormData) {
@@ -239,7 +240,7 @@ export default async function DeliveryNotesPage({
     if (!deliveryNoteId) return;
     await shareDeliveryNoteDocument({ orgId, deliveryNoteId, channel: "email" });
     revalidatePath("/documents/delivery-notes");
-    redirect("/documents/delivery-notes");
+    redirect(flash("/documents/delivery-notes", "Saved"));
   }
 
   type DeliveryNoteRow = {

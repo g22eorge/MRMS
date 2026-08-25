@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/currency";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 import { approveQuotationAction, postRepairMessageAction } from "./actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 // Customer-facing repair steps (internal workshop sub-states are collapsed).
@@ -201,9 +202,9 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
                   <form action={approveQuotationAction}>
                     <input type="hidden" name="quotationId" value={q.id} />
                     <input type="hidden" name="jobId" value={job.id} />
-                    <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1 text-[0.75rem] font-semibold text-white transition hover:bg-emerald-700">
+                    <SubmitButton bare className="rounded-lg bg-emerald-600 px-3 py-1 text-[0.75rem] font-semibold text-white transition hover:bg-emerald-700">
                       Approve
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -273,7 +274,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
             placeholder="Write a message…"
             className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
           />
-          <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Send</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Send</SubmitButton>
         </form>
       </div>
 

@@ -7,6 +7,7 @@ import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { DocumentSourcePicker } from "@/components/documents/DocumentSourcePicker";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 type SourceLine = {
   id: string;
   description: string;
@@ -187,22 +188,16 @@ export function CreateCreditNoteDialog({ eligibleSources, action, returnAndRefun
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={selected.items.length === 0}
-                className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
+              <SubmitButton bare disabled={selected.items.length === 0}
+ className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)] hover:border-[var(--accent)]/50 disabled:cursor-not-allowed disabled:opacity-40">
                 Create only
-              </button>
-              <button
-                type="submit"
-                disabled={selected.items.length === 0}
-                formAction={returnAndRefundAction}
-                onClick={(e) => { if (!window.confirm("Create the credit note, restock the selected items, and refund them in full now?")) e.preventDefault(); }}
-                className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-              >
+              </SubmitButton>
+              <SubmitButton bare disabled={selected.items.length === 0}
+ formAction={returnAndRefundAction}
+ onClick={(e) => { if (!window.confirm("Create the credit note, restock the selected items, and refund them in full now?")) e.preventDefault(); }}
+ className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40">
                 Return &amp; refund now
-              </button>
+              </SubmitButton>
             </div>
           </form>
         ) : (

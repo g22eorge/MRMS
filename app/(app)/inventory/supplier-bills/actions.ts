@@ -11,6 +11,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
+import { findRecentDuplicate } from "@/lib/dedup";
 async function requireInventoryManager() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -195,6 +196,14 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
 
     const balance = bill.totalAmount - bill.paidAmount;
     if (amount > balance) return null;
+
+    // Paying a supplier bill twice overstates what we have paid out and throws
+    // the bill's balance off, so the same amount arriving twice in seconds is
+    // treated as one submission.
+    const dup = await findRecentDuplicate(tx.supplierPayment, {
+      orgId, billId, amount, createdById: session.user.id,
+    });
+    if (dup) return null;
 
     const nextPaid = bill.paidAmount + amount;
     const supplierPayment = await tx.supplierPayment.create({

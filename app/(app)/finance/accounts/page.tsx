@@ -22,6 +22,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
 // Plain-English names so a non-accountant can pick the right type.
@@ -223,12 +224,9 @@ export default async function ChartOfAccountsPage({
             <MenuSection label="Actions" />
             <form action={toggleActive}>
               <input type="hidden" name="id" value={acc.id} />
-              <button
-                type="submit"
-                className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
-              >
+              <SubmitButton bare className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]">
                 {acc.isActive ? "Deactivate" : "Activate"}
-              </button>
+              </SubmitButton>
             </form>
             <MenuDestructiveRow>
               <form action={deleteAccount}>
@@ -290,24 +288,18 @@ export default async function ChartOfAccountsPage({
           description="Load the standard chart of accounts to get started instantly — 40 accounts covering assets, liabilities, equity, revenue, and expenses. You can edit or delete them afterwards."
           action={
             <form action={seedDefaults}>
-              <button
-                type="submit"
-                className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold"
-              >
+              <SubmitButton bare className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold">
                 Load standard accounts
-              </button>
+              </SubmitButton>
             </form>
           }
         />
       ) : (
         <form action={seedDefaults} className="flex justify-end">
-          <button
-            type="submit"
-            title="Adds any missing standard accounts — existing codes are skipped"
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-          >
+          <SubmitButton bare title="Adds any missing standard accounts — existing codes are skipped"
+ className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
             + Load standard defaults
-          </button>
+          </SubmitButton>
         </form>
       )}
 
@@ -371,12 +363,9 @@ export default async function ChartOfAccountsPage({
             />
           </div>
           <div className="flex justify-end sm:col-span-3">
-            <button
-              type="submit"
-              className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold"
-            >
+            <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
               Create Account
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </details>

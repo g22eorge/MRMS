@@ -49,6 +49,8 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
@@ -326,7 +328,7 @@ export default async function InvoicesPage({
       });
     }
     revalidatePath("/documents/invoices");
-    redirect(`/documents/invoices/${invoice.id}?pay=1`);
+    redirect(flash(`/documents/invoices/${invoice.id}?pay=1`, "Standalone invoice created"));
   }
 
   // Row-menu Send — works for standalone AND job-linked invoices, logs to the
@@ -689,19 +691,17 @@ export default async function InvoicesPage({
               { key: "PAID", label: "Paid" },
               { key: "OVERDUE", label: "Overdue" },
             ].map((s) => (
-              <button
-                key={s.key}
-                type="submit"
-                name="status"
-                value={s.key}
-                className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
-                  statusFilter === s.key
-                    ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
-                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
-                }`}
-              >
+              <SubmitButton bare key={s.key}
+
+ name="status"
+ value={s.key}
+ className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
+ statusFilter === s.key
+ ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
+ : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+ }`}>
                 {s.label}
-              </button>
+              </SubmitButton>
             ))}
           </div>
           <label className="sr-only" htmlFor="inv-search">Search invoices</label>

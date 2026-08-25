@@ -30,6 +30,7 @@ import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -348,7 +349,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: sale.id, action: "POS_SALE_DELETED", summary: "Open POS sale deleted" });
 
     revalidatePath("/pos");
-    redirect("/pos");
+    redirect(flash("/pos", "Sale deleted"));
   }
 
   async function updateItemAction(formData: FormData) {
@@ -1081,9 +1082,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                     <form id={`edit-item-${it.id}`} action={updateItemAction}>
                       <input type="hidden" name="saleId" value={sale.id} />
                       <input type="hidden" name="itemId" value={it.id} />
-                      <button type="submit" title="Save line" className={iconBtn}>
+                      <SubmitButton bare title="Save line" className={iconBtn}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
+                      </SubmitButton>
                     </form>
                     <form action={deleteItemAction}>
                       <input type="hidden" name="saleId" value={sale.id} />
@@ -1341,7 +1342,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                         <input type="hidden" name="saleId" value={sale.id} />
                         <input type="hidden" name="creditNoteId" value={cn.id} />
                         <input name="note" placeholder="Stock received note (optional)" className={`${fieldOnStrong} min-w-[200px] flex-1`} />
-                        <Button type="submit" variant="secondary" size="sm">Mark items received</Button>
+                        <SubmitButton variant="secondary" size="sm">Mark items received</SubmitButton>
                       </form>
                     ) : cn.itemsReceivedBackNote ? (
                       <p className="border-t border-[var(--line)] px-3 py-2 text-[0.75rem] text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>

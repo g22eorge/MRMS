@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function TaxRatesPage({
@@ -134,17 +135,17 @@ export default async function TaxRatesPage({
         <form action={toggleTaxRateAction}>
           <input type="hidden" name="taxRateId" value={rate.id} />
           <input type="hidden" name="action" value="toggle" />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+          <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             {rate.isActive ? "Deactivate" : "Activate"}
-          </button>
+          </SubmitButton>
         </form>
         {!rate.isDefault && (
           <form action={toggleTaxRateAction}>
             <input type="hidden" name="taxRateId" value={rate.id} />
             <input type="hidden" name="action" value="setDefault" />
-            <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+            <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
               Set as Default
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>
@@ -211,9 +212,9 @@ export default async function TaxRatesPage({
                   Set as default rate
                 </label>
               </div>
-              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
+              <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
                 Create Tax Rate
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </details>
@@ -224,7 +225,7 @@ export default async function TaxRatesPage({
       <form method="GET" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search name, code…"
           className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+        <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
         {q && <a href="/finance/tax-rates" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
       </form>
 

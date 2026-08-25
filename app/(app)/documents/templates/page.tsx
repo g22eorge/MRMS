@@ -19,6 +19,7 @@ import {
 } from "@/lib/pdf/templates";
 import type { OrgPlan } from "@prisma/client";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 // ── Plan badge colours ────────────────────────────────────────────────────────
@@ -237,7 +238,7 @@ export default async function DocumentTemplatesPage() {
                             <form action={setTemplateAction} className="min-w-0 flex-1">
                               <input type="hidden" name="key"  value={t.key} />
                               <input type="hidden" name="kind" value={kind}  />
-                              <Button type="submit" variant="secondary" size="sm" fullWidth>Set default</Button>
+                              <SubmitButton variant="secondary" size="sm" fullWidth>Set default</SubmitButton>
                             </form>
                           )
                         ) : (

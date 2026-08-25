@@ -26,6 +26,7 @@ import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const updateClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(4, "Enter a valid phone number"),
@@ -427,9 +428,9 @@ export default async function ClientDetailPage({
                       <form action={togglePortalUserAction}>
                         <input type="hidden" name="portalUserId" value={pu.id} />
                         <input type="hidden" name="clientId" value={client.id} />
-                        <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
+                        <SubmitButton bare className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
                           {pu.isActive ? "Revoke" : "Restore"}
-                        </button>
+                        </SubmitButton>
                       </form>
                       {/* Revoking keeps the login so it can be restored; deleting
                           removes it for good, for one created in error. */}
@@ -457,9 +458,9 @@ export default async function ClientDetailPage({
                           <input type="hidden" name="portalUserId" value={pu.id} />
                           <input type="hidden" name="clientId" value={l.client.id} />
                           <input type="hidden" name="fromClientId" value={client.id} />
-                          <button type="submit" title="Remove this account" className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--ink)] hover:bg-red-500/10">
+                          <SubmitButton bare title="Remove this account" className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--ink)] hover:bg-red-500/10">
                             {l.client.organization ? `${l.client.organization} — ${l.client.fullName}` : l.client.fullName} <span className="text-red-500">×</span>
-                          </button>
+                          </SubmitButton>
                         </form>
                       ))
                     )}
@@ -473,7 +474,7 @@ export default async function ClientDetailPage({
                             <option key={c.id} value={c.id}>{c.organization ? `${c.organization} — ${c.fullName}` : c.fullName}</option>
                           ))}
                         </select>
-                        <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--accent)]">Add</button>
+                        <SubmitButton bare className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-0.5 text-[0.71875rem] font-semibold text-[var(--accent)]">Add</SubmitButton>
                       </form>
                     ) : null}
                   </div>
@@ -492,7 +493,7 @@ export default async function ClientDetailPage({
               <option value="MEMBER">Member</option>
             </select>
             <input name="password" type="text" required minLength={8} placeholder="Temporary password (min 8)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white sm:col-span-2">Create portal login</button>
+            <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white sm:col-span-2">Create portal login</SubmitButton>
           </form>
         </div>
       ) : null}
@@ -568,7 +569,7 @@ export default async function ClientDetailPage({
         </div>
         <form action={addClientNote} className="flex flex-col gap-2 p-4">
           <textarea name="body" required placeholder="Add note" className="min-h-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20" />
-          <button type="submit" disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</button>
+          <SubmitButton bare disabled={!notesFeatureAvailable} className="btn-premium self-start rounded-lg px-3 py-2 text-sm text-white disabled:opacity-60">Add Note</SubmitButton>
         </form>
 
         <div className="space-y-2 px-4 pb-4">

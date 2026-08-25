@@ -14,6 +14,7 @@ import {
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   PENDING_INTAKE:       { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
@@ -322,13 +323,10 @@ function RequestDrawer({
                 />
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40"
-                >
+                <SubmitButton bare disabled={pending}
+ className="rounded-lg px-3 py-2 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40">
                   Save
-                </button>
+                </SubmitButton>
                 {pending ? <span className="text-xs text-[var(--ink-muted)]">Saving…</span> : null}
               </div>
             </form>

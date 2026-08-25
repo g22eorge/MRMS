@@ -32,6 +32,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 import { clientDisplayName } from "@/lib/client-name";
+import { flash } from "@/lib/flash";
 export const dynamic = "force-dynamic";
 
 export default async function CreditNotesPage({
@@ -110,7 +111,7 @@ export default async function CreditNotesPage({
       summary: `Returned items marked received for credit note ${cn.creditNoteNumber}`,
     });
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Items received updated"));
   }
 
   async function issueRefundFromCreditNoteAction(formData: FormData) {
@@ -165,7 +166,7 @@ export default async function CreditNotesPage({
     });
     if (dupRefund) {
       revalidatePath("/documents/credit-notes");
-      redirect("/documents/credit-notes");
+      redirect(flash("/documents/credit-notes", "Refund from credit note issued"));
     }
 
     // Refund write + ledger post run inside the txn; ensure schema first.
@@ -229,7 +230,7 @@ export default async function CreditNotesPage({
     }).catch(() => {});
     revalidatePath("/documents/credit-notes");
     revalidatePath("/documents/refunds");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Refund from credit note issued"));
   }
 
   async function shareCreditNoteWhatsAppAction(formData: FormData) {
@@ -241,7 +242,7 @@ export default async function CreditNotesPage({
     if (!creditNoteId) return;
     await shareCreditNoteDocument({ orgId, creditNoteId, channel: "whatsapp" });
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Saved"));
   }
 
   async function shareCreditNoteEmailAction(formData: FormData) {
@@ -253,7 +254,7 @@ export default async function CreditNotesPage({
     if (!creditNoteId) return;
     await shareCreditNoteDocument({ orgId, creditNoteId, channel: "email" });
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Saved"));
   }
 
   async function createCreditNoteAction(formData: FormData) {
@@ -331,7 +332,7 @@ export default async function CreditNotesPage({
     const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, ...parentLink, totalAmount });
     if (dupCn) {
       revalidatePath("/documents/credit-notes");
-      redirect("/documents/credit-notes");
+      redirect(flash("/documents/credit-notes", "Credit note created"));
     }
 
     let creditNoteNumber = "";
@@ -393,7 +394,7 @@ export default async function CreditNotesPage({
       actorName: user.name ?? user.email ?? "Unknown",
     }).catch(() => {});
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Credit note created"));
   }
 
   // One-click "Return & refund now": the common case where a customer brings an
@@ -580,7 +581,7 @@ export default async function CreditNotesPage({
     notifyRefundIssued({ orgId, creditNoteNumber, clientName: `CN ${creditNoteNumber}`, amount: totalAmount, actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
     revalidatePath("/documents/credit-notes");
     revalidatePath("/documents/refunds");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Saved"));
   }
 
   async function updateCreditNoteDateAction(formData: FormData) {
@@ -593,7 +594,7 @@ export default async function CreditNotesPage({
     if (!id || !issueDateRaw) return;
     await prisma.creditNote.updateMany({ where: { id, orgId }, data: { issuedAt: new Date(issueDateRaw) } });
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Credit note date updated"));
   }
 
   async function deleteCreditNoteAction(formData: FormData) {
@@ -622,7 +623,7 @@ export default async function CreditNotesPage({
       before: { creditNoteNumber: cn.creditNoteNumber, totalAmount: cn.totalAmount },
     });
     revalidatePath("/documents/credit-notes");
-    redirect("/documents/credit-notes");
+    redirect(flash("/documents/credit-notes", "Credit note deleted"));
   }
 
   // ── Data ─────────────────────────────────────────────────────────────────────

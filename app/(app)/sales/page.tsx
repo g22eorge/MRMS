@@ -622,7 +622,7 @@ export default async function SalesPage({
             placeholder={activeTab === "leads" ? "Search by name, phone or organization..." : "Search by quote number or name..."}
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
-          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {(activeTab === "leads" ? hasLeadFilters : Boolean(searchQ)) ? (
             <Link href={href({ status: null, overdue: false, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}

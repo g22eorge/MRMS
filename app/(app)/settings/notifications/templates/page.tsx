@@ -11,6 +11,7 @@ import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus 
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 function supportsCommsTemplates() {
   return Boolean(Prisma.dmmf.datamodel.models.find((m) => m.name === "CommunicationTemplate"));
 }
@@ -135,13 +136,11 @@ export default async function NotificationTemplatesPage({
       </Link>
       {user.role === "ADMIN" ? (
         <form action={bulkReplaceBrandName}>
-          <button
-            className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
-            type="submit"
-            title='Replace "Eagle Info Solutions"/"Your Repair Team" with your company name'
-          >
+          <SubmitButton bare className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"
+
+ title='Replace "Eagle Info Solutions"/"Your Repair Team" with your company name'>
             Replace brand name
-          </button>
+          </SubmitButton>
         </form>
       ) : null}
     </div>
@@ -527,14 +526,14 @@ export default async function NotificationTemplatesPage({
             <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Maintenance</summary>
             <div className="absolute right-0 z-10 mt-1 flex flex-wrap gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 shadow-lg">
               <form action={deduplicateTemplates}>
-                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
+                <SubmitButton bare className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
                   Remove duplicates
-                </button>
+                </SubmitButton>
               </form>
               <form action={applyMetaMigration}>
-                <button type="submit" className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
+                <SubmitButton bare className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
                   Apply migration
-                </button>
+                </SubmitButton>
               </form>
             </div>
           </details>
@@ -602,7 +601,7 @@ export default async function NotificationTemplatesPage({
             defaultValue="en"
             className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14 md:col-span-1 xl:col-span-2"
           />
-          <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-sm text-white md:col-span-2 xl:col-span-1">Create</SubmitButton>
         </form>
       </details>
 
@@ -719,14 +718,14 @@ export default async function NotificationTemplatesPage({
                       </div>
                     ) : null}
                     <div className="flex flex-wrap gap-2 xl:col-span-6">
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm text-white">Save</button>
+                      <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-sm text-white">Save</SubmitButton>
                     </div>
                   </form>
 
                     {user.role === "ADMIN" ? (
                       <form action={deleteTemplate} className="mt-2">
                         <input type="hidden" name="id" value={t.id} />
-                        <button type="submit" className="rounded-lg px-3 py-2 text-[0.8125rem] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">Delete template</button>
+                        <SubmitButton bare className="rounded-lg px-3 py-2 text-[0.8125rem] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">Delete template</SubmitButton>
                       </form>
                     ) : null}
                   </div>
@@ -796,7 +795,7 @@ export default async function NotificationTemplatesPage({
                   inputMode="numeric"
                   className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
                 />
-                <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save</button>
+                <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Save</SubmitButton>
               </form>
             );
           })}

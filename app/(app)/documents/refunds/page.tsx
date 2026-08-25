@@ -31,6 +31,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 export const dynamic = "force-dynamic";
 
 export default async function RefundsPage({
@@ -199,7 +201,7 @@ export default async function RefundsPage({
     });
     if (dupRefund) {
       revalidatePath("/documents/refunds");
-      redirect("/documents/refunds");
+      redirect(flash("/documents/refunds", "Refund created"));
     }
 
     // Refund write + ledger reversal run inside the txn; ensure schema first.
@@ -293,7 +295,7 @@ export default async function RefundsPage({
       summary: `Refund ${formatMoney(amountRaw, currency)} against ${sourceType} ${sourceId}`,
     });
     revalidatePath("/documents/refunds");
-    redirect("/documents/refunds");
+    redirect(flash("/documents/refunds", "Refund created"));
   }
 
   async function deleteRefundAction(formData: FormData) {
@@ -807,12 +809,9 @@ export default async function RefundsPage({
               <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>
             ))}
           </select>
-          <button
-            type="submit"
-            className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]"
-          >
+          <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Filter
-          </button>
+          </SubmitButton>
         </form>
       </DocumentFilterBar>
 

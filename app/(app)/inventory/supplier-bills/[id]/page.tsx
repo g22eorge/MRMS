@@ -11,6 +11,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { cancelSupplierBillAction, createSupplierPaymentAction, deleteSupplierPaymentAction } from "../actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function SupplierBillDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -128,7 +129,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
             </select>
             <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
             <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-            <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Record</button>
+            <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Record</SubmitButton>
             <input name="note" placeholder="Payment note" className="sm:col-span-5 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
           </form>
         ) : null}

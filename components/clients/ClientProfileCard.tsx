@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export type UpdateClientState = { ok: boolean; error: string | null };
 
 type ClientProfile = {
@@ -132,9 +133,9 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={pending} className="btn-premium rounded-lg px-3 py-2 text-white disabled:opacity-60">
+        <SubmitButton bare disabled={pending} className="btn-premium rounded-lg px-3 py-2 text-white disabled:opacity-60">
           {pending ? "Saving…" : "Save Client"}
-        </button>
+        </SubmitButton>
         <button
           type="button"
           onClick={() => setEditing(false)}

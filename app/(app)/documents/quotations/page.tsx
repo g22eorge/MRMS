@@ -31,6 +31,8 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -123,7 +125,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     const id = String(formData.get("id") ?? "").trim();
     await db.quotation.delete({ where: { id } });
     revalidatePath("/documents/quotations");
-    redirect("/documents/quotations");
+    redirect(flash("/documents/quotations", "Quotation deleted"));
   }
 
   async function convertToInvoiceAction(formData: FormData) {
@@ -143,7 +145,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     revalidatePath("/documents/quotations");
     if (invoice) {
       revalidatePath("/documents/invoices");
-      redirect(`/documents/invoices/${invoice.id}`);
+      redirect(flash(`/documents/invoices/${invoice.id}`, "Quotation converted to invoice"));
     }
     redirect("/documents/quotations");
   }
@@ -205,19 +207,17 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
                 { key: "ACCEPTED", label: "Accepted" },
                 { key: "REJECTED", label: "Rejected" },
               ].map((s) => (
-                <button
-                  key={s.key}
-                  type="submit"
-                  name="status"
-                  value={s.key}
-                  className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
-                    statusFilter === s.key
-                      ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
-                      : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
-                  }`}
-                >
+                <SubmitButton bare key={s.key}
+
+ name="status"
+ value={s.key}
+ className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
+ statusFilter === s.key
+ ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
+ : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+ }`}>
                   {s.label}
-                </button>
+                </SubmitButton>
               ))}
             </div>
             <label className="sr-only" htmlFor="qt-search">Search quotations</label>

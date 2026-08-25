@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requirePortalSessionAllowingPasswordChange } from "@/lib/portal-auth";
 import { changePortalPasswordAction } from "../actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 /**
@@ -88,9 +89,9 @@ export default async function PortalChangePasswordPage({
             />
           </label>
 
-          <button type="submit" className="btn-premium w-full rounded-lg px-4 py-2.5 text-sm font-semibold">
+          <SubmitButton bare className="btn-premium w-full rounded-lg px-4 py-2.5 text-sm font-semibold">
             Save password
-          </button>
+          </SubmitButton>
         </form>
 
         {!forced ? (
@@ -100,9 +101,9 @@ export default async function PortalChangePasswordPage({
               redirect("/portal/dashboard");
             }}
           >
-            <button type="submit" className="w-full text-center text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <SubmitButton bare className="w-full text-center text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
               Back to my repairs
-            </button>
+            </SubmitButton>
           </form>
         ) : null}
       </div>

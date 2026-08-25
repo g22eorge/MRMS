@@ -24,6 +24,8 @@ import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { findRecentDuplicate } from "@/lib/dedup";
+import { flash } from "@/lib/flash";
 type SearchParams = {
   q?: string;
   tech?: string;
@@ -194,6 +196,14 @@ async function receiveInvoicePaymentAction(formData: FormData) {
   // Payment + receipt + ledger post run inside the txn; ensure schema first.
   await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
+    // Inside the transaction, so the second of two racing requests sees the
+    // first one's committed row rather than writing a second payment against
+    // the same invoice.
+    const dup = await findRecentDuplicate(tx.payment, {
+      orgId, invoiceId: invoice.id, amount: amountRaw, method, createdById: user.id,
+    });
+    if (dup) return;
+
     const payment = await tx.payment.create({
       data: { invoiceId: invoice.id, currency, amount: amountRaw, method, reference: reference || null, createdById: user.id, orgId },
     });
@@ -209,7 +219,7 @@ async function receiveInvoicePaymentAction(formData: FormData) {
 
   revalidatePath("/payout-followups");
   revalidatePath("/documents/invoices");
-  redirect("/payout-followups");
+  redirect(flash("/payout-followups", "Invoice payment received"));
 }
 
 export default async function PayoutFollowupsPage({
@@ -541,7 +551,7 @@ export default async function PayoutFollowupsPage({
               ))}
             </select>
           )}
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</SubmitButton>
           <Link href={`/payout-followups?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
         </form>
       </section>

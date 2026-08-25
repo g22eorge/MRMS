@@ -19,6 +19,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { ensureQuotationFromJob } from "@/lib/commercial/document-workflow";
 
 import { clientDisplayName } from "@/lib/client-name";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 function DeviceIcon({ type }: { type: string }) {
   const cls = "inline-block h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)]";
   switch (type) {
@@ -231,12 +232,9 @@ export default async function JobCardsPage({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40"
-        >
+        <SubmitButton bare className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40">
           Filter
-        </button>
+        </SubmitButton>
         {(q || statusFilter) && (
           <Link
             href="/documents/job-cards"

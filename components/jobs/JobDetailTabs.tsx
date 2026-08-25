@@ -26,6 +26,7 @@ import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-
 import { can } from "@/lib/permissions";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "documents", "timeline", "photos", "messages"] as const;
 
 function formatUtcDateTime(value: Date | string) {
@@ -991,14 +992,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 });
               }}
             >
-              <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[0.8125rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
+              <SubmitButton bare disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[0.8125rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
                 {isStatusPending ? "Updating…" : (
                   <>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
                     {nextActionByStatus[statusKey]}
                   </>
                 )}
-              </button>
+              </SubmitButton>
             </form>
           ) : isTerminal ? (
             <div className="flex shrink-0 items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
@@ -1035,9 +1036,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     });
                   }}
                 >
-                  <button type="submit" disabled={isStatusPending} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60">
+                  <SubmitButton bare disabled={isStatusPending} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60">
                     {prettyEnum(status)}
-                  </button>
+                  </SubmitButton>
                 </form>
               ),
             )}
@@ -1119,11 +1120,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               handleStatusUpdateResult(res, statusActions[0]);
             });
           }}>
-            <button
-              type="submit"
-              disabled={isStatusPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-black shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60"
-            >
+            <SubmitButton bare disabled={isStatusPending}
+ className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-black shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60">
               {isStatusPending ? (
                 <span>Updating…</span>
               ) : (
@@ -1132,7 +1130,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   {nextActionByStatus[statusKey]}
                 </>
               )}
-            </button>
+            </SubmitButton>
           </form>
         ) : isTerminal ? (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
@@ -1686,13 +1684,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </details>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={isOneTimeExternalPending}
-                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-                >
+                <SubmitButton bare disabled={isOneTimeExternalPending}
+ className="btn-premium w-full rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
                   {oneTimeExternal ? "Update" : "Assign"}
-                </button>
+                </SubmitButton>
                 {oneTimeExternal && (
                   <button
                     type="button"
@@ -1872,13 +1867,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 <p className="text-xs text-[var(--ink-muted)]">Client billing and payout controls are admin-only.</p>
               ) : null}
               <div className="space-y-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-                  className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60"
-                >
+                <SubmitButton bare disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+ className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
                   {isFinancialPending ? "Saving…" : "Save Billing"}
-                </button>
+                </SubmitButton>
                 <button
                   type="button"
                   onClick={() => setActive("overview")}
@@ -2379,10 +2371,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <button type="submit" disabled={isCommunicationPending}
-                  className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
+                <SubmitButton bare disabled={isCommunicationPending}
+ className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
                   {isCommunicationPending ? "Saving…" : "Save Workflow"}
-                </button>
+                </SubmitButton>
                 <button type="button" onClick={() => setActive("overview")} disabled={isCommunicationPending}
                   className="px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)]">
                   Cancel

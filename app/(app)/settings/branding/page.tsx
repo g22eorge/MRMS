@@ -16,6 +16,8 @@ import { planLabel, resolveTemplateKey, splitTemplatesByPlan } from "@/lib/pdf/t
 import { prisma } from "@/lib/prisma";
 
 import { isShippedDefaultTerms } from "@/lib/quote-terms";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 const brandingFieldClass =
   "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
@@ -199,7 +201,7 @@ export default async function BrandingPage({
     await writeFile(targetPath, bytes);
 
     revalidatePath("/settings/branding");
-    redirect("/settings/branding?saved=1");
+    redirect(flash("/settings/branding?saved=1", "Saved"));
   }
 
   async function saveBrandingAction(formData: FormData) {
@@ -323,7 +325,7 @@ export default async function BrandingPage({
     invalidateOrgNumberConfig(saveOrgId);
 
     revalidatePath("/settings/branding");
-    redirect("/settings/branding?profileSaved=1");
+    redirect(flash("/settings/branding?profileSaved=1", "Branding saved"));
   }
 
   return (
@@ -456,7 +458,7 @@ export default async function BrandingPage({
         </details>
 
         <div className="border-t border-[var(--line)] px-4 py-3">
-          <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem]">Save branding</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem]">Save branding</SubmitButton>
         </div>
       </form>
 
@@ -472,7 +474,7 @@ export default async function BrandingPage({
             className="w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-xs sm:text-sm outline-none"
             required
           />
-          <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-sm">Upload Logo</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-sm">Upload Logo</SubmitButton>
         </form>
 
         <div className="mt-3">

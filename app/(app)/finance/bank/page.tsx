@@ -21,6 +21,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function BankPage({
@@ -295,12 +296,9 @@ export default async function BankPage({
             />
           </div>
           <div className="flex justify-end sm:col-span-4">
-            <button
-              type="submit"
-              className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold"
-            >
+            <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
               Create
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </details>
@@ -461,12 +459,9 @@ export default async function BankPage({
                       />
                     </div>
                     <div className="flex items-end">
-                      <button
-                        type="submit"
-                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
-                      >
+                      <SubmitButton bare className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
                         Add
-                      </button>
+                      </SubmitButton>
                     </div>
                   </form>
                 </details>
@@ -491,7 +486,7 @@ export default async function BankPage({
                     {sp.txperiod && <input type="hidden" name="txperiod" value={sp.txperiod} />}
                     <input name="q" defaultValue={q} placeholder="Search…"
                       className="h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none" />
-                    <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium hover:bg-[var(--panel-strong)]">Search</button>
+                    <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
                     {q && <a href={`/finance/bank?account=${activeAccount.id}`} className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium leading-8 hover:bg-[var(--panel-strong)]">Clear</a>}
                   </form>
                 </div>
@@ -565,9 +560,9 @@ export default async function BankPage({
                   actions={(tx) => (
                     <form action={reconcile}>
                       <input type="hidden" name="id" value={tx.id} />
-                      <button type="submit" className="text-[var(--accent)] hover:underline">
+                      <SubmitButton bare className="text-[var(--accent)] hover:underline">
                         {tx.reconciledAt ? "Undo" : "Mark checked"}
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                   tableFooter={
@@ -611,9 +606,9 @@ export default async function BankPage({
                               )}
                               <form action={reconcile}>
                                 <input type="hidden" name="id" value={tx.id} />
-                                <button type="submit" className="text-[0.8125rem] text-[var(--accent)] hover:underline">
+                                <SubmitButton bare className="text-[0.8125rem] text-[var(--accent)] hover:underline">
                                   {tx.reconciledAt ? "Undo" : "Mark checked"}
-                                </button>
+                                </SubmitButton>
                               </form>
                             </div>
                           </div>

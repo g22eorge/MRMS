@@ -17,6 +17,7 @@ import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
 import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
 const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 const clientSelect = { fullName: true, phone: true, email: true, organization: true, address: true } as const;
@@ -92,12 +93,12 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
     <>
       {canSend && client?.phone && (
         <form action={sendCreditNoteWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && client?.email && (
         <form action={sendCreditNoteEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       <Link href={`/api/credit-notes/${creditNote.id}`} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</Link>

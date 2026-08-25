@@ -25,6 +25,7 @@ import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail"
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
+import { flash } from "@/lib/flash";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -128,7 +129,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     revalidatePath("/documents/quotations");
     if (invoice) {
       revalidatePath("/documents/invoices");
-      redirect(`/documents/invoices/${invoice.id}`);
+      redirect(flash(`/documents/invoices/${invoice.id}`, "Quotation converted to invoice"));
     }
     redirect(`/documents/quotations/${id}`);
   }
@@ -140,7 +141,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
     await prisma.quotation.deleteMany({ where: { id, orgId: actorOrg } });
     revalidatePath("/documents/quotations");
-    redirect("/documents/quotations");
+    redirect(flash("/documents/quotations", "Quotation deleted"));
   }
 
   const status: { label: string; tone: BadgeTone } = {
@@ -158,12 +159,12 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     <>
       {canSend && quotation.client?.phone && (
         <form action={sendQuotationWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && quotation.client?.email && (
         <form action={sendQuotationEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
@@ -252,7 +253,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                               discount: Number(fd.get("discount")) || 0,
                             });
                             revalidatePath(`/documents/quotations/${id}`);
-                            redirect(`/documents/quotations/${id}?edit=1`);
+                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
                           }}
                           className="flex flex-1 flex-wrap items-end gap-2"
                         >
@@ -269,18 +270,18 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                           <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
                             <input name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</button>
+                          <SubmitButton bare className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</SubmitButton>
                         </form>
                         <form
                           action={async (fd: FormData) => {
                             "use server";
                             await removeQuotationItem(String(fd.get("itemId") ?? ""));
                             revalidatePath(`/documents/quotations/${id}`);
-                            redirect(`/documents/quotations/${id}?edit=1`);
+                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
                           }}
                         >
                           <input type="hidden" name="itemId" value={item.id} />
-                          <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                          <SubmitButton bare className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</SubmitButton>
                         </form>
                       </div>
                     ))}
@@ -294,7 +295,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                           discount: Number(fd.get("discount")) || 0,
                         });
                         revalidatePath(`/documents/quotations/${id}`);
-                        redirect(`/documents/quotations/${id}?edit=1`);
+                        redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
                       }}
                       className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
                     >
@@ -310,7 +311,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                       <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
                         <input name="discount" type="number" min="0" max="100" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add line</button>
+                      <SubmitButton bare className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add line</SubmitButton>
                     </form>
                   </div>
                   <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
@@ -369,7 +370,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   });
                   revalidatePath(`/documents/quotations/${id}`);
                   revalidatePath("/documents/quotations");
-                  redirect(`/documents/quotations/${id}`);
+                  redirect(flash(`/documents/quotations/${id}`, "Quotation deleted"));
                 }}
                 className={cardClass}
               >
@@ -389,7 +390,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   <textarea name="notes" defaultValue={quotation.notes ?? ""} rows={4} className="w-full resize-y rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
                 </div>
                 <div className="flex items-center gap-2 border-t border-[var(--line)] px-4 py-3">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold">Save changes</button>
+                  <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold">Save changes</SubmitButton>
                   <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Cancel</Link>
                 </div>
               </form>

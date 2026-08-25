@@ -8,6 +8,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
+import { flash } from "@/lib/flash";
 async function requireInventoryManager() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -41,7 +42,7 @@ export async function createStockLocationAction(formData: FormData): Promise<voi
   }
 
   revalidatePath("/inventory/locations");
-  redirect("/inventory/locations?created=1");
+  redirect(flash("/inventory/locations?created=1", "Stock location created"));
 }
 
 // Inline quick-add so stock-count / transfer flows never dead-end when the org
@@ -89,7 +90,7 @@ export async function updateStockLocationAction(formData: FormData): Promise<voi
   }
 
   revalidatePath("/inventory/locations");
-  redirect("/inventory/locations?saved=1");
+  redirect(flash("/inventory/locations?saved=1", "Stock location updated"));
 }
 
 export async function toggleStockLocationAction(formData: FormData) {
