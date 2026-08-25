@@ -1,13 +1,13 @@
 {
   "source": "mrms-prod.db",
-  "capturedAt": "2026-08-24T20:25:38.385Z",
+  "capturedAt": "2026-08-25T06:08:06.981Z",
   "totals": {
-    "tables": 110,
-    "rows": 2777
+    "tables": 119,
+    "rows": 4100
   },
   "tables": {
     "Account": {
-      "rows": 10,
+      "rows": 11,
       "sums": {},
       "ranges": {
         "accessTokenExpiresAt": {
@@ -22,13 +22,13 @@
         },
         "createdAt": {
           "min": "2026-04-10T00:12:37.178Z",
-          "max": "2026-07-02T12:07:31.950Z",
-          "nonNull": 10
+          "max": "2026-08-08T06:58:23.883Z",
+          "nonNull": 11
         },
         "updatedAt": {
           "min": "2026-04-10T00:21:56.526Z",
-          "max": "2026-07-02T12:07:31.950Z",
-          "nonNull": 10
+          "max": "2026-08-18T10:53:31.065Z",
+          "nonNull": 11
         }
       }
     },
@@ -71,24 +71,24 @@
       }
     },
     "AiPromptLog": {
-      "rows": 8,
+      "rows": 18,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-05-25T15:40:16.055Z",
-          "max": "2026-06-07T19:10:18.898Z",
-          "nonNull": 8
+          "max": "2026-08-18T13:22:57.278Z",
+          "nonNull": 18
         }
       }
     },
     "AuditLog": {
-      "rows": 844,
+      "rows": 1093,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-10T11:40:09.326Z",
-          "max": "2026-07-08T11:04:37.250Z",
-          "nonNull": 844
+          "max": "2026-08-24T15:39:16.898Z",
+          "nonNull": 1093
         }
       }
     },
@@ -206,23 +206,34 @@
       }
     },
     "ChartOfAccount": {
-      "rows": 0,
+      "rows": 6,
       "sums": {},
-      "ranges": {}
+      "ranges": {
+        "createdAt": {
+          "min": "2026-08-06T11:14:46.673Z",
+          "max": "2026-08-06T11:14:47.004Z",
+          "nonNull": 6
+        },
+        "updatedAt": {
+          "min": "2026-08-06T11:14:46.673Z",
+          "max": "2026-08-06T11:14:47.004Z",
+          "nonNull": 6
+        }
+      }
     },
     "Client": {
-      "rows": 77,
+      "rows": 91,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-10T11:40:09.103Z",
-          "max": "2026-07-09T08:43:21.569Z",
-          "nonNull": 77
+          "max": "2026-08-24T15:39:16.499Z",
+          "nonNull": 91
         },
         "updatedAt": {
-          "min": "2026-04-10T11:40:09.103Z",
-          "max": "2026-07-09T08:43:21.569Z",
-          "nonNull": 77
+          "min": "2026-04-10T11:50:29.153Z",
+          "max": "2026-08-24T15:39:16.499Z",
+          "nonNull": 91
         }
       }
     },
@@ -318,13 +329,29 @@
       "ranges": {}
     },
     "DeliveryNote": {
-      "rows": 0,
+      "rows": 1,
       "sums": {},
-      "ranges": {}
+      "ranges": {
+        "deliveredAt": {
+          "min": "2026-08-21T07:48:28.123Z",
+          "max": "2026-08-21T07:48:28.123Z",
+          "nonNull": 1
+        },
+        "createdAt": {
+          "min": "2026-08-21T07:48:28.123Z",
+          "max": "2026-08-21T07:48:28.123Z",
+          "nonNull": 1
+        }
+      }
     },
     "DeliveryNoteItem": {
-      "rows": 0,
-      "sums": {},
+      "rows": 1,
+      "sums": {
+        "quantity": {
+          "sum": 10,
+          "nonNull": 1
+        }
+      },
       "ranges": {}
     },
     "Department": {
@@ -333,18 +360,18 @@
       "ranges": {}
     },
     "Device": {
-      "rows": 56,
+      "rows": 60,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-12T05:51:41.509Z",
-          "max": "2026-07-07T15:40:08.597Z",
-          "nonNull": 56
+          "max": "2026-08-21T07:28:57.714Z",
+          "nonNull": 60
         },
         "updatedAt": {
           "min": "2026-04-12T05:51:41.509Z",
-          "max": "2026-07-07T15:40:08.597Z",
-          "nonNull": 56
+          "max": "2026-08-21T07:28:57.714Z",
+          "nonNull": 60
         }
       }
     },
@@ -354,31 +381,62 @@
       "ranges": {}
     },
     "DiagnosisReport": {
-      "rows": 0,
+      "rows": 7,
       "sums": {},
-      "ranges": {}
+      "ranges": {
+        "createdAt": {
+          "min": "2026-08-05T15:22:32.266Z",
+          "max": "2026-08-18T13:23:02.594Z",
+          "nonNull": 7
+        },
+        "updatedAt": {
+          "min": "2026-08-05T15:23:49.731Z",
+          "max": "2026-08-18T13:24:40.206Z",
+          "nonNull": 7
+        }
+      }
     },
     "DocumentBrandingSettings": {
-      "rows": 2,
+      "rows": 1,
       "sums": {
         "quoteValidityDays": {
-          "sum": 60,
-          "nonNull": 2
+          "sum": 30,
+          "nonNull": 1
         },
         "sequencePadLength": {
-          "sum": 8,
-          "nonNull": 2
+          "sum": 4,
+          "nonNull": 1
         },
         "vatRatePercent": {
-          "sum": 36,
-          "nonNull": 2
+          "sum": 18,
+          "nonNull": 1
         }
       },
       "ranges": {
         "updatedAt": {
-          "min": "2026-04-11T15:49:38.809Z",
+          "min": "2026-06-06T20:29:19.000Z",
           "max": "2026-06-06T20:29:19.000Z",
-          "nonNull": 2
+          "nonNull": 1
+        }
+      }
+    },
+    "DocumentSequence": {
+      "rows": 5,
+      "sums": {
+        "year": {
+          "sum": 10130,
+          "nonNull": 5
+        },
+        "value": {
+          "sum": 88,
+          "nonNull": 5
+        }
+      },
+      "ranges": {
+        "updatedAt": {
+          "min": "2026-08-19T16:28:29.733Z",
+          "max": "2026-08-24T08:43:53.912Z",
+          "nonNull": 5
         }
       }
     },
@@ -488,87 +546,100 @@
       "ranges": {}
     },
     "Invoice": {
-      "rows": 56,
+      "rows": 89,
       "sums": {
         "totalAmount": {
-          "sum": 18160000,
-          "nonNull": 56
+          "sum": 65977536,
+          "nonNull": 89
         },
         "paidAmount": {
-          "sum": 16630000,
-          "nonNull": 56
+          "sum": 43743262,
+          "nonNull": 89
         }
       },
       "ranges": {
         "dueDate": {
           "min": "2026-07-04T00:00:00.000Z",
-          "max": "2026-07-24T00:00:00.000Z",
-          "nonNull": 3
+          "max": "2026-08-31T00:00:00.000Z",
+          "nonNull": 17
         },
         "issuedAt": {
           "min": "2026-05-05T14:45:37.356Z",
-          "max": "2026-07-09T08:44:44.906Z",
-          "nonNull": 56
+          "max": "2026-08-24T00:00:00.000Z",
+          "nonNull": 89
         },
         "paidAt": {
           "min": "2026-06-01T13:14:40.762Z",
-          "max": "2026-07-08T11:04:37.069Z",
-          "nonNull": 51
+          "max": "2026-08-21T07:42:59.561Z",
+          "nonNull": 62
         },
         "createdAt": {
           "min": "2026-05-29T20:28:51.441Z",
-          "max": "2026-07-09T08:44:44.906Z",
-          "nonNull": 56
+          "max": "2026-08-24T08:43:54.122Z",
+          "nonNull": 89
         },
         "updatedAt": {
           "min": "2026-06-01T13:14:40.763Z",
-          "max": "2026-07-09T08:44:44.906Z",
-          "nonNull": 56
+          "max": "2026-08-24T08:43:54.122Z",
+          "nonNull": 89
         }
       }
     },
+    "InvoiceAttachment": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
     "InvoiceLine": {
-      "rows": 6,
+      "rows": 36,
       "sums": {
         "quantity": {
-          "sum": 8,
-          "nonNull": 6
+          "sum": 122,
+          "nonNull": 36
         },
         "unitPrice": {
-          "sum": 890000,
-          "nonNull": 6
+          "sum": 7034764,
+          "nonNull": 36
         },
         "discountAmount": {
           "sum": 0,
-          "nonNull": 6
+          "nonNull": 36
         },
         "taxAmount": {
-          "sum": 0,
-          "nonNull": 6
+          "sum": 572,
+          "nonNull": 36
         },
         "lineTotal": {
-          "sum": 1030000,
-          "nonNull": 6
+          "sum": 44434764,
+          "nonNull": 36
+        },
+        "saleUomFactor": {
+          "sum": null,
+          "nonNull": 0
+        },
+        "costAtSale": {
+          "sum": null,
+          "nonNull": 0
         }
       },
       "ranges": {
         "createdAt": {
           "min": "2026-06-24T10:53:18.920Z",
-          "max": "2026-07-09T08:44:44.906Z",
-          "nonNull": 6
+          "max": "2026-08-24T08:43:54.122Z",
+          "nonNull": 36
         }
       }
     },
     "Job": {
-      "rows": 75,
+      "rows": 97,
       "sums": {
         "costEstimate": {
-          "sum": 11420000,
-          "nonNull": 67
+          "sum": 14110000,
+          "nonNull": 84
         },
         "finalCost": {
-          "sum": 20910000,
-          "nonNull": 69
+          "sum": 26282200,
+          "nonNull": 86
         },
         "externalTechFee": {
           "sum": 1060000,
@@ -584,42 +655,46 @@
         },
         "softwareOsInstall": {
           "sum": 6,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwareDriversUpdates": {
           "sum": 0,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwareDataBackupRestore": {
           "sum": 1,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwareAccountSetup": {
           "sum": 1,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwarePerformanceTune": {
           "sum": 0,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwareThirdPartyApps": {
           "sum": 2,
-          "nonNull": 75
+          "nonNull": 97
         },
         "softwareLicenseAttested": {
           "sum": 9,
-          "nonNull": 75
+          "nonNull": 97
         },
         "clientPaid": {
-          "sum": 56,
-          "nonNull": 75
+          "sum": 63,
+          "nonNull": 97
+        },
+        "warrantyMonths": {
+          "sum": 31,
+          "nonNull": 10
         }
       },
       "ranges": {
         "lastClientContactAt": {
           "min": "2026-04-10T12:14:24.636Z",
-          "max": "2026-07-08T08:22:11.818Z",
-          "nonNull": 25
+          "max": "2026-08-13T13:19:49.116Z",
+          "nonNull": 37
         },
         "externalPaidAt": {
           "min": "2026-04-13T16:24:25.902Z",
@@ -633,28 +708,28 @@
         },
         "quotedAt": {
           "min": "2026-04-27T11:09:02.122Z",
-          "max": "2026-06-10T12:55:46.713Z",
-          "nonNull": 10
+          "max": "2026-08-02T09:58:00.615Z",
+          "nonNull": 18
         },
         "receivedAt": {
           "min": "2026-04-04T13:46:00.000Z",
-          "max": "2026-07-07T15:40:38.293Z",
-          "nonNull": 75
+          "max": "2026-08-24T15:39:16.811Z",
+          "nonNull": 97
         },
         "completedAt": {
           "min": "2026-04-10T15:36:39.373Z",
-          "max": "2026-07-08T11:00:51.567Z",
-          "nonNull": 57
+          "max": "2026-08-13T13:27:36.626Z",
+          "nonNull": 74
         },
         "closedAt": {
           "min": "2026-06-16T13:18:12.047Z",
-          "max": "2026-07-08T08:23:33.479Z",
-          "nonNull": 3
+          "max": "2026-08-02T09:51:03.499Z",
+          "nonNull": 4
         },
         "updatedAt": {
           "min": "2026-04-14T12:16:15.312Z",
-          "max": "2026-07-08T11:04:37.161Z",
-          "nonNull": 75
+          "max": "2026-08-24T16:39:41.380Z",
+          "nonNull": 97
         },
         "deliveredAt": {
           "min": null,
@@ -663,13 +738,18 @@
         },
         "clientPaidAt": {
           "min": "2026-05-06T15:34:34.598Z",
-          "max": "2026-07-08T11:04:37.160Z",
-          "nonNull": 56
+          "max": "2026-08-21T07:22:19.863Z",
+          "nonNull": 63
         },
         "invoiceIssuedAt": {
           "min": "2026-05-04T12:03:46.050Z",
-          "max": "2026-07-08T11:04:35.950Z",
-          "nonNull": 56
+          "max": "2026-08-13T13:28:01.067Z",
+          "nonNull": 71
+        },
+        "warrantyExpiresAt": {
+          "min": "2026-10-03T15:06:50.029Z",
+          "max": "2026-12-13T13:22:30.387Z",
+          "nonNull": 10
         }
       }
     },
@@ -679,30 +759,71 @@
       "ranges": {}
     },
     "JobStatusHistory": {
-      "rows": 0,
+      "rows": 35,
       "sums": {},
-      "ranges": {}
+      "ranges": {
+        "changedAt": {
+          "min": "2026-08-02T09:51:06.975Z",
+          "max": "2026-08-13T13:31:10.899Z",
+          "nonNull": 35
+        }
+      }
     },
     "JournalEntry": {
-      "rows": 0,
-      "sums": {},
-      "ranges": {}
+      "rows": 19,
+      "sums": {
+        "totalAmount": {
+          "sum": 29413262,
+          "nonNull": 19
+        }
+      },
+      "ranges": {
+        "date": {
+          "min": "2026-08-06T11:14:47.069Z",
+          "max": "2026-08-22T09:07:06.298Z",
+          "nonNull": 19
+        },
+        "postedAt": {
+          "min": "2026-08-06T11:14:47.344Z",
+          "max": "2026-08-22T09:07:06.440Z",
+          "nonNull": 19
+        },
+        "createdAt": {
+          "min": "2026-08-06T11:14:47.345Z",
+          "max": "2026-08-22T09:07:06.440Z",
+          "nonNull": 19
+        },
+        "updatedAt": {
+          "min": "2026-08-06T11:14:47.345Z",
+          "max": "2026-08-22T09:07:06.440Z",
+          "nonNull": 19
+        }
+      }
     },
     "JournalLine": {
-      "rows": 0,
-      "sums": {},
+      "rows": 38,
+      "sums": {
+        "debit": {
+          "sum": 29413262,
+          "nonNull": 38
+        },
+        "credit": {
+          "sum": 29413262,
+          "nonNull": 38
+        }
+      },
       "ranges": {}
     },
     "Lead": {
-      "rows": 10,
+      "rows": 12,
       "sums": {
         "estimatedValue": {
-          "sum": 54200000,
-          "nonNull": 5
+          "sum": 54200018,
+          "nonNull": 7
         },
         "score": {
           "sum": 0,
-          "nonNull": 10
+          "nonNull": 12
         }
       },
       "ranges": {
@@ -717,51 +838,51 @@
           "nonNull": 4
         },
         "followUpAt": {
-          "min": null,
-          "max": null,
-          "nonNull": 0
+          "min": "2026-07-30T00:00:00.000Z",
+          "max": "2026-07-30T00:00:00.000Z",
+          "nonNull": 2
         },
         "createdAt": {
           "min": "2026-06-01T13:40:21.257Z",
-          "max": "2026-06-05T16:36:02.956Z",
-          "nonNull": 10
+          "max": "2026-07-30T16:15:19.834Z",
+          "nonNull": 12
         },
         "updatedAt": {
           "min": "2026-06-01T13:56:59.703Z",
-          "max": "2026-06-25T14:08:01.607Z",
-          "nonNull": 10
+          "max": "2026-07-30T16:15:19.834Z",
+          "nonNull": 12
         }
       }
     },
     "LeadActivity": {
-      "rows": 29,
+      "rows": 31,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-06-01T13:40:21.370Z",
-          "max": "2026-06-25T14:08:01.941Z",
-          "nonNull": 29
+          "max": "2026-07-30T16:15:19.973Z",
+          "nonNull": 31
         }
       }
     },
     "Notification": {
-      "rows": 690,
+      "rows": 995,
       "sums": {
         "isRead": {
-          "sum": 433,
-          "nonNull": 690
+          "sum": 515,
+          "nonNull": 995
         }
       },
       "ranges": {
         "readAt": {
           "min": "2026-04-13T16:22:59.008Z",
-          "max": "2026-07-08T08:24:02.652Z",
-          "nonNull": 433
+          "max": "2026-08-06T10:12:36.530Z",
+          "nonNull": 515
         },
         "createdAt": {
           "min": "2026-04-12T05:53:36.025Z",
-          "max": "2026-07-08T11:04:38.437Z",
-          "nonNull": 690
+          "max": "2026-08-24T15:39:17.556Z",
+          "nonNull": 995
         }
       }
     },
@@ -920,43 +1041,43 @@
       }
     },
     "OutboundMessage": {
-      "rows": 221,
+      "rows": 326,
       "sums": {
         "attemptCount": {
-          "sum": 255,
-          "nonNull": 221
+          "sum": 359,
+          "nonNull": 326
         }
       },
       "ranges": {
         "lastAttemptAt": {
           "min": "2026-04-12T17:06:00.639Z",
-          "max": "2026-07-08T11:00:55.935Z",
-          "nonNull": 188
+          "max": "2026-08-24T13:53:03.131Z",
+          "nonNull": 292
         },
         "nextAttemptAt": {
           "min": "1970-01-01T00:00:00.000Z",
-          "max": "2026-07-08T11:00:53.518Z",
-          "nonNull": 221
+          "max": "2026-08-24T13:53:33.131Z",
+          "nonNull": 326
         },
         "sentAt": {
           "min": "2026-04-15T07:30:01.302Z",
-          "max": "2026-07-08T11:00:55.935Z",
-          "nonNull": 165
+          "max": "2026-08-24T13:53:02.484Z",
+          "nonNull": 251
         },
         "lockedAt": {
-          "min": null,
-          "max": null,
-          "nonNull": 0
+          "min": "2026-08-24T13:00:03.386Z",
+          "max": "2026-08-24T13:00:03.386Z",
+          "nonNull": 1
         },
         "createdAt": {
           "min": "2026-04-12T16:28:50.745Z",
-          "max": "2026-07-08T11:00:53.519Z",
-          "nonNull": 221
+          "max": "2026-08-24T13:53:02.572Z",
+          "nonNull": 326
         },
         "updatedAt": {
           "min": "2026-04-12T17:06:00.640Z",
-          "max": "2026-07-08T11:00:55.936Z",
-          "nonNull": 221
+          "max": "2026-08-24T13:53:03.133Z",
+          "nonNull": 326
         },
         "providerDeliveryAt": {
           "min": null,
@@ -966,35 +1087,51 @@
       }
     },
     "Part": {
-      "rows": 68,
+      "rows": 72,
       "sums": {
         "unitCost": {
-          "sum": 48334400,
-          "nonNull": 68
+          "sum": 54134400,
+          "nonNull": 72
         },
         "qtyOnHand": {
-          "sum": 23599,
-          "nonNull": 68
+          "sum": 3572,
+          "nonNull": 72
         },
         "reorderLevel": {
-          "sum": 305,
-          "nonNull": 68
+          "sum": 307,
+          "nonNull": 72
         },
         "qtyReserved": {
           "sum": 0,
-          "nonNull": 68
+          "nonNull": 72
+        },
+        "sellingPrice": {
+          "sum": 4000000,
+          "nonNull": 3
+        },
+        "taxRate": {
+          "sum": 54,
+          "nonNull": 3
+        },
+        "saleUomFactor": {
+          "sum": null,
+          "nonNull": 0
+        },
+        "purchaseUomFactor": {
+          "sum": null,
+          "nonNull": 0
         }
       },
       "ranges": {
         "createdAt": {
           "min": "2026-05-28T20:16:58.586Z",
-          "max": "2026-07-04T09:17:28.044Z",
-          "nonNull": 68
+          "max": "2026-08-18T17:50:10.088Z",
+          "nonNull": 72
         },
         "updatedAt": {
-          "min": "2026-05-29T10:49:51.366Z",
-          "max": "2026-07-09T13:37:12.226Z",
-          "nonNull": 68
+          "min": "2026-06-05T13:35:11.595Z",
+          "max": "2026-08-21T15:17:52.991Z",
+          "nonNull": 72
         }
       }
     },
@@ -1009,43 +1146,47 @@
       "ranges": {}
     },
     "PartStockTransaction": {
-      "rows": 94,
+      "rows": 151,
       "sums": {
         "quantity": {
-          "sum": 24479,
-          "nonNull": 94
+          "sum": 44688,
+          "nonNull": 151
+        },
+        "unitCost": {
+          "sum": null,
+          "nonNull": 0
         }
       },
       "ranges": {
         "createdAt": {
           "min": "2026-05-28T20:17:54.825Z",
-          "max": "2026-07-09T13:37:12.294Z",
-          "nonNull": 94
+          "max": "2026-08-21T15:17:53.061Z",
+          "nonNull": 151
         }
       }
     },
     "Payment": {
-      "rows": 64,
+      "rows": 85,
       "sums": {
         "exchangeRateToBase": {
           "sum": null,
           "nonNull": 0
         },
         "amount": {
-          "sum": 20348100,
-          "nonNull": 64
+          "sum": 50141362,
+          "nonNull": 85
         }
       },
       "ranges": {
         "receivedAt": {
           "min": "2026-06-01T13:14:40.624Z",
-          "max": "2026-07-09T13:38:29.924Z",
-          "nonNull": 64
+          "max": "2026-08-22T09:07:05.514Z",
+          "nonNull": 85
         },
         "createdAt": {
           "min": "2026-06-01T13:14:40.624Z",
-          "max": "2026-07-09T13:38:29.924Z",
-          "nonNull": 64
+          "max": "2026-08-22T09:07:05.514Z",
+          "nonNull": 85
         }
       }
     },
@@ -1055,11 +1196,64 @@
       "ranges": {}
     },
     "Photo": {
+      "rows": 1,
+      "sums": {},
+      "ranges": {
+        "uploadedAt": {
+          "min": "2026-08-18T14:12:00.208Z",
+          "max": "2026-08-18T14:12:00.208Z",
+          "nonNull": 1
+        }
+      }
+    },
+    "PlatformSetting": {
       "rows": 0,
       "sums": {},
       "ranges": {}
     },
-    "PlatformSetting": {
+    "PortalSession": {
+      "rows": 14,
+      "sums": {},
+      "ranges": {
+        "expiresAt": {
+          "min": "2026-08-03T17:22:12.283Z",
+          "max": "2026-08-25T00:39:28.144Z",
+          "nonNull": 14
+        },
+        "createdAt": {
+          "min": "2026-08-03T09:22:12.284Z",
+          "max": "2026-08-24T16:39:28.147Z",
+          "nonNull": 14
+        }
+      }
+    },
+    "PortalUser": {
+      "rows": 6,
+      "sums": {
+        "isActive": {
+          "sum": 4,
+          "nonNull": 6
+        }
+      },
+      "ranges": {
+        "lastLoginAt": {
+          "min": "2026-08-02T16:20:18.633Z",
+          "max": "2026-08-24T16:39:28.262Z",
+          "nonNull": 6
+        },
+        "createdAt": {
+          "min": "2026-08-02T16:19:10.793Z",
+          "max": "2026-08-18T17:13:50.179Z",
+          "nonNull": 6
+        },
+        "updatedAt": {
+          "min": "2026-08-03T11:35:58.103Z",
+          "max": "2026-08-24T16:39:28.263Z",
+          "nonNull": 6
+        }
+      }
+    },
+    "PortalUserClient": {
       "rows": 0,
       "sums": {},
       "ranges": {}
@@ -1095,27 +1289,27 @@
       "ranges": {}
     },
     "Quotation": {
-      "rows": 6,
+      "rows": 8,
       "sums": {
         "subtotal": {
-          "sum": 62400000,
-          "nonNull": 6
+          "sum": 77280000,
+          "nonNull": 8
         },
         "discountAmount": {
           "sum": 0,
-          "nonNull": 6
+          "nonNull": 8
         },
         "vatAmount": {
-          "sum": 990000,
-          "nonNull": 6
+          "sum": 1674000,
+          "nonNull": 8
         },
         "totalAmount": {
-          "sum": 63390000,
-          "nonNull": 6
+          "sum": 78954000,
+          "nonNull": 8
         },
         "taxRate": {
-          "sum": 18,
-          "nonNull": 1
+          "sum": 36,
+          "nonNull": 2
         }
       },
       "ranges": {
@@ -1126,13 +1320,13 @@
         },
         "sentAt": {
           "min": "2026-06-01T14:07:43.194Z",
-          "max": "2026-06-01T14:07:43.194Z",
-          "nonNull": 1
+          "max": "2026-08-19T16:28:41.209Z",
+          "nonNull": 2
         },
         "acceptedAt": {
           "min": "2026-06-01T14:08:39.261Z",
-          "max": "2026-06-01T14:08:39.261Z",
-          "nonNull": 1
+          "max": "2026-08-19T16:28:50.695Z",
+          "nonNull": 2
         },
         "rejectedAt": {
           "min": null,
@@ -1141,57 +1335,78 @@
         },
         "createdAt": {
           "min": "2026-06-01T14:06:46.797Z",
-          "max": "2026-07-07T08:00:22.345Z",
-          "nonNull": 6
+          "max": "2026-08-19T16:28:29.856Z",
+          "nonNull": 8
         },
         "updatedAt": {
           "min": "2026-06-01T14:08:39.263Z",
-          "max": "2026-07-07T08:00:22.345Z",
-          "nonNull": 6
+          "max": "2026-08-21T07:38:14.758Z",
+          "nonNull": 8
+        },
+        "issueDate": {
+          "min": "2026-06-16T00:00:00.000Z",
+          "max": "2026-08-19T00:00:00.000Z",
+          "nonNull": 3
         }
       }
     },
     "QuotationItem": {
-      "rows": 13,
+      "rows": 12,
       "sums": {
         "quantity": {
-          "sum": 31,
-          "nonNull": 13
+          "sum": 30,
+          "nonNull": 12
         },
         "unitPrice": {
-          "sum": 39000000,
-          "nonNull": 13
+          "sum": 43980000,
+          "nonNull": 12
         },
         "discount": {
           "sum": 0,
-          "nonNull": 13
+          "nonNull": 12
         },
         "lineTotal": {
-          "sum": 62400000,
-          "nonNull": 13
+          "sum": 77280000,
+          "nonNull": 12
         }
       },
       "ranges": {
         "createdAt": {
           "min": "2026-06-01T14:06:46.797Z",
-          "max": "2026-07-07T08:00:22.345Z",
-          "nonNull": 13
+          "max": "2026-08-21T07:37:24.630Z",
+          "nonNull": 12
+        }
+      }
+    },
+    "RateLimit": {
+      "rows": 153,
+      "sums": {
+        "count": {
+          "sum": 193,
+          "nonNull": 153
+        }
+      },
+      "ranges": {
+        "resetAt": {
+          "min": "2026-08-02T07:27:31.668Z",
+          "max": "2026-08-24T17:24:00.484Z",
+          "nonNull": 153
         }
       }
     },
     "Receipt": {
-      "rows": 1,
+      "rows": 20,
       "sums": {
         "amount": {
-          "sum": 600000,
-          "nonNull": 1
+          "sum": 30013262,
+          "nonNull": 20
         }
       },
       "ranges": {
         "issuedAt": {
           "min": "2026-06-09T13:50:12.024Z",
-          "max": "2026-06-09T13:50:12.024Z",
-          "nonNull": 1
+          "max": "2026-08-22T09:07:05.924Z",
+          "nonNull": 20
         },
         "voidedAt": {
           "min": null,
@@ -1220,19 +1435,24 @@
       "sums": {},
       "ranges": {}
     },
+    "RepairMessage": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
     "RepairRequest": {
-      "rows": 16,
+      "rows": 34,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-10T11:25:29.126Z",
-          "max": "2026-07-07T15:01:35.652Z",
-          "nonNull": 16
+          "max": "2026-08-24T13:53:01.361Z",
+          "nonNull": 34
         },
         "updatedAt": {
           "min": "2026-04-25T18:36:07.868Z",
-          "max": "2026-07-07T15:40:38.884Z",
-          "nonNull": 16
+          "max": "2026-08-24T15:39:17.022Z",
+          "nonNull": 34
         }
       }
     },
@@ -1244,14 +1464,14 @@
           "nonNull": 1
         },
         "value": {
-          "sum": 30,
+          "sum": 48,
           "nonNull": 1
         }
       },
       "ranges": {
         "updatedAt": {
-          "min": "2026-07-07T15:01:35.000Z",
-          "max": "2026-07-07T15:01:35.000Z",
+          "min": "2026-08-24T13:53:01.000Z",
+          "max": "2026-08-24T13:53:01.000Z",
           "nonNull": 1
         }
       }
@@ -1262,27 +1482,27 @@
       "ranges": {}
     },
     "Sale": {
-      "rows": 4,
+      "rows": 19,
       "sums": {
         "subtotal": {
-          "sum": 4080000,
-          "nonNull": 4
+          "sum": 6760000,
+          "nonNull": 19
         },
         "discountAmount": {
           "sum": 0,
-          "nonNull": 4
+          "nonNull": 19
         },
         "vatAmount": {
           "sum": 734400,
-          "nonNull": 4
+          "nonNull": 19
         },
         "totalAmount": {
-          "sum": 4814400,
-          "nonNull": 4
+          "sum": 7494400,
+          "nonNull": 19
         },
         "paidAmount": {
-          "sum": 3718100,
-          "nonNull": 4
+          "sum": 6398100,
+          "nonNull": 19
         }
       },
       "ranges": {
@@ -1293,42 +1513,50 @@
         },
         "paidAt": {
           "min": "2026-07-09T13:33:59.043Z",
-          "max": "2026-07-09T13:38:30.083Z",
-          "nonNull": 2
+          "max": "2026-08-22T09:07:07.058Z",
+          "nonNull": 11
         },
         "createdAt": {
           "min": "2026-06-05T15:19:15.111Z",
-          "max": "2026-07-09T13:35:32.803Z",
-          "nonNull": 4
+          "max": "2026-08-22T09:06:18.555Z",
+          "nonNull": 19
         },
         "updatedAt": {
           "min": "2026-06-05T15:20:35.185Z",
-          "max": "2026-07-09T13:38:30.084Z",
-          "nonNull": 4
+          "max": "2026-08-22T09:07:07.059Z",
+          "nonNull": 19
         }
       }
     },
     "SaleItem": {
-      "rows": 12,
+      "rows": 21,
       "sums": {
         "quantity": {
-          "sum": 17,
-          "nonNull": 12
+          "sum": 29,
+          "nonNull": 21
         },
         "unitPrice": {
-          "sum": 3980000,
-          "nonNull": 12
+          "sum": 5485000,
+          "nonNull": 21
         },
         "lineTotal": {
-          "sum": 4080000,
-          "nonNull": 12
+          "sum": 6760000,
+          "nonNull": 21
+        },
+        "saleUomFactor": {
+          "sum": 9,
+          "nonNull": 9
+        },
+        "costAtSale": {
+          "sum": 893500,
+          "nonNull": 5
         }
       },
       "ranges": {
         "createdAt": {
           "min": "2026-06-05T15:20:34.793Z",
-          "max": "2026-07-09T13:37:12.363Z",
-          "nonNull": 12
+          "max": "2026-08-22T09:06:49.128Z",
+          "nonNull": 21
         }
       }
     },
@@ -1338,23 +1566,23 @@
       "ranges": {}
     },
     "Session": {
-      "rows": 195,
+      "rows": 227,
       "sums": {},
       "ranges": {
         "expiresAt": {
           "min": "2026-04-12T13:11:04.649Z",
-          "max": "2026-07-11T20:20:55.956Z",
-          "nonNull": 195
+          "max": "2026-08-24T10:54:30.467Z",
+          "nonNull": 227
         },
         "createdAt": {
           "min": "2026-04-10T09:37:45.287Z",
-          "max": "2026-07-10T20:20:55.959Z",
-          "nonNull": 195
+          "max": "2026-08-24T02:54:30.469Z",
+          "nonNull": 227
         },
         "updatedAt": {
           "min": "2026-04-10T09:37:45.287Z",
-          "max": "2026-07-10T20:20:55.959Z",
-          "nonNull": 195
+          "max": "2026-08-24T02:54:30.469Z",
+          "nonNull": 227
         }
       }
     },
@@ -1490,14 +1718,19 @@
       "sums": {},
       "ranges": {}
     },
+    "SystemAnnouncement": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
     "SystemAuditEvent": {
-      "rows": 60,
+      "rows": 144,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-06-05T15:23:54.842Z",
-          "max": "2026-07-09T08:44:45.301Z",
-          "nonNull": 60
+          "max": "2026-08-24T16:39:41.521Z",
+          "nonNull": 144
         }
       }
     },
@@ -1506,30 +1739,35 @@
       "sums": {},
       "ranges": {}
     },
+    "TechnicianPayout": {
+      "rows": 0,
+      "sums": {},
+      "ranges": {}
+    },
     "User": {
-      "rows": 10,
+      "rows": 11,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-10T00:12:35.956Z",
-          "max": "2026-07-02T12:07:31.831Z",
-          "nonNull": 10
+          "max": "2026-08-08T06:58:23.782Z",
+          "nonNull": 11
         },
         "updatedAt": {
           "min": "2026-04-10T00:21:54.315Z",
-          "max": "2026-07-02T12:07:31.831Z",
-          "nonNull": 10
+          "max": "2026-08-21T07:13:53.915Z",
+          "nonNull": 11
         }
       }
     },
     "UserAccessAudit": {
-      "rows": 1,
+      "rows": 3,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-05-22T10:51:39.532Z",
-          "max": "2026-05-22T10:51:39.532Z",
-          "nonNull": 1
+          "max": "2026-08-21T07:13:54.204Z",
+          "nonNull": 3
         }
       }
     },
@@ -1554,13 +1792,13 @@
       "ranges": {}
     },
     "UserPermission": {
-      "rows": 38,
+      "rows": 36,
       "sums": {},
       "ranges": {
         "createdAt": {
           "min": "2026-04-10T00:22:08.803Z",
-          "max": "2026-05-22T10:51:39.344Z",
-          "nonNull": 38
+          "max": "2026-08-21T07:13:54.055Z",
+          "nonNull": 36
         }
       }
     },

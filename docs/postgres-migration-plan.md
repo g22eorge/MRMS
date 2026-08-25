@@ -505,29 +505,52 @@ to the directory name and shared a project with the application stack — `docke
 compose ps` on production listed the development database as part of it. It now
 declares `name: mrms-dev`.
 
-### Phase 6 — Production cutover — **PREPARED, blocked on a fresh dump**
+### Phase 6 — Production cutover — **DATA PATH DONE on the current export**
 
-Every step is rehearsed and written up in `docs/cutover-runbook.md`. Two steps
-need the live systems and cannot be done from here:
+The owner supplied a fresh export on 2026-08-25 (newest row 2026-08-24), and the
+whole data path has been run against it end to end, including inside the Docker
+stack.
 
-- **taking the final dump** inside the write freeze — `scripts/pg/dump-turso.mjs`
-  is written and rehearsed against a local source (2,780 rows, 115 tables, row
-  counts matched, and the resulting fingerprint is byte-identical per table to
-  the original), but it has never run against live Turso credentials;
-- **switching traffic** to the new stack.
+| Measure | July snapshot | **Current export** |
+| --- | --- | --- |
+| Rows | 2,780 | **4,103** |
+| Tables in dump | 115 | **124** |
+| Columns the datamodel expected and the DB lacked | 51 | **0** |
+| Columns the DB had and the datamodel did not | 16 | **17** (one new: `CreditNote.invoiceId`) |
+| Unknown tables | 6 | **0** |
+| Unique-constraint violations | 2 | **1** (`Job.invoiceNumber`, 14 values / 16 surplus) |
 
-The snapshot in the repo is from 2026-07-14 with its newest row on 2026-07-10, so
-it is too old to cut over from. Rehearsed duration for the data steps: under two
-minutes.
+Production's own healing script closed the 51-column gap between July and now,
+and `DocumentBrandingSettings` no longer has duplicate `orgId` rows. The nine
+extra tables are the ones Phase 1 modelled plus the eight the schema declared but
+production had never provisioned — all now present and accounted for.
 
-The runbook is deliberately ordered so that everything reversible happens first:
-the stack is proven healthy while empty, the import is validated before it writes,
-and verification happens **before** traffic moves. Up to that point rollback is
-"stop the new stack".
+Verified against this export:
 
-One thing to watch at step 8: `--check` will report the same two duplicate-key
-findings as the rehearsal, plus anything created since July. **A new finding means
-stop** — the resolvers cover only what was analysed.
+- `import --check` — clean apart from the known `Job.invoiceNumber` policy
+- **4,100 rows across 58 tables** imported (3 junk rows excluded by design)
+- `verify-import` — 119 tables, row counts, **every numeric sum and every
+  timestamp range match**
+- `verify-business` — **24/24 assertions pass**, including money totals to the
+  shilling: `SUM(Payment.amount)` 50,141,362, `SUM(Invoice.totalAmount)`
+  65,977,536, `SUM(Invoice.paidAmount)` 43,743,262, `SUM(Job.finalCost)`
+  26,282,200
+- Repeated **inside the container stack** with the dump mounted read-only, same
+  results
+- The application serves it: logged in through the container and fetched
+  `/dashboard`, `/jobs`, `/clients`, `/documents/invoices`, `/finance`,
+  `/reports` — all 200, with **46 distinct invoice numbers and 12 job numbers
+  rendered** and no empty states
+
+What still requires the live systems, and only that:
+
+1. Provision the VPS and point DNS at it.
+2. Freeze writes and take the **final** export (this one is a day old; anything
+   written since would be lost).
+3. Re-run the same three commands — they are now proven against real current data.
+
+`scripts/pg/dump-turso.mjs` still has never run against live Turso credentials;
+if the export is produced by whatever tool made this one, it is not needed.
 
 ### Phase 7 — Postgres-native follow-ups
 
@@ -602,6 +625,7 @@ Two passes that turned out to be worthless until checked:
 | `bun run check:links` | passes |
 | `bun audit` | 2 pre-existing high advisories in a transitive `effect` package (via `uploadthing` and Prisma's own `@prisma/config`); not introduced here |
 | `bun run qa:e2e` | **17 pass, 6 fail — pre-existing UI drift, not database** |
+| Current export: import + verify + business + container stack + authenticated page fetches | all pass |
 | `smoke:prod` | not runnable without a live production URL |
 
 The six e2e failures are assertions against UI that the design-system work on

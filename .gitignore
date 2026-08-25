@@ -17,6 +17,10 @@
 
 # next.js
 /.next/
+# Alternate build output directories: scripts/build.mjs uses .next-gate off-CI,
+# the QA scripts use .next-qa and Playwright uses .next-e2e. Globbed so a new
+# one cannot get committed by accident.
+.next-*/
 /.next-gate/
 /out/
 

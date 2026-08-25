@@ -72,9 +72,19 @@ for (const table of tables) {
   if (rows > 0) {
     const model = tableToModel.get(table);
 
-    // Numeric columns: sum them. Uses the DB's own type so it also covers
-    // columns the schema does not know about (they still have to survive).
-    const numeric = cols.filter((c) => c.type.includes("REAL") || c.type.includes("INT") || c.type.includes("NUM") || c.type.includes("DECIMAL"));
+    // Numeric columns: sum them. Uses the DB's own declared type so it also
+    // covers columns the datamodel does not know about — those still have to
+    // survive the import.
+    //
+    // The datamodel wins where the two disagree. RateLimit.resetAt is declared
+    // INTEGER in SQLite (the old hand-written table stored epoch milliseconds)
+    // but is a DateTime in the model, so Postgres has it as a timestamp and
+    // summing it there fails. Anything the model calls a DateTime belongs in the
+    // temporal set below, not here.
+    const numeric = cols.filter((c) => {
+      if (model?.columns.get(c.name)?.type === "DateTime") return false;
+      return c.type.includes("REAL") || c.type.includes("INT") || c.type.includes("NUM") || c.type.includes("DECIMAL");
+    });
     for (const c of numeric) {
       // Booleans are stored as INTEGER; summing them is still a useful checksum.
       const r = await client.execute(`SELECT SUM(CAST(${q(c.name)} AS REAL)) AS s, COUNT(${q(c.name)}) AS n FROM ${q(table)}`);

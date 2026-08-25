@@ -4,9 +4,15 @@ Everything in this document has been rehearsed against the production snapshot
 except the two steps that need the live systems: taking the final dump, and
 switching DNS. Timings below are from the rehearsal (2,777 rows).
 
-**Blocked on:** a fresh dump of the live database. The snapshot in the repo
-(`mrms-prod.db`) is from 2026-07-14 and its newest row is 2026-07-10, so it is
-too old to cut over from.
+**Status:** the whole data path has been run against the export of 2026-08-25
+(4,103 rows, newest row 2026-08-24) — validated, imported, verified, and served
+by the application inside the Docker stack. See the Phase 6 section of
+`postgres-migration-plan.md` for the figures.
+
+What remains is only what needs the live systems: provisioning the VPS, freezing
+writes, and taking the **final** export. The one in the repo is a day old, so
+anything written since would be lost — the commands below are unchanged and now
+proven against real current data.
 
 ## Before the window
 
@@ -63,10 +69,10 @@ whole window.
    docker compose run --rm --no-deps -v "$(pwd)/final.db:/app/final.db:ro" \
      migrate node scripts/pg/import.mjs final.db --check
    ```
-   Expect it to report the same two duplicate-key findings as the rehearsal
-   (`Job.invoiceNumber`, `DocumentBrandingSettings.orgId`) plus anything new
-   created since July. **A new finding means stop and read it** — the resolvers
-   in `docs/pg-migration/import-map.json` cover only what was analysed.
+   Against the 2026-08-25 export this reports exactly one finding, the known
+   `Job.invoiceNumber` policy (14 duplicated values, 16 surplus rows).
+   **A new finding means stop and read it** — the resolvers in
+   `docs/pg-migration/import-map.json` cover only what has been analysed.
 
 9. **Import.**
    ```bash

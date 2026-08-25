@@ -29,7 +29,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com https://*.turso.io https://va.vercel-analytics.com",
+  // No turso.io: the browser never spoke to the database directly even on
+  // Turso, and the database is now inside the deployment's own network.
+  "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com https://va.vercel-analytics.com",
   "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
