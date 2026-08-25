@@ -1,0 +1,139 @@
+# Deploys the Postgres/Docker migration branch to the shared VPS for
+# validation — separate from `main`, which is untouched by this workflow and
+# keeps deploying however it already does (Vercel).
+#
+# Reachable at http://<SERVER_HOST>:<APP_PORT> for now, with no domain and no
+# Traefik — see docs/deployment.md for the docker-compose.shared-edge.yml
+# overlay to switch to once a hostname is ready.
+#
+# One-time manual setup on the server (this workflow does not do this part):
+#   git clone <repo-url> <DEPLOY_PATH>   # e.g. /var/www/mrms-staging
+#   cd <DEPLOY_PATH> && git checkout feat/postgres-docker-migration
+# `.env` itself is written by this workflow on every deploy (from the ENV_CI
+# secret below) — no need to create it by hand first.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions) — see
+# .env.ci.example for what goes in each and why they're split this way:
+#   ENV_CI           - the application's .env content, pasted as one secret
+#   SERVER_HOST      - server IP
+#   SERVER_USER      - SSH login user
+#   SERVER_SSH_KEY   - PEM private key
+#   SERVER_PORT      - SSH port
+#   DEPLOY_PATH      - path to the clone on the server, e.g. /var/www/mrms-staging
+#
+# Builds happen on the server itself (matches docs/deployment.md's documented
+# `git pull && docker compose up -d --build` flow) rather than in CI + a
+# registry. Simpler for a validation phase with infrequent deploys; revisit if
+# deploys become frequent enough that the build load competes with eaglestays
+# on the shared box — see the capacity note in docs/deployment.md.
+
+name: Deploy migration branch (staging)
+
+on:
+  push:
+    branches:
+      - feat/postgres-docker-migration
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-migration-staging
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://mrms:mrms_ci@localhost:5432/mrms_ci?schema=public
+      BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mrms
+          POSTGRES_PASSWORD: mrms_ci
+          POSTGRES_DB: mrms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mrms -d mrms_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-deploy-staging-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-deploy-staging-
+      - run: bun install --frozen-lockfile
+      - run: bun run prisma:generate
+      - run: bun run lint
+      - run: bunx tsc --noEmit
+      - run: bun run build
+
+  deploy:
+    name: Deploy → server IP:PORT
+    needs: quality
+    runs-on: ubuntu-latest
+    environment:
+      name: mrms-migration-staging
+    steps:
+      # ENV_CI is the whole application .env, pasted as one secret (see
+      # .env.ci.example). Written here and copied to the server below, so the
+      # server's .env always matches whatever's in the secret — no separate
+      # manual copy-and-fill step on the server itself.
+      - name: Write .env from ENV_CI
+        run: echo "${{ secrets.ENV_CI }}" > .env
+
+      - name: Copy .env to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: ".env"
+          target: ${{ secrets.DEPLOY_PATH }}
+          overwrite: true
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            git fetch origin feat/postgres-docker-migration
+            git checkout feat/postgres-docker-migration
+            git reset --hard origin/feat/postgres-docker-migration
+
+            docker compose -f docker-compose.yml up -d --build --remove-orphans
+            docker image prune -f
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            cd "${{ secrets.DEPLOY_PATH }}"
+            docker compose -f docker-compose.yml ps

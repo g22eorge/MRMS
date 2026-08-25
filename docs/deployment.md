@@ -167,6 +167,75 @@ docker compose ps                                  # STATUS column shows (health
 docker inspect --format '{{.State.Health.Status}}' mrms-app-1
 ```
 
+## Validating on the shared VPS before a domain is ready
+
+Until a hostname is sorted, test the migration branch at the server's
+`http://<server-ip>:<APP_PORT>` directly — the base `docker-compose.yml`
+already publishes `APP_PORT` to the host, so no Traefik/domain setup is
+needed for this phase. Set `NEXT_PUBLIC_APP_URL`/`BETTER_AUTH_URL` to that
+`http://` address (not `https://` — there's no TLS yet, and BetterAuth reads
+the scheme off this URL to decide the cookie's `Secure` flag, so `https` here
+would break login over plain HTTP).
+
+`.github/workflows/deploy-migration-staging.yml` automates this: on push to
+`feat/postgres-docker-migration` (or manually via `workflow_dispatch`), it
+runs the quality gate, then SSHes into the server and runs the same
+`git pull && docker compose up -d --build` from "Releasing a change" below.
+It never touches `main`, and builds happen on the server itself rather than
+in CI + a registry (simplest for infrequent validation deploys — revisit if
+that build load starts competing with eaglestays on deploys, given the
+capacity note below). See the workflow file for the one-time manual setup
+(git clone on the server, `.env`, and the GitHub repo secrets it needs).
+
+Once a hostname is ready, move to `docker-compose.shared-edge.yml` below —
+that's the point at which the shared Traefik proxy and a real domain take
+over from the raw `IP:PORT`.
+
+## Sharing a server with another site
+
+`docker-compose.yml` alone assumes MRMS owns the whole VPS: `app` publishes
+`APP_PORT` directly and expects its own reverse proxy in front. That breaks the
+moment the box already runs another site behind a shared TLS-terminating
+proxy, because two proxies cannot both bind 80/443.
+
+If the target VPS already runs a shared Traefik "edge" stack for other sites
+(the pattern documented on the eaglestays server — one Traefik container owns
+80/443, every site joins its external `edge` Docker network and is routed by
+`Host()` label rules), use the overlay instead of the base file alone:
+
+```bash
+docker network create edge || true      # once, if it does not exist yet
+cp .env.docker.example .env             # fill it in, plus MRMS_HOSTNAME
+docker compose -f docker-compose.yml -f docker-compose.shared-edge.yml up -d --build
+```
+
+This drops `app`'s host-port publish (Traefik reaches it over the `edge`
+network instead, so nothing on the box competes for a host port) and adds the
+Traefik router labels, keyed off `MRMS_HOSTNAME` in `.env`.
+
+**Validating the migration before it takes over the real domains.** Set
+`MRMS_HOSTNAME` to a staging subdomain first, not `care.`/`app.eagleinfosolutions.com`
+— those still point at the current production (Vercel) until this stack is
+confirmed. Also add the staging hostname to `BETTER_AUTH_TRUSTED_ORIGINS` in
+`.env` (comma-separated) so BetterAuth accepts it. Cutting over later is just
+changing `MRMS_HOSTNAME` to the real domain, updating DNS, and restarting the
+`app` service to pick up the new Traefik label — the same running stack and
+data throughout, no move required.
+
+**Capacity.** A box already running one database-backed app (Postgres +
+app server + a scheduler, say) has little room for a second — check that
+server's own capacity notes before adding this stack to it. Every MRMS service
+in `docker-compose.yml` carries an explicit CPU/memory limit for exactly this
+reason, but on a genuinely tight box treat this as a time-boxed validation
+deployment and plan to move to a larger box before it carries real traffic.
+Watch `docker stats` after deploying.
+
+**Volumes and networks don't collide by name** — `docker-compose.yml` sets
+`name: mrms`, so its named volumes and default network are prefixed `mrms_*`
+regardless of what else runs on the box. Only the `edge` network is shared,
+and it's declared `external`, so `docker compose down` here never touches it
+or the other sites attached to it.
+
 ## Local development
 
 Development runs entirely in containers too — see `docs/development.md`.
