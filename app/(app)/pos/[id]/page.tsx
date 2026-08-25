@@ -28,6 +28,7 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
+import { clientDisplayName } from "@/lib/client-name";
 
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
@@ -145,7 +146,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     notes: string | null;
     branchId: string | null;
     branch: { name: string } | null;
-    client: { fullName: string; phone: string | null; email: string | null } | null;
+    client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null;
     items: Array<{ id: string; partId: string | null; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
     payments: Array<{ id: string; amount: number; method: PaymentMethod; reference: string | null; receivedAt: Date; currency: string | null }>;
     _count: { payments: number; creditNotes: number; refunds: number };
@@ -198,7 +199,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         notes: true,
         branchId: true,
         branch: { select: { name: true } },
-        client: { select: { fullName: true, phone: true, email: true } },
+        client: { select: { fullName: true, phone: true, email: true, organization: true } },
         items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
         payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
@@ -1398,7 +1399,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
             ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{ title: "Customer", name: sale.client?.fullName ?? "Walk-in" }}
+          party={{ title: "Customer", name: clientDisplayName(sale.client, "Walk-in") }}
         />
       </div>
     </div>

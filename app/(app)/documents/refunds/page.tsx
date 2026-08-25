@@ -29,6 +29,7 @@ import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
+import { clientDisplayName } from "@/lib/client-name";
 
 export const dynamic = "force-dynamic";
 
@@ -371,9 +372,9 @@ export default async function RefundsPage({
       { reference: { contains: q } },
       { note: { contains: q } },
       { invoice: { is: { invoiceNumber: { contains: q } } } },
-      { invoice: { is: { job: { is: { client: { is: { fullName: { contains: q } } } } } } } },
+      { invoice: { is: { job: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } } } },
       { sale: { is: { saleNumber: { contains: q } } } },
-      { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+      { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
       { creditNote: { is: { creditNoteNumber: { contains: q } } } },
     ];
   }
@@ -390,16 +391,16 @@ export default async function RefundsPage({
     invoiceId: true,
     saleId: true,
     creditNoteId: true,
-    invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
-    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+    invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } } } },
+    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
     creditNote: {
       select: {
         creditNoteNumber: true,
-        sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } },
+        sale: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
         invoice: {
           select: {
-            client: { select: { fullName: true, phone: true, email: true } },
-            job: { select: { client: { select: { fullName: true, phone: true, email: true } } } },
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
+            job: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
           },
         },
       },
@@ -431,8 +432,8 @@ export default async function RefundsPage({
         invoiceNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
-        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+        client: { select: { fullName: true, phone: true, organization: true } },
+        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -445,7 +446,7 @@ export default async function RefundsPage({
         saleNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -458,12 +459,12 @@ export default async function RefundsPage({
         creditNoteNumber: true,
         totalAmount: true,
         currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
+        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
         invoice: {
           select: {
             invoiceNumber: true,
-            client: { select: { fullName: true, phone: true } },
-            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+            client: { select: { fullName: true, phone: true, organization: true } },
+            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
           },
         },
         refunds: { select: { amount: true } },
@@ -519,7 +520,7 @@ export default async function RefundsPage({
     {
       label: "Invoices",
       options: refundableInvoices.map((invoice) => {
-        const who = invoice.client?.fullName ?? invoice.job?.client?.fullName ?? "No customer";
+        const who = clientDisplayName(invoice.client ?? invoice.job?.client, "No customer");
         return {
           value: `invoice:${invoice.id}`,
           label: `${who} — ${invoice.invoiceNumber}`,
@@ -531,7 +532,7 @@ export default async function RefundsPage({
     {
       label: "Sales",
       options: refundableSales.map((sale) => {
-        const who = sale.client?.fullName ?? "Walk-in";
+        const who = clientDisplayName(sale.client, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -570,14 +571,15 @@ export default async function RefundsPage({
       : r.saleId
       ? `/sales/${r.saleId}`
       : null;
-    const clientName =
-      r.invoice?.job?.client?.fullName ??
-      r.invoice?.client?.fullName ??
-      r.sale?.client?.fullName ??
-      r.creditNote?.sale?.client?.fullName ??
-      r.creditNote?.invoice?.client?.fullName ??
-      r.creditNote?.invoice?.job?.client?.fullName ??
-      "—";
+    const clientName = clientDisplayName(
+      r.invoice?.job?.client ??
+        r.invoice?.client ??
+        r.sale?.client ??
+        r.creditNote?.sale?.client ??
+        r.creditNote?.invoice?.client ??
+        r.creditNote?.invoice?.job?.client,
+      "—",
+    );
     const recipientPhone =
       r.invoice?.job?.client?.phone ??
       r.invoice?.client?.phone ??

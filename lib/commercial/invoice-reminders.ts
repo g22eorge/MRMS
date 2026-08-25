@@ -34,10 +34,10 @@ const invoiceReminderSelect = {
   job: {
     select: {
       id: true,
-      client: { select: { fullName: true, phone: true, email: true } },
+      client: { select: { fullName: true, phone: true, email: true, organization: true } },
     },
   },
-  client: { select: { fullName: true, phone: true, email: true } },
+  client: { select: { fullName: true, phone: true, email: true, organization: true } },
 } as const;
 
 type InvoiceReminderRow = {

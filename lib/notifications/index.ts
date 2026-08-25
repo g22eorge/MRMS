@@ -93,7 +93,7 @@ export async function getUnreadNotifications(userId: string, limit = 20, opts?: 
         select: {
           id: true,
           jobNumber: true,
-          ...(includeClient ? { client: { select: { fullName: true, phone: true } } } : {}),
+          ...(includeClient ? { client: { select: { fullName: true, phone: true, organization: true } } } : {}),
         },
       },
     },
@@ -111,7 +111,7 @@ export async function getAllNotifications(userId: string, limit = 50, opts?: { i
         select: {
           id: true,
           jobNumber: true,
-          ...(includeClient ? { client: { select: { fullName: true, phone: true } } } : {}),
+          ...(includeClient ? { client: { select: { fullName: true, phone: true, organization: true } } } : {}),
         },
       },
     },

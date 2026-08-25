@@ -26,7 +26,7 @@ type JobOption = {
   jobNumber: string;
   brand: string;
   model: string;
-  client: { fullName: string; phone: string | null; address: string | null } | null;
+  client: { fullName: string; phone: string | null; address: string | null; organization: string | null } | null;
 };
 
 type PartOption = { id: string; sku: string; name: string; unitCost: number | null; sellingPrice?: number | null; taxable?: boolean; taxRate?: number | null; qtyOnHand: number };

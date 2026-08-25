@@ -29,6 +29,7 @@ import { formatEATDate } from "@/lib/date-eat";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { clientDisplayName } from "@/lib/client-name";
 
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
@@ -60,14 +61,14 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   if (q) {
     where.OR = [
       { quoteNumber: { contains: q } },
-      { client: { fullName: { contains: q } } },
+      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
     ];
   }
 
   // KPI band reflects the whole org (all statuses), respecting only the search —
   // so the summary numbers stay stable as you flip the status filter.
   const kpiWhere: Prisma.QuotationWhereInput = { orgId: user.orgId };
-  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q } }, { client: { fullName: { contains: q } } }];
+  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q } }, { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } }];
 
   const [quotations, totalItems, statusGroups] = await Promise.all([
     db.quotation.findMany({
@@ -80,7 +81,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
         totalAmount: true,
         validUntil: true,
         createdAt: true,
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -97,7 +98,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   const rows = quotations.map((q) => {
     const currency = normalizeCurrency(orgCurrency, normalizeCurrency(q.currency, "UGX"));
-    const clientName = q.client?.fullName ?? "—";
+    const clientName = clientDisplayName(q.client, "—");
     return {
       id: q.id,
       quoteNumber: q.quoteNumber,
@@ -170,7 +171,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     db.part.findMany({ where: { orgId: user.orgId, isActive: true }, orderBy: { name: "asc" }, take: 500, select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, taxable: true, taxRate: true, qtyOnHand: true } }),
     db.taxRate.findMany({ where: { orgId: user.orgId, isActive: true, appliesToSales: true }, orderBy: [{ isDefault: "desc" }, { code: "asc" }], select: { id: true, name: true, code: true, rate: true, isDefault: true } }),
     db.lead.findMany({ where: { orgId: user.orgId, status: { notIn: ["LOST", "STALE"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, fullName: true, phone: true, organization: true, interest: true } }),
-    db.job.findMany({ where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } } }),
+    db.job.findMany({ where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true, organization: true } } } }),
     getDocumentBrandingSettings(user.orgId),
   ]);
 

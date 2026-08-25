@@ -4,6 +4,7 @@
  */
 import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null;
@@ -31,7 +32,7 @@ type Sale = {
   createdAt: Date;
   currency?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null } | null;
   subtotal: number;
   discountAmount: number;
   vatAmount: number;
@@ -94,7 +95,8 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       docDate={dateStr}
       metaRows={metaRows}
       topRuleColor="#f97316"
-      clientName={sale.client?.fullName ?? "Walk-in Customer"}
+      clientName={clientDisplayName(sale.client, "Walk-in Customer")}
+      clientAttn={clientContactName(sale.client)}
       clientPhone={sale.client?.phone ?? null}
       clientEmail={null}
       clientLocation={null}

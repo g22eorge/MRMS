@@ -24,6 +24,7 @@ import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "documents", "timeline", "photos", "messages"] as const;
 
@@ -530,7 +531,7 @@ type Props = {
     timelineConfidence?: "FIRM" | "ESTIMATED" | "PARTS_DEPENDENT" | null;
     timelineNote?: string | null;
     assignedTo?: { id: string; name: string; role: Role } | null;
-    client?: { fullName: string; phone: string; email: string | null } | null;
+    client?: { fullName: string; phone: string; email: string | null; organization?: string | null } | null;
     clientPayments?: Array<{
       id: string;
       amount: number;
@@ -1057,10 +1058,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             </h1>
             <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--ink-muted)]">{job.issueDescription}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.75rem] text-[var(--ink-muted)]">
-              {role !== "TECHNICIAN_EXTERNAL" && job.client?.fullName ? (
+              {role !== "TECHNICIAN_EXTERNAL" && job.client ? (
                 <span className="inline-flex items-center gap-1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <strong className="text-[var(--ink)]">{job.client.fullName}</strong>
+                  <strong className="text-[var(--ink)]">{clientDisplayName(job.client)}</strong>
                 </span>
               ) : null}
               <span className="inline-flex items-center gap-1">
@@ -1238,7 +1239,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Client &amp; technician</p>
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
             <span className="text-[0.71875rem] text-[var(--ink-muted)]">Client</span>
-            <span className="truncate text-[0.78125rem] font-semibold text-[var(--ink)]">{job.client?.fullName ?? "No client"}</span>
+            <span className="truncate text-[0.78125rem] font-semibold text-[var(--ink)]">{clientDisplayName(job.client, "No client")}</span>
           </div>
           <div className="flex items-center justify-between gap-2 pt-2">
             <span className="text-[0.71875rem] text-[var(--ink-muted)]">Technician</span>
@@ -1360,10 +1361,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           {/* Contact card */}
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)]/15 text-2xl font-black text-[var(--accent)]">
-              {(job.client?.fullName?.trim() || "?").charAt(0).toUpperCase()}
+              {(clientDisplayName(job.client, "?")).charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-black text-[var(--ink)]">{job.client?.fullName ?? "No client"}</p>
+              <p className="text-lg font-black text-[var(--ink)]">{clientDisplayName(job.client, "No client")}</p>
+              {clientContactName(job.client) ? <p className="text-sm text-[var(--ink-muted)]">{clientContactName(job.client)}</p> : null}
               {job.client?.phone ? (
                 <a href={`tel:${job.client.phone}`} className="text-sm text-[var(--accent)]">{job.client.phone}</a>
               ) : <p className="text-sm text-[var(--ink-muted)]">No phone</p>}
@@ -2623,7 +2625,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         onClose={() => setCompletionFlowOpen(false)}
         jobId={job.id}
         jobNumber={job.jobNumber}
-        clientName={job.client?.fullName}
+        clientName={job.client ? clientDisplayName(job.client) : null}
         clientPhone={job.client?.phone}
         clientBill={clientBillValue}
         balanceDue={clientBalanceDue}

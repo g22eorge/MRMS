@@ -29,6 +29,7 @@ import {
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
+import { clientDisplayName } from "@/lib/client-name";
 
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
@@ -250,8 +251,8 @@ export default async function DeliveryNotesPage({
     receivedByName: string;
     receivedBySignatureText: string | null;
     note: string | null;
-    sale: { id: string; saleNumber: string; invoiceNumber: string | null; client: { fullName: string; phone: string | null; email: string | null } | null } | null;
-    invoice?: { id: string; invoiceNumber: string; client: { fullName: string; phone: string | null; email: string | null } | null; job: { id: string; jobNumber: string; client: { fullName: string; phone: string | null; email: string | null } } | null } | null;
+    sale: { id: string; saleNumber: string; invoiceNumber: string | null; client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null } | null;
+    invoice?: { id: string; invoiceNumber: string; client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null; job: { id: string; jobNumber: string; client: { fullName: string; phone: string | null; email: string | null; organization: string | null } } | null } | null;
   };
 
   const now = new Date();
@@ -268,9 +269,9 @@ export default async function DeliveryNotesPage({
     ? [
         { deliveryNoteNumber: { contains: q } },
         { invoice: { is: { invoiceNumber: { contains: q } } } },
-        { invoice: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { invoice: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
         { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
       ]
     : undefined;
   // Legacy deployments whose Prisma client predates DeliveryNote.invoice can't
@@ -279,7 +280,7 @@ export default async function DeliveryNotesPage({
     ? [
         { deliveryNoteNumber: { contains: q } },
         { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { fullName: { contains: q } } } } } },
+        { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
       ]
     : undefined;
 
@@ -311,15 +312,15 @@ export default async function DeliveryNotesPage({
             id: true,
             saleNumber: true,
             invoiceNumber: true,
-            client: { select: { fullName: true, phone: true, email: true } },
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
           },
         },
         invoice: {
           select: {
             id: true,
             invoiceNumber: true,
-            client: { select: { fullName: true, phone: true, email: true } },
-            job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
+            job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
           },
         },
       },
@@ -349,7 +350,7 @@ export default async function DeliveryNotesPage({
             id: true,
             saleNumber: true,
             invoiceNumber: true,
-            client: { select: { fullName: true, phone: true, email: true } },
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
           },
         },
       },
@@ -375,13 +376,13 @@ export default async function DeliveryNotesPage({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { issuedAt: "desc" },
       take: 80,
-      select: { id: true, invoiceNumber: true, totalAmount: true, currency: true, paidAmount: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } },
+      select: { id: true, invoiceNumber: true, totalAmount: true, currency: true, paidAmount: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } }, client: { select: { fullName: true, phone: true, organization: true } } },
     }).then((rows) => rows.filter((invoice) => invoice.paidAmount >= invoice.totalAmount)),
     prisma.sale.findMany({
       where: { orgId, status: "PAID" },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true } } },
+      select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).catch(() => []),
   ]);
   const hasDeliverySources = invoiceOptions.length > 0 || saleOptions.length > 0;
@@ -394,7 +395,7 @@ export default async function DeliveryNotesPage({
     {
       label: "Paid invoices",
       options: invoiceOptions.map((invoice) => {
-        const who = invoice.client?.fullName ?? invoice.job?.client?.fullName ?? "No customer";
+        const who = clientDisplayName(invoice.client ?? invoice.job?.client, "No customer");
         const phone = invoice.client?.phone ?? invoice.job?.client?.phone ?? "";
         return {
           value: `invoice:${invoice.id}`,
@@ -409,7 +410,7 @@ export default async function DeliveryNotesPage({
     {
       label: "Paid sales",
       options: saleOptions.map((sale) => {
-        const who = sale.client?.fullName ?? "Walk-in";
+        const who = clientDisplayName(sale.client, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -517,7 +518,7 @@ export default async function DeliveryNotesPage({
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
                 {/* Client + source visible on mobile (those columns hidden at md/lg) */}
                 <p className="mt-0.5 font-medium text-[var(--ink)] lg:hidden">
-                  {n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? ""}
+                  {n.invoice?.job?.client ? clientDisplayName(n.invoice.job.client) : n.sale?.client ? clientDisplayName(n.sale.client) : ""}
                 </p>
               </>
             ),
@@ -543,7 +544,7 @@ export default async function DeliveryNotesPage({
             header: "Client",
             headerClassName: "hidden lg:table-cell",
             className: "hidden text-[var(--ink-muted)] lg:table-cell",
-            cell: (n) => n.invoice?.job?.client.fullName ?? n.sale?.client?.fullName ?? "-",
+            cell: (n) => clientDisplayName(n.invoice?.job?.client ?? n.sale?.client, "-"),
           },
           {
             key: "delivered",

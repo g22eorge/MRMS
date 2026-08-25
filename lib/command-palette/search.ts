@@ -3,6 +3,7 @@ import { type Prisma } from "@prisma/client";
 import { DOCUMENTS_ROUTES } from "@/lib/documents/routes";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { clientDisplayName } from "@/lib/client-name";
 import { phoneLookupVariants } from "@/lib/phone";
 
 import type { CommandPaletteUser } from "./quick-actions";
@@ -30,7 +31,7 @@ function buildJobWhere(params: {
 
   if (user.role !== "TECHNICIAN_EXTERNAL") {
     textOr.push(
-      { client: { fullName: { contains: q } } },
+      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
       { client: { phone: { contains: q } } },
       { issueDescription: { contains: q } },
     );
@@ -104,7 +105,7 @@ export async function searchCommandPalette(params: {
           status: true,
           brand: true,
           model: true,
-          client: { select: { fullName: true, phone: true } },
+          client: { select: { fullName: true, phone: true, organization: true } },
         },
         orderBy: { updatedAt: "desc" },
         take: RESULT_LIMIT,
@@ -113,7 +114,7 @@ export async function searchCommandPalette(params: {
       for (const job of jobs) {
         const device = [job.brand, job.model].filter(Boolean).join(" ").trim();
         const clientLine = job.client
-          ? `${job.client.fullName}${job.client.phone ? ` · ${job.client.phone}` : ""}`
+          ? `${clientDisplayName(job.client)}${job.client.phone ? ` · ${job.client.phone}` : ""}`
           : device || job.status.replaceAll("_", " ");
         hits.push({
           id: `job-${job.id}`,
@@ -140,7 +141,7 @@ export async function searchCommandPalette(params: {
 
     const clients = await prisma.client.findMany({
       where: { orgId: params.orgId, OR: clientOr },
-      select: { id: true, fullName: true, phone: true, email: true },
+      select: { id: true, fullName: true, phone: true, email: true, organization: true },
       orderBy: { updatedAt: "desc" },
       take: RESULT_LIMIT,
     });
@@ -149,7 +150,7 @@ export async function searchCommandPalette(params: {
       hits.push({
         id: `client-${client.id}`,
         kind: "client",
-        label: client.fullName,
+        label: clientDisplayName(client),
         description: [client.phone, client.email].filter(Boolean).join(" · ") || "Client",
         href: `/clients/${client.id}`,
       });
@@ -163,7 +164,7 @@ export async function searchCommandPalette(params: {
         OR: [
           { invoiceNumber: { contains: q } },
           { subject: { contains: q } },
-          { client: { fullName: { contains: q } } },
+          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
           { client: { phone: { contains: q } } },
           { job: { jobNumber: { contains: q } } },
         ],
@@ -173,7 +174,7 @@ export async function searchCommandPalette(params: {
         invoiceNumber: true,
         status: true,
         totalAmount: true,
-        client: { select: { fullName: true } },
+        client: { select: { fullName: true, organization: true } },
         job: { select: { jobNumber: true } },
       },
       orderBy: { issuedAt: "desc" },
@@ -181,7 +182,7 @@ export async function searchCommandPalette(params: {
     });
 
     for (const invoice of invoices) {
-      const context = invoice.job?.jobNumber ?? invoice.client?.fullName ?? invoice.status;
+      const context = invoice.job?.jobNumber ?? (invoice.client ? clientDisplayName(invoice.client) : null) ?? invoice.status;
       hits.push({
         id: `invoice-${invoice.id}`,
         kind: "invoice",
@@ -196,11 +197,11 @@ export async function searchCommandPalette(params: {
         orgId: params.orgId,
         OR: [
           { quoteNumber: { contains: q } },
-          { client: { fullName: { contains: q } } },
+          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
           { job: { jobNumber: { contains: q } } },
         ],
       },
-      select: { id: true, quoteNumber: true, status: true, client: { select: { fullName: true } }, job: { select: { jobNumber: true } } },
+      select: { id: true, quoteNumber: true, status: true, client: { select: { fullName: true, organization: true } }, job: { select: { jobNumber: true } } },
       orderBy: { createdAt: "desc" },
       take: RESULT_LIMIT,
     });
@@ -209,7 +210,7 @@ export async function searchCommandPalette(params: {
         id: `quotation-${quotation.id}`,
         kind: "quotation",
         label: quotation.quoteNumber,
-        description: quotation.job?.jobNumber ?? quotation.client?.fullName ?? quotation.status,
+        description: quotation.job?.jobNumber ?? (quotation.client ? clientDisplayName(quotation.client) : null) ?? quotation.status,
         href: `${DOCUMENTS_ROUTES.quotations}?q=${encodeURIComponent(quotation.quoteNumber)}`,
       });
     }

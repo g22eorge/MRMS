@@ -24,6 +24,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
+import { clientDisplayName } from "@/lib/client-name";
 
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
@@ -84,7 +85,7 @@ export default async function PosPage({
         OR: [
           { saleNumber: { contains: q } },
           { notes: { contains: q } },
-          { client: { fullName: { contains: q } } },
+          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
         ],
       }
     : {};
@@ -212,7 +213,7 @@ export default async function PosPage({
     paidAmount: number;
     invoicedAt: Date | null;
     createdAt: Date;
-    client: { id: string; fullName: string } | null;
+    client: { id: string; fullName: string; organization: string | null } | null;
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
@@ -234,7 +235,7 @@ export default async function PosPage({
         paidAmount: true,
         invoicedAt: true,
         createdAt: true,
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         createdBy: { select: { id: true, name: true } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
       },
@@ -515,7 +516,7 @@ export default async function PosPage({
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate font-bold text-[var(--ink)]">{s.client?.fullName ?? "Walk-in"}</p>
+                    <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(s.client, "Walk-in")}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
                       {" · "}{formatEATDate(s.createdAt)}
@@ -554,7 +555,7 @@ export default async function PosPage({
                 header: "Client",
                 cell: (s) =>
                   s.client
-                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
+                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
                     : <span className="text-[var(--ink-muted)]">Walk-in</span>,
               },
               {

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CheckboxField } from "@/components/forms";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { DocumentSourcePicker } from "@/components/documents/DocumentSourcePicker";
+import { clientDisplayName } from "@/lib/client-name";
 
 type SourceLine = {
   id: string;
@@ -26,7 +27,7 @@ type SourceOption = {
   reference: string;
   totalAmount: number;
   currency: string;
-  client: { fullName: string; phone: string | null } | null;
+  client: { fullName: string; phone: string | null; organization: string | null } | null;
   items: SourceLine[];
 };
 
@@ -55,10 +56,10 @@ export function CreateCreditNoteDialog({ eligibleSources, action, returnAndRefun
   const invoices = eligibleSources.filter((s) => s.kind === "invoice");
   const toOption = (s: SourceOption) => ({
     value: s.key,
-    label: `${s.client?.fullName ?? "Walk-in"} — ${s.reference}`,
+    label: `${clientDisplayName(s.client, "Walk-in")} — ${s.reference}`,
     hint: money(s.totalAmount, s.currency),
     // Customer name first: people search by who, not by document number.
-    search: [s.client?.fullName ?? "Walk-in", s.client?.phone, s.reference].filter(Boolean).join(" "),
+    search: [clientDisplayName(s.client, "Walk-in"), s.client?.phone, s.reference].filter(Boolean).join(" "),
   });
 
   return (

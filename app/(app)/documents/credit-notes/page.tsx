@@ -31,6 +31,7 @@ import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pag
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
+import { clientDisplayName } from "@/lib/client-name";
 export const dynamic = "force-dynamic";
 
 export default async function CreditNotesPage({
@@ -640,10 +641,10 @@ export default async function CreditNotesPage({
             { creditNoteNumber: { contains: q } },
             { reason: { contains: q } },
             { sale: { saleNumber: { contains: q } } },
-            { sale: { client: { fullName: { contains: q } } } },
+            { sale: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
             { invoice: { invoiceNumber: { contains: q } } },
-            { invoice: { client: { fullName: { contains: q } } } },
-            { invoice: { job: { client: { fullName: { contains: q } } } } },
+            { invoice: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
+            { invoice: { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } },
           ],
         }
       : {}),
@@ -659,12 +660,12 @@ export default async function CreditNotesPage({
     prisma.creditNote.findMany({
       where: creditNotesWhere,
       include: {
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
         invoice: {
           select: {
             invoiceNumber: true,
-            client: { select: { fullName: true, phone: true, email: true } },
-            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
+            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
           },
         },
         items: { select: { description: true, quantity: true, unitPrice: true, lineTotal: true } },
@@ -682,7 +683,7 @@ export default async function CreditNotesPage({
         saleNumber: true,
         totalAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
         items: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
       },
       orderBy: { createdAt: "desc" },
@@ -697,8 +698,8 @@ export default async function CreditNotesPage({
         invoiceNumber: true,
         totalAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
-        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+        client: { select: { fullName: true, phone: true, organization: true } },
+        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
         lines: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
       },
       orderBy: { createdAt: "desc" },
@@ -966,7 +967,7 @@ export default async function CreditNotesPage({
             className: "text-[var(--ink)]",
             cell: (cn) => {
               const p = creditNoteParent(cn);
-              return p.client?.fullName ?? <span className="text-[var(--ink-muted)]">{p.clientName}</span>;
+              return p.client ? clientDisplayName(p.client) : <span className="text-[var(--ink-muted)]">{p.clientName}</span>;
             },
           },
           {

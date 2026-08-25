@@ -167,7 +167,7 @@ export default async function FieldPage({
       OR: [
         { visitNumber: { contains: q } },
         { job: { jobNumber: { contains: q } } },
-        { job: { client: { fullName: { contains: q } } } },
+        { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
         { assignedTo: { name: { contains: q } } },
       ],
     } : {}),

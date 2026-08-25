@@ -8,6 +8,7 @@ import { CommercialLineItemsEditor, LineItemTotals, TaxToggleField } from "@/com
 import { FormTextarea } from "@/components/ui/form-field";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 type ClientOption = {
   id: string;
@@ -29,7 +30,7 @@ type JobOption = {
   jobNumber: string;
   brand: string;
   model: string;
-  client: { fullName: string; phone: string | null; address: string | null } | null;
+  client: { fullName: string; phone: string | null; address: string | null; organization: string | null } | null;
 };
 type PartOption = { id: string; sku: string; name: string; unitCost: number | null; sellingPrice?: number | null; taxable?: boolean; taxRate?: number | null; qtyOnHand: number };
 type TaxRateOption = { id: string; name: string; code: string; rate: number; isDefault: boolean };
@@ -123,13 +124,13 @@ export function NewQuotationForm({
 
   const customerSources = useMemo<CustomerSource[]>(() => {
     const clientSources = clients.map((client) => {
-      const meta = [client.phone, client.email, client.organization].filter(Boolean).join(" - ");
+      const meta = [clientContactName(client), client.phone, client.email].filter(Boolean).join(" - ");
       const detail = client.address ?? "Client record";
       return {
         key: `client:${client.id}`,
         kind: "client" as const,
         id: client.id,
-        title: client.fullName,
+        title: clientDisplayName(client),
         badge: "Client",
         meta,
         detail,
@@ -152,7 +153,7 @@ export function NewQuotationForm({
     });
     const jobSources = jobs.map((job) => {
       const device = [job.brand, job.model].filter(Boolean).join(" ");
-      const title = job.client?.fullName ?? job.jobNumber;
+      const title = job.client ? clientDisplayName(job.client, job.jobNumber) : job.jobNumber;
       const meta = [job.jobNumber, job.client?.phone, device].filter(Boolean).join(" - ");
       const detail = job.client?.address ?? "Repair job";
       return {

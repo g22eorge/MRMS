@@ -44,6 +44,7 @@ import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
+import { clientDisplayName } from "@/lib/client-name";
 const workflowReasonValues = [
   "NONE",
   "PARTS_PENDING",
@@ -709,7 +710,7 @@ export async function updateJobAction(formData: FormData) {
             model: true,
             repairTimeline: true,
             timelineNote: true,
-            client: { select: { fullName: true, phone: true } },
+            client: { select: { fullName: true, phone: true, organization: true } },
             assignedTo: { select: { id: true, name: true, role: true } },
           },
         });
@@ -732,10 +733,10 @@ export async function updateJobAction(formData: FormData) {
     const clientName =
       user.role === "TECHNICIAN_EXTERNAL"
         ? "Client"
-        : (await prisma.job.findUnique({
+        : clientDisplayName((await prisma.job.findUnique({
             where: { id: job.id, orgId },
-            select: { client: { select: { fullName: true } } },
-          }))?.client.fullName ?? "Client";
+            select: { client: { select: { fullName: true, organization: true } } },
+          }))?.client ?? null, "Client");
     await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
     // Record the transition so the client portal (and staff) can show a real
     // repair timeline. Additive + best-effort — never blocks the status change.
@@ -1580,7 +1581,7 @@ export async function generateJobDeliveryNoteAction(
       model: true,
       deliveredTo: true,
       deliveryMethod: true,
-      client: { select: { fullName: true } },
+      client: { select: { fullName: true, organization: true } },
       invoice: {
         select: {
           id: true,

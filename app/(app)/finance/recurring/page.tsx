@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { clientDisplayName } from "@/lib/client-name";
 export const dynamic = "force-dynamic";
 
 const FREQUENCIES = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
@@ -66,7 +67,7 @@ export default async function RecurringInvoicesPage({
     prisma.recurringInvoice.findMany({
       where: { orgId },
       include: {
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         items: true,
         createdBy: { select: { name: true } },
       },
@@ -74,9 +75,9 @@ export default async function RecurringInvoicesPage({
     }),
     prisma.client.findMany({
       where: { orgId },
-      select: { id: true, fullName: true },
+      select: { id: true, fullName: true, organization: true },
       orderBy: { fullName: "asc" },
-    }).catch(() => [] as { id: string; fullName: string }[]),
+    }).catch(() => [] as { id: string; fullName: string; organization: string | null }[]),
   ]);
 
   const currency = org.baseCurrency ?? "UGX";
@@ -262,7 +263,7 @@ export default async function RecurringInvoicesPage({
   const activeCount = recurringInvoices.filter((r) => r.isActive).length;
   const dueNow = recurringInvoices.filter((r) => r.isActive && r.nextDueAt <= now).length;
   const filteredRecurring = q
-    ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || r.client?.fullName?.toLowerCase().includes(q))
+    ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || clientDisplayName(r.client, "").toLowerCase().includes(q))
     : recurringInvoices;
 
   // KPIs above stay whole-dataset; only the displayed rows are paginated.
@@ -328,7 +329,7 @@ export default async function RecurringInvoicesPage({
                 <select name="clientId" required className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
                   <option value="">Select client…</option>
                   {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.fullName}</option>
+                    <option key={c.id} value={c.id}>{clientDisplayName(c)}</option>
                   ))}
                 </select>
               </div>
@@ -432,7 +433,7 @@ export default async function RecurringInvoicesPage({
             key: "client",
             header: "Client",
             className: "text-[var(--ink)]",
-            cell: (rec) => rec.client.fullName,
+            cell: (rec) => clientDisplayName(rec.client),
           },
           {
             key: "frequency",
@@ -497,7 +498,7 @@ export default async function RecurringInvoicesPage({
             <div className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate font-bold text-[var(--ink)]">{rec.subject}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{rec.client.fullName} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(rec.client)} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
                 <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
                   {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()} · <span className={isDue ? "font-semibold text-amber-600" : ""}>{isDue ? "Due now" : `Next ${fmt(rec.nextDueAt)}`}</span>
                 </p>

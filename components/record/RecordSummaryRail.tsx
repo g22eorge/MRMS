@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { BadgeTone } from "@/components/ui/StatusBadge";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 export type SummaryRow = { label: string; value: ReactNode };
 export type RelatedDoc = { label: string; href?: string; sub?: string; tone?: BadgeTone };
@@ -53,8 +54,8 @@ export function RecordSummaryRail({
     (client
       ? {
           title: "Client",
-          name: client.fullName,
-          org: client.organization,
+          name: clientDisplayName(client),
+          org: clientContactName(client),
           lines: [client.phone, client.email, client.address],
         }
       : null);

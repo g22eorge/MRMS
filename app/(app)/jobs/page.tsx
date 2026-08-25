@@ -18,6 +18,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
 
+import { clientDisplayName } from "@/lib/client-name";
 type SearchParams = {
   status?: string;
   pricing?: string;
@@ -46,7 +47,7 @@ const jobListSelect = {
   deviceType: true, brand: true, model: true, serialOrImei: true,
   clientId: true, deviceId: true, assignedToId: true,
   issueDescription: true, diagnosisNotes: true,
-  client:     { select: { id: true, fullName: true, phone: true } },
+  client:     { select: { id: true, fullName: true, phone: true, organization: true } },
   assignedTo: { select: { id: true, name: true } },
   device:     { select: { id: true, deviceType: true, brand: true, model: true } },
 } as const;
@@ -240,7 +241,7 @@ export default async function JobsPage({
             ? {
                 OR: [
                   { jobNumber: { contains: q } },
-                  { client: { fullName: { contains: q } } },
+                  { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
                   { client: { phone: { contains: q } } },
                   // Support both the legacy Job.brand/model fields and the newer Device relation.
                   { brand: { contains: q } },
@@ -301,7 +302,7 @@ export default async function JobsPage({
       canLoadClientRows
         ? prisma.client.findMany({
             where: { id: { in: clientIds } },
-            select: { id: true, fullName: true, phone: true },
+            select: { id: true, fullName: true, phone: true, organization: true },
           })
         : Promise.resolve([]),
       prisma.user.findMany({
@@ -393,7 +394,7 @@ export default async function JobsPage({
       deviceType: job.device?.deviceType ?? fallbackFields(job).deviceType ?? "OTHER",
       brand: job.device?.brand ?? fallbackFields(job).brand ?? "",
       model: job.device?.model ?? fallbackFields(job).model ?? "",
-      clientName: "client" in job ? (job as { client?: { fullName?: string } }).client?.fullName : undefined,
+      clientName: "client" in job ? clientDisplayName((job as { client?: { fullName?: string; organization?: string | null } }).client, "") || undefined : undefined,
       assignedTo: job.assignedTo?.name ?? (job as { oneTimeExternalAssignment?: { technicianName: string } }).oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
@@ -481,7 +482,7 @@ export default async function JobsPage({
       deviceType: job.device?.deviceType ?? fallbackFields.deviceType ?? "OTHER",
       brand: job.device?.brand ?? fallbackFields.brand ?? "",
       model: job.device?.model ?? fallbackFields.model ?? "",
-      clientName: "client" in job ? job.client?.fullName : undefined,
+      clientName: "client" in job ? clientDisplayName(job.client, "") || undefined : undefined,
       clientPhone: "client" in job ? job.client?.phone ?? null : null,
       issue: job.issueDescription ?? null,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,

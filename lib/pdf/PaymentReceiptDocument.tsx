@@ -68,8 +68,9 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
         { label: "Reference", value: reference || `REF-${receiptNumber}` },
       ]}
       clientLabel="Received From"
-      clientName={clientName || "—"}
-      clientLocation={clientOrganization || null}
+      clientName={clientOrganization || clientName || "—"}
+      clientAttn={clientOrganization ? clientName || null : null}
+      clientLocation={null}
       clientPhone={clientPhone || null}
       lineItems={items}
       subTotal={amountLabel}

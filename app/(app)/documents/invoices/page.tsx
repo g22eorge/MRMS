@@ -47,6 +47,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { clientDisplayName } from "@/lib/client-name";
 
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
@@ -355,8 +356,8 @@ export default async function InvoicesPage({
       { invoiceNumber: { contains: q } },
       { subject: { contains: q } },
       { job: { jobNumber: { contains: q } } },
-      { job: { client: { fullName: { contains: q } } } },
-      { client: { fullName: { contains: q } } },
+      { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
+      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
     ];
   }
 
@@ -402,10 +403,10 @@ export default async function InvoicesPage({
             id: true,
             jobNumber: true,
             status: true,
-            client: { select: { fullName: true } },
+            client: { select: { fullName: true, organization: true } },
           },
         },
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         payments: { select: { id: true }, take: 1 },
         deliveryNotes: { select: { id: true }, take: 1 },
       },
@@ -471,7 +472,7 @@ export default async function InvoicesPage({
         clientBill: true,
         completedAt: true,
         receivedAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
       },
     })
     .catch(() => []);
@@ -524,7 +525,7 @@ export default async function InvoicesPage({
         jobNumber: true,
         brand: true,
         model: true,
-        client: { select: { fullName: true, phone: true, address: true } },
+        client: { select: { fullName: true, phone: true, address: true, organization: true } },
       },
     })
     .catch(() => []);
@@ -727,7 +728,7 @@ export default async function InvoicesPage({
               };
 
               const rows = (filtered as any[]).map((inv) => {
-                const clientName = inv.job?.client?.fullName ?? inv.client?.fullName ?? "—";
+                const clientName = clientDisplayName(inv.job?.client ?? inv.client, "—");
                 const invoiceCurrency = normalizeCurrency(inv.currency ?? orgCurrency, "UGX");
                 const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
                 const statusLabel = inv.isPaid

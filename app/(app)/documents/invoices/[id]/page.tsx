@@ -196,7 +196,7 @@ export default async function InvoiceDetailPage({
   }) : [];
   const jobs = isEdit ? await db.job.findMany({
     where: { orgId: orgId },
-    select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } },
+    select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true, organization: true } } },
     orderBy: { receivedAt: "desc" },
   }) : [];
   const parts = isEdit ? await db.part.findMany({

@@ -18,6 +18,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { ensureQuotationFromJob } from "@/lib/commercial/document-workflow";
 
+import { clientDisplayName } from "@/lib/client-name";
 function DeviceIcon({ type }: { type: string }) {
   const cls = "inline-block h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)]";
   switch (type) {
@@ -105,7 +106,7 @@ export default async function JobCardsPage({
       ? {
           OR: [
             { jobNumber: { contains: q } },
-            { client: { fullName: { contains: q } } },
+            { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
             { brand: { contains: q } },
             { model: { contains: q } },
           ],
@@ -128,7 +129,7 @@ export default async function JobCardsPage({
         deviceType: true,
         issueDescription: true,
         receivedAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
       },
     }),
     prisma.job.count({ where }),
@@ -261,7 +262,7 @@ export default async function JobCardsPage({
                 <Link href={`/jobs/${job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">
                   {job.jobNumber}
                 </Link>
-                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] sm:hidden">{job.client.fullName}</p>
+                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] sm:hidden">{clientDisplayName(job.client)}</p>
               </>
             ),
           },
@@ -272,7 +273,7 @@ export default async function JobCardsPage({
             className: "hidden sm:table-cell",
             cell: (job) => (
               <>
-                <p className="font-medium text-[var(--ink)]">{job.client.fullName}</p>
+                <p className="font-medium text-[var(--ink)]">{clientDisplayName(job.client)}</p>
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client.phone}</p>
               </>
             ),

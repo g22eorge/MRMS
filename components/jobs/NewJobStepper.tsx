@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
+import { clientDisplayName } from "@/lib/client-name";
 const steps = ["Client Info", "Device Info", "Issue", "Review"] as const;
 
 type DeviceDraft = {
@@ -324,7 +325,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                     className="flex w-full items-start justify-between gap-3 border-b border-[var(--line)] px-3 py-2 text-left text-sm last:border-b-0 hover:bg-[var(--panel)]"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-[var(--ink)]">{c.fullName}</span>
+                      <span className="block truncate font-medium text-[var(--ink)]">{clientDisplayName(c)}</span>
                       <span className="block truncate text-xs text-[var(--ink-muted)]">{c.phone}{c.organization ? ` · ${c.organization}` : ""}</span>
                     </span>
                     <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">Use</span>
@@ -379,7 +380,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           />
           {existingClient ? (
             <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-2 text-xs text-[var(--accent)] md:col-span-2">
-              Existing client found: <strong>{existingClient.fullName}</strong>. Submitting will update this client profile.
+              Existing client found: <strong>{clientDisplayName(existingClient)}</strong>. Submitting will update this client profile.
             </p>
           ) : null}
         </section>

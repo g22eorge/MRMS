@@ -18,6 +18,7 @@ import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { clientDisplayName } from "@/lib/client-name";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatPhoneDisplay } from "@/lib/phone";
@@ -303,7 +304,8 @@ export default async function ClientDetailPage({
       <RecordActionBar
         backHref="/clients"
         eyebrow="Clients"
-        title={client.fullName}
+        // The organisation is the account; the contact shows in the details below.
+        title={clientDisplayName(client)}
         secondary={canEdit ? (
           <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem]">+ New Repair</Link>
         ) : undefined}
@@ -496,7 +498,7 @@ export default async function ClientDetailPage({
       ) : null}
 
       {isAdmin && mergeCandidates.length > 0 ? (
-        <MergeClientPanel sourceId={client.id} sourceName={client.fullName} sourceEmail={client.email} candidates={mergeCandidates} />
+        <MergeClientPanel sourceId={client.id} sourceName={clientDisplayName(client)} sourceEmail={client.email} candidates={mergeCandidates} />
       ) : null}
 
       <div className="dc-card px-3 py-2.5">

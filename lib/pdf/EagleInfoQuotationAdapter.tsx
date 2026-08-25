@@ -94,10 +94,11 @@ export function EagleInfoQuotationAdapter(props: Props) {
       primaryDateLabel="Quote Date:"
       terms={`Valid until ${props.validUntil}`}
       dueDate={props.estimatedDuration ? `ETA: ${props.estimatedDuration}` : null}
-      clientName={props.clientName}
+      clientName={props.clientOrganization || props.clientName}
+      clientAttn={props.clientOrganization ? props.clientName : null}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
-      clientLocation={props.clientOrganization || null}
+      clientLocation={null}
       lineItems={items}
       subTotal={showVat ? props.repairCost : null}
       vatLabel={showVat ? props.vatLabel : null}

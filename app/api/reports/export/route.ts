@@ -7,6 +7,7 @@ import { getAppCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
+import { clientDisplayName } from "@/lib/client-name";
 import { JOB_STATUSES, isOpenJobStatus } from "@/lib/job-status";
 
 type ExportType =
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
         month: month.label,
         currency,
         jobNumber: job.jobNumber,
-        client: job.client.fullName,
+        client: clientDisplayName(job.client),
         completedAt: job.completedAt?.toISOString() ?? "",
         externalTechBill: externalTechBill.toFixed(2),
         ourBillToClient: clientBill.toFixed(2),
@@ -419,7 +420,7 @@ export async function GET(req: NextRequest) {
       month: month.label,
       currency,
       invoiceNumber: inv.invoiceNumber,
-      client: inv.client?.fullName ?? "",
+      client: clientDisplayName(inv.client, ""),
       status: inv.status,
       issuedAt: inv.issuedAt.toISOString(),
       dueAt: inv.dueDate?.toISOString() ?? "",

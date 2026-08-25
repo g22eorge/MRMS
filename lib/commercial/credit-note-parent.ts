@@ -11,6 +11,7 @@
  * add a CHECK to an existing table, so both columns are nullable and the
  * invariant is asserted in application code at the point of creation.
  */
+import { clientDisplayName } from "@/lib/client-name";
 
 export type ParentClient = {
   fullName: string;
@@ -57,7 +58,7 @@ export function creditNoteParent(creditNote: {
       reference: invoice.invoiceNumber,
       label: `Invoice: ${invoice.invoiceNumber}`,
       client,
-      clientName: client?.fullName ?? "No customer",
+      clientName: clientDisplayName(client, "No customer"),
     };
   }
 
@@ -70,7 +71,7 @@ export function creditNoteParent(creditNote: {
       client,
       // POS sales are frequently anonymous, and "Walk-in" is what the rest of
       // the app calls that customer.
-      clientName: client?.fullName ?? "Walk-in",
+      clientName: clientDisplayName(client, "Walk-in"),
     };
   }
 

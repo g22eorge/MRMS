@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { createLead, advanceLeadStageAction } from "./actions";
+import { clientDisplayName } from "@/lib/client-name";
 
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -129,7 +130,7 @@ export default async function SalesPage({
           OR: [
             { quoteNumber: { contains: searchQ } },
             { lead:   { fullName: { contains: searchQ } } },
-            { client: { fullName: { contains: searchQ } } },
+            { client: { OR: [{ fullName: { contains: searchQ } }, { organization: { contains: searchQ } }] } },
           ],
         }
       : {}),
@@ -192,7 +193,7 @@ export default async function SalesPage({
           where: quotationWhere,
           include: {
             lead:   { select: { id: true, fullName: true } },
-            client: { select: { id: true, fullName: true } },
+            client: { select: { id: true, fullName: true, organization: true } },
           },
           orderBy: { createdAt: "desc" },
           skip: (page - 1) * PAGE_SIZE,
@@ -881,7 +882,7 @@ export default async function SalesPage({
             rows={quotations}
             getRowKey={(q) => q.id}
             renderMobileCard={(q) => {
-              const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
+              const recipientName = (q.client ? clientDisplayName(q.client) : null) ?? q.lead?.fullName ?? null;
               const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
               return (
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -929,7 +930,7 @@ export default async function SalesPage({
                 header: "Client / Lead",
                 cell: (q) =>
                   q.client
-                    ? <Link href={`/clients/${q.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{q.client.fullName}</Link>
+                    ? <Link href={`/clients/${q.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(q.client)}</Link>
                     : q.lead
                       ? <Link href={`/sales/leads/${q.lead.id}`} className="font-medium text-[var(--ink)] hover:underline">{q.lead.fullName}</Link>
                       : <span className="opacity-30">—</span>,

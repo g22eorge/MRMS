@@ -15,6 +15,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { clientDisplayName } from "@/lib/client-name";
 
 export default async function JobDetailPage({
   params,
@@ -319,7 +320,7 @@ export default async function JobDetailPage({
 
   const movePanel = canMoveJob && moveCandidates.length > 0 ? (
     <div className="flex justify-end">
-      <MoveJobPanel jobId={job.id} currentClientName={job.client?.fullName ?? "this account"} candidates={moveCandidates} />
+      <MoveJobPanel jobId={job.id} currentClientName={clientDisplayName(job.client, "this account")} candidates={moveCandidates} />
     </div>
   ) : null;
 

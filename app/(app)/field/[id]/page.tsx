@@ -10,6 +10,7 @@ import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail, type ActivityItem } from "@/components/record/RecordSummaryRail";
 import { VisitActions } from "./VisitActions";
 
+import { clientDisplayName } from "@/lib/client-name";
 const STATUS_LABELS: Record<FieldVisitStatus, string> = {
   SCHEDULED: "Scheduled",
   EN_ROUTE: "En Route",
@@ -64,7 +65,7 @@ export default async function FieldVisitDetailPage({
           brand: true,
           model: true,
           deviceType: true,
-          ...(isManager ? { client: { select: { fullName: true, phone: true } } } : {}),
+          ...(isManager ? { client: { select: { fullName: true, phone: true, organization: true } } } : {}),
         },
       },
     },
@@ -127,7 +128,7 @@ export default async function FieldVisitDetailPage({
             />
             <DetailRow label="Device" value={`${visit.job.brand} ${visit.job.model}`} />
             {isManager && visit.job.client && (
-              <DetailRow label="Client" value={`${visit.job.client.fullName} — ${visit.job.client.phone}`} />
+              <DetailRow label="Client" value={`${clientDisplayName(visit.job.client)} — ${visit.job.client.phone}`} />
             )}
           </dl>
         </div>

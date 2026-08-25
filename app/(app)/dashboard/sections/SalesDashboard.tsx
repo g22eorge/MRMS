@@ -55,7 +55,7 @@ export async function SalesDashboard({ userId, orgId }: { userId: string | undef
     prisma.job.count({ where: { ...orgFilter, status: "READY_FOR_PICKUP" } }),
     prisma.job.findMany({
       where: { ...orgFilter, status: "AWAITING_APPROVAL" },
-      select: { id: true, jobNumber: true, clientBill: true, client: { select: { fullName: true } }, receivedAt: true },
+      select: { id: true, jobNumber: true, clientBill: true, client: { select: { fullName: true, organization: true } }, receivedAt: true },
       orderBy: { receivedAt: "asc" },
       take: 8,
     }),

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { moveJobToClientAction } from "@/app/(app)/jobs/[id]/move-actions";
 
+import { clientDisplayName } from "@/lib/client-name";
 type Candidate = { id: string; fullName: string; phone: string; organization: string | null };
 
 /**
@@ -84,10 +85,10 @@ export function MoveJobPanel({
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => { setTargetId(c.id); setQuery(c.fullName); }}
+                    onClick={() => { setTargetId(c.id); setQuery(clientDisplayName(c)); }}
                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[0.8125rem] hover:bg-[var(--panel-strong)]"
                   >
-                    <span className="font-semibold text-[var(--ink)]">{c.fullName}</span>
+                    <span className="font-semibold text-[var(--ink)]">{clientDisplayName(c)}</span>
                     <span className="text-[0.75rem] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
                   </button>
                 ))
@@ -99,7 +100,7 @@ export function MoveJobPanel({
           {error ? <p className="mr-auto text-[0.75rem] text-red-600">{error}</p> : null}
           <button type="button" onClick={() => setOpen(false)} className="btn-premium-secondary rounded-lg px-4 py-2 text-[0.8125rem] font-medium">Cancel</button>
           <button type="button" onClick={doMove} disabled={moving || !target} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-[0.8125rem] font-semibold text-white hover:opacity-90 disabled:opacity-40">
-            {moving ? "Moving…" : target ? `Move to ${target.fullName}` : "Move job"}
+            {moving ? "Moving…" : target ? `Move to ${clientDisplayName(target)}` : "Move job"}
           </button>
         </div>
       </Modal>

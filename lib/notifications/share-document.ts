@@ -86,6 +86,7 @@ const invoiceClientSelect = {
   fullName: true,
   phone: true,
   email: true,
+  organization: true,
 } as const;
 
 const linkedInvoiceSelect = {

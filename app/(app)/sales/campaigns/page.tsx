@@ -23,6 +23,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { clientDisplayName } from "@/lib/client-name";
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
 const CONTACT_STATUSES: CampaignContactStatus[] = ["PENDING", "SENT", "OPENED", "RESPONDED", "OPTED_OUT"];
@@ -217,8 +218,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         // including one here threw PrismaClientValidationError and 500'd the
         // page for every selected campaign. Delivery state comes from `status`.
         include: {
-          lead: { select: { fullName: true, phone: true, email: true, status: true } },
-          client: { select: { fullName: true, phone: true, email: true } },
+          lead: { select: { fullName: true, phone: true, email: true, status: true, organization: true } },
+          client: { select: { fullName: true, phone: true, email: true, organization: true } },
         },
       })
     : [];
@@ -642,7 +643,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <div className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(person)}</p>
                             <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                               {person.phone} · {cc.lead ? "Lead" : "Client"}
                               {cc.sentAt ? ` · sent ${formatEATDate(cc.sentAt)}` : ""}
@@ -665,7 +666,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         if (!person) return null;
                         return (
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="truncate font-semibold text-[var(--ink)]">{clientDisplayName(person)}</p>
                             <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
                           </div>
                         );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { ClientPickerOption, NewClientFields } from "@/lib/forms/line-items";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 type CustomerPickerProps = {
   clients: ClientPickerOption[];
@@ -68,7 +69,7 @@ export function CustomerPicker({
       {selectedClient ? (
         /* Chosen existing client */
         <div className="mt-2 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/5 px-3 py-2.5">
-          <p className="truncate text-[0.8125rem] font-bold text-[var(--ink)]">{selectedClient.fullName}</p>
+          <p className="truncate text-[0.8125rem] font-bold text-[var(--ink)]">{clientDisplayName(selectedClient)}</p>
           <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
             {[selectedClient.phone, selectedClient.email, selectedClient.organization].filter(Boolean).join(" - ") || "Client record"}
           </p>
@@ -114,9 +115,9 @@ export function CustomerPicker({
                   onClick={() => onSelectClient(client.id)}
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition hover:border-[var(--accent)]/40"
                 >
-                  <span className="block truncate text-[0.8125rem] font-bold text-[var(--ink)]">{client.fullName}</span>
+                  <span className="block truncate text-[0.8125rem] font-bold text-[var(--ink)]">{clientDisplayName(client)}</span>
                   <span className="block truncate text-[0.75rem] text-[var(--ink-muted)]">
-                    {[client.phone, client.email, client.organization].filter(Boolean).join(" - ") || "Client record"}
+                    {[clientContactName(client), client.phone, client.email].filter(Boolean).join(" - ") || "Client record"}
                   </span>
                 </button>
               ))}

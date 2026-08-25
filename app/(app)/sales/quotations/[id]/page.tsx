@@ -27,6 +27,7 @@ import {
   updateQuotationItem,
   updateQuotationStatus,
 } from "../../actions";
+import { clientDisplayName } from "@/lib/client-name";
 
  const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
   DRAFT: "neutral",
@@ -82,7 +83,7 @@ export default async function QuotationDetailPage({
   // manual "Mark accepted" in between is redundant when you're invoicing anyway).
   const canAcceptAndInvoice = canAccept && can.createInvoices(user) && !quotation.convertedToInvoiceId;
   const canOverrideDiscount = can.overrideDiscount(user);
-  const recipientName = quotation.client?.fullName ?? quotation.lead?.fullName ?? null;
+  const recipientName = (quotation.client ? clientDisplayName(quotation.client) : null) ?? quotation.lead?.fullName ?? null;
   const recipientAddress = quotation.client?.address ?? null;
   const taxDisplayLabel = quotation.taxLabel ?? "Tax";
   const taxDisplayRate = quotation.taxRate ?? null;

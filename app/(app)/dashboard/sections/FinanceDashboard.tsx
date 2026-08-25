@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 import { DashboardHero } from "./shared";
 
+import { clientDisplayName } from "@/lib/client-name";
 export async function FinanceDashboard({ orgId }: { orgId: string }) {
   const currency = getAppCurrency();
   const today = new Date();
@@ -18,7 +19,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
   const [invoices, recentPayments, salesRevenue] = await Promise.all([
     prisma.invoice.findMany({
       where: { orgId },
-      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true } } } } },
+      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } } },
       orderBy: { issuedAt: "desc" },
       take: 50,
     }),
@@ -137,7 +138,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
                 <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
                   <div className="min-w-0">
                     <p className="mono truncate text-xs font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
-                    <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{inv.job?.client?.fullName ?? "—"} · {inv.job?.jobNumber ?? "—"}</p>
+                    <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(inv.job?.client)} · {inv.job?.jobNumber ?? "—"}</p>
                   </div>
                   <div className="ml-3 shrink-0 text-right">
                     <p className="text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(balance, currency)}</p>

@@ -9,6 +9,7 @@ import { DeliveryNoteDocument } from "@/lib/pdf/DeliveryNoteDocument";
 import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 
+import { clientDisplayName } from "@/lib/client-name";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -35,13 +36,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         select: {
           saleNumber: true,
           invoiceNumber: true,
-          client: { select: { fullName: true } },
+          client: { select: { fullName: true, organization: true } },
         },
       },
       invoice: {
         select: {
           invoiceNumber: true,
-          job: { select: { jobNumber: true, client: { select: { fullName: true } } } },
+          job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } },
         },
       },
       items: { select: { description: true, quantity: true }, orderBy: { description: "asc" } },
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           select: {
             saleNumber: true,
             invoiceNumber: true,
-            client: { select: { fullName: true } },
+            client: { select: { fullName: true, organization: true } },
           },
         },
         items: { select: { description: true, quantity: true }, orderBy: { description: "asc" } },
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const sourceRef = note.invoice?.invoiceNumber
     ? `${note.invoice.invoiceNumber}${note.invoice.job ? ` / ${note.invoice.job.jobNumber}` : ""}`
     : (note.sale?.invoiceNumber ?? note.sale?.saleNumber ?? "-");
-  const clientName = note.invoice?.job?.client.fullName ?? note.sale?.client?.fullName ?? "-";
+  const clientName = clientDisplayName(note.invoice?.job?.client ?? note.sale?.client, "-");
   const element = createElement(DeliveryNoteDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     deliveryNoteNumber: note.deliveryNoteNumber,

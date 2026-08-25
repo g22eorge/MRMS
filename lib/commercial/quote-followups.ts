@@ -167,7 +167,7 @@ export async function sendQuoteFollowUpForJob(params: {
       clientBill: true,
       quotedAt: true,
       updatedAt: true,
-      client: { select: { fullName: true, phone: true, email: true } },
+      client: { select: { fullName: true, phone: true, email: true, organization: true } },
       quotations: {
         where: { status: { in: ["DRAFT", "SENT"] } },
         orderBy: { createdAt: "desc" },
@@ -235,7 +235,7 @@ export async function sendQuoteFollowUpForQuotation(params: {
       sentAt: true,
       createdAt: true,
       jobId: true,
-      client: { select: { fullName: true, phone: true, email: true } },
+      client: { select: { fullName: true, phone: true, email: true, organization: true } },
       lead: { select: { fullName: true, phone: true, email: true } },
     },
   });

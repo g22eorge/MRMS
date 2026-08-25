@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { formatMoneyCompact } from "@/lib/currency";
+import { clientDisplayName } from "@/lib/client-name";
 
 export type SalesStaffRow = {
   name: string;
@@ -41,7 +42,7 @@ export function SalesPerformanceGrid({
   wonMtd: number;
   salesCount: number;
   invoicesCount: number;
-  quotedJobs: Array<{ id: string; jobNumber: string; clientBill: number | null; client: { fullName: string } | null; receivedAt: Date }>;
+  quotedJobs: Array<{ id: string; jobNumber: string; clientBill: number | null; client: { fullName: string; organization: string | null } | null; receivedAt: Date }>;
   readyPickup: number;
 }) {
   return (
@@ -145,7 +146,7 @@ export function SalesPerformanceGrid({
                   <Link key={j.id} href={`/jobs/${j.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                     <div className="min-w-0">
                       <p className="mono truncate text-xs font-bold text-[var(--accent)]">{j.jobNumber}</p>
-                      <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{j.client?.fullName ?? "—"}</p>
+                      <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(j.client, "—")}</p>
                     </div>
                     <div className="ml-3 shrink-0 text-right">
                       {j.clientBill && <p className="text-xs font-semibold text-[var(--ink)]">{formatMoneyCompact(j.clientBill, currency)}</p>}

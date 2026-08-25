@@ -75,6 +75,7 @@ const s = StyleSheet.create({
   toBlock: { flex: 1 },
   toLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   toName: { fontSize: 10.5, fontFamily: "Helvetica-Bold", marginBottom: 2 },
+  toAttn: { fontSize: 8.5, fontFamily: "Helvetica-Bold", marginBottom: 2 },
   toLine: { fontSize: 8.5, color: MUTED, marginBottom: 1.5 },
   datesBlock: { width: 200 },
   dateRow: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 4 },
@@ -150,6 +151,8 @@ export type EagleInfoDocumentProps = {
   // Client
   clientLabel?: string;      // "To" (default) | "Bill To"
   clientName: string;
+  /** The person to address inside a company — printed as "Attn: …". */
+  clientAttn?: string | null;
   clientEmail?: string | null;
   clientPhone?: string | null;
   clientLocation?: string | null;
@@ -180,7 +183,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   const {
     companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyLogoUrl,
     docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate, metaRows, topRuleColor,
-    clientLabel = "To", clientName, clientEmail, clientPhone, clientLocation,
+    clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
     notes, paymentTo, termsText,
@@ -256,6 +259,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
           <View style={s.toBlock}>
             <Text style={s.toLabel}>{clientLabel}</Text>
             <Text style={s.toName}>{clientName}</Text>
+            {clientAttn    ? <Text style={s.toAttn}>Attn: {clientAttn}</Text>  : null}
             {clientEmail   ? <Text style={s.toLine}>{clientEmail}</Text>   : null}
             {clientPhone   ? <Text style={s.toLine}>{clientPhone}</Text>   : null}
             {clientLocation? <Text style={s.toLine}>{clientLocation}</Text>: null}

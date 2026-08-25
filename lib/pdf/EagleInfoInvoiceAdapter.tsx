@@ -99,10 +99,11 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       terms={props.termsText ? "As agreed" : null}
       dueDate={props.isPaid ? "Paid" : null}
       clientLabel="Bill To"
-      clientName={props.clientName}
+      clientName={props.clientOrganization || props.clientName}
+      clientAttn={props.clientOrganization ? props.clientName : null}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
-      clientLocation={props.clientOrganization || null}
+      clientLocation={null}
       lineItems={items}
       subTotal={props.subtotalValue || props.repairCost || null}
       vatLabel={showVat ? props.vatLabel : null}
