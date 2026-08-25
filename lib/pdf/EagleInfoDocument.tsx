@@ -31,86 +31,117 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { isTermsHeading } from "@/lib/quote-terms";
 import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 // ── Palette ────────────────────────────────────────────────────────────────────
-const INK      = "#0f172a";   // near-black body text
-const MUTED    = "#6B7280";   // grey labels
-const DIVIDER  = "#E5E7EB";   // thin rule
+//
+// One slate family throughout, so the greys read as chosen rather than as three
+// different defaults that happened to land near each other. The accent is the
+// only colour that varies by document (receipts pass orange); everything else
+// stays constant so a customer holding an invoice and a quotation sees one house.
+const INK      = "#0F172A";   // near-black body text
+const MUTED    = "#64748B";   // labels and secondary lines
+const FAINT    = "#94A3B8";   // page furniture: page numbers, column rules
+const DIVIDER  = "#E2E8F0";   // hairline
 const WHITE    = "#FFFFFF";
-const NAVY     = "#1e293b";   // filled line-item header bar (matches official)
-const SHADE    = "#F3F4F6";   // shaded balance-due row
+const NAVY     = "#1E293B";   // table header bar, and the default accent
+const PANEL    = "#F8FAFC";   // party/meta band
+const SHADE    = "#F1F5F9";   // balance-due bar
 const LABEL_SZ = 7;           // caps section-label font size
+
+// Vertical rhythm. Every margin below is one of these, so the page has a beat.
+const SP = { xs: 4, sm: 8, md: 14, lg: 22, xl: 32 };
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   page: {
     paddingHorizontal: 40,
-    paddingVertical: 36,
+    paddingTop: 0,
+    // Room for the fixed page footer, so body content can never run into it.
+    paddingBottom: 54,
     fontSize: 9,
     fontFamily: "Helvetica",
     color: INK,
     backgroundColor: WHITE,
   },
 
-  // Full-bleed accent bar (pulled to the page edges past the 40/36 padding).
-  topRule: { height: 5, marginHorizontal: -40, marginTop: -36, marginBottom: 24 },
+  // Full-bleed accent bar. Every document gets one now: it seals the top edge
+  // and stops the page starting on nothing.
+  topRule: { height: 4, marginHorizontal: -40 },
+  headPad: { height: SP.xl },
 
   // ── Header ──
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: SP.lg },
   headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 150, height: 60, marginBottom: 8, objectFit: "contain" },
-  companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  companyLine: { fontSize: 8, color: MUTED, marginBottom: 1.5 },
-  phoneEmailRow: { flexDirection: "row", gap: 4, marginBottom: 1.5 },
-  companyLineLabel: { fontSize: 8, color: INK, fontFamily: "Helvetica-Bold", width: 38 },
+  logo: { width: 150, height: 58, marginBottom: SP.sm, objectFit: "contain" },
+  companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3, letterSpacing: -0.15 },
+  // One quiet contact line instead of a stack of bold PHONE:/EMAIL:/WEB: labels,
+  // which shouted louder than the company name above them.
+  companyLine: { fontSize: 8, color: MUTED, lineHeight: 1.5 },
 
-  headerRight: { width: 180, alignItems: "flex-end" },
-  docTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  docNumber: { fontSize: 8.5, color: MUTED, marginBottom: 8 },
-  balanceBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 7, alignItems: "flex-end", width: "100%" },
-  balanceLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 },
-  balanceAmount: { fontSize: 15, fontFamily: "Helvetica-Bold" },
+  headerRight: { width: 190, alignItems: "flex-end" },
+  docTitle: { fontSize: 24, fontFamily: "Helvetica-Bold", letterSpacing: -0.5, marginBottom: 2 },
+  docNumber: { fontSize: 8.5, color: MUTED, letterSpacing: 0.3, marginBottom: SP.md },
+  // The one number a reader looks for first, so it gets the accent edge.
+  balanceBox: { borderWidth: 1, borderColor: DIVIDER, borderLeftWidth: 3, borderRadius: 3, paddingHorizontal: 12, paddingVertical: 9, alignItems: "flex-end", width: "100%", backgroundColor: PANEL },
+  balanceLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 },
+  balanceAmount: { fontSize: 16, fontFamily: "Helvetica-Bold", letterSpacing: -0.3 },
 
-  // ── Divider ──
-  hr: { borderTopWidth: 1, borderTopColor: DIVIDER, marginBottom: 14 },
-
-  // ── Client / dates row ──
-  toDateRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-  toBlock: { flex: 1 },
-  toLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
-  toName: { fontSize: 10.5, fontFamily: "Helvetica-Bold", marginBottom: 2 },
-  toAttn: { fontSize: 8.5, fontFamily: "Helvetica-Bold", marginBottom: 2 },
+  // ── Party / meta band ──
+  // A single soft panel rather than two floating columns with competing
+  // underlines. It anchors the upper page and separates "who and when" from
+  // "what and how much".
+  band: { flexDirection: "row", backgroundColor: PANEL, borderRadius: 3, padding: SP.md, marginBottom: SP.lg },
+  bandLeft: { flex: 1, paddingRight: SP.md },
+  bandRight: { width: 210, borderLeftWidth: 1, borderLeftColor: DIVIDER, paddingLeft: SP.md },
+  toLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 5 },
+  toName: { fontSize: 11, fontFamily: "Helvetica-Bold", marginBottom: 2, letterSpacing: -0.15 },
+  toAttn: { fontSize: 8.5, fontFamily: "Helvetica-Bold", marginBottom: 3 },
   toLine: { fontSize: 8.5, color: MUTED, marginBottom: 1.5 },
-  datesBlock: { width: 200 },
-  dateRow: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 4 },
+  dateRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 },
   dateLabel: { fontSize: 8.5, color: MUTED },
-  dateValue: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  dateValue: { fontSize: 8.5, fontFamily: "Helvetica-Bold", textAlign: "right" },
 
   // ── Line-items table ──
-  table: { marginBottom: 6 },
-  tableHead: { flexDirection: "row", backgroundColor: NAVY, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 2 },
-  th: { fontSize: 8, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.4, color: WHITE },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 7, paddingHorizontal: 8 },
-  colNum:   { width: 24 },
-  colDesc:  { flex: 1, paddingRight: 6 },
+  table: { marginBottom: SP.sm },
+  tableHead: { flexDirection: "row", backgroundColor: NAVY, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 2 },
+  th: { fontSize: 7.5, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.7, color: WHITE },
+  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 9, paddingHorizontal: 10, alignItems: "flex-start" },
+  emptyRow: { paddingVertical: 14, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: DIVIDER },
+  emptyText: { fontSize: 8.5, color: FAINT, fontStyle: "italic" },
+  colNum:   { width: 22 },
+  colDesc:  { flex: 1, paddingRight: 10 },
   colQty:   { width: 44, textAlign: "center" },
-  colRate:  { width: 88, textAlign: "right" },
-  colAmt:   { width: 96, textAlign: "right" },
-  itemName: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2 },
-  itemSku:  { fontSize: 7.5, color: MUTED },
+  colRate:  { width: 92, textAlign: "right" },
+  colAmt:   { width: 100, textAlign: "right" },
+  itemName: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2, lineHeight: 1.35 },
+  itemSku:  { fontSize: 7.5, color: MUTED, letterSpacing: 0.2 },
+  cell:     { fontSize: 9 },
+  cellMuted:{ fontSize: 9, color: MUTED },
 
   // ── Totals ──
-  totalsWrap: { marginTop: 6, marginLeft: "auto", width: 220 },
-  totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: DIVIDER },
+  totalsWrap: { marginTop: SP.sm, marginLeft: "auto", width: 250 },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
   totalLabel: { fontSize: 9, color: MUTED },
   totalValue: { fontSize: 9, textAlign: "right" },
-  totalRowBold: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
-  totalLabelBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold" },
-  totalValueBold: { fontSize: 9.5, fontFamily: "Helvetica-Bold", textAlign: "right" },
-  balanceDueRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, backgroundColor: SHADE, marginTop: 2 },
+  // A rule above the grand total instead of a box around every row: the eye
+  // needs one break between the arithmetic and its result.
+  totalRowBold: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 7, borderTopWidth: 1, borderTopColor: INK, marginTop: 2 },
+  totalLabelBold: { fontSize: 10, fontFamily: "Helvetica-Bold" },
+  totalValueBold: { fontSize: 10, fontFamily: "Helvetica-Bold", textAlign: "right" },
+  balanceDueRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 10, backgroundColor: SHADE, borderRadius: 3, borderLeftWidth: 3, marginTop: SP.xs },
 
   // ── Footer ──
-  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: 28, marginBottom: 14 },
-  footer: { flexDirection: "row", gap: 32 },
+  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: SP.xl, marginBottom: SP.md },
+  footer: { flexDirection: "row", gap: SP.xl },
   footerCol: { flex: 1 },
+
+  // ── Fixed page footer ──
+  // Without this the page simply stopped, leaving a third of the sheet blank
+  // and no way to tell a two-page invoice from a one-page one.
+  pageFoot: {
+    position: "absolute", bottom: 24, left: 40, right: 40,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    borderTopWidth: 1, borderTopColor: DIVIDER, paddingTop: 7,
+  },
+  pageFootText: { fontSize: 7, color: FAINT, letterSpacing: 0.4 },
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
   footerTermHead: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK, marginTop: 5, marginBottom: 1.5 },
@@ -201,6 +232,18 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
         { label: "Due Date:",         value: dueDate || "-" },
       ];
 
+  // Receipts pass their own colour; everything else takes the house navy. This
+  // is the single hue that moves, and it appears in exactly three places: the
+  // top edge, the balance card, and the balance bar.
+  const accent = topRuleColor || NAVY;
+
+  // Address, then contacts on one line. Printing each contact on its own bold
+  // "PHONE:" row made the block louder than the company name it belongs to.
+  const companyLines = [
+    companyAddress,
+    [companyPhone, companyEmail, companyWebsite].filter(Boolean).join("   ·   "),
+  ].filter((l) => l && l.trim());
+
   // Bank details: one or more accounts, each a block of lines. Blank lines
   // separate accounts (so "Payment To" can list multiple bank accounts).
   const bankBlocks = (paymentTo ?? "")
@@ -212,7 +255,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
     <Document title={`${docTitle} ${docNumber}`}>
       <Page size="A4" style={s.page}>
 
-        {topRuleColor ? <View style={[s.topRule, { backgroundColor: topRuleColor }]} /> : null}
+        <View style={[s.topRule, { backgroundColor: accent }]} fixed />
+        <View style={s.headPad} />
 
         {/* ── Header ── */}
         <View style={s.header}>
@@ -223,44 +267,25 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
               <Image style={s.logo} src={companyLogoUrl} />
             ) : null}
             <Text style={s.companyName}>{companyName}</Text>
-            <Text style={s.companyLine}>{companyAddress}</Text>
-            {companyPhone ? (
-              <View style={s.phoneEmailRow}>
-                <Text style={s.companyLineLabel}>PHONE:</Text>
-                <Text style={s.companyLine}>{companyPhone}</Text>
-              </View>
-            ) : null}
-            {companyEmail ? (
-              <View style={s.phoneEmailRow}>
-                <Text style={s.companyLineLabel}>EMAIL:</Text>
-                <Text style={s.companyLine}>{companyEmail}</Text>
-              </View>
-            ) : null}
-            {companyWebsite ? (
-              <View style={s.phoneEmailRow}>
-                <Text style={s.companyLineLabel}>WEB:</Text>
-                <Text style={s.companyLine}>{companyWebsite}</Text>
-              </View>
-            ) : null}
+            {companyLines.map((line, i) => (
+              <Text key={i} style={s.companyLine}>{line}</Text>
+            ))}
           </View>
 
-          {/* Right: doc type + balance */}
+          {/* Right: doc type + the headline number */}
           <View style={s.headerRight}>
             <Text style={s.docTitle}>{docTitle}</Text>
             <Text style={s.docNumber}>#{docNumber}</Text>
-            <View style={s.balanceBox}>
+            <View style={[s.balanceBox, { borderLeftColor: accent }]}>
               <Text style={s.balanceLabel}>Balance Due</Text>
               <Text style={s.balanceAmount}>{balanceDue}</Text>
             </View>
           </View>
         </View>
 
-        {/* ── Divider ── */}
-        <View style={s.hr} />
-
-        {/* ── Client / Dates ── */}
-        <View style={s.toDateRow}>
-          <View style={s.toBlock}>
+        {/* ── Who and when ── */}
+        <View style={s.band} wrap={false}>
+          <View style={s.bandLeft}>
             <Text style={s.toLabel}>{clientLabel}</Text>
             <Text style={s.toName}>{clientName}</Text>
             {clientAttn    ? <Text style={s.toAttn}>Attn: {clientAttn}</Text>  : null}
@@ -268,7 +293,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             {clientPhone   ? <Text style={s.toLine}>{clientPhone}</Text>   : null}
             {clientLocation? <Text style={s.toLine}>{clientLocation}</Text>: null}
           </View>
-          <View style={s.datesBlock}>
+          <View style={s.bandRight}>
             {dateRows.map((dr, i) => (
               <View key={i} style={s.dateRow}>
                 <Text style={s.dateLabel}>{dr.label}</Text>
@@ -280,8 +305,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
 
         {/* ── Line items table ── */}
         <View style={s.table}>
-          {/* Header row */}
-          <View style={s.tableHead}>
+          {/* Repeats at the top of every page, so a long invoice stays readable. */}
+          <View style={s.tableHead} fixed>
             <Text style={[s.th, s.colNum]}>#</Text>
             <Text style={[s.th, s.colDesc]}>Item &amp; Description</Text>
             <Text style={[s.th, s.colQty]}>Qty</Text>
@@ -289,23 +314,30 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             <Text style={[s.th, s.colAmt]}>Amount</Text>
           </View>
 
-          {/* Data rows */}
+          {/* Data rows. wrap={false} keeps a description and its price together
+              rather than splitting one item across a page break. */}
           {lineItems.map((item, idx) => (
-            <View key={idx} style={s.tableRow}>
-              <Text style={[{ fontSize: 9 }, s.colNum]}>{idx + 1}</Text>
+            <View key={idx} style={s.tableRow} wrap={false}>
+              <Text style={[s.cellMuted, s.colNum]}>{idx + 1}</Text>
               <View style={s.colDesc}>
                 <Text style={s.itemName}>{item.name}</Text>
                 {item.sku ? <Text style={s.itemSku}>SKU: {item.sku}</Text> : null}
               </View>
-              <Text style={[{ fontSize: 9 }, s.colQty]}>{String(item.quantity)}</Text>
-              <Text style={[{ fontSize: 9, color: MUTED }, s.colRate]}>{item.rate}</Text>
-              <Text style={[{ fontSize: 9 }, s.colAmt]}>{item.amount}</Text>
+              <Text style={[s.cell, s.colQty]}>{String(item.quantity)}</Text>
+              <Text style={[s.cellMuted, s.colRate]}>{item.rate}</Text>
+              <Text style={[s.cell, s.colAmt]}>{item.amount}</Text>
             </View>
           ))}
+
+          {lineItems.length === 0 ? (
+            <View style={s.emptyRow}>
+              <Text style={s.emptyText}>No items on this document.</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ── Totals ── */}
-        <View style={s.totalsWrap}>
+        <View style={s.totalsWrap} wrap={false}>
           {subTotal ? (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Sub Total</Text>
@@ -334,7 +366,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
               <Text style={s.totalValue}>{paymentMade}</Text>
             </View>
           ) : null}
-          <View style={s.balanceDueRow}>
+          <View style={[s.balanceDueRow, { borderLeftColor: accent }]}>
             <Text style={s.totalLabelBold}>Balance Due</Text>
             <Text style={s.totalValueBold}>{balanceDue}</Text>
           </View>
@@ -342,7 +374,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
 
         {/* ── Footer ── */}
         <View style={s.footerDivider} />
-        <View style={s.footer}>
+        <View style={s.footer} wrap={false}>
           {/* Left: terms sit first, where the eye lands */}
           {termsText ? (
             <View style={s.footerCol}>
@@ -378,6 +410,20 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
         </View>
 
         <QuotationPromoStrip promo={promo} />
+
+        {/* Pinned to every page: identifies a loose sheet, and makes it obvious
+            when a document runs to more than one page. */}
+        <View style={s.pageFoot} fixed>
+          <Text style={s.pageFootText}>
+            {[companyName, `${docTitle} #${docNumber}`].filter(Boolean).join("   ·   ")}
+          </Text>
+          <Text
+            style={s.pageFootText}
+            render={({ pageNumber, totalPages }) =>
+              totalPages > 1 ? `Page ${pageNumber} of ${totalPages}` : ""
+            }
+          />
+        </View>
 
       </Page>
     </Document>
