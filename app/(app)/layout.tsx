@@ -1,4 +1,5 @@
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
+import { FlashToast } from "@/components/ui/FlashToast";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Header } from "@/components/layout/Header";
@@ -188,6 +189,7 @@ export default async function AppLayout({
               </div>
             ) : null}
             <AnnouncementBanner announcements={announcements} />
+            <FlashToast />
             {children}
           </div>
         </main>

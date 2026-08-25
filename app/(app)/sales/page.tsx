@@ -19,6 +19,7 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 import { createLead, advanceLeadStageAction } from "./actions";
 import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
@@ -326,9 +327,11 @@ export default async function SalesPage({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create lead";
-      redirect(`/sales?tab=leads&createError=${encodeURIComponent(msg)}`);
+      redirect(`/sales?tab=leads&createError=${encodeURIComponent(msg)}&failed=${encodeURIComponent(msg)}`);
     }
-    redirect("/sales?tab=leads");
+    // Say so. A save that repaints the page in silence is indistinguishable
+    // from one that was dropped, which is why people tap the button twice.
+    redirect(`/sales?tab=leads&saved=${encodeURIComponent("Lead created")}`);
   }
 
   // ── Hrefs ───────────────────────────────────────────────────────────────
@@ -666,7 +669,7 @@ export default async function SalesPage({
               <textarea name="notes" placeholder="Notes" rows={2} className={`${field} sm:col-span-2 lg:col-span-3`} />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Button type="submit" size="sm" className="px-4 font-bold">Create Lead</Button>
+              <SubmitButton size="sm" className="px-4 font-bold" pendingLabel="Creating…">Create Lead</SubmitButton>
               <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
             </div>
           </form>

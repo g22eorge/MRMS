@@ -15,6 +15,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyLeadStatus, notifyQuotationStatus } from "@/lib/notifications";
 import { createQuotationRecord, type CreateQuotationInput } from "@/lib/sales/quotation-service";
 
+import { isDoubleSubmit } from "@/lib/double-submit";
 const createLeadSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
@@ -68,11 +69,27 @@ export async function createLead(data: {
     if (!assignee) throw new Error("Assigned user not found");
   }
 
+  // The same lead arriving twice is a double submission, not two customers.
+  // Return the row we already made rather than creating its twin.
+  const phone = sanitizeText(parsed.data.phone);
+  const fullName = sanitizeText(parsed.data.fullName);
+  const recent = await prisma.lead.findFirst({
+    where: { orgId, phone, fullName, createdById: user.id },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, createdAt: true },
+  }).catch(() => null);
+  if (recent && isDoubleSubmit(recent.createdAt)) {
+    // Return the same shape as a fresh create, so a caller reading the result
+    // cannot tell -- and does not have to care -- which path it took.
+    revalidatePath("/sales");
+    return prisma.lead.findUniqueOrThrow({ where: { id: recent.id } });
+  }
+
   const lead = await prisma.lead.create({
     data: {
-      fullName: sanitizeText(parsed.data.fullName),
+      fullName,
       orgId,
-      phone: sanitizeText(parsed.data.phone),
+      phone,
       email: sanitizeOptionalText(parsed.data.email),
       organization: sanitizeOptionalText(parsed.data.organization),
       interest: sanitizeOptionalText(parsed.data.interest),
