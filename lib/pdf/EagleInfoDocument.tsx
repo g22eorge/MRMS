@@ -55,7 +55,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 40,
     paddingTop: 0,
     // Room for the fixed page footer, so body content can never run into it.
-    paddingBottom: 54,
+    paddingBottom: 44,
     fontSize: 9,
     fontFamily: "Helvetica",
     color: INK,
@@ -65,12 +65,12 @@ const s = StyleSheet.create({
   // Full-bleed accent bar. Every document gets one now: it seals the top edge
   // and stops the page starting on nothing.
   topRule: { height: 4, marginHorizontal: -40 },
-  headPad: { height: SP.xl },
+  headPad: { height: SP.lg },
 
   // ── Header ──
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: SP.lg },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: SP.md },
   headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 150, height: 58, marginBottom: SP.sm, objectFit: "contain" },
+  logo: { width: 142, height: 52, marginBottom: 6, objectFit: "contain" },
   companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3, letterSpacing: -0.15 },
   // One quiet contact line instead of a stack of bold PHONE:/EMAIL:/WEB: labels,
   // which shouted louder than the company name above them.
@@ -88,9 +88,11 @@ const s = StyleSheet.create({
   // A single soft panel rather than two floating columns with competing
   // underlines. It anchors the upper page and separates "who and when" from
   // "what and how much".
-  band: { flexDirection: "row", backgroundColor: PANEL, borderRadius: 3, padding: SP.md, marginBottom: SP.lg },
+  band: { flexDirection: "row", backgroundColor: PANEL, borderRadius: 3, paddingVertical: SP.sm + 2, paddingHorizontal: SP.md, marginBottom: SP.md },
   bandLeft: { flex: 1, paddingRight: SP.md },
-  bandRight: { width: 210, borderLeftWidth: 1, borderLeftColor: DIVIDER, paddingLeft: SP.md },
+  // Centred, so a three-row meta column sits against the middle of a five-line
+  // address rather than hanging from its top edge.
+  bandRight: { width: 210, borderLeftWidth: 1, borderLeftColor: DIVIDER, paddingLeft: SP.md, justifyContent: "center" },
   toLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 5 },
   toName: { fontSize: 11, fontFamily: "Helvetica-Bold", marginBottom: 2, letterSpacing: -0.15 },
   toAttn: { fontSize: 8.5, fontFamily: "Helvetica-Bold", marginBottom: 3 },
@@ -103,7 +105,10 @@ const s = StyleSheet.create({
   table: { marginBottom: SP.sm },
   tableHead: { flexDirection: "row", backgroundColor: NAVY, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 2 },
   th: { fontSize: 7.5, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.7, color: WHITE },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 9, paddingHorizontal: 10, alignItems: "flex-start" },
+  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 8, paddingHorizontal: 10, alignItems: "flex-start" },
+  // Barely-there tint on alternate rows. On a thirty-line quotation it keeps the
+  // eye on one row across the full width; on a three-line one it is invisible.
+  tableRowAlt: { backgroundColor: "#FBFCFE" },
   emptyRow: { paddingVertical: 14, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: DIVIDER },
   emptyText: { fontSize: 8.5, color: FAINT, fontStyle: "italic" },
   colNum:   { width: 22 },
@@ -115,6 +120,9 @@ const s = StyleSheet.create({
   itemSku:  { fontSize: 7.5, color: MUTED, letterSpacing: 0.2 },
   cell:     { fontSize: 9 },
   cellMuted:{ fontSize: 9, color: MUTED },
+  // The amount is what a reader scans down the page for, so it carries weight
+  // while the unit rate beside it stays quiet.
+  cellAmount:{ fontSize: 9, fontFamily: "Helvetica-Bold" },
 
   // ── Totals ──
   totalsWrap: { marginTop: SP.sm, marginLeft: "auto", width: 250 },
@@ -129,7 +137,11 @@ const s = StyleSheet.create({
   balanceDueRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 10, backgroundColor: SHADE, borderRadius: 3, borderLeftWidth: 3, marginTop: SP.xs },
 
   // ── Footer ──
-  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: SP.xl, marginBottom: SP.md },
+  // A flexGrow spacer here would anchor this block to the foot of the page,
+  // but react-pdf lets it consume the whole remaining page and pushes the
+  // footer onto a second sheet -- a six-line quotation came out two pages
+  // long. Trailing whitespace is the cheaper problem.
+  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: SP.lg, marginBottom: SP.sm },
   footer: { flexDirection: "row", gap: SP.xl },
   footerCol: { flex: 1 },
 
@@ -144,8 +156,8 @@ const s = StyleSheet.create({
   pageFootText: { fontSize: 7, color: FAINT, letterSpacing: 0.4 },
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
-  footerTermHead: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK, marginTop: 5, marginBottom: 1.5 },
-  footerTermLine: { fontSize: 8.5, color: INK, lineHeight: 1.45, marginBottom: 1 },
+  footerTermHead: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK, marginTop: 4, marginBottom: 1 },
+  footerTermLine: { fontSize: 8.5, color: INK, lineHeight: 1.3, marginBottom: 0.5 },
   bankBlock: { marginBottom: 8 },
   bankBlockDivided: { marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: "#E5E7EB" },
   bankLabel: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
@@ -317,7 +329,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
           {/* Data rows. wrap={false} keeps a description and its price together
               rather than splitting one item across a page break. */}
           {lineItems.map((item, idx) => (
-            <View key={idx} style={s.tableRow} wrap={false}>
+            <View key={idx} style={idx % 2 === 1 ? [s.tableRow, s.tableRowAlt] : s.tableRow} wrap={false}>
               <Text style={[s.cellMuted, s.colNum]}>{idx + 1}</Text>
               <View style={s.colDesc}>
                 <Text style={s.itemName}>{item.name}</Text>
@@ -325,7 +337,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
               </View>
               <Text style={[s.cell, s.colQty]}>{String(item.quantity)}</Text>
               <Text style={[s.cellMuted, s.colRate]}>{item.rate}</Text>
-              <Text style={[s.cell, s.colAmt]}>{item.amount}</Text>
+              <Text style={[s.cellAmount, s.colAmt]}>{item.amount}</Text>
             </View>
           ))}
 
@@ -374,7 +386,10 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
 
         {/* ── Footer ── */}
         <View style={s.footerDivider} />
-        <View style={s.footer} wrap={false}>
+        {/* Deliberately allowed to wrap. Pinning it whole meant a tall terms
+            block that did not fit the remaining space jumped to a second sheet,
+            turning a six-line quotation into a two-page document. */}
+        <View style={s.footer}>
           {/* Left: terms sit first, where the eye lands */}
           {termsText ? (
             <View style={s.footerCol}>

@@ -45,7 +45,7 @@ const MUTED = "#6b7280";
 const RULE = "#e5e7eb";
 
 const s = StyleSheet.create({
-  wrap: { marginTop: 14, paddingTop: 8, borderTopWidth: 1, borderTopColor: RULE },
+  wrap: { marginTop: 10, paddingTop: 7, borderTopWidth: 1, borderTopColor: RULE },
   label: {
     fontSize: 7,
     fontFamily: "Helvetica-Bold",
