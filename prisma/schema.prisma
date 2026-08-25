@@ -1432,7 +1432,7 @@ model DocumentBrandingSettings {
   vatRatePercent        Float         @default(18)
   vatInclusive          Boolean       @default(false)
   vatLabel              String        @default("VAT")
-  termsText             String        @default("Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.")
+  termsText             String        @default("We supply equipment and carry out repairs; only the terms relevant to this document apply.\nGoods are subject to stock availability and carry the manufacturer warranty only, where applicable.\nRepair work is carried out only after approval is recorded, and parts availability may affect the timeline.\nPre-existing or hidden faults may affect the outcome of a repair.\nUncollected devices may attract storage fees after notice.")
   footerText            String        @default("Powered by Duuka Pro Max — Eagle Info's repair & business management platform. care.eagleinfosolutions.com")
   paymentInstructions   String        @default("")
   paymentAccounts       String        @default("")

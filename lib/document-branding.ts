@@ -19,7 +19,7 @@ export const defaultBranding = {
   vatInclusive: false,
   vatLabel: "VAT",
   termsText:
-    "Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.",
+    "We supply equipment and carry out repairs; only the terms relevant to this document apply.\nGoods are subject to stock availability and carry the manufacturer warranty only, where applicable.\nRepair work is carried out only after approval is recorded, and parts availability may affect the timeline.\nPre-existing or hidden faults may affect the outcome of a repair.\nUncollected devices may attract storage fees after notice.",
   footerText: "",
   // Multi-line "PAYMENT TO" block shown on invoices/receipts. First line is the
   // bank name; remaining lines are branch / account name / account number.

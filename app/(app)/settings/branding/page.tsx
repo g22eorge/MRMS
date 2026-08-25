@@ -15,6 +15,7 @@ import { can } from "@/lib/permissions";
 import { planLabel, resolveTemplateKey, splitTemplatesByPlan } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
 
+import { isShippedDefaultTerms } from "@/lib/quote-terms";
 const brandingFieldClass =
   "rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14";
 
@@ -442,6 +443,12 @@ export default async function BrandingPage({
           <summary className="cursor-pointer select-none px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Terms &amp; footer <span className="font-normal normal-case tracking-normal text-[var(--ink-muted)]">— optional</span></summary>
           <div className="grid gap-2 px-4 pb-4">
             <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
+            {isShippedDefaultTerms(settings.termsText) ? (
+              <p className="text-[0.6875rem] leading-relaxed text-[var(--ink-muted)]">
+                Leave this as it is and each document prints the terms that fit it: repair terms on repair
+                work, sales terms on goods. Write your own and yours are used everywhere instead.
+              </p>
+            ) : null}
             <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             <label className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Payment to (bank accounts shown on invoices &amp; receipts)</label>
             <BankAccountsEditor initial={parsePaymentAccounts(settings.paymentAccounts)} />

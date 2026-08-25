@@ -6,6 +6,7 @@ import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
+import { pickDocumentTerms } from "@/lib/quote-terms";
 type Branding = {
   documentTitle?: string | null;
   companyName?: string | null;
@@ -114,7 +115,7 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       balanceDue={balance > 0 ? formatMoney(balance, currency) : formatMoney(0, currency)}
       notes={methodNote ?? (branding?.footerText ?? null)}
       paymentTo={bankLines || null}
-      termsText={branding?.termsText ?? null}
+      termsText={pickDocumentTerms(branding?.termsText, "SALE")}
     />
   );
 }

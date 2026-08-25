@@ -10,6 +10,7 @@ import { formatEATDocDate } from "@/lib/date-eat";
 import { compactText } from "@/lib/pdf/pdf-utils";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 
+import { pickDocumentTerms } from "@/lib/quote-terms";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -122,7 +123,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     notes: invoice.notes ?? "",
     status: invoice.status,
     currency,
-    termsText: branding.termsText ?? "",
+    termsText: pickDocumentTerms(branding.termsText, invoice.jobId ? "REPAIR" : "SALE"),
     footerText: branding.footerText ?? "",
     signatureCompanyLabel: "Authorized Signatory",
     signatureClientLabel: "Client Signature",

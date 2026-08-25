@@ -10,6 +10,7 @@ import { compactText, compactListText, prettyEnum, resolvePdfLogo } from "@/lib/
 import { QuotationTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
 
+import { pickDocumentTerms } from "@/lib/quote-terms";
 export type GenerateQuotationResult =
   | { ok: true; buffer: Buffer; filename: string; quotationNumber: string; clientPhone: string }
   | { ok: false; error: string };
@@ -125,7 +126,7 @@ export async function generateQuotationBuffer(
     notes: compactListText(job.clientConversationNote, 180),
     status: prettyEnum(job.status),
     currency,
-    termsText: branding.termsText,
+    termsText: pickDocumentTerms(branding.termsText, "REPAIR"),
     footerText: branding.footerText,
     signatureCompanyLabel: branding.signatureCompanyLabel,
     signatureClientLabel: branding.signatureClientLabel,

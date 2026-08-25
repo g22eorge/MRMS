@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
 import { clientContactName } from "@/lib/client-name";
+import { pickDocumentTerms } from "@/lib/quote-terms";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -112,7 +113,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       creditNote.itemsReceivedBackNote ? `Return note: ${creditNote.itemsReceivedBackNote}` : null,
     ].filter(Boolean).join("\n"),
     paymentTo: null,
-    termsText: branding.termsText || null,
+    termsText: pickDocumentTerms(
+      branding.termsText,
+      creditNote.invoice?.job ? "REPAIR" : creditNote.sale || creditNote.invoice ? "SALE" : "MIXED",
+    ),
   });
 
   try {
