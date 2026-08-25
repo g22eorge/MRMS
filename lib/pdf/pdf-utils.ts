@@ -39,22 +39,44 @@ export async function toDataUriFromLocal(filePath: string, contentType: string):
 
 type LogoCandidate = { file: string; type: string };
 
+/**
+ * First candidate that exists, in list order.
+ *
+ * This used to be Promise.any over access(), which resolves with whichever
+ * check happens to settle first. The list read like a priority order but was
+ * not one, so which logo a document got came down to disk timing.
+ */
+async function firstExistingLogo(candidates: LogoCandidate[]): Promise<string | undefined> {
+  for (const c of candidates) {
+    try {
+      await access(c.file);
+      return await toDataUriFromLocal(c.file, c.type);
+    } catch {
+      // next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Documents print on white. The brand asset is white artwork on a solid black
+ * field, which lands as a black slab on paper, so a dark-on-transparent variant
+ * wins wherever one exists. The app UI keeps using the original.
+ */
+const DOC_LOGO_FIRST: LogoCandidate[] = [
+  { file: path.join(process.cwd(), "public", "eagle-info-logo-doc.png"), type: "image/png" },
+];
+
 /** Resolve logo for job-card and quotation PDFs (eagle-info-logo variants only). */
 export async function resolvePdfLogo(): Promise<string | undefined> {
-  const localCandidates: LogoCandidate[] = [
-    // Documents print on white. The main brand asset is white artwork on a solid
-    // black field, which lands as a black slab on paper, so a dark-on-transparent
-    // variant wins here when one exists. The app UI keeps using the original.
-    { file: path.join(process.cwd(), "public", "eagle-info-logo-doc.png"), type: "image/png" },
+  const local = await firstExistingLogo([
+    ...DOC_LOGO_FIRST,
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.webp"), type: "image/webp" },
-  ];
-  const winner = await Promise.any(
-    localCandidates.map((c) => access(c.file).then(() => c)),
-  ).catch(() => null);
-  if (winner) return toDataUriFromLocal(winner.file, winner.type);
+  ]);
+  if (local) return local;
 
   const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   if (baseUrl) {
@@ -68,7 +90,8 @@ export async function resolvePdfLogo(): Promise<string | undefined> {
 
 /** Resolve logo for invoice PDFs — also checks invoice-logo variants and INVOICE_LOGO_URL env. */
 export async function resolveInvoiceLogo(): Promise<string | undefined> {
-  const localCandidates: LogoCandidate[] = [
+  const local = await firstExistingLogo([
+    ...DOC_LOGO_FIRST,
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },
@@ -77,11 +100,8 @@ export async function resolveInvoiceLogo(): Promise<string | undefined> {
     { file: path.join(process.cwd(), "public", "invoice-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "invoice-logo.jpeg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "invoice-logo.webp"), type: "image/webp" },
-  ];
-  const winner = await Promise.any(
-    localCandidates.map((c) => access(c.file).then(() => c)),
-  ).catch(() => null);
-  if (winner) return toDataUriFromLocal(winner.file, winner.type);
+  ]);
+  if (local) return local;
 
   const explicit = process.env.INVOICE_LOGO_URL;
   if (explicit) {

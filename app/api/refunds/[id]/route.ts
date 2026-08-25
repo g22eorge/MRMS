@@ -115,6 +115,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientLocation: null,
     lineItems,
     subTotal: formatMoney(refund.amount, refund.currency),
+    // The headline is the money that moved. "Balance Due UGX 0" is true of a
+    // refund and tells the reader nothing.
+    headlineLabel: "Amount Refunded",
+    headlineAmount: formatMoney(refund.amount, refund.currency),
     totalLabel: "Refund Total",
     totalAmount: formatMoney(refund.amount, refund.currency),
     paymentMade: formatMoney(refund.amount, refund.currency),

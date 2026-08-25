@@ -103,6 +103,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientLocation: null,
     lineItems,
     subTotal: formatMoney(creditNote.totalAmount, currency),
+    // Lead with the credit issued rather than what is left outstanding on it.
+    headlineLabel: "Credit Issued",
+    headlineAmount: formatMoney(creditNote.totalAmount, currency),
     totalLabel: "Credit Total",
     totalAmount: formatMoney(creditNote.totalAmount, currency),
     paymentMade: formatMoney(refundedTotal, currency),
