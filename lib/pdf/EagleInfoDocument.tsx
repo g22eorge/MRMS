@@ -30,24 +30,9 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 
 import { isTermsHeading } from "@/lib/quote-terms";
 import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
-// ── Palette ────────────────────────────────────────────────────────────────────
-//
-// One slate family throughout, so the greys read as chosen rather than as three
-// different defaults that happened to land near each other. The accent is the
-// only colour that varies by document (receipts pass orange); everything else
-// stays constant so a customer holding an invoice and a quotation sees one house.
-const INK      = "#0F172A";   // near-black body text
-const MUTED    = "#64748B";   // labels and secondary lines
-const FAINT    = "#94A3B8";   // page furniture: page numbers, column rules
-const DIVIDER  = "#E2E8F0";   // hairline
-const WHITE    = "#FFFFFF";
-const NAVY     = "#1E293B";   // table header bar, and the default accent
-const PANEL    = "#F8FAFC";   // party/meta band
-const SHADE    = "#F1F5F9";   // balance-due bar
-const LABEL_SZ = 7;           // caps section-label font size
-
-// Vertical rhythm. Every margin below is one of these, so the page has a beat.
-const SP = { xs: 4, sm: 8, md: 14, lg: 22, xl: 32 };
+// Palette and rhythm come from lib/pdf/house, so this template and the delivery
+// note, job card and statement cannot drift apart into slightly different greys.
+import { DIVIDER, FAINT, INK, LABEL_SZ, MUTED, NAVY, PANEL, SHADE, SP, WHITE, ZEBRA } from "@/lib/pdf/house";
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
@@ -108,7 +93,7 @@ const s = StyleSheet.create({
   tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 8, paddingHorizontal: 10, alignItems: "flex-start" },
   // Barely-there tint on alternate rows. On a thirty-line quotation it keeps the
   // eye on one row across the full width; on a three-line one it is invisible.
-  tableRowAlt: { backgroundColor: "#FBFCFE" },
+  tableRowAlt: { backgroundColor: ZEBRA },
   emptyRow: { paddingVertical: 14, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: DIVIDER },
   emptyText: { fontSize: 8.5, color: FAINT, fontStyle: "italic" },
   colNum:   { width: 22 },

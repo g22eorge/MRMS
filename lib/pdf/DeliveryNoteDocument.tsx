@@ -1,60 +1,33 @@
 /**
- * Delivery Note — Eagle Info house style.
- * Matches the clean white design from Quote_EISL-000014.pdf.
+ * Delivery Note — house style.
+ *
+ * A handover record, so the page is built around three questions: what was
+ * handed over, to whom, and who signed for it. The chrome comes from
+ * lib/pdf/house so this sits beside an invoice as the same company's paper.
  */
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
-const INK     = "#0f172a";
-const MUTED   = "#6B7280";
-const DIVIDER = "#E5E7EB";
-const WHITE   = "#FFFFFF";
-const LABEL   = 7;
+import {
+  HouseDocHead, HouseLetterhead, HousePageFooter, HouseTopRule,
+  INK, MUTED, SP, companyLetterheadLines, house,
+} from "@/lib/pdf/house";
 
 const s = StyleSheet.create({
-  page: { paddingHorizontal: 40, paddingVertical: 36, fontSize: 9, fontFamily: "Helvetica", color: INK, backgroundColor: WHITE },
-
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 72, height: 36, marginBottom: 6, objectFit: "contain" },
-  companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  companyLine: { fontSize: 8, color: MUTED, marginBottom: 1.5 },
-  infoRow: { flexDirection: "row", gap: 4, marginBottom: 1.5 },
-  infoLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", width: 38 },
-  headerRight: { width: 180, alignItems: "flex-end" },
-  docTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  docNumber: { fontSize: 8.5, color: MUTED, marginBottom: 8 },
-  refBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 7, alignItems: "flex-end", width: "100%" },
-  refLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 },
-  refValue: { fontSize: 10, fontFamily: "Helvetica-Bold" },
-
-  hr: { borderTopWidth: 1, borderTopColor: DIVIDER, marginBottom: 16 },
-
-  grid2: { flexDirection: "row", gap: 24, marginBottom: 16 },
-  col: { flex: 1 },
-  sectionLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingBottom: 4 },
-  fieldRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 4.5 },
-  fieldLabel: { width: 80, fontSize: 8.5, color: MUTED },
-  fieldValue: { flex: 1, fontSize: 8.5, fontFamily: "Helvetica-Bold" },
-
-  // Items table
-  table: { marginBottom: 16 },
-  tableHead: { flexDirection: "row", borderBottomWidth: 1.5, borderBottomColor: INK, paddingBottom: 4 },
-  th: { fontSize: 8, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.4 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 7 },
-  colNum:  { width: 24 },
-  colDesc: { flex: 1 },
+  colNum:  { width: 22 },
+  colDesc: { flex: 1, paddingRight: 10 },
   colQty:  { width: 60, textAlign: "right" },
 
-  // Footer
-  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: 20, marginBottom: 14 },
-  sigRow: { flexDirection: "row", gap: 24 },
-  sigCol: { flex: 1 },
-  sigLine: { borderBottomWidth: 1, borderBottomColor: INK, marginTop: 28, marginBottom: 5 },
-  sigLabel: { fontSize: 7.5, color: MUTED },
-  sigName: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  noteBlock: { marginBottom: SP.md },
+  noteText: { fontSize: 8.5, color: INK, lineHeight: 1.45 },
 
-  noteLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 },
-  noteText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 12 },
+  // Signatures. The rule sits under an empty run of space rather than under the
+  // typed name, because someone has to sign on it in ink.
+  sigWrap: { marginTop: SP.lg, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: SP.md },
+  sigRow: { flexDirection: "row", gap: SP.xl },
+  sigCol: { flex: 1 },
+  sigName: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  sigLine: { borderBottomWidth: 1, borderBottomColor: INK, marginTop: 30, marginBottom: 5 },
+  sigLabel: { fontSize: 7.5, color: MUTED },
 });
 
 type DeliveryItem = { description: string; quantity: number };
@@ -67,6 +40,7 @@ type Props = {
     companyAddressLine2: string;
     companyContacts: string;
     companyEmail?: string | null;
+    companyWebsite?: string | null;
     companyLogoUrl?: string | null;
   };
   deliveryNoteNumber: string;
@@ -81,111 +55,102 @@ type Props = {
   items: DeliveryItem[];
 };
 
-export function DeliveryNoteDocument({ branding, deliveryNoteNumber, deliveredAt, saleRef, clientName, deliveredByName, receivedByName, receivedBySignatureText, deliveryMethod, note, items }: Props) {
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+export function DeliveryNoteDocument({
+  branding, deliveryNoteNumber, deliveredAt, saleRef, clientName,
+  deliveredByName, receivedByName, receivedBySignatureText, deliveryMethod, note, items,
+}: Props) {
+  const lines = companyLetterheadLines({
+    companyAddress: [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n"),
+    companyPhone: branding.companyContacts,
+    companyEmail: branding.companyEmail,
+    companyWebsite: branding.companyWebsite,
+  });
 
   return (
     <Document title={`Delivery Note ${deliveryNoteNumber}`}>
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={house.page}>
+        <HouseTopRule />
+        <View style={house.headPad} />
 
-        {/* Header */}
-        <View style={s.header}>
-          <View style={s.headerLeft}>
-            {branding.companyLogoUrl
-              // eslint-disable-next-line jsx-a11y/alt-text
-              ? <Image style={s.logo} src={branding.companyLogoUrl} />
-              : null}
-            <Text style={s.companyName}>{branding.companyName}</Text>
-            {address ? <Text style={s.companyLine}>{address}</Text> : null}
-            {branding.companyContacts ? (
-              <View style={s.infoRow}><Text style={s.infoLabel}>PHONE:</Text><Text style={s.companyLine}>{branding.companyContacts}</Text></View>
-            ) : null}
-            {branding.companyEmail ? (
-              <View style={s.infoRow}><Text style={s.infoLabel}>EMAIL:</Text><Text style={s.companyLine}>{branding.companyEmail}</Text></View>
-            ) : null}
+        <View style={house.header}>
+          <HouseLetterhead companyName={branding.companyName} companyLogoUrl={branding.companyLogoUrl} lines={lines} />
+          <HouseDocHead
+            docTitle="Delivery Note"
+            docNumber={deliveryNoteNumber}
+            cardLabel="Reference"
+            cardValue={saleRef}
+            cardIsText
+          />
+        </View>
+
+        {/* Who received it, and who released it */}
+        <View style={house.band} wrap={false}>
+          <View style={house.bandCol}>
+            <Text style={house.label}>Delivered To</Text>
+            <Text style={house.partyName}>{clientName}</Text>
+            <Text style={house.partyLine}>{deliveredAt}</Text>
+            {deliveryMethod ? <Text style={house.partyLine}>{deliveryMethod}</Text> : null}
           </View>
-          <View style={s.headerRight}>
-            <Text style={s.docTitle}>Delivery Note</Text>
-            <Text style={s.docNumber}>#{deliveryNoteNumber}</Text>
-            <View style={s.refBox}>
-              <Text style={s.refLabel}>Reference</Text>
-              <Text style={s.refValue}>{saleRef}</Text>
+          <View style={house.bandColDivided}>
+            <Text style={house.label}>Dispatch</Text>
+            <View style={house.metaRow}>
+              <Text style={house.metaLabel}>Dispatched by</Text>
+              <Text style={house.metaValue}>{deliveredByName}</Text>
+            </View>
+            <View style={house.metaRow}>
+              <Text style={house.metaLabel}>Received by</Text>
+              <Text style={house.metaValue}>{receivedByName}</Text>
             </View>
           </View>
         </View>
 
-        <View style={s.hr} />
-
-        {/* Client + Delivery info */}
-        <View style={s.grid2}>
-          <View style={s.col}>
-            <Text style={s.sectionLabel}>Delivered To</Text>
-            {[
-              { label: "Client",   value: clientName },
-              { label: "Method",   value: deliveryMethod ?? "-" },
-              { label: "Date",     value: deliveredAt },
-            ].map((r, i) => (
-              <View key={i} style={s.fieldRow}>
-                <Text style={s.fieldLabel}>{r.label}</Text>
-                <Text style={s.fieldValue}>{r.value}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={s.col}>
-            <Text style={s.sectionLabel}>Dispatch Details</Text>
-            {[
-              { label: "Dispatched by", value: deliveredByName },
-              { label: "Received by",   value: receivedByName },
-            ].map((r, i) => (
-              <View key={i} style={s.fieldRow}>
-                <Text style={s.fieldLabel}>{r.label}</Text>
-                <Text style={s.fieldValue}>{r.value}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Items */}
-        <View style={s.table}>
-          <View style={s.tableHead}>
-            <Text style={[s.th, s.colNum]}>#</Text>
-            <Text style={[s.th, s.colDesc]}>Description</Text>
-            <Text style={[s.th, s.colQty]}>Qty</Text>
+        {/* What was handed over */}
+        <View style={{ marginBottom: SP.md }}>
+          <View style={house.tableHead} fixed>
+            <Text style={[house.th, s.colNum]}>#</Text>
+            <Text style={[house.th, s.colDesc]}>Description</Text>
+            <Text style={[house.th, s.colQty]}>Qty</Text>
           </View>
           {items.map((it, i) => (
-            <View key={i} style={s.tableRow}>
-              <Text style={[{ fontSize: 9 }, s.colNum]}>{i + 1}</Text>
-              <Text style={[{ fontSize: 9 }, s.colDesc]}>{it.description}</Text>
-              <Text style={[{ fontSize: 9 }, s.colQty]}>{String(it.quantity)}</Text>
+            <View key={i} style={i % 2 === 1 ? [house.tableRow, house.tableRowAlt] : house.tableRow} wrap={false}>
+              <Text style={[house.cellMuted, s.colNum]}>{i + 1}</Text>
+              <Text style={[house.cell, s.colDesc]}>{it.description}</Text>
+              <Text style={[house.cellStrong, s.colQty]}>{String(it.quantity)}</Text>
             </View>
           ))}
+          {items.length === 0 ? (
+            <View style={house.emptyRow}>
+              <Text style={house.emptyText}>No items listed on this delivery.</Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* Note */}
         {note ? (
-          <>
-            <Text style={s.noteLabel}>Notes</Text>
+          <View style={s.noteBlock}>
+            <Text style={house.sectionLabel}>Notes</Text>
             <Text style={s.noteText}>{note}</Text>
-          </>
+          </View>
         ) : null}
 
-        {/* Signatures */}
-        <View style={s.footerDivider} />
-        <View style={s.sigRow}>
-          <View style={s.sigCol}>
-            <Text style={s.sigName}>{deliveredByName}</Text>
-            <View style={s.sigLine} />
-            <Text style={s.sigLabel}>Dispatched by</Text>
-          </View>
-          <View style={s.sigCol}>
-            <Text style={s.sigName}>{receivedByName}</Text>
-            <View style={s.sigLine} />
-            <Text style={s.sigLabel}>
-              {receivedBySignatureText ? receivedBySignatureText : "Client signature (confirmation of receipt)"}
-            </Text>
+        {/* Signatures stay whole; a rule stranded on its own page signs nothing. */}
+        <View style={s.sigWrap} wrap={false}>
+          <View style={s.sigRow}>
+            <View style={s.sigCol}>
+              <Text style={s.sigName}>{deliveredByName}</Text>
+              <View style={s.sigLine} />
+              <Text style={s.sigLabel}>Dispatched by</Text>
+            </View>
+            <View style={s.sigCol}>
+              <Text style={s.sigName}>{receivedByName}</Text>
+              <View style={s.sigLine} />
+              <Text style={s.sigLabel}>
+                {receivedBySignatureText || "Client signature (confirmation of receipt)"}
+              </Text>
+            </View>
           </View>
         </View>
 
+        <HousePageFooter companyName={branding.companyName} docTitle="Delivery Note" docNumber={deliveryNoteNumber} />
       </Page>
     </Document>
   );

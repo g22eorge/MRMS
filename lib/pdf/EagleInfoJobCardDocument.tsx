@@ -1,67 +1,50 @@
 /**
- * Job Card — Eagle Info house style.
- * Uses the same clean white layout as the PDF quote template, adapted for repair jobs.
+ * Job Card — house style.
+ *
+ * The workshop's intake record, and the one document a customer signs before
+ * anything is opened up. So it has to be legible at a counter and unambiguous
+ * afterwards: what came in, what was on it, what the customer said was wrong,
+ * and what we found. The chrome comes from lib/pdf/house.
  */
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
-const INK     = "#0f172a";
-const MUTED   = "#6B7280";
-const DIVIDER = "#E5E7EB";
-const WHITE   = "#FFFFFF";
-const LABEL   = 7;
+import {
+  HouseDocHead, HouseLetterhead, HousePageFooter, HouseTopRule,
+  DIVIDER, INK, MUTED, PANEL, SP, companyLetterheadLines, house,
+} from "@/lib/pdf/house";
 
 const s = StyleSheet.create({
-  page: { paddingHorizontal: 40, paddingVertical: 36, fontSize: 9, fontFamily: "Helvetica", color: INK, backgroundColor: WHITE },
-
-  // Header
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 72, height: 36, marginBottom: 6, objectFit: "contain" },
-  companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  companyLine: { fontSize: 8, color: MUTED, marginBottom: 1.5 },
-  infoRow: { flexDirection: "row", gap: 4, marginBottom: 1.5 },
-  infoLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", width: 38 },
-  headerRight: { width: 180, alignItems: "flex-end" },
-  docTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  docNumber: { fontSize: 8.5, color: MUTED, marginBottom: 8 },
-  statusBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 7, alignItems: "flex-end", width: "100%" },
-  statusLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 },
-  statusValue: { fontSize: 11, fontFamily: "Helvetica-Bold" },
-
-  hr: { borderTopWidth: 1, borderTopColor: DIVIDER, marginBottom: 16 },
-
-  // Two-col grid for sections
-  grid2: { flexDirection: "row", gap: 16, marginBottom: 14 },
+  grid2: { flexDirection: "row", gap: SP.lg, marginBottom: SP.md },
   col: { flex: 1 },
+  section: { marginBottom: SP.md },
 
-  // Section
-  sectionLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingBottom: 4 },
-  fieldRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 4.5 },
-  fieldLabel: { width: 90, fontSize: 8.5, color: MUTED },
+  // Label/value rows. Hairline under each so a handwritten correction has a
+  // line to sit on, which is how these get used in practice.
+  fieldRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingVertical: 5 },
+  fieldLabel: { width: 78, fontSize: 8.5, color: MUTED },
   fieldValue: { flex: 1, fontSize: 8.5, fontFamily: "Helvetica-Bold" },
 
-  // Full-width section
-  fullSection: { marginBottom: 14 },
-  contentBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, padding: 10, minHeight: 40 },
-  contentText: { fontSize: 8.5, lineHeight: 1.6 },
-
-  // Checklist
-  checkGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
-  checkItem: { flexDirection: "row", alignItems: "center", gap: 4, width: "30%" },
-  checkBox: { width: 10, height: 10, borderWidth: 1, borderColor: DIVIDER, borderRadius: 2 },
+  // Accessories. A ticked box has to read as ticked from across a counter, so
+  // it is a filled square with a clear border rather than a tint.
+  checkGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
+  checkItem: { flexDirection: "row", alignItems: "center", gap: 5, width: "33%", marginBottom: 6 },
+  checkBox: { width: 9, height: 9, borderWidth: 1, borderColor: "#94A3B8", borderRadius: 1.5 },
+  checkBoxOn: { backgroundColor: INK, borderColor: INK },
   checkLabel: { fontSize: 8, color: MUTED },
+  checkLabelOn: { fontSize: 8, color: INK, fontFamily: "Helvetica-Bold" },
 
-  // Footer
-  footerDivider: { borderTopWidth: 1, borderTopColor: DIVIDER, marginTop: 20, marginBottom: 14 },
-  footer: { flexDirection: "row", gap: 32 },
-  footerLabel: { fontSize: LABEL, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 },
-  footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5 },
+  // Free-text areas keep a panel so the block is obviously a written statement
+  // rather than a field we filled in.
+  contentBox: { backgroundColor: PANEL, borderRadius: 3, padding: 10, minHeight: 42 },
+  contentText: { fontSize: 8.5, lineHeight: 1.5 },
 
-  // Signatures
-  sigRow: { flexDirection: "row", gap: 20, marginTop: 16 },
+  sigWrap: { marginTop: SP.lg, borderTopWidth: 1, borderTopColor: DIVIDER, paddingTop: SP.md },
+  sigRow: { flexDirection: "row", gap: SP.xl },
   sigCol: { flex: 1 },
-  sigLine: { borderBottomWidth: 1, borderBottomColor: INK, marginTop: 24, marginBottom: 4 },
+  sigLine: { borderBottomWidth: 1, borderBottomColor: INK, marginTop: 30, marginBottom: 5 },
   sigLabel: { fontSize: 7.5, color: MUTED },
+
+  noteText: { fontSize: 8, color: MUTED, lineHeight: 1.45 },
 });
 
 type Props = {
@@ -103,51 +86,77 @@ const DEVICE_CHECKLIST = [
   "Charger", "Earphones", "Screen protector", "Case / Cover",
 ];
 
+const has = (v?: string | null) => Boolean(v && v !== "N/A" && v.trim());
+const orDash = (v?: string | null) => (has(v) ? (v as string) : "—");
+
 export function EagleInfoJobCardDocument(props: Props) {
-  const address = [props.companyAddressLine1, props.companyAddressLine2].filter(Boolean).join(", ");
-  const accList = (props.accessories !== "N/A" ? props.accessories : "").split(/,|;|\n/).map(s => s.trim()).filter(Boolean);
+  const letterhead = companyLetterheadLines({
+    companyAddress: [props.companyAddressLine1, props.companyAddressLine2].filter(Boolean).join("\n"),
+    companyPhone: props.companyContacts,
+    companyEmail: props.companyEmail,
+    companyWebsite: props.companyWebsite,
+  });
+
+  const accList = (has(props.accessories) ? props.accessories : "")
+    .split(/,|;|\n/).map((x) => x.trim()).filter(Boolean);
+
+  const diagnosis = [
+    has(props.diagnosisSummary) ? props.diagnosisSummary : "",
+    has(props.partsNeeded) ? `Parts: ${props.partsNeeded}` : "",
+  ].filter(Boolean).join("\n") || "—";
 
   return (
     <Document title={`Job Card ${props.documentNumber}`}>
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={house.page}>
+        <HouseTopRule />
+        <View style={house.headPad} />
 
-        {/* Header */}
-        <View style={s.header}>
-          <View style={s.headerLeft}>
-            {props.companyLogoUrl
-              // eslint-disable-next-line jsx-a11y/alt-text
-              ? <Image style={s.logo} src={props.companyLogoUrl} />
-              : null}
-            <Text style={s.companyName}>{props.companyName}</Text>
-            {address ? <Text style={s.companyLine}>{address}</Text> : null}
-            {props.companyContacts ? (
-              <View style={s.infoRow}><Text style={s.infoLabel}>PHONE:</Text><Text style={s.companyLine}>{props.companyContacts}</Text></View>
-            ) : null}
-            {props.companyEmail ? (
-              <View style={s.infoRow}><Text style={s.infoLabel}>EMAIL:</Text><Text style={s.companyLine}>{props.companyEmail}</Text></View>
-            ) : null}
+        <View style={house.header}>
+          <HouseLetterhead companyName={props.companyName} companyLogoUrl={props.companyLogoUrl} lines={letterhead} />
+          <HouseDocHead
+            docTitle="Job Card"
+            docNumber={props.documentNumber}
+            cardLabel="Status"
+            cardValue={props.status}
+            cardIsText
+          />
+        </View>
+
+        {/* Whose device, and when it came in */}
+        <View style={house.band} wrap={false}>
+          <View style={house.bandLeft}>
+            <Text style={house.label}>Client</Text>
+            {/* The organisation is the account; the person is the contact on it. */}
+            <Text style={house.partyName}>{props.clientOrganization || props.clientName}</Text>
+            {props.clientOrganization ? <Text style={house.partyAttn}>Attn: {props.clientName}</Text> : null}
+            {has(props.clientPhone) ? <Text style={house.partyLine}>{props.clientPhone}</Text> : null}
+            {has(props.clientEmail) ? <Text style={house.partyLine}>{props.clientEmail}</Text> : null}
           </View>
-          <View style={s.headerRight}>
-            <Text style={s.docTitle}>Job Card</Text>
-            <Text style={s.docNumber}>#{props.documentNumber}</Text>
-            <View style={s.statusBox}>
-              <Text style={s.statusLabel}>Status</Text>
-              <Text style={s.statusValue}>{props.status}</Text>
+          <View style={house.bandRight}>
+            <View style={house.metaRow}>
+              <Text style={house.metaLabel}>Received</Text>
+              <Text style={house.metaValue}>{props.dateIssued}</Text>
+            </View>
+            <View style={house.metaRow}>
+              <Text style={house.metaLabel}>Repair ID</Text>
+              <Text style={house.metaValue}>{props.repairId}</Text>
+            </View>
+            <View style={house.metaRow}>
+              <Text style={house.metaLabel}>Received by</Text>
+              <Text style={house.metaValue}>{props.preparedByName}</Text>
             </View>
           </View>
         </View>
 
-        <View style={s.hr} />
-
-        {/* Client + Device */}
+        {/* What came in */}
         <View style={s.grid2}>
           <View style={s.col}>
-            <Text style={s.sectionLabel}>Client Information</Text>
+            <Text style={house.sectionLabel}>Device</Text>
             {[
-              { label: "Name",   value: props.clientName },
-              { label: "Phone",  value: props.clientPhone },
-              { label: "Email",  value: props.clientEmail || "—" },
-              { label: "Org",    value: props.clientOrganization || "—" },
+              { label: "Type", value: orDash(props.deviceType) },
+              { label: "Brand / Model", value: orDash(props.deviceLabel) },
+              { label: "Serial / IMEI", value: orDash(props.serialOrImei) },
+              { label: "Condition", value: orDash(props.physicalCondition) },
             ].map((r, i) => (
               <View key={i} style={s.fieldRow}>
                 <Text style={s.fieldLabel}>{r.label}</Text>
@@ -156,91 +165,62 @@ export function EagleInfoJobCardDocument(props: Props) {
             ))}
           </View>
           <View style={s.col}>
-            <Text style={s.sectionLabel}>Device Information</Text>
-            {[
-              { label: "Type",        value: props.deviceType },
-              { label: "Brand/Model", value: props.deviceLabel },
-              { label: "Serial/IMEI", value: props.serialOrImei || "—" },
-              { label: "Condition",   value: props.physicalCondition || "—" },
-            ].map((r, i) => (
-              <View key={i} style={s.fieldRow}>
-                <Text style={s.fieldLabel}>{r.label}</Text>
-                <Text style={s.fieldValue}>{r.value}</Text>
-              </View>
-            ))}
+            <Text style={house.sectionLabel}>Accessories Received</Text>
+            <View style={s.checkGrid}>
+              {DEVICE_CHECKLIST.map((item) => {
+                const checked = accList.some((a) => a.toLowerCase().includes(item.toLowerCase()));
+                return (
+                  <View key={item} style={s.checkItem}>
+                    <View style={checked ? [s.checkBox, s.checkBoxOn] : s.checkBox} />
+                    <Text style={checked ? s.checkLabelOn : s.checkLabel}>{item}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </View>
 
-        {/* Accessories Checklist */}
-        <View style={s.fullSection}>
-          <Text style={s.sectionLabel}>Accessories Received</Text>
-          <View style={s.checkGrid}>
-            {DEVICE_CHECKLIST.map((item) => {
-              const checked = accList.some(a => a.toLowerCase().includes(item.toLowerCase()));
-              return (
-                <View key={item} style={s.checkItem}>
-                  <View style={[s.checkBox, checked ? { backgroundColor: INK } : {}]} />
-                  <Text style={s.checkLabel}>{item}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Issue + Diagnosis */}
+        {/* What is wrong with it, said twice: by the customer, then by us */}
         <View style={s.grid2}>
           <View style={s.col}>
-            <Text style={s.sectionLabel}>Customer Issue</Text>
+            <Text style={house.sectionLabel}>Reported by Customer</Text>
             <View style={s.contentBox}>
-              <Text style={s.contentText}>{props.customerIssue !== "N/A" ? props.customerIssue : "—"}</Text>
+              <Text style={s.contentText}>{orDash(props.customerIssue)}</Text>
             </View>
           </View>
           <View style={s.col}>
-            <Text style={s.sectionLabel}>Diagnosis / Parts Needed</Text>
+            <Text style={house.sectionLabel}>Diagnosis / Parts Needed</Text>
             <View style={s.contentBox}>
-              <Text style={s.contentText}>
-                {[
-                  props.diagnosisSummary !== "N/A" ? props.diagnosisSummary : "",
-                  props.partsNeeded !== "N/A" ? `Parts: ${props.partsNeeded}` : "",
-                ].filter(Boolean).join("\n") || "—"}
-              </Text>
+              <Text style={s.contentText}>{diagnosis}</Text>
             </View>
           </View>
         </View>
 
-        {/* Technician Notes */}
-        {props.technicianNotes && props.technicianNotes !== "N/A" ? (
-          <View style={s.fullSection}>
-            <Text style={s.sectionLabel}>Technician Notes</Text>
+        {has(props.technicianNotes) ? (
+          <View style={s.section} wrap={false}>
+            <Text style={house.sectionLabel}>Technician Notes</Text>
             <View style={s.contentBox}>
               <Text style={s.contentText}>{props.technicianNotes}</Text>
             </View>
           </View>
         ) : null}
 
-        {/* Footer */}
-        <View style={s.footerDivider} />
-        {props.footerText ? (
-          <View style={s.footer}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.footerLabel}>Notes</Text>
-              <Text style={s.footerText}>{props.footerText}</Text>
+        {/* Signatures stay whole; a rule stranded on its own page signs nothing. */}
+        <View style={s.sigWrap} wrap={false}>
+          {props.footerText ? <Text style={s.noteText}>{props.footerText}</Text> : null}
+          <View style={s.sigRow}>
+            <View style={s.sigCol}>
+              <View style={s.sigLine} />
+              <Text style={s.sigLabel}>{props.signatureCompanyLabel || "Authorised Signatory"}</Text>
             </View>
-          </View>
-        ) : null}
-
-        {/* Signatures */}
-        <View style={s.sigRow}>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text style={s.sigLabel}>{props.signatureCompanyLabel || "Authorised Signatory"}</Text>
-          </View>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text style={s.sigLabel}>{props.signatureClientLabel || "Client Signature"}</Text>
+            <View style={s.sigCol}>
+              <View style={s.sigLine} />
+              <Text style={s.sigLabel}>{props.signatureClientLabel || "Client Signature"}</Text>
+            </View>
           </View>
         </View>
 
+        <HousePageFooter companyName={props.companyName} docTitle="Job Card" docNumber={props.documentNumber} />
       </Page>
     </Document>
   );

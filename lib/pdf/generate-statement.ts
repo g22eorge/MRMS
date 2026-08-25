@@ -67,6 +67,7 @@ export async function generateStatementBuffer(
       companyAddressLine2: branding.companyAddressLine2,
       companyContacts: branding.companyContacts,
       companyEmail: branding.companyEmail,
+      companyWebsite: branding.companyWebsite,
       companyLogoUrl: logoUrl,
       footerText: branding.footerText,
     },
