@@ -46,19 +46,23 @@ function clampParas(items: string[], maxChars: number): string[] {
  * portal so a customer can only download a report staff have approved.
  */
 /**
- * Has the repair actually happened yet?
+ * Has the device been handed back yet?
  *
  * An assessment report is issued at two very different moments: before the work,
  * to get the customer to approve a quote, and after it, as the record of what
- * was done. The standing warranty note has to read correctly in both — promising
- * testing that already happened reads as sloppy, and claiming testing that has
- * not happened is a false statement to a customer.
+ * was done. The standing note has to read correctly in both — promising testing
+ * that already happened reads as sloppy, and claiming testing that has not
+ * happened is a false statement to a customer.
+ *
+ * The line is drawn at handover, not at repair: testing is done with the
+ * customer present, so a job waiting to be collected has been repaired but not
+ * yet tested, and still reads in the future.
  */
-const REPAIR_DONE_STATUSES = new Set(["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"]);
+const HANDED_OVER_STATUSES = new Set(["DELIVERED", "COMPLETED", "CLOSED"]);
 
 function standingWarrantyNote(status: string | null | undefined): string {
-  const done = REPAIR_DONE_STATUSES.has(String(status ?? ""));
-  return done
+  const handedOver = HANDED_OVER_STATUSES.has(String(status ?? ""));
+  return handedOver
     ? "The system was fully tested after repair and confirmed to be operating normally. Replacement components carry applicable supplier warranty."
     : "The system will be fully tested after repair to confirm normal operation, and replacement components carry applicable supplier warranty.";
 }
