@@ -120,3 +120,36 @@ FROM postgres:18-alpine AS backup
 COPY scripts/pg-backup.sh /usr/local/bin/pg-backup
 RUN chmod +x /usr/local/bin/pg-backup
 CMD ["pg-backup"]
+
+# ── dev ─────────────────────────────────────────────────────────────────────
+# Development target: `next dev` with the working tree bind-mounted, so editing
+# a file on the host reloads the running container. Not used in production.
+#
+# node_modules and .next are named volumes in docker-compose.dev.yml rather than
+# part of the mount: a bind mount would shadow the install baked in below, and on
+# macOS a bind-mounted node_modules is slow enough to be unusable.
+FROM oven/bun:1-debian AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+# Bind-mounted file events do not reach the container reliably on macOS or
+# Windows, so the watcher polls. Override to "" on Linux, where inotify works
+# through the mount and polling only burns CPU.
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+# Generate the client at build time so the first start is not delayed by it. The
+# entrypoint regenerates when prisma/schema.prisma has changed.
+COPY prisma ./prisma
+COPY prisma.config.ts tsconfig.json ./
+RUN bunx prisma generate
+
+EXPOSE 3000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+CMD ["bun", "run", "dev:docker"]

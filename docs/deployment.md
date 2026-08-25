@@ -169,14 +169,11 @@ docker inspect --format '{{.State.Health.Status}}' mrms-app-1
 
 ## Local development
 
-The application runs on the host; only the database is containerised:
+Development runs entirely in containers too — see `docs/development.md`.
 
 ```bash
-bun run pg:up        # postgres on 5433, plus a scratch instance on 5434
-bun run dev
+bun run dev:up     # app on http://localhost:3000, with live reload
 ```
 
-`docker-compose.dev.yml` uses its own compose project (`mrms-dev`) so those
-containers are never mistaken for part of the application stack. Ports are 5433
-and 5434 rather than 5432 because a host Postgres commonly holds 5432 and the
-collision is silent — you connect to the wrong server and believe the results.
+It is a separate compose project (`mrms-dev`) from the production stack
+(`mrms`), so the two can run side by side without colliding.

@@ -19,7 +19,7 @@ Primary stack:
 
 - Next.js 16 App Router, React 19, TypeScript.
 - Prisma 6.19 with the `postgresql` provider. One `DATABASE_URL` everywhere; there is no per-environment driver switch.
-- Local development runs the app on the host against a Postgres container (`bun run pg:up`, port 5433).
+- Local development runs entirely in containers (`bun run dev:up`); the databases are published on 5433 and 5434 for host tooling.
 - Production is Docker Compose on a single VPS, database included. See `docs/deployment.md`.
 - BetterAuth for auth/session.
 - Tailwind/shadcn-style UI, Sonner/toasts, React Hook Form/Zod where forms are client-driven.
@@ -186,13 +186,24 @@ the extension, or its type and its value will disagree.
 ### Commands
 
 ```bash
-bun run pg:up            # start the local Postgres containers (5433, 5434)
-bun run dev              # applies migrations, then next dev
-bun run db:migrate       # create a migration from a schema change
-bun run db:deploy        # apply migrations to DATABASE_URL
-bun run pg:drift <db>    # drift report against a SQLite dump
+bun run dev:up           # the whole dev stack in containers; app on :3000
+bun run dev:logs         # follow the app
+bun run dev:check        # tsc + lint, in the container
+bun run dev:test         # unit tests, in the container
+bun run dev:migrate      # prisma migrate dev, in the container
+bun run pg:drift <db>    # drift report against a SQLite dump (host tool)
 bun run build            # production build
 ```
+
+**Development runs in Docker.** Editing a file on the host reloads the running
+container — the app through Next's dev server, the worker and scheduler through
+file watchers. The exception is `prisma/schema.prisma`: the client is generated
+inside the container, so run `bun run dev:migrate` after a schema change. Full
+detail in `docs/development.md`.
+
+Do not start a host dev server alongside it. Both would bind :3000, and the one
+that loses is not obvious — the symptom is stale HTML served from whichever
+process won.
 
 Never use `prisma db push` against a database that matters: it is what produced
 the drift this migration had to reconcile (51 columns the datamodel expected and
