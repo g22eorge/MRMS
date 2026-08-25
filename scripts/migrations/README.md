@@ -152,3 +152,48 @@ Verified after: invoice total, job bill and the sum of its lines all agree at
 expected; no invoice anywhere still disagrees with its job's bill; no invoice's
 lines disagree with its total; payments untouched at 85; `foreign_key_check`
 clean. A `SystemAuditEvent` records the change.
+
+---
+
+## Per-tenant document codes — set 2026-08-25
+
+All seven organisations on `repairmanager` shared the code `EIS`, so Akimaathe
+Kyarumba Foundation — a paying customer — was issuing documents prefixed with
+Eagle Info Solutions' code.
+
+Codes set, derived from each name:
+
+| Tenant | Code |
+|---|---|
+| Akimaathe Kyarumba Foundation | `AKF` |
+| Eagle Info Solutions (platform, `org_eis_01`) | `EIS` |
+| Elite Digital | `ELD` |
+| FixIt Fast Ghana | `FFG` |
+| TechFix Uganda | `TFU` |
+| iRepair Kenya | `IRK` |
+
+Existing documents keep their numbers; only future ones use the new code. care
+is unchanged on `EIS`.
+
+### The `singleton` branding row, and the seventh org
+
+A second organisation also named "Eagle Info Solutions" (slug
+`eagle-info-solutions`, created 8 May 2026) held **0 users, 0 clients and 2 paid
+sales** — and it **owned the `singleton` branding row**, the shared fallback any
+org without its own branding inherits. Writing a code for that org would have
+written it into every other org's default.
+
+Two changes, both deliberate:
+
+* `singleton.orgId` set to `NULL`, so the fallback belongs to nobody. The org
+  now derives `EAGLE-INFO-SOLUTIONS` from its slug, which is the intended
+  behaviour for an org with no branding row of its own.
+* The org retired with `isActive: false`, `billingStatus: CANCELLED` and
+  `planCancelledAt` stamped — **not deleted**. 32 tables cascade from
+  `Organization`, so a delete would have destroyed its two paid sales.
+  `isActive: false` makes it read-only through the suspension guard
+  (`lib/billing-access.ts`) while every record survives.
+
+Verified after: 6 active tenants with 6 distinct codes and no sharing; sales
+still 4 and invoices still 3 summing 845,000; `foreign_key_check` clean; care
+untouched at 1 org, code `EIS`, 89 invoices.
