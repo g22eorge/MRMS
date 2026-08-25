@@ -370,6 +370,7 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
         "role" TEXT NOT NULL DEFAULT 'IT_OFFICER',
         "passwordHash" TEXT,
         "isActive" INTEGER NOT NULL DEFAULT 1,
+        "mustChangePassword" INTEGER NOT NULL DEFAULT 0,
         "lastLoginAt" DATETIME,
         "createdById" TEXT,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -382,6 +383,14 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PortalUser_clientId_idx" ON "PortalUser"("clientId")');
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "PortalUser_orgId_idx" ON "PortalUser"("orgId")');
     changes.push({ kind: "create_table", detail: "Created PortalUser + indexes" });
+  } else {
+    // A login issued by an admin must be replaced by the customer on first use.
+    // Without the column every portal page 500s on a missing field.
+    const portalCols = await tableColumns("PortalUser");
+    if (!portalCols.has("mustChangePassword")) {
+      await prisma.$executeRawUnsafe('ALTER TABLE "PortalUser" ADD COLUMN "mustChangePassword" INTEGER NOT NULL DEFAULT 0');
+      changes.push({ kind: "alter_table", detail: "Added PortalUser.mustChangePassword" });
+    }
   }
 
   // PortalSession — portal auth cookie store (Phase 4a)
