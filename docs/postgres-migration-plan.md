@@ -562,3 +562,59 @@ Bugs found and fixed along the way that had nothing to do with SQLite:
 produced; `/api/health` was session-gated, making the container healthcheck
 decorative; and the unit test suite exercised a different Prisma client than
 production.
+
+## 7. Verification of the scripts, run after the phases closed
+
+Several scripts were edited during the migration but not executed at the time.
+Running them found four more problems, all now fixed:
+
+| Script | Finding |
+| --- | --- |
+| `qa:perf`, `qa:http-security`, `qa:rate-limit`, `qa:pdf-smoke` | Could not run at all: `bun run build` writes to `.next-gate` off-CI while `bun run start` looked only in `.next`. Fixed by honouring `NEXT_DIST_DIR` and adding `scripts/qa-env.mjs` |
+| Same four | Still defaulted `DATABASE_URL` to `file:./dev.db`, so a run without an explicit URL tested nothing |
+| `predeploy:check` | Failed its lint step with **63,358 problems** — eslint was linting generated JavaScript in `.next-qa`. `.next-gate` was ignored, the new directory was not. Now globbed as `.next-*` |
+| `playwright.config.ts` | Still SQLite-shaped: `ALLOW_SQLITE_PRODUCTION=1`, `prisma db push`, and a `file:` default pointing at the **development** database for a destructive seed |
+
+Two passes that turned out to be worthless until checked:
+
+- **`qa:rate-limit` passed while the `RateLimit` table stayed empty.** The
+  limiter falls back to an in-memory window on any error, so the HTTP test passes
+  either way. Verified separately that the Postgres path is live: four calls
+  against a limit of three give allowed/allowed/allowed/blocked and leave a row
+  with `count=4`.
+- **`qa:pdf-smoke` "passed" by skipping every check.** It finds a record with an
+  unscoped `findFirst`, so with several organisations seeded it picks another
+  org's invoice and the correctly org-scoped route returns 404. Against
+  single-org data all five PDFs generate (~97KB each) — worth confirming, since
+  documents render money.
+
+### End state of the verification suite
+
+| Command | Result |
+| --- | --- |
+| `bunx tsc --noEmit` | 0 errors |
+| `bun run lint` | 0 errors, 107 warnings (pre-existing) |
+| `bun run test:unit` | 508 pass, 4 skip, 0 fail |
+| `bun run build` | passes |
+| `bun run predeploy:check` | passes (lint, build, data-integrity, concurrency, perf, http-security) |
+| `bun run qa:data-integrity` / `qa:concurrency` / `qa:perf` / `qa:http-security` / `qa:rate-limit` / `qa:pdf-smoke` | all pass |
+| `bun run seed` / `seed:base` / `seed:commercial` | all run |
+| `bun run check:links` | passes |
+| `bun audit` | 2 pre-existing high advisories in a transitive `effect` package (via `uploadthing` and Prisma's own `@prisma/config`); not introduced here |
+| `bun run qa:e2e` | **17 pass, 6 fail — pre-existing UI drift, not database** |
+| `smoke:prod` | not runnable without a live production URL |
+
+The six e2e failures are assertions against UI that the design-system work on
+`main` changed, and the specs are byte-identical between `main` and this branch.
+Evidenced rather than assumed:
+
+- `document-lifecycle` waits for a link named "Create Job Card"; the page
+  snapshot shows the search worked and the row rendered, offering "Open job card
+  PDF" and "Generate Job Card" instead.
+- `authz-smoke` waits for a link named "Settings" that the redesigned navigation
+  no longer exposes under that name.
+- `viewport-smoke` diffs table header classes (`text-[0.6875rem] uppercase
+  tracking-[0.12em]`) introduced by the DataTable redesign.
+- `read-only-security` **passes in isolation** — it was flaky in the full run.
+
+Worth fixing, but it is UI-test maintenance, unrelated to the database.
