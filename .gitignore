@@ -57,3 +57,9 @@ dev.db
 *.db-shm
 # stray libSQL local-file artifacts (created when a command treats the Turso URL as a path)
 libsql:*
+
+# Environment values pulled down from Vercel. The .env* rule above only matches
+# files whose NAME starts with .env, so a directory of *.env files slips past it.
+vercel-env/
+*.env
+!.env.example
