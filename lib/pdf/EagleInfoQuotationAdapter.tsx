@@ -53,7 +53,7 @@ type Props = {
 
 export function EagleInfoQuotationAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
-    .filter(Boolean).join(", ");
+    .filter(Boolean).join("\n");
 
   const showVat = props.vatApplicable && !!props.vatAmount && props.vatAmount !== "UGX 0";
 

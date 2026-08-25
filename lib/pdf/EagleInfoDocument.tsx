@@ -70,7 +70,7 @@ const s = StyleSheet.create({
   // ── Header ──
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: SP.md },
   headerLeft: { flex: 1, paddingRight: 24 },
-  logo: { width: 142, height: 52, marginBottom: 6, objectFit: "contain" },
+  logo: { width: 150, height: 44, marginBottom: 6, objectFit: "contain" },
   companyName: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 3, letterSpacing: -0.15 },
   // One quiet contact line instead of a stack of bold PHONE:/EMAIL:/WEB: labels,
   // which shouted louder than the company name above them.
@@ -216,6 +216,9 @@ export type EagleInfoDocumentProps = {
   totalAmount: string;
   paymentMade?: string | null;
   balanceDue: string;
+  /** Header-card overrides. A receipt leads with "Amount Paid", not a nil balance. */
+  headlineLabel?: string | null;
+  headlineAmount?: string | null;
 
   // Footer
   notes?: string | null;
@@ -233,6 +236,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
     clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
+    headlineLabel, headlineAmount,
     notes, paymentTo, termsText, promo,
   } = props;
 
@@ -249,11 +253,17 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   // top edge, the balance card, and the balance bar.
   const accent = topRuleColor || NAVY;
 
-  // Address, then contacts on one line. Printing each contact on its own bold
-  // "PHONE:" row made the block louder than the company name it belongs to.
+  // The letterhead under the logo: who issued this, where they are, and how to
+  // reach them. Each street line keeps its own row (callers pass them newline
+  // separated) rather than running into one long comma-joined line, phones sit
+  // together, and email and site share the last row. Collapsing all five into
+  // one paragraph was unreadable once a real address and two numbers were set;
+  // giving each a bold "PHONE:" label, as this once did, was louder than the
+  // company name above it.
   const companyLines = [
-    companyAddress,
-    [companyPhone, companyEmail, companyWebsite].filter(Boolean).join("   ·   "),
+    ...companyAddress.split("\n").map((l) => l.trim()),
+    companyPhone ?? "",
+    [companyEmail, companyWebsite].filter(Boolean).join("   ·   "),
   ].filter((l) => l && l.trim());
 
   // Bank details: one or more accounts, each a block of lines. Blank lines
@@ -289,8 +299,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             <Text style={s.docTitle}>{docTitle}</Text>
             <Text style={s.docNumber}>#{docNumber}</Text>
             <View style={[s.balanceBox, { borderLeftColor: accent }]}>
-              <Text style={s.balanceLabel}>Balance Due</Text>
-              <Text style={s.balanceAmount}>{balanceDue}</Text>
+              <Text style={s.balanceLabel}>{headlineLabel || "Balance Due"}</Text>
+              <Text style={s.balanceAmount}>{headlineAmount || balanceDue}</Text>
             </View>
           </View>
         </View>

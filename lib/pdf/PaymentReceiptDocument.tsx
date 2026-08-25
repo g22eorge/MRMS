@@ -37,7 +37,7 @@ type ReceiptProps = {
 };
 
 export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone }: ReceiptProps) {
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
 
   // Zero in the amount's currency (e.g. "UGX 600,000" -> "UGX 0") for the
   // fallback when no real balance was supplied.

@@ -57,7 +57,7 @@ export async function GET(
   const issuedAt = quotation.issueDate ?? quotation.sentAt ?? quotation.createdAt;
   const validUntil = quotation.validUntil ?? new Date(issuedAt.getTime() + branding.quoteValidityDays * 86400000);
   const currency = quotation.currency;
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const lineItems: EagleInfoLineItem[] = quotation.items.length > 0
     ? quotation.items.map((item) => ({
         name: item.description,
@@ -82,6 +82,7 @@ export async function GET(
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Estimate",
     docNumber: quotation.quoteNumber,

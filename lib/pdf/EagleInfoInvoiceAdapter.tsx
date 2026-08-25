@@ -51,7 +51,7 @@ type Props = {
 
 export function EagleInfoInvoiceAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
-    .filter(Boolean).join(", ");
+    .filter(Boolean).join("\n");
 
   // Only show a VAT line when tax actually applies and is non-zero (the official
   // invoice omits the VAT row entirely when there's none).

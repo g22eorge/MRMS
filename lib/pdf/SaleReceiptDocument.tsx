@@ -55,7 +55,7 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
   }));
 
   const address = [branding?.companyAddressLine1, branding?.companyAddressLine2]
-    .filter(Boolean).join(", ");
+    .filter(Boolean).join("\n");
 
   const balance = Math.max(0, sale.totalAmount - sale.paidAmount);
   const dateStr = sale.createdAt.toLocaleDateString("en-GB", { timeZone: "Africa/Nairobi", day: "2-digit", month: "short", year: "numeric" });
@@ -96,6 +96,10 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       docDate={dateStr}
       metaRows={metaRows}
       topRuleColor="#f97316"
+      // A receipt records money received, so the headline is what was paid.
+      // A settled sale led with "Balance Due UGX 0", which is true and useless.
+      headlineLabel={balance > 0 ? "Balance Due" : "Amount Paid"}
+      headlineAmount={balance > 0 ? formatMoney(balance, currency) : formatMoney(sale.paidAmount, currency)}
       clientName={clientDisplayName(sale.client, "Walk-in Customer")}
       clientAttn={clientContactName(sale.client)}
       clientPhone={sale.client?.phone ?? null}

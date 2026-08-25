@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     getDocumentBrandingSettings(orgId),
     resolveInvoiceLogo(),
   ]);
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const currency = creditNote.currency;
   const parent = creditNoteParent(creditNote);
   const refundedTotal = creditNote.refunds.reduce((sum, refund) => sum + refund.amount, 0);
@@ -89,6 +89,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Credit Note",
     docNumber: creditNote.creditNoteNumber,

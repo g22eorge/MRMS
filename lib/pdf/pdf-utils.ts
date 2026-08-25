@@ -42,6 +42,10 @@ type LogoCandidate = { file: string; type: string };
 /** Resolve logo for job-card and quotation PDFs (eagle-info-logo variants only). */
 export async function resolvePdfLogo(): Promise<string | undefined> {
   const localCandidates: LogoCandidate[] = [
+    // Documents print on white. The main brand asset is white artwork on a solid
+    // black field, which lands as a black slab on paper, so a dark-on-transparent
+    // variant wins here when one exists. The app UI keeps using the original.
+    { file: path.join(process.cwd(), "public", "eagle-info-logo-doc.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },

@@ -75,7 +75,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     getDocumentBrandingSettings(orgId),
     resolveInvoiceLogo(),
   ]);
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const recipient = refund.invoice?.job?.client
     ?? refund.invoice?.client
     ?? refund.sale?.client
@@ -101,6 +101,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Refund",
     docNumber: refundNumber,

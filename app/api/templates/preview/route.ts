@@ -30,9 +30,19 @@ export const dynamic = "force-dynamic";
 // ── Logo resolver (same as invoice route) ─────────────────────────────────────
 
 async function resolveLogoDataUri(): Promise<string | undefined> {
-  const file = fileURLToPath(new URL("../../../../public/eagle-info-logo.png", import.meta.url));
-  const bytes = await readFile(file);
-  return `data:image/png;base64,${bytes.toString("base64")}`;
+  // These previews show what will be printed, so they take the same
+  // dark-on-transparent variant the real documents do rather than the
+  // white-on-black brand asset, which would preview as a black slab.
+  for (const name of ["eagle-info-logo-doc.png", "eagle-info-logo.png"]) {
+    try {
+      const file = fileURLToPath(new URL(`../../../../public/${name}`, import.meta.url));
+      const bytes = await readFile(file);
+      return `data:image/png;base64,${bytes.toString("base64")}`;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return undefined;
 }
 
 // ── Sample / dummy data ───────────────────────────────────────────────────────
