@@ -12,6 +12,7 @@ import { resolvePdfLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,9 @@ export async function GET(
   const branding = await getDocumentBrandingSettings(orgId);
   const logoUrl = await resolvePdfLogo();
   const recipient = quotation.client ?? quotation.lead;
-  const clientLocation = quotation.client
-    ? [quotation.client.organization, quotation.client.address].filter(Boolean).join("\n") || null
-    : quotation.lead?.organization ?? null;
+  // The organisation heads the address block (with the person on the Attn
+  // line), so only the street address belongs down here.
+  const clientLocation = quotation.client?.address ?? null;
   const issuedAt = quotation.issueDate ?? quotation.sentAt ?? quotation.createdAt;
   const validUntil = quotation.validUntil ?? new Date(issuedAt.getTime() + branding.quoteValidityDays * 86400000);
   const currency = quotation.currency;
@@ -86,7 +87,8 @@ export async function GET(
     docDate: formatEATDocDate(issuedAt),
     terms: `Valid until ${formatEATDocDate(validUntil)}`,
     dueDate: null,
-    clientName: recipient?.fullName ?? "Client",
+    clientName: clientDisplayName(recipient, "Client"),
+    clientAttn: clientContactName(recipient),
     clientEmail: recipient?.email ?? null,
     clientPhone: recipient?.phone ?? null,
     clientLocation,

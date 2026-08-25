@@ -11,6 +11,7 @@ import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDo
 import { resolveInvoiceLogo, prettyEnum } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -106,10 +107,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     docDate: formatEATDocDate(refund.refundedAt),
     terms: prettyEnum(refund.method),
     dueDate: null,
-    clientName: recipient?.fullName ?? "Walk-in",
+    clientName: clientDisplayName(recipient, "Walk-in"),
+    clientAttn: clientContactName(recipient),
     clientEmail: recipient?.email ?? null,
     clientPhone: recipient?.phone ?? null,
-    clientLocation: recipient?.organization ?? null,
+    clientLocation: null,
     lineItems,
     subTotal: formatMoney(refund.amount, refund.currency),
     totalLabel: "Refund Total",

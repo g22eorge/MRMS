@@ -12,6 +12,7 @@ import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
+import { clientContactName } from "@/lib/client-name";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -94,9 +95,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     terms: "Sales return / adjustment",
     dueDate: null,
     clientName: parent.clientName,
+    clientAttn: clientContactName(parent.client),
     clientEmail: parent.client?.email ?? null,
     clientPhone: parent.client?.phone ?? null,
-    clientLocation: parent.client?.organization ?? null,
+    clientLocation: null,
     lineItems,
     subTotal: formatMoney(creditNote.totalAmount, currency),
     totalLabel: "Credit Total",
