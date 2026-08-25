@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 
 import { LineItemsTable, type PdfLineItem } from "./pdf-line-items";
 
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const GREEN = "#059669";
 const GREEN_DARK = "#065f46";
 const GREEN_LIGHT = "#d1fae5";
@@ -239,6 +240,7 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
@@ -513,6 +515,8 @@ export function InvoiceDocumentV2(rawProps: Props) {
           </View>
           <Text style={s.footer}>{props.footerText}</Text>
         </View>
+
+        <QuotationPromoStrip promo={props.promo} />
 
       </Page>
     </Document>

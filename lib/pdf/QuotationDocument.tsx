@@ -1,6 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { isTermsHeading } from "@/lib/quote-terms";
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const NAVY = "#0f3b7a";
 const NAVY_LIGHT = "#1e56a8";
 const GOLD = "#D4AF37";
@@ -231,6 +232,7 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
@@ -442,6 +444,8 @@ export function QuotationDocument(props: Props) {
           </View>
           <Text style={s.footer}>{props.footerText}</Text>
         </View>
+
+        <QuotationPromoStrip promo={props.promo} />
 
       </Page>
     </Document>

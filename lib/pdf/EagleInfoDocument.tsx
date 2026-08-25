@@ -29,6 +29,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { isTermsHeading } from "@/lib/quote-terms";
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 // ── Palette ────────────────────────────────────────────────────────────────────
 const INK      = "#0f172a";   // near-black body text
 const MUTED    = "#6B7280";   // grey labels
@@ -178,6 +179,7 @@ export type EagleInfoDocumentProps = {
   notes?: string | null;
   paymentTo?: string | null; // multi-line bank details
   termsText?: string | null;
+  promo?: QuotationPromo | null;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -189,7 +191,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
     clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
-    notes, paymentTo, termsText,
+    notes, paymentTo, termsText, promo,
   } = props;
 
   const dateRows = metaRows && metaRows.length > 0
@@ -376,6 +378,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             </View>
           ) : null}
         </View>
+
+        <QuotationPromoStrip promo={promo} />
 
       </Page>
     </Document>

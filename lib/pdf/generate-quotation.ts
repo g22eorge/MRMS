@@ -11,6 +11,7 @@ import { QuotationTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templa
 import { prisma } from "@/lib/prisma";
 
 import { quotationTerms } from "@/lib/quote-terms";
+import { defaultQuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 export type GenerateQuotationResult =
   | { ok: true; buffer: Buffer; filename: string; quotationNumber: string; clientPhone: string }
   | { ok: false; error: string };
@@ -127,6 +128,7 @@ export async function generateQuotationBuffer(
     status: prettyEnum(job.status),
     currency,
     termsText: quotationTerms(branding.termsText, "REPAIR"),
+    promo: defaultQuotationPromo(branding.companyName),
     footerText: branding.footerText,
     signatureCompanyLabel: branding.signatureCompanyLabel,
     signatureClientLabel: branding.signatureClientLabel,

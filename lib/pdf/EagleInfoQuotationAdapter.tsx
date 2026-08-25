@@ -4,6 +4,7 @@
  */
 import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 
+import { type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 type Props = {
   companyName: string;
   companyTagline?: string;
@@ -24,6 +25,7 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  promo?: QuotationPromo | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;
@@ -99,6 +101,7 @@ export function EagleInfoQuotationAdapter(props: Props) {
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
       clientLocation={null}
+      promo={props.promo ?? null}
       lineItems={items}
       subTotal={showVat ? props.repairCost : null}
       vatLabel={showVat ? props.vatLabel : null}

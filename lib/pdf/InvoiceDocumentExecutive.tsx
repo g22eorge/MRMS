@@ -6,6 +6,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 
 import { LineItemsTable, type PdfLineItem } from "./pdf-line-items";
 
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const NAVY  = "#0f172a";
 const SLATE = "#1e293b";
 const GOLD  = "#d4af37";
@@ -92,6 +93,7 @@ type Props = {
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  promo?: QuotationPromo | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
   lineItems?:     PdfLineItem[];
@@ -235,6 +237,8 @@ export function InvoiceDocumentExecutive(props: Props) {
         </View>
 
         <Text style={s.footer}>{props.footerText}</Text>
+        <QuotationPromoStrip promo={props.promo} />
+
       </Page>
     </Document>
   );

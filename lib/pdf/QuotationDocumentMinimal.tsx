@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const DARK = "#0f172a";
 const MID = "#475569";
 const LIGHT = "#94a3b8";
@@ -66,6 +67,7 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
@@ -191,6 +193,8 @@ export function QuotationDocumentMinimal(props: Props) {
           </View>
         </View>
         {props.footerText ? <Text style={[s.tiny, { marginTop: 8 }]}>{props.footerText}</Text> : null}
+        <QuotationPromoStrip promo={props.promo} />
+
       </Page>
     </Document>
   );
