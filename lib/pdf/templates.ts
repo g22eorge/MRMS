@@ -3,20 +3,10 @@ import type { OrgPlan } from "@prisma/client";
 import type { ComponentType } from "react";
 
 import { EagleInfoInvoiceAdapter }  from "@/lib/pdf/EagleInfoInvoiceAdapter";
-import { InvoiceDocumentV2 }        from "@/lib/pdf/InvoiceDocumentV2";
-import { InvoiceDocumentMinimal }   from "@/lib/pdf/InvoiceDocumentMinimal";
-import { InvoiceDocumentPremium }   from "@/lib/pdf/InvoiceDocumentPremium";
-import { InvoiceDocumentExecutive } from "@/lib/pdf/InvoiceDocumentExecutive";
 import { EagleInfoJobCardDocument } from "@/lib/pdf/EagleInfoJobCardDocument";
-import { JobCardDocumentCompact }   from "@/lib/pdf/JobCardDocumentCompact";
-import { JobCardDocumentTechnical } from "@/lib/pdf/JobCardDocumentTechnical";
-import { JobCardDocumentPremium }   from "@/lib/pdf/JobCardDocumentPremium";
 import { EagleInfoQuotationAdapter }from "@/lib/pdf/EagleInfoQuotationAdapter";
-import { QuotationDocumentMinimal } from "@/lib/pdf/QuotationDocumentMinimal";
 import { SaleReceiptDocument }          from "@/lib/pdf/SaleReceiptDocument";
 import { SaleReceiptDocumentThermal }   from "@/lib/pdf/SaleReceiptDocumentThermal";
-import { SaleReceiptDocumentBranded }   from "@/lib/pdf/SaleReceiptDocumentBranded";
-import { SaleReceiptDocumentExecutive } from "@/lib/pdf/SaleReceiptDocumentExecutive";
 
 export type DocKind = "INVOICE" | "QUOTATION" | "JOB_CARD" | "RECEIPT";
 
@@ -142,44 +132,42 @@ function fallbackKeyForKind(kind: DocKind) {
   return "receipt_classic";
 }
 
+// The alternate template components are still in lib/pdf/ but are no longer
+// imported here. They are kept so an alternate can be rebuilt in the house
+// style later rather than written from scratch.
+
 // Different templates have different prop types; the caller is responsible for
 // supplying a compatible props object.
+//
+// Every kind resolves to the house template regardless of the stored key.
+// The alternates (Modern, Minimal, Premium, Executive, Compact, Technical) were
+// each designed separately and none of them were carried through the house
+// restyle, so selecting one used to hand a customer a document that looked
+// nothing like the rest of their paperwork. No tenant on either production
+// database is on anything but "_classic", so nothing in use changes; the keys
+// are still stored and honoured the moment an alternate is rebuilt.
+//
+// The one deliberate exception is the thermal receipt, further down. That is a
+// paper format for an 80mm till roll, not a style choice.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function InvoiceTemplateComponent(key: TemplateKey): ComponentType<any> {
-  if (key === "invoice_modern")    return InvoiceDocumentV2;
-  if (key === "invoice_premium")   return InvoiceDocumentPremium;
-  if (key === "invoice_minimal")   return InvoiceDocumentMinimal;
-  if (key === "invoice_executive") return InvoiceDocumentExecutive;
-  // invoice_classic (default) — Eagle Info house style
+export function InvoiceTemplateComponent(_key: TemplateKey): ComponentType<any> {
   return EagleInfoInvoiceAdapter;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function QuotationTemplateComponent(key: TemplateKey): ComponentType<any> {
-  if (key === "quote_minimal")   return QuotationDocumentMinimal;
-  if (key === "quote_detailed")  return QuotationDocumentMinimal;
-  if (key === "quote_modern")    return InvoiceDocumentV2;
-  if (key === "quote_executive") return InvoiceDocumentExecutive;
-  // quote_classic (default) — Eagle Info house style
+export function QuotationTemplateComponent(_key: TemplateKey): ComponentType<any> {
   return EagleInfoQuotationAdapter;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function JobCardTemplateComponent(key: TemplateKey): ComponentType<any> {
-  if (key === "job_card_compact")   return JobCardDocumentCompact;
-  if (key === "job_card_detailed")  return EagleInfoJobCardDocument; // detailed = Eagle Info clean
-  if (key === "job_card_technical") return JobCardDocumentTechnical;
-  if (key === "job_card_premium")   return JobCardDocumentPremium;
-  // job_card_classic (default) — Eagle Info house style
+export function JobCardTemplateComponent(_key: TemplateKey): ComponentType<any> {
   return EagleInfoJobCardDocument;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReceiptTemplateComponent(key: TemplateKey): ComponentType<any> {
-  if (key === "receipt_thermal")   return SaleReceiptDocumentThermal;
-  if (key === "receipt_branded")   return SaleReceiptDocumentBranded;
-  if (key === "receipt_itemized")  return SaleReceiptDocumentBranded;  // itemized = branded variant
-  if (key === "receipt_executive") return SaleReceiptDocumentExecutive;
-  // receipt_classic (default)
+  // Thermal is a paper size, not a look: 80mm till roll. Keep it.
+  if (key === "receipt_thermal") return SaleReceiptDocumentThermal;
   return SaleReceiptDocument;
 }

@@ -172,14 +172,18 @@ export async function generateAssessmentBuffer(params: {
     warranty.push(standingWarrantyNote(job.status));
   }
 
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
-  const footerText = [branding.companyName, branding.companyEmail || branding.companyWebsite, address]
+  // Newline separated: the document gives each street line its own row.
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
+  const footerText = [branding.companyName, branding.companyEmail || branding.companyWebsite, address.replace(/\n/g, ", ")]
     .filter(Boolean).join("  |  ");
 
   const element = createElement(AssessmentReportDocument, {
     companyName: branding.companyName,
     companyTagline: branding.companyTagline ?? "",
     companyAddress: address,
+    companyContacts: branding.companyContacts ?? "",
+    companyEmail: branding.companyEmail ?? "",
+    companyWebsite: branding.companyWebsite ?? "",
     companyLogoUrl: logoUrl,
     jobNumber: job.jobNumber,
     preparedForName: job.client?.fullName ?? "",
