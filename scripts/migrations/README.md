@@ -92,3 +92,44 @@ Verified after: row counts unchanged on `CreditNote`, `CreditNoteItem` and
 app actually runs both succeed against the migrated schema; and on the branch, a
 new invoice-sourced credit note inserts while the existing sale-sourced one
 still resolves its parent.
+
+---
+
+## `backfill-job-invoice-lines` — applied to care 2026-08-25
+
+Itemises job invoices written before repairs carried invoice lines. A job
+invoice used to record only a total, so it could not be credited line by line
+and the PDF printed a subtotal no line accounted for.
+
+```bash
+turso db export <db> --output-file backup.db --overwrite
+TDB=<libsql url> TTOK=<token> bun run scripts/migrations/backfill-job-invoice-lines.ts          # dry run
+TDB=<libsql url> TTOK=<token> bun run scripts/migrations/backfill-job-invoice-lines.ts --apply
+```
+
+Only touches invoices with ZERO lines, so it is idempotent and never disturbs
+one itemised by hand. It never writes `Invoice.totalAmount` — lines are derived
+from it — and verifies `subtotal + tax == totalAmount` per invoice, rolling back
+any that fails.
+
+It itemises against the **invoice's own total**, not the job's current
+`clientBill`: for a historical document the invoice is the record of what was
+billed. Not academic — `EIS/INV/2026/0042` on care carries 185,000 against a job
+whose bill was later revised to 395,000, and using the job figure would have
+written lines contradicting the total. The script logs that case rather than
+hiding it.
+
+**care result:** 66 of 66 itemised, invoice sum and count unchanged (65,977,536
+across 89), `InvoiceLine` rows 36 -> 102, zero job invoices left without lines,
+zero invoices whose lines disagree with their total, `foreign_key_check` clean.
+Creditable paid invoices went from 5 to 59.
+
+Not yet run on `repairmanager` — its 3 invoices are all unsettled, so there is
+nothing there to credit.
+
+### Note for the owner
+
+`EIS/INV/2026/0042` (job `EIS/2026/0042`, unpaid) has an invoice total of
+185,000 against a job bill of 395,000. The invoice was issued and the job's bill
+revised afterwards without the invoice being reissued. Worth deciding which
+figure is right and correcting it.
