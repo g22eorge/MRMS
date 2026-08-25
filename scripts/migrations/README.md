@@ -127,9 +127,21 @@ Creditable paid invoices went from 5 to 59.
 Not yet run on `repairmanager` — its 3 invoices are all unsettled, so there is
 nothing there to credit.
 
-### Note for the owner
+### `EIS/INV/2026/0042` — corrected 2026-08-25
 
-`EIS/INV/2026/0042` (job `EIS/2026/0042`, unpaid) has an invoice total of
-185,000 against a job bill of 395,000. The invoice was issued and the job's bill
-revised afterwards without the invoice being reissued. Worth deciding which
-figure is right and correcting it.
+The invoice was issued at 185,000 and the job's bill afterwards revised to
+395,000 without the invoice being reissued, so the document understated what the
+customer (Nangai Moses) owed by 210,000.
+
+Corrected to 395,000 on the owner's instruction. It was a clean reissue rather
+than a restatement of settled money: nothing was attached to it — no payments,
+refunds, credit notes, delivery notes or receipts — and being unpaid it had no
+ledger entries, the books being cash-basis. The total was taken from
+`Job.clientBill` and the lines rebuilt from it, exactly as the live invoicing
+path does.
+
+Verified after: invoice total, job bill and the sum of its lines all agree at
+395,000; care's invoice sum moved 65,977,536 -> 66,187,536, exactly the +210,000
+expected; no invoice anywhere still disagrees with its job's bill; no invoice's
+lines disagree with its total; payments untouched at 85; `foreign_key_check`
+clean. A `SystemAuditEvent` records the change.
