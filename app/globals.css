@@ -310,44 +310,69 @@ body {
   letter-spacing: 0.004em;
 }
 
-/* The booking slip is bone stock on a dark counter, so its fields are ruled
-   lines on paper rather than the app's filled boxes. Unlayered: the
-   `:where(input, select, textarea)` rules further down are unlayered too, and
-   they would otherwise paint white-on-white inside the slip — text the customer
-   cannot see while typing.
+/* The booking slip is a paper form, so its fields are ruled lines — no boxes,
+   no fills. Unlayered, because the `:where(input, select, textarea)` rules
+   further down are unlayered too and would otherwise paint the app's dark form
+   chrome inside a bone-coloured slip: white text on a near-white ground, which
+   the customer cannot read while typing.
 
-   The rule and the tint carry real contrast on purpose. The first attempt used
-   a #C4B99F hairline on #EDE6D6 paper, about 1.5:1 — the fields were invisible
-   and the form read as empty space. A faint warm fill plus a 2px rule at ~4:1
-   makes each field legible as somewhere to write. */
+   Two earlier attempts are worth remembering. A #C4B99F hairline on #EDE6D6
+   paper is about 1.5:1 — invisible, and the slip read as empty space. Adding a
+   tinted fill fixed the contrast but made every field look disabled. A bare
+   ruled line at ~4:1 is both visible and obviously writable. */
 .landing-shopfront :where(input:not([type="radio"]), textarea) {
   border: 0;
   border-bottom: 2px solid #6A6154;
   border-radius: 0;
-  background: rgba(34, 30, 23, 0.05);
+  background: transparent;
   color: #221E17;
-  min-height: 2.5rem;
-  padding: 0.45rem 0.5rem;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.125rem;
+  font-size: 1rem;
+  transition: border-color 120ms ease;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea)::placeholder {
-  color: #6F6656;
+  color: #8F8571;
+  font-size: 0.9375rem;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea):hover {
-  background: rgba(34, 30, 23, 0.08);
+  border-bottom-color: #3D3729;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus,
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus-visible {
   outline: none;
   border-bottom-color: #221E17;
-  background: rgba(34, 30, 23, 0.09);
-  box-shadow: inset 0 -1px 0 0 #221E17;
+  background: transparent;
+  box-shadow: inset 0 -2px 0 -1px #221E17;
 }
 
-code,
-pre,
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+/* The note field is ruled like a pad, so it reads as somewhere to write a
+   sentence rather than a text box that happens to be tall. Lines are painted
+   with a gradient and `background-attachment: local`, so they scroll with the
+   text instead of staying pinned to the element. */
+.landing-shopfront textarea {
+  border-bottom: 0;
+  padding: 0.125rem 0.125rem 0;
+  line-height: 1.75rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 1.6875rem,
+    #C4B99F 1.6875rem,
+    #C4B99F 1.75rem
+  );
+  background-attachment: local;
+}
+.landing-shopfront textarea:focus,
+.landing-shopfront textarea:focus-visible {
+  box-shadow: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 1.6875rem,
+    #8F8571 1.6875rem,
+    #8F8571 1.75rem
+  );
 }
 
 /* ── Glass & Shadows ─────────────────────────────────────────────────────── */

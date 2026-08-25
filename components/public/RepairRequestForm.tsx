@@ -8,9 +8,9 @@ const DEVICE_TYPES = [
   { value: "PHONE_ANDROID", label: "Android" },
   { value: "PHONE_IPHONE",  label: "iPhone" },
   { value: "TABLET",        label: "Tablet" },
-  { value: "WINDOWS_PC",    label: "Windows laptop" },
+  { value: "WINDOWS_PC",    label: "Windows" },
   { value: "MAC",           label: "Mac" },
-  { value: "OTHER",         label: "Something else" },
+  { value: "OTHER",         label: "Other" },
 ];
 
 const HANDOVER_OPTIONS = [
@@ -199,9 +199,9 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
   const inputCls =
     "w-full border-b-[1.5px] border-[#C4B99F] bg-transparent px-0.5 py-1.5 text-[16px] text-[#221E17] outline-none transition placeholder:text-[#8A806E] focus:border-[#221E17]";
   const labelCls =
-    "mb-1.5 block text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[#6A6154]";
+    "mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6A6154]";
   const optionCls =
-    "cursor-pointer border-[1.5px] px-3 py-1.5 text-[14px] transition select-none";
+    "flex min-h-10 cursor-pointer select-none items-center justify-center border-[1.5px] px-1 text-center text-[13.5px] leading-tight transition";
 
   /** Which fields each pane needs before it will let you move on. The server
    *  validates the whole payload regardless — this only avoids a pointless
@@ -294,7 +294,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         <>
           <fieldset className="mt-4">
             <legend className={labelCls}>What is it?</legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               {DEVICE_TYPES.map((d) => {
                 const on = data.device_type === d.value;
                 return (
@@ -302,7 +302,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                     key={d.value}
                     className={`${optionCls} ${on
                       ? "border-[#221E17] bg-[#221E17] text-[#EDE6D6]"
-                      : "border-[#C4B99F] text-[#5D5548] hover:border-[#8A806E]"}`}
+                      : "border-[#C4B99F] text-[#4A4336] hover:border-[#6A6154] hover:bg-[#221E17]/[0.04]"}`}
                   >
                     <input
                       type="radio" name="device_type" value={d.value} checked={on}
@@ -337,7 +337,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
           <div className="mt-4">
             <label className={labelCls} htmlFor="rr-problem">What&apos;s it doing?</label>
             <textarea
-              id="rr-problem" rows={2} value={data.problem_description}
+              id="rr-problem" rows={3} value={data.problem_description}
               onChange={(e) => set("problem_description", e.target.value)}
               placeholder="Screen cracked, won't charge, very slow…"
               className={`${inputCls} resize-none`}
