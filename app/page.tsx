@@ -132,13 +132,6 @@ const MODULES = [
   },
 ];
 
-const STATS = [
-  { value: "9", label: "Modules" },
-  { value: "9", label: "User Roles" },
-  { value: "50+", label: "Features" },
-  { value: "Cloud", label: "Hosted" },
-];
-
 // ── Pricing — mirrors the in-app billing plans (lib/pesapal, lib/plan-limits) ──
 // Display names use the branded Duuka ladder; internal billing keys stay
 // STARTER/STANDARD/GROWTH/PREMIUM/ENTERPRISE. Keep amounts in sync with
@@ -695,6 +688,20 @@ function DuukaSaasLanding() {
   );
 }
 
+/**
+ * Eagle Info Solutions — the repair shop's own page.
+ *
+ * This page does one job: get a device booked in. It used to carry a full
+ * Duuka ProMax pitch as well — nine module cards and a five-tier price table —
+ * which meant a customer with a cracked screen scrolled through enterprise
+ * software pricing, and a business owner scrolled past a repair form. The
+ * software has its own landing on app.eagleinfosolutions.com
+ * (`DuukaSaasLanding` below); here it gets one line in the footer.
+ *
+ * Visual language is the shopfront rather than a SaaS template: Barlow
+ * Condensed at signage weight, brass instead of yellow-gold, and the booking
+ * form set on bone stock like a paper slip on the counter.
+ */
 export default async function Page() {
   const session = await getSession();
   if (session?.user) redirect("/dashboard");
@@ -703,391 +710,154 @@ export default async function Page() {
 
   if (isSaasLanding) return <DuukaSaasLanding />;
 
+  const WA_LINK =
+    "https://wa.me/256772006344?text=Hi%20Eagle%20Info%2C%20I%20have%20a%20device%20I%20need%20repaired.";
+
   return (
-    <main className="theme-blackgold relative min-h-screen overflow-x-hidden bg-[#050505] text-white">
+    <main className="landing-shopfront min-h-screen overflow-x-hidden bg-[#0B0A08] font-body text-[#EDE6D6]">
 
-      {/* ── Ambient background ── */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-1/4 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-[#D4AF37]/8 blur-[140px]" />
+      {/* ── Utility bar: the three things people phone to ask ── */}
+      <div className="border-b border-[#EDE6D6]/14 text-[13.5px] text-[#8C8579]">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-7 gap-y-1 px-5 py-2.5 sm:px-10">
+          <span>Mon–Sat <b className="font-semibold text-[#DCD2BD]">9:00–19:00</b></span>
+          <span className="hidden sm:inline">Shop L28, Nalubega Complex, Bombo Road</span>
+          <span className="ml-auto flex gap-5">
+            <Link href="/status" className="transition-colors hover:text-[#EDE6D6]">Track a repair</Link>
+            <Link href="/feedback" className="transition-colors hover:text-[#EDE6D6]">Complaint</Link>
+            <Link href="/login" className="transition-colors hover:text-[#EDE6D6]">Staff login</Link>
+          </span>
+        </div>
       </div>
 
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-40 border-b border-white/6 bg-[#050505]/90 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-
-          {/* Brand — Eagle Info Solutions */}
-          <div className="flex items-center gap-2">
-            <Image src="/eagle-info-logo.png" alt="Eagle Info Solutions" width={32} height={32} className="h-8 w-8 object-contain" priority />
-            <span className="text-sm font-bold text-white">Eagle Info Solutions</span>
+      {/* ── Masthead ── */}
+      <div className="mx-auto max-w-[1120px] px-5 sm:px-10">
+        <div className="flex items-center justify-between gap-4 pt-5">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/eagle-info-logo.png" alt="" width={34} height={34}
+              className="h-[34px] w-[34px] shrink-0 object-contain" priority
+            />
+            <span>
+              <b className="block font-cond text-[25px] font-bold uppercase leading-none tracking-[0.02em]">
+                Eagle Info Solutions
+              </b>
+              <span className="mt-px block text-[11.5px] uppercase tracking-[0.14em] text-[#8C8579]">
+                Device repair · Kampala
+              </span>
+            </span>
           </div>
-
-          {/* Nav actions */}
-          <div className="flex items-center gap-2">
-            <a
-              href="#repair-form"
-              className="hidden items-center gap-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition active:scale-[0.98] hover:bg-[#D4AF37]/20 sm:flex"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
-              Repair Request
-            </a>
-            <Link
-              href="/feedback"
-              className="hidden items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs font-semibold text-red-400/80 transition hover:bg-red-500/15 hover:text-red-400 md:flex"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              Complaint
-            </Link>
-            <a
-              href="https://wa.me/256772006344?text=Hi%20Eagle%20Info%2C%20I%20have%20a%20device%20I%20need%20repaired."
-              target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-lg bg-[#25D366]/15 border border-[#25D366]/25 px-3 py-2 text-xs font-semibold text-[#25D366] transition active:scale-[0.98] hover:bg-[#25D366]/25"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5" aria-hidden><path d={WA_PATH}/></svg>
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
-            <Link
-              href="/login"
-              className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/60 transition active:scale-[0.98] hover:border-white/20 hover:text-white"
-            >
-              Staff Login
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl px-4">
-
-        {/* ══════════════════════════════════════════════════════════════
-            HERO — Eagle Info Solutions repair service + inline form
-        ══════════════════════════════════════════════════════════════ */}
-        <section id="repair-form" className="py-12 md:py-16">
-
-          {/* Two-column: left = copy, right = form */}
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-14">
-
-            {/* ── Left: Company + service intro ── */}
-            <div className="lg:max-w-sm lg:pt-2 lg:sticky lg:top-24">
-              {/* Hero illustration — device brought back to life */}
-              <svg viewBox="0 0 320 170" className="mb-6 w-full max-w-[320px]" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Device repair illustration">
-                <defs>
-                  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#E8C84A" />
-                    <stop offset="1" stopColor="#C9A020" />
-                  </linearGradient>
-                </defs>
-                <circle cx="196" cy="86" r="78" fill="#D4AF37" opacity="0.10" />
-                {/* Laptop */}
-                <rect x="18" y="52" width="150" height="92" rx="8" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
-                <rect x="30" y="64" width="126" height="68" rx="4" fill="#111" />
-                <path d="M40 108 h18 l7 -26 l11 44 l8 -22 h22" stroke="#E8C84A" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <rect x="6" y="144" width="174" height="9" rx="4.5" fill="#1a1a1a" stroke="url(#gold)" strokeWidth="1.5" />
-                {/* Phone */}
-                <rect x="196" y="34" width="74" height="112" rx="14" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
-                <rect x="205" y="46" width="56" height="76" rx="4" fill="#111" />
-                <path d="M233 96 m-13 0 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0" fill="none" stroke="#E8C84A" strokeWidth="2.5" opacity="0.35" />
-                <path d="M226 96 l5 5 l9 -11" stroke="#E8C84A" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="233" cy="134" r="3" fill="url(#gold)" />
-                {/* Repair badge — crossed wrench + screwdriver */}
-                <circle cx="150" cy="40" r="24" fill="#0b0b0b" stroke="url(#gold)" strokeWidth="2.5" />
-                <path d="M141 49 l10 -10 M148 32 a6 6 0 0 1 8 8 l-2 2" stroke="#E8C84A" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M159 49 l-9 -9" stroke="#E8C84A" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-                <circle cx="143" cy="47" r="2" fill="#E8C84A" />
-                {/* Sparkles */}
-                <path d="M286 30 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 z" fill="url(#gold)" opacity="0.8" />
-                <circle cx="60" cy="30" r="2.5" fill="#D4AF37" opacity="0.6" />
-              </svg>
-
-              {/* Company badge */}
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-1.5">
-                <Image src="/eagle-info-logo.png" alt="" width={16} height={16} className="h-4 w-4 object-contain" />
-                <span className="text-[0.8125rem] font-semibold text-white/60">Eagle Info Solutions</span>
-              </div>
-
-              <h1 className="text-3xl font-extrabold leading-tight text-white xl:text-4xl">
-                Device broken?<br />
-                <span className="bg-gradient-to-r from-[#E8C84A] to-[#C9A020] bg-clip-text text-transparent">
-                  We fix it fast.
-                </span>
-              </h1>
-
-              <p className="mt-4 text-sm leading-relaxed text-white/50">
-                Fill in the form to submit your repair request directly to Eagle Info Solutions.
-                We&apos;ll review it and get back to you within a few hours with a quote and timeline.
-              </p>
-
-              {/* Proof strip — punchy, from the shop's real guarantees.
-                  Swap in a real Google rating / repair count when available. */}
-              <div className="mt-6 grid grid-cols-3 gap-2">
-                {[
-                  { stat: "4.9★", sub: "rated on Google" },
-                  { stat: "Free", sub: "written quote" },
-                  { stat: "30-day", sub: "repair warranty" },
-                ].map((s) => (
-                  <div key={s.sub} className="rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2.5 text-center">
-                    <p className="text-base font-extrabold text-[#E8C84A]">{s.stat}</p>
-                    <p className="mt-0.5 text-[0.6875rem] leading-tight text-white/55">{s.sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Trust badges */}
-              <div className="mt-6 space-y-2.5">
-                {[
-                  {
-                    label: "Written quote before any work begins",
-                    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
-                  },
-                  {
-                    label: "No fix, no fee — guaranteed",
-                    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
-                  },
-                  {
-                    label: "30-day warranty on all repairs",
-                    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>,
-                  },
-                  {
-                    label: "Shop L28, Nalubega Complex, Bombo Road, Kampala",
-                    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
-                  },
-                  {
-                    label: "Phones · Laptops · Tablets · PCs",
-                    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
-                  },
-                ].map((t) => (
-                  <div key={t.label} className="flex items-start gap-2.5">
-                    <span className="mt-0.5 text-[#D4AF37]/60">{t.icon}</span>
-                    <p className="text-[0.8125rem] leading-tight text-white/55">{t.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Alternative contact */}
-              <div className="mt-7 flex flex-col gap-2">
-                <p className="text-[0.8125rem] font-semibold uppercase tracking-widest text-white/55">Or contact us directly</p>
-                <a
-                  href="https://wa.me/256772006344?text=Hi%20Eagle%20Info%2C%20I%20have%20a%20device%20I%20need%20repaired.%20Please%20help%20me."
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-lg bg-[#25D366]/12 border border-[#25D366]/25 px-4 py-2.5 text-sm font-semibold text-[#25D366] transition active:scale-[0.98] hover:bg-[#25D366]/20"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 shrink-0" aria-hidden><path d={WA_PATH}/></svg>
-                  +256 772 006 344 on WhatsApp
-                </a>
-                <a
-                  href="/address"
-                  className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/3 px-4 py-2.5 text-sm text-white/55 transition hover:border-white/15 hover:text-white/65"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden>
-                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-                  </svg>
-                  Get directions to our shop
-                </a>
-              </div>
-            </div>
-
-            {/* ── Right: The repair request form ── */}
-            <div className="flex-1">
-              <div
-                className="relative overflow-hidden rounded-2xl border border-white/10 p-6 md:p-8"
-                style={{
-                  background: "linear-gradient(160deg,#111111 0%,#0d0d0d 100%)",
-                  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5)",
-                }}
-              >
-                <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#D4AF37]/6 blur-[60px]" />
-                <div className="relative">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <p className="text-base font-bold text-white">Repair Request Form</p>
-                      <p className="mt-0.5 text-xs text-white/55">All fields marked * are required</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/8 px-3 py-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      <span className="text-[0.75rem] font-semibold text-emerald-400">Live</span>
-                    </div>
-                  </div>
-                  <RepairRequestForm />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Complaint CTA strip ── */}
-          <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-red-500/12 bg-red-500/[0.04] px-6 py-5 text-center sm:flex-row sm:text-left">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 text-red-400">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white/80">Had a bad experience?</p>
-              <p className="mt-0.5 text-xs text-white/55">
-                We take every complaint seriously. Tell us what went wrong and we&apos;ll make it right.
-              </p>
-            </div>
-            <Link
-              href="/feedback"
-              className="flex shrink-0 items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-5 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              Submit a Complaint
-            </Link>
-          </div>
-        </section>
-
-        {/* ── Divider with Duuka ProMax intro ── */}
-        <div className="relative py-6">
-          <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
-          <div className="relative flex justify-center">
-            <div className="flex items-center gap-3 rounded-full border border-white/8 bg-[#050505] px-5 py-2">
-              <span className="text-[0.8125rem] text-white/55">Also available as a</span>
-              <span className="text-[0.8125rem] font-bold text-[#D4AF37]/70">Duuka ProMax</span>
-              <span className="text-[0.8125rem] text-white/55">business system</span>
-              <a href="#business-system" className="text-[0.8125rem] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">
-                Learn more ↓
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════
-            SYSTEM SHOWCASE — Duuka ProMax for business owners
-        ══════════════════════════════════════════════════════════════ */}
-        <section id="business-system" className="py-12">
-
-          {/* Stats bar */}
-          <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {STATS.map((s) => (
-              <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] p-4 text-center">
-                <p className="text-2xl font-extrabold text-[#D4AF37]">{s.value}</p>
-                <p className="mt-0.5 text-[0.8125rem] text-white/55">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Heading */}
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[0.8125rem] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]/90">Duuka ProMax — Business Management System</span>
-          </div>
-          <h2 className="mt-3 text-2xl font-extrabold text-white md:text-3xl">
-            Manage your entire business like a pro
-          </h2>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-white/55">
-            The complete system that runs Eagle Info Solutions. Everything below, in one place:
-          </p>
-
-          {/* Module grid */}
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {MODULES.map((mod) => (
-              <div
-                key={mod.group}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-white/[0.04]"
-              >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
-                <p className="text-sm font-bold text-white">{mod.group}</p>
-                <p className="mt-1.5 text-[0.8125rem] leading-snug text-white/55">{mod.blurb}</p>
-                <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-wide text-white/55">{mod.items.length} tools</p>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Pricing ── */}
-          <div className="mt-14">
-            <PricingPlans />
-          </div>
-
-          {/* ── Commercial CTA ── */}
-          <div
-            className="relative mt-10 overflow-hidden rounded-3xl border border-[#D4AF37]/25 p-8 md:p-12"
-            style={{
-              background: "linear-gradient(135deg,#1f1b0e 0%,#141006 40%,#0c0c0c 100%)",
-              boxShadow: "0 0 0 1px rgba(212,175,55,0.12), 0 24px 60px rgba(0,0,0,0.5)",
-            }}
+          <a
+            href="tel:+256772006344"
+            className="hidden shrink-0 bg-[#C9962C] px-6 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.03em] text-[#191204] transition-colors hover:bg-[#E0B457] sm:inline-block"
           >
-            <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-[#D4AF37]/12 blur-[80px]" />
+            Call 0772 006 344
+          </a>
+        </div>
 
-            <div className="relative max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-                <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Get Duuka ProMax for Your Business</span>
-              </div>
+        {/* ── Hero: the promise takes the room, the slip stays small ── */}
+        <div className="grid items-start gap-11 py-12 lg:grid-cols-[1.28fr_0.72fr] lg:gap-15 lg:py-14">
+          <div>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-[#C9962C]">
+              Phones · Laptops · Tablets · Desktops
+            </p>
+            <h1 className="mt-4 text-[clamp(46px,7.4vw,88px)] font-bold uppercase leading-[0.92] text-balance">
+              You&apos;ll know the price <em className="not-italic text-[#C9962C]">before</em> we open it.
+            </h1>
+            <p className="mt-5 max-w-[44ch] text-[18.5px] leading-[1.5] text-[#DCD2BD]">
+              Bring it to the counter, send it by courier, or we come and collect it anywhere in
+              Kampala. Either way you get a{" "}
+              <b className="font-semibold text-[#EDE6D6]">written quote first</b>, and we don&apos;t
+              start until you say so.
+            </p>
 
-              <h3 className="text-2xl font-extrabold leading-snug text-white md:text-3xl">
-                Want this system for<br />your business?
-              </h3>
-              <p className="mt-3 text-base leading-relaxed text-white/60">
-                Hosted for your business — setup, data migration, staff training, and ongoing support included.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax%20for%20my%20business.%20Please%20send%20me%20pricing%20and%20setup%20details."
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]"
-                  style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
-                  WhatsApp us now
-                </a>
-                <a
-                  href="https://app.eagleinfosolutions.com"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
-                    <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                  </svg>
-                  app.eagleinfosolutions.com
-                </a>
-                <a
-                  href="tel:+256772006344"
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-white/25 hover:text-white"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.8 19.79 19.79 0 0 1 2 1.18 2 2 0 0 1 4 .03h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 7.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/>
-                  </svg>
-                  +256 772 006 344
-                </a>
-              </div>
-            </div>
+            <dl className="mt-8 border-t border-[#EDE6D6]/16">
+              {[
+                ["No fix, no fee", "If we can’t repair it, you pay nothing. Not a diagnostic charge, nothing."],
+                ["30 days", "Warranty on every repair we do, parts and labour."],
+                ["4.9 on Google", "From reviews by people who walked in off Bombo Road."],
+                ["Same day", "Quote back within a few hours. Most repairs done in one to three days."],
+              ].map(([term, detail]) => (
+                <div key={term} className="flex items-baseline gap-4 border-b border-[#EDE6D6]/9 py-3">
+                  <dt className="w-[118px] shrink-0 font-cond text-[20px] font-bold uppercase tracking-[0.02em] text-[#C9962C]">
+                    {term}
+                  </dt>
+                  <dd className="text-[15.5px] text-[#DCD2BD]">{detail}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        </section>
 
+          {/* The slip. Bone stock, set down a half-degree askew. */}
+          <div id="book" className="scroll-mt-6 -rotate-[0.5deg] bg-[#EDE6D6] p-6 text-[#221E17] shadow-[0_14px_34px_rgba(0,0,0,0.55)]">
+            <RepairRequestForm />
+          </div>
+        </div>
       </div>
 
-      {/* ── Footer ── */}
-      <footer className="mt-8 border-t border-white/6 px-4 py-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Image src="/eagle-info-logo.png" alt="Eagle Info Solutions" width={28} height={28} className="h-7 w-7 object-contain" />
-              <div>
-                <p className="text-xs font-bold text-white">Eagle Info Solutions</p>
-                <p className="text-[0.75rem] text-white/55">Powered by Duuka ProMax · © {new Date().getFullYear()}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {[
-                { href: "https://www.facebook.com/EagleInfoSolutions", label: "Facebook", icon: <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" fill="currentColor"/> },
-                { href: "https://www.instagram.com/EagleInfo_UG", label: "Instagram", icon: <><rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></> },
-                { href: "https://www.tiktok.com/@EagleInfo_UG", label: "TikTok", icon: <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.78a4.85 4.85 0 01-1.01-.09z" fill="currentColor"/> },
-                { href: "https://www.linkedin.com/company/104326797/", label: "LinkedIn", icon: <><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" fill="currentColor"/><circle cx="4" cy="4" r="2" fill="currentColor"/></> },
-              ].map((s) => (
-                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/8 text-white/55 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]">
-                  <svg width="12" height="12" viewBox="0 0 24 24">{s.icon}</svg>
-                </a>
-              ))}
-              <Link href="/feedback" className="text-xs font-semibold text-red-400/60 transition hover:text-red-400">Complaint</Link>
-              <Link href="/login" className="text-xs font-semibold text-white/55 transition hover:text-[#D4AF37]">Staff Login</Link>
-            </div>
-          </div>
+      {/* ── The sign above the bench ── */}
+      <div className="border-y border-[#EDE6D6]/16 bg-[#141210]">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-7 px-5 py-7 sm:px-10">
+          <p className="font-cond text-[clamp(30px,4.4vw,50px)] font-bold uppercase leading-[0.94] tracking-[0.01em] text-[#C9962C]">
+            Nothing gets touched<br />without a quote.
+          </p>
+          <p className="max-w-[40ch] text-[16px] text-[#DCD2BD]">
+            Written, itemised, sent by WhatsApp before any work starts. That&apos;s how the counter
+            has run since 2019.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Where we are, and how else to reach us ── */}
+      <div className="mx-auto grid max-w-[1120px] gap-9 px-5 py-12 sm:px-10 md:grid-cols-3 md:gap-11">
+        <section>
+          <h2 className="mb-3 border-b border-[#EDE6D6]/16 pb-2 text-[19px] font-bold uppercase">
+            Come to us
+          </h2>
+          <p className="text-[15.5px] leading-[1.55] text-[#DCD2BD]">
+            Shop L28, Nalubega Complex<br />1st floor, Bombo Road<br />Opposite Watoto Church
+          </p>
+          <p className="mt-2 text-[15.5px] text-[#DCD2BD]">Monday to Saturday, 9 till 7.</p>
+          <Link href="/address" className="mt-2 inline-block text-[15px] text-[#C9962C] underline underline-offset-4">
+            Directions to the shop
+          </Link>
+        </section>
+        <section>
+          <h2 className="mb-3 border-b border-[#EDE6D6]/16 pb-2 text-[19px] font-bold uppercase">
+            Or don&apos;t
+          </h2>
+          <p className="text-[15.5px] leading-[1.55] text-[#DCD2BD]">
+            Send it with any courier, or ask us to collect. We cover Kampala — choose “Request a
+            pickup” on the slip and we&apos;ll arrange it.
+          </p>
+        </section>
+        <section>
+          <h2 className="mb-3 border-b border-[#EDE6D6]/16 pb-2 text-[19px] font-bold uppercase">
+            Talk to a person
+          </h2>
+          <a href="tel:+256772006344" className="block font-cond text-[31px] font-bold tracking-[0.01em] text-[#EDE6D6]">
+            0772 006 344
+          </a>
+          <p className="mt-1 text-[15.5px] leading-[1.55] text-[#DCD2BD]">
+            Call, or{" "}
+            <a href={WA_LINK} target="_blank" rel="noreferrer" className="text-[#C9962C] underline underline-offset-4">
+              message us on WhatsApp
+            </a>
+            . Someone at the counter answers, not a queue.
+          </p>
+        </section>
+      </div>
+
+      {/* ── Footer. The software gets one line. ── */}
+      <footer className="border-t border-[#EDE6D6]/14">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-4 px-5 pb-7 pt-5 text-[13.5px] text-[#8C8579] sm:px-10">
+          <p>© {new Date().getFullYear()} Eagle Info Solutions · Kampala</p>
+          <p>
+            Repairs here are tracked in{" "}
+            <a href="https://app.eagleinfosolutions.com" className="text-[#DCD2BD] underline underline-offset-4">
+              Duuka ProMax
+            </a>
+            , our own system. Runs a shop like this? Ask us.
+          </p>
         </div>
       </footer>
     </main>

@@ -253,6 +253,12 @@
 }
 
 @theme inline {
+  /* Public repair landing only (app/page.tsx). Barlow Condensed carries the
+     signage-weight headings, Barlow the body copy. The app itself stays on
+     Inter — see app/layout.tsx, where both are registered with preload:false. */
+  --font-cond: var(--font-barlow-condensed), "Barlow Condensed", Impact, sans-serif;
+  --font-body: var(--font-barlow), Barlow, -apple-system, BlinkMacSystemFont, sans-serif;
+
   --color-background: var(--page-bg);
   --color-foreground: var(--ink);
   /* Raise text-xs from 12px → 13px globally so badges/labels stay readable
@@ -291,6 +297,43 @@ body {
 :where(h1, h2, h3, h4) {
   font-family: var(--font-display, var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif));
   letter-spacing: -0.02em;
+}
+
+/* Public repair landing (app/page.tsx): signage-weight headings.
+   Declared here, unlayered, rather than as Tailwind utilities on the elements —
+   the `:where(h1..h4)` rule above is unlayered too, and unlayered CSS beats
+   anything in `@layer utilities` no matter its specificity, so `font-cond` and
+   a tracking utility would both silently lose on a heading. Condensed uppercase
+   also wants positive tracking, not the -0.02em set above. */
+.landing-shopfront :where(h1, h2) {
+  font-family: var(--font-barlow-condensed), "Barlow Condensed", Impact, sans-serif;
+  letter-spacing: 0.004em;
+}
+
+/* The booking slip is bone stock on a dark counter, so its fields are ruled
+   lines on paper rather than the app's filled boxes. Unlayered again: the
+   `:where(input, select, textarea)` rules further down are unlayered too, and
+   they would otherwise paint white-on-white inside the slip — text the customer
+   cannot see while typing. */
+.landing-shopfront :where(input:not([type="radio"]), textarea) {
+  border: 0;
+  border-bottom: 1.5px solid #C4B99F;
+  border-radius: 0;
+  background: transparent;
+  color: #221E17;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.125rem;
+  transition: border-color 120ms ease;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea)::placeholder {
+  color: #8A806E;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea):focus,
+.landing-shopfront :where(input:not([type="radio"]), textarea):focus-visible {
+  outline: none;
+  border-bottom-color: #221E17;
+  background: transparent;
+  box-shadow: 0 2px 0 -1px #221E17;
 }
 
 code,

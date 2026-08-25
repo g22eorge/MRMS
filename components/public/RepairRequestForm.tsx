@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 
+// Labels are what the customer reads; the values are the DeviceType enum and
+// must not change. Kept short so the row of choices stays scannable.
 const DEVICE_TYPES = [
-  { value: "PHONE_ANDROID", label: "Android Phone" },
-  { value: "PHONE_IPHONE",  label: "iPhone / iPad" },
+  { value: "PHONE_ANDROID", label: "Android" },
+  { value: "PHONE_IPHONE",  label: "iPhone" },
   { value: "TABLET",        label: "Tablet" },
-  { value: "WINDOWS_PC",    label: "Windows PC / Laptop" },
-  { value: "MAC",           label: "MacBook / iMac" },
-  { value: "OTHER",         label: "Other Device" },
+  { value: "WINDOWS_PC",    label: "Windows laptop" },
+  { value: "MAC",           label: "Mac" },
+  { value: "OTHER",         label: "Something else" },
 ];
 
 const HANDOVER_OPTIONS = [
@@ -45,6 +47,9 @@ const HANDOVER_OPTIONS = [
 ];
 
 type Step = "form" | "success";
+/** Which pane of the slip is showing. Purely presentational: every field
+ *  stays in `data`, so the submitted payload is identical whatever is visible. */
+type Pane = 1 | 2 | 3;
 
 interface FormData {
   customer_name: string;
@@ -57,6 +62,7 @@ interface FormData {
   handover_method: string;
   preferred_dropoff_date: string;
   pickup_address: string;
+  preferred_pickup_date: string;
   delivery_person_name: string;
   delivery_person_phone: string;
   _hp: string; // honeypot
@@ -66,7 +72,7 @@ const empty: FormData = {
   customer_name: "", phone: "", email: "",
   device_type: "", brand: "", model: "",
   problem_description: "", handover_method: "SELF_DROPOFF",
-  preferred_dropoff_date: "", pickup_address: "",
+  preferred_dropoff_date: "", pickup_address: "", preferred_pickup_date: "",
   delivery_person_name: "", delivery_person_phone: "",
   _hp: "",
 };
@@ -82,6 +88,7 @@ interface RepairRequestFormProps {
 
 export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions", whatsappNumber = "256772006344" }: RepairRequestFormProps) {
   const [step, setStep]       = useState<Step>("form");
+  const [pane, setPane]       = useState<Pane>(1);
   const [data, setData]       = useState<FormData>(empty);
   const [errors, setErrors]   = useState<string[]>([]);
   const [busy, setBusy]       = useState(false);
@@ -114,6 +121,8 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
           handover_method: data.handover_method,
           preferred_dropoff_date: data.handover_method === "SELF_DROPOFF" ? data.preferred_dropoff_date : undefined,
           pickup_address: data.handover_method === "REQUEST_PICKUP" ? data.pickup_address : undefined,
+          // Required by POST /api/repair-requests for this handover method.
+          preferred_pickup_date: data.handover_method === "REQUEST_PICKUP" ? data.preferred_pickup_date : undefined,
           delivery_person_name: data.handover_method === "SEND_WITH_DELIVERY_PERSON" ? data.delivery_person_name : undefined,
           delivery_person_phone: data.handover_method === "SEND_WITH_DELIVERY_PERSON" ? data.delivery_person_phone : undefined,
           ...(orgSlug ? { org_slug: orgSlug } : {}),
@@ -136,58 +145,111 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
   }
 
   if (step === "success") {
+    // Rendered inside the bone slip on the landing page, so this is ink on
+    // paper too — a stamped receipt rather than a dark success toast.
     return (
-      <div className="flex flex-col items-center gap-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 px-8 py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-400">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden>
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </div>
-        <div>
-          <p className="text-lg font-bold text-white">Repair Request Received!</p>
+      <div>
+        <div className="flex items-baseline justify-between gap-3 border-b-2 border-[#221E17] pb-2.5">
+          <h2 className="text-[23px] font-bold uppercase leading-none text-[#221E17]">
+            Booked in
+          </h2>
           {requestNum && (
-            <p className="mt-1 mono text-sm font-semibold text-emerald-400">{requestNum}</p>
+            <p className="mono shrink-0 text-[13px] font-semibold text-[#6A6154]">{requestNum}</p>
           )}
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/55">
-            Hello {data.customer_name || "Customer"}
-            <br />
-            <br />
-            Thank you for submitting your repair request{requestNum ? ` (${requestNum})` : ""}.
-            <br />
-            <br />
-            Your request has been received and logged successfully. Our team will contact you shortly with next steps, including device drop-off/pick-up guidance and the diagnosis timeline.
-            <br />
-            <br />
-            Best regards,
-            <br />
-            {companyName}
-          </p>
         </div>
-        <div className="flex flex-wrap justify-center gap-3">
+
+        <p className="mt-4 text-[16px] leading-relaxed text-[#221E17]">
+          Thank you{data.customer_name ? `, ${data.customer_name.split(" ")[0]}` : ""}. We have your
+          device details{requestNum ? <> under <b className="font-semibold">{requestNum}</b></> : null}.
+        </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-[#6A6154]">
+          Someone from the counter will be in touch shortly with a written quote and the timeline.
+          Nothing gets opened until you approve the price.
+        </p>
+
+        {/* The stamp — the promise, pressed onto the receipt */}
+        <div className="mt-5 inline-block -rotate-[6deg] border-[2.5px] border-[#A87A1E] px-3.5 pb-1.5 pt-2 leading-[0.95] tracking-[0.05em] text-[#A87A1E] opacity-90">
+          <b className="block font-cond text-[21px] font-bold uppercase">Quote before work</b>
+          <span className="mono block text-[10.5px] tracking-[0.1em]">{companyName}</span>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <a
             href={`https://wa.me/${whatsappNumber}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-2 rounded-xl bg-[#25D366]/15 border border-[#25D366]/25 px-5 py-2.5 text-sm font-semibold text-[#25D366] transition hover:bg-[#25D366]/25"
+            target="_blank" rel="noreferrer"
+            className="bg-[#221E17] px-5 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-            </svg>
-            Chat on WhatsApp
+            Message us on WhatsApp
           </a>
           <button
-            onClick={() => { setStep("form"); setData(empty); setRequestNum(""); }}
-            className="rounded-xl border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/60 transition hover:text-white"
+            type="button"
+            onClick={() => { setStep("form"); setPane(1); setData(empty); setRequestNum(""); }}
+            className="text-[14px] text-[#6A6154] underline underline-offset-4 transition-colors hover:text-[#221E17]"
           >
-            Submit another request
+            Book another device
           </button>
         </div>
       </div>
     );
   }
 
-  const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/25";
-  const labelCls = "mb-1 block text-[0.8125rem] font-semibold uppercase tracking-wider text-white/60";
+  // ── Paper-slip palette ────────────────────────────────────────────────────
+  // The form sits on bone stock on a dark counter (see app/page.tsx), so it is
+  // ink-on-paper rather than the app's light-on-dark.
+  const inputCls =
+    "w-full border-b-[1.5px] border-[#C4B99F] bg-transparent px-0.5 py-1.5 text-[16px] text-[#221E17] outline-none transition placeholder:text-[#8A806E] focus:border-[#221E17]";
+  const labelCls =
+    "mb-1.5 block text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[#6A6154]";
+  const optionCls =
+    "cursor-pointer border-[1.5px] px-3 py-1.5 text-[14px] transition select-none";
+
+  /** Which fields each pane needs before it will let you move on. The server
+   *  validates the whole payload regardless — this only avoids a pointless
+   *  round trip and a scroll back up the slip. */
+  function missingOn(p: Pane): string[] {
+    const gaps: string[] = [];
+    if (p === 1) {
+      if (!data.device_type) gaps.push("Choose what kind of device it is.");
+      if (!data.brand.trim()) gaps.push("Tell us the make — Samsung, Apple, HP…");
+      if (!data.problem_description.trim()) gaps.push("Describe what it's doing.");
+    }
+    if (p === 2) {
+      if (!data.customer_name.trim()) gaps.push("We need a name to put on the job.");
+      if (!data.phone.trim()) gaps.push("We need a phone number to send the quote to.");
+    }
+    if (p === 3) {
+      if (!data.handover_method) gaps.push("Choose how the device gets to us.");
+      if (data.handover_method === "SELF_DROPOFF" && !data.preferred_dropoff_date)
+        gaps.push("Pick the day you'll bring it in.");
+      if (data.handover_method === "REQUEST_PICKUP" && !data.pickup_address.trim())
+        gaps.push("Where should we collect it?");
+      if (data.handover_method === "REQUEST_PICKUP" && !data.preferred_pickup_date)
+        gaps.push("Pick the day we should collect it.");
+      if (data.handover_method === "SEND_WITH_DELIVERY_PERSON"
+        && (!data.delivery_person_name.trim() || !data.delivery_person_phone.trim()))
+        gaps.push("Give us the courier's name and number.");
+    }
+    return gaps;
+  }
+
+  function next() {
+    const gaps = missingOn(pane);
+    if (gaps.length) { setErrors(gaps); return; }
+    setErrors([]);
+    setPane((p) => (p === 1 ? 2 : 3));
+  }
+
+  function back() {
+    setErrors([]);
+    setPane((p) => (p === 3 ? 2 : 1));
+  }
+
+  const PANES: Array<{ n: Pane; title: string; hint: string }> = [
+    { n: 1, title: "What needs fixing?", hint: "Next: how to reach you, then how it gets to us." },
+    { n: 2, title: "How do we reach you?", hint: "One more step: getting the device to us." },
+    { n: 3, title: "Getting it to us", hint: "We reply on WhatsApp with a written quote." },
+  ];
+  const current = PANES[pane - 1];
 
   return (
     <form onSubmit={submit} noValidate>
@@ -200,186 +262,247 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         autoComplete="off"
       />
 
-      {errors.length > 0 && (
-        <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
-          {errors.map((e) => (
-            <p key={e} className="text-sm text-red-400">{e}</p>
-          ))}
-        </div>
-      )}
-
-      {/* ── Row 1: Name + Phone ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelCls}>Full Name *</label>
-          <input
-            required value={data.customer_name} onChange={(e) => set("customer_name", e.target.value)}
-            placeholder="e.g. Sarah Namutebi" className={inputCls}
+      {/* Progress: three rules, filled as you go */}
+      <div className="flex gap-1.5" aria-hidden="true">
+        {PANES.map((p) => (
+          <span
+            key={p.n}
+            className={`h-[3px] flex-1 ${p.n <= pane ? "bg-[#221E17]" : "bg-[#C4B99F]"}`}
           />
-        </div>
-        <div>
-          <label className={labelCls}>Phone Number *</label>
-          <input
-            required type="tel" value={data.phone} onChange={(e) => set("phone", e.target.value)}
-            placeholder="07xx xxx xxx" className={inputCls}
-          />
-        </div>
+        ))}
       </div>
 
-      {/* ── Row 2: Email ── */}
-      <div className="mt-4">
-        <label className={labelCls}>Email Address <span className="text-white/60 normal-case font-normal">(optional)</span></label>
-        <input
-          type="email" value={data.email} onChange={(e) => set("email", e.target.value)}
-          placeholder="you@example.com" className={inputCls}
-        />
-      </div>
-
-      {/* ── Row 3: Device Type + Brand ── */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelCls}>Device Type *</label>
-          <select
-            required value={data.device_type} onChange={(e) => set("device_type", e.target.value)}
-            className={inputCls + " cursor-pointer"}
-          >
-            <option value="" disabled>Select device type…</option>
-            {DEVICE_TYPES.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>Brand *</label>
-          <input
-            required value={data.brand} onChange={(e) => set("brand", e.target.value)}
-            placeholder="e.g. Samsung, Apple, HP…" className={inputCls}
-          />
-        </div>
-      </div>
-
-      {/* ── Row 4: Model ── */}
-      <div className="mt-4">
-        <label className={labelCls}>Model <span className="text-white/60 normal-case font-normal">(optional but helpful)</span></label>
-        <input
-          value={data.model} onChange={(e) => set("model", e.target.value)}
-          placeholder="e.g. Galaxy S21, iPhone 13, HP Pavilion…" className={inputCls}
-        />
-      </div>
-
-      {/* ── Row 5: Problem Description ── */}
-      <div className="mt-4">
-        <label className={labelCls}>Describe the Problem *</label>
-        <textarea
-          required rows={3} value={data.problem_description}
-          onChange={(e) => set("problem_description", e.target.value)}
-          placeholder="Tell us what's wrong — screen cracked, won't turn on, battery issues, slow performance…"
-          className={inputCls + " resize-none"}
-        />
-      </div>
-
-      {/* ── Row 6: Handover Method ── */}
-      <div className="mt-5">
-        <label className={labelCls}>How will you bring / send the device?</label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {HANDOVER_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer flex-col gap-0.5 rounded-lg border px-3.5 py-3 transition ${
-                data.handover_method === opt.value
-                  ? "border-[#D4AF37]/50 bg-[#D4AF37]/8"
-                  : "border-white/8 bg-white/3 hover:border-white/15"
-              }`}
-            >
-              <input
-                type="radio" name="handover_method" value={opt.value}
-                checked={data.handover_method === opt.value}
-                onChange={(e) => set("handover_method", e.target.value)}
-                className="sr-only"
-              />
-              <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#D4AF37]/80" : "text-white/60"}`}>{opt.icon}</span>
-              <span className="text-sm font-semibold text-white/80">{opt.label}</span>
-              <span className="text-[0.8125rem] text-white/60">{opt.desc}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Conditional: self drop-off date ── */}
-      {data.handover_method === "SELF_DROPOFF" && (
-        <div className="mt-4">
-          <label className={labelCls}>Preferred Drop-off Date *</label>
-          <input
-            required type="date" value={data.preferred_dropoff_date}
-            min={new Date().toISOString().split("T")[0]}
-            onChange={(e) => set("preferred_dropoff_date", e.target.value)}
-            className={inputCls}
-          />
-        </div>
-      )}
-
-      {/* ── Conditional: pickup address ── */}
-      {data.handover_method === "REQUEST_PICKUP" && (
-        <div className="mt-4">
-          <label className={labelCls}>Pickup Address *</label>
-          <input
-            required value={data.pickup_address}
-            onChange={(e) => set("pickup_address", e.target.value)}
-            placeholder="Your address or nearest landmark in Kampala"
-            className={inputCls}
-          />
-        </div>
-      )}
-
-      {/* ── Conditional: delivery person details ── */}
-      {data.handover_method === "SEND_WITH_DELIVERY_PERSON" && (
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>Delivery Person Name *</label>
-            <input
-              required value={data.delivery_person_name}
-              onChange={(e) => set("delivery_person_name", e.target.value)}
-              placeholder="Name of person delivering" className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Delivery Person Phone *</label>
-            <input
-              required type="tel" value={data.delivery_person_phone}
-              onChange={(e) => set("delivery_person_phone", e.target.value)}
-              placeholder="07xx xxx xxx" className={inputCls}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── Submit ── */}
-      <div className="mt-6">
-        <button
-          type="submit" disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-black transition hover:opacity-90 disabled:opacity-60"
-          style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)", boxShadow: "0 6px 24px rgba(212,175,55,0.30)" }}
-        >
-          {busy ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-              Submitting…
-            </>
-          ) : (
-            <>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
-              Submit Repair Request
-            </>
-          )}
-        </button>
-        <p className="mt-2.5 text-center text-[0.8125rem] text-white/60">
-          We&apos;ll confirm your request and send a quote via WhatsApp or call.
+      <div className="mt-4 flex items-baseline justify-between gap-3 border-b-2 border-[#221E17] pb-2.5">
+        <h2 className="text-[23px] font-bold uppercase leading-none text-[#221E17]">
+          {current.title}
+        </h2>
+        <p className="shrink-0 text-[11.5px] uppercase tracking-[0.08em] text-[#6A6154]">
+          Step {pane} of 3
         </p>
       </div>
+
+      {errors.length > 0 && (
+        <div role="alert" className="mt-4 border-l-[3px] border-[#B4342A] bg-[#B4342A]/8 px-3 py-2.5">
+          {errors.map((e) => (
+            <p key={e} className="text-[14px] text-[#8E2A22]">{e}</p>
+          ))}
+        </div>
+      )}
+
+      {/* ── Pane 1: the device ── */}
+      {pane === 1 && (
+        <>
+          <fieldset className="mt-4">
+            <legend className={labelCls}>What is it?</legend>
+            <div className="flex flex-wrap gap-2">
+              {DEVICE_TYPES.map((d) => {
+                const on = data.device_type === d.value;
+                return (
+                  <label
+                    key={d.value}
+                    className={`${optionCls} ${on
+                      ? "border-[#221E17] bg-[#221E17] text-[#EDE6D6]"
+                      : "border-[#C4B99F] text-[#5D5548] hover:border-[#8A806E]"}`}
+                  >
+                    <input
+                      type="radio" name="device_type" value={d.value} checked={on}
+                      onChange={(e) => set("device_type", e.target.value)} className="sr-only"
+                    />
+                    {d.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls} htmlFor="rr-brand">Make</label>
+              <input
+                id="rr-brand" value={data.brand} onChange={(e) => set("brand", e.target.value)}
+                placeholder="Samsung, Apple, HP…" className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="rr-model">
+                Model <span className="font-normal normal-case tracking-normal">(if you know it)</span>
+              </label>
+              <input
+                id="rr-model" value={data.model} onChange={(e) => set("model", e.target.value)}
+                placeholder="Galaxy S21, HP 840 G7…" className={inputCls}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls} htmlFor="rr-problem">What&apos;s it doing?</label>
+            <textarea
+              id="rr-problem" rows={2} value={data.problem_description}
+              onChange={(e) => set("problem_description", e.target.value)}
+              placeholder="Screen cracked, won't charge, very slow…"
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ── Pane 2: reaching you ── */}
+      {pane === 2 && (
+        <>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls} htmlFor="rr-name">Your name</label>
+              <input
+                id="rr-name" value={data.customer_name} autoComplete="name"
+                onChange={(e) => set("customer_name", e.target.value)}
+                placeholder="Sarah Namutebi" className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="rr-phone">Phone number</label>
+              <input
+                id="rr-phone" type="tel" value={data.phone} autoComplete="tel"
+                onChange={(e) => set("phone", e.target.value)}
+                placeholder="07xx xxx xxx" className={inputCls}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className={labelCls} htmlFor="rr-email">
+              Email <span className="font-normal normal-case tracking-normal">(optional)</span>
+            </label>
+            <input
+              id="rr-email" type="email" value={data.email} autoComplete="email"
+              onChange={(e) => set("email", e.target.value)}
+              placeholder="you@example.com" className={inputCls}
+            />
+          </div>
+          <p className="mt-3 text-[13px] leading-snug text-[#6A6154]">
+            The quote comes by WhatsApp to the number above, usually within a few hours.
+          </p>
+        </>
+      )}
+
+      {/* ── Pane 3: getting it to us ── */}
+      {pane === 3 && (
+        <>
+          <fieldset className="mt-4">
+            <legend className={labelCls}>How does it get to us?</legend>
+            <div className="flex flex-col gap-2">
+              {HANDOVER_OPTIONS.map((opt) => {
+                const on = data.handover_method === opt.value;
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer items-baseline gap-3 border-[1.5px] px-3 py-2.5 transition ${on
+                      ? "border-[#221E17] bg-[#221E17]/6"
+                      : "border-[#C4B99F] hover:border-[#8A806E]"}`}
+                  >
+                    <input
+                      type="radio" name="handover_method" value={opt.value} checked={on}
+                      onChange={(e) => set("handover_method", e.target.value)} className="sr-only"
+                    />
+                    <span className={`mt-0.5 h-3.5 w-3.5 shrink-0 border-[1.5px] ${on
+                      ? "border-[#221E17] bg-[#221E17]" : "border-[#8A806E]"}`} aria-hidden="true" />
+                    <span>
+                      <span className="block text-[15px] font-semibold text-[#221E17]">{opt.label}</span>
+                      <span className="block text-[13px] text-[#6A6154]">{opt.desc}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {data.handover_method === "SELF_DROPOFF" && (
+            <div className="mt-4">
+              <label className={labelCls} htmlFor="rr-date">Which day will you bring it?</label>
+              <input
+                id="rr-date" type="date" value={data.preferred_dropoff_date}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => set("preferred_dropoff_date", e.target.value)}
+                className={inputCls}
+              />
+            </div>
+          )}
+
+          {data.handover_method === "REQUEST_PICKUP" && (
+            <div className="mt-4">
+              <label className={labelCls} htmlFor="rr-addr">Where do we collect it?</label>
+              <input
+                id="rr-addr" value={data.pickup_address}
+                onChange={(e) => set("pickup_address", e.target.value)}
+                placeholder="Address or nearest landmark in Kampala" className={inputCls}
+              />
+              <div className="mt-4">
+                <label className={labelCls} htmlFor="rr-pickdate">Which day should we come?</label>
+                <input
+                  id="rr-pickdate" type="date" value={data.preferred_pickup_date}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => set("preferred_pickup_date", e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+          )}
+
+          {data.handover_method === "SEND_WITH_DELIVERY_PERSON" && (
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelCls} htmlFor="rr-dpn">Courier&apos;s name</label>
+                <input
+                  id="rr-dpn" value={data.delivery_person_name}
+                  onChange={(e) => set("delivery_person_name", e.target.value)}
+                  placeholder="Who's bringing it" className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls} htmlFor="rr-dpp">Courier&apos;s phone</label>
+                <input
+                  id="rr-dpp" type="tel" value={data.delivery_person_phone}
+                  onChange={(e) => set("delivery_person_phone", e.target.value)}
+                  placeholder="07xx xxx xxx" className={inputCls}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Move through the slip ── */}
+      <div className="mt-6 flex items-center gap-3">
+        {pane > 1 && (
+          <button
+            type="button" onClick={back}
+            className="border-[1.5px] border-[#C4B99F] px-4 py-3 font-cond text-[17px] font-bold uppercase tracking-[0.04em] text-[#5D5548] transition-colors hover:border-[#221E17] hover:text-[#221E17]"
+          >
+            Back
+          </button>
+        )}
+        {pane < 3 ? (
+          <button
+            type="button" onClick={next}
+            className="flex-1 bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08]"
+          >
+            Continue
+          </button>
+        ) : (
+          <button
+            type="submit" disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 bg-[#221E17] px-4 py-3.5 font-cond text-[19px] font-bold uppercase tracking-[0.05em] text-[#EDE6D6] transition-colors hover:bg-[#0B0A08] disabled:opacity-60"
+          >
+            {busy ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Sending…
+              </>
+            ) : "Send it in"}
+          </button>
+        )}
+      </div>
+      <p className="mt-3 text-[13px] leading-snug text-[#6A6154]">{current.hint}</p>
     </form>
   );
 }

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
-import { Inter } from "next/font/google";
+import { Barlow, Barlow_Condensed, Inter } from "next/font/google";
 
 import { ThemeProvider, type Theme } from "@/components/layout/ThemeProvider";
 import "./globals.css";
@@ -16,6 +16,26 @@ const inter = Inter({
   display: "swap",
   // Preload only the weights we actually use to keep the WOFF2 small
   weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+// Barlow and Barlow Condensed are used by the public repair landing only — the
+// condensed cut carries its signage-weight headings, the regular its body copy.
+// preload:false keeps them out of the <head> of every app route; the browser
+// fetches them only where the CSS variables are actually applied.
+const barlow = Barlow({
+  subsets: ["latin"],
+  variable: "--font-barlow",
+  display: "swap",
+  weight: ["400", "500", "600"],
+  preload: false,
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+  weight: ["600", "700"],
+  preload: false,
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000";
@@ -84,7 +104,7 @@ export default async function RootLayout({
     // suppressHydrationWarning: the theme class is finalized on the client and
     // browser extensions inject attributes on <html> (e.g. crxemulator="") before
     // hydration. Scoped to this element only — it never masks child mismatches.
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${barlow.variable} ${barlowCondensed.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         <ThemeProvider initialTheme={initialTheme}>
           {children}
