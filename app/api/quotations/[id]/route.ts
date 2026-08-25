@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { formatEATDocDate } from "@/lib/date-eat";
 import { formatMoney } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { pickQuoteTerms } from "@/lib/quote-terms";
+import { quotationTerms } from "@/lib/quote-terms";
 import { can } from "@/lib/permissions";
 import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDocument";
 import { resolvePdfLogo } from "@/lib/pdf/pdf-utils";
@@ -109,7 +109,7 @@ export async function GET(
     paymentTo: null,
     // Repair quote vs sales quote get concise, relevant terms (unless the org
     // wrote its own). A quote linked to a job is a repair; otherwise a sale.
-    termsText: pickQuoteTerms(branding.termsText, !!quotation.job),
+    termsText: quotationTerms(branding.termsText, quotation.job ? "REPAIR" : "SALE"),
   });
 
   try {

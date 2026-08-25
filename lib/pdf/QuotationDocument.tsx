@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
+import { isTermsHeading } from "@/lib/quote-terms";
 const NAVY = "#0f3b7a";
 const NAVY_LIGHT = "#1e56a8";
 const GOLD = "#D4AF37";
@@ -164,6 +165,7 @@ const s = StyleSheet.create({
 
   // ── terms ────────────────────────────────────────────────────────────────
   termItem: { fontSize: 8.2, color: DARK, fontWeight: 600, marginBottom: 2 },
+  termHead: { fontSize: 9, fontFamily: "Helvetica-Bold", marginTop: 6, marginBottom: 2 },
 
   // ── signatures ──────────────────────────────────────────────────────────
   sigWrap: {
@@ -416,7 +418,9 @@ export function QuotationDocument(props: Props) {
           <View style={s.sectionHead}><Text style={s.sectionTitle}>Terms & Conditions</Text></View>
           <View style={s.sectionBody}>
             {(props.termsText ?? "").split("\n").map((l) => l.trim()).filter(Boolean).map((line, i) => (
-              <Text key={i} style={s.termItem}>• {line}</Text>
+              isTermsHeading(line)
+                ? <Text key={i} style={s.termHead}>{line}</Text>
+                : <Text key={i} style={s.termItem}>• {line}</Text>
             ))}
           </View>
         </View>

@@ -28,6 +28,7 @@
  */
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
+import { isTermsHeading } from "@/lib/quote-terms";
 // ── Palette ────────────────────────────────────────────────────────────────────
 const INK      = "#0f172a";   // near-black body text
 const MUTED    = "#6B7280";   // grey labels
@@ -112,6 +113,8 @@ const s = StyleSheet.create({
   footerRight: { flex: 1 },
   footerLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 5 },
   footerText: { fontSize: 8.5, color: INK, lineHeight: 1.5, marginBottom: 10 },
+  footerTermHead: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: INK, marginTop: 5, marginBottom: 1.5 },
+  footerTermLine: { fontSize: 8.5, color: INK, lineHeight: 1.45, marginBottom: 1 },
   bankBlock: { marginBottom: 8 },
   bankBlockDivided: { marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: "#E5E7EB" },
   bankLabel: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: MUTED, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
@@ -367,7 +370,9 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
           {termsText ? (
             <View style={s.footerRight}>
               <Text style={s.footerLabel}>Terms &amp; Conditions</Text>
-              <Text style={s.footerText}>{termsText}</Text>
+              {termsText.split("\n").map((l) => l.trim()).filter(Boolean).map((line, i) => (
+                <Text key={i} style={isTermsHeading(line) ? s.footerTermHead : s.footerTermLine}>{line}</Text>
+              ))}
             </View>
           ) : null}
         </View>

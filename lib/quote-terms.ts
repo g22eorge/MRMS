@@ -9,29 +9,40 @@ import { defaultBranding } from "@/lib/document-branding";
  * begins only after approval is recorded" and warning about storage fees on
  * uncollected devices. None of it applied to what they had bought.
  *
- * So terms are chosen per document. A repair document gets repair terms, a
- * sales document gets sales terms, and anything that could be either gets a
- * set that says so plainly rather than pretending the business is only a
- * workshop. Validity dates are not repeated here because every quotation
- * template already prints "Valid until" in its own right.
+ * Invoices and receipts are transactional, so they carry only the terms for
+ * the work in hand. Quotations are different: every client gets one, which
+ * makes them the one document that should show the full range. So a quotation
+ * prints both sets under their own headings, with the section covering this
+ * quote first. A client quoted for equipment learns we also repair, and the
+ * headings keep it obvious which clauses bind them.
+ *
+ * Validity dates are not repeated here because every quotation template prints
+ * "Valid until" in its own right.
  *
  * Whatever the owner writes in Settings always wins over all of this.
  */
 
 export type DocumentWorkKind = "REPAIR" | "SALE" | "MIXED";
 
-export const TERMS_REPAIR = [
+/** A heading line. The PDF templates bold any line ending in a colon. */
+const GOODS_HEAD = "Goods:";
+const REPAIRS_HEAD = "Repairs:";
+
+const SALE_LINES = [
+  "Prices are subject to stock availability at the time of order.",
+  "Goods carry the manufacturer warranty only, where applicable.",
+  "Payment is due in full before delivery unless otherwise agreed.",
+];
+
+const REPAIR_LINES = [
   "Repair work is carried out only after approval is recorded.",
   "Parts availability may affect the final timeline and cost.",
   "Pre-existing or hidden faults may affect the outcome.",
   "Uncollected devices may attract storage fees after notice.",
-].join("\n");
+];
 
-export const TERMS_SALE = [
-  "Prices are subject to stock availability at the time of order.",
-  "Goods carry the manufacturer warranty only, where applicable.",
-  "Payment is due in full before delivery unless otherwise agreed.",
-].join("\n");
+export const TERMS_REPAIR = REPAIR_LINES.join("\n");
+export const TERMS_SALE = SALE_LINES.join("\n");
 
 /**
  * For documents that can cover either line of business, and for the terms an
@@ -67,10 +78,14 @@ export function isShippedDefaultTerms(brandingTerms: string | null | undefined):
   return stored === "" || SHIPPED_DEFAULTS.includes(stored);
 }
 
+/** True for a section heading, which templates render bold and without a bullet. */
+export function isTermsHeading(line: string): boolean {
+  return line.trim().endsWith(":");
+}
+
 /**
- * Choose the terms to print on a document.
- * - Terms the owner wrote win, always.
- * - Otherwise pick the set matching the work the document covers.
+ * Choose the terms to print on a transactional document (invoice, receipt,
+ * credit note): only the work that document actually covers.
  */
 export function pickDocumentTerms(
   brandingTerms: string | null | undefined,
@@ -82,9 +97,23 @@ export function pickDocumentTerms(
   return TERMS_MIXED;
 }
 
-/** Back-compat wrapper for the quotation routes. */
+/**
+ * Terms for a quotation: both trades, under headings, this quote's own section
+ * first. Owner-written terms are printed as-is and never split up.
+ */
+export function quotationTerms(
+  brandingTerms: string | null | undefined,
+  kind: "REPAIR" | "SALE",
+): string {
+  if (!isShippedDefaultTerms(brandingTerms)) return (brandingTerms ?? "").trim();
+  const goods = [GOODS_HEAD, ...SALE_LINES];
+  const repairs = [REPAIRS_HEAD, ...REPAIR_LINES];
+  return (kind === "SALE" ? [...goods, ...repairs] : [...repairs, ...goods]).join("\n");
+}
+
+/** Back-compat wrapper for callers that only know repair-or-not. */
 export function pickQuoteTerms(brandingTerms: string | null | undefined, isRepair: boolean): string {
-  return pickDocumentTerms(brandingTerms, isRepair ? "REPAIR" : "SALE");
+  return quotationTerms(brandingTerms, isRepair ? "REPAIR" : "SALE");
 }
 
 /** @deprecated prefer TERMS_REPAIR / TERMS_SALE */

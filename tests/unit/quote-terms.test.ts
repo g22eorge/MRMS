@@ -6,8 +6,10 @@ import {
   TERMS_REPAIR,
   TERMS_SALE,
   isShippedDefaultTerms,
+  isTermsHeading,
   pickDocumentTerms,
   pickQuoteTerms,
+  quotationTerms,
 } from "@/lib/quote-terms";
 
 // The repair-only block the app originally shipped. Orgs created before the
@@ -67,9 +69,42 @@ describe("pickDocumentTerms", () => {
   });
 });
 
+describe("quotationTerms", () => {
+  // Every client gets a quotation, so it carries both trades under headings
+  // rather than only the half that covers this particular quote.
+  it("shows both sections whichever the quote is for", () => {
+    for (const kind of ["REPAIR", "SALE"] as const) {
+      const terms = quotationTerms(LEGACY_DEFAULT, kind);
+      expect(terms).toContain("Goods:");
+      expect(terms).toContain("Repairs:");
+      for (const line of [...TERMS_SALE.split("\n"), ...TERMS_REPAIR.split("\n")]) {
+        expect(terms).toContain(line);
+      }
+    }
+  });
+
+  it("leads with the section covering this quote", () => {
+    const sale = quotationTerms(LEGACY_DEFAULT, "SALE").split("\n");
+    const repair = quotationTerms(LEGACY_DEFAULT, "REPAIR").split("\n");
+    expect(sale[0]).toBe("Goods:");
+    expect(repair[0]).toBe("Repairs:");
+  });
+
+  it("prints owner-written terms as one block, never split into sections", () => {
+    const own = "Payment on collection. No exceptions.";
+    expect(quotationTerms(own, "SALE")).toBe(own);
+    expect(quotationTerms(own, "REPAIR")).toBe(own);
+  });
+
+  it("marks only the headings as headings", () => {
+    const lines = quotationTerms(LEGACY_DEFAULT, "SALE").split("\n");
+    expect(lines.filter(isTermsHeading)).toEqual(["Goods:", "Repairs:"]);
+  });
+});
+
 describe("pickQuoteTerms", () => {
-  it("maps the repair flag onto the same choice", () => {
-    expect(pickQuoteTerms(LEGACY_DEFAULT, true)).toBe(TERMS_REPAIR);
-    expect(pickQuoteTerms(LEGACY_DEFAULT, false)).toBe(TERMS_SALE);
+  it("still maps the repair flag onto the quotation terms", () => {
+    expect(pickQuoteTerms(LEGACY_DEFAULT, true)).toBe(quotationTerms(LEGACY_DEFAULT, "REPAIR"));
+    expect(pickQuoteTerms(LEGACY_DEFAULT, false)).toBe(quotationTerms(LEGACY_DEFAULT, "SALE"));
   });
 });
