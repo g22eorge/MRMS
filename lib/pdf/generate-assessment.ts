@@ -45,6 +45,24 @@ function clampParas(items: string[], maxChars: number): string[] {
  * `requireClientVisible` gates it to a published (CLIENT) report — used by the
  * portal so a customer can only download a report staff have approved.
  */
+/**
+ * Has the repair actually happened yet?
+ *
+ * An assessment report is issued at two very different moments: before the work,
+ * to get the customer to approve a quote, and after it, as the record of what
+ * was done. The standing warranty note has to read correctly in both — promising
+ * testing that already happened reads as sloppy, and claiming testing that has
+ * not happened is a false statement to a customer.
+ */
+const REPAIR_DONE_STATUSES = new Set(["READY_FOR_PICKUP", "DELIVERED", "COMPLETED", "CLOSED"]);
+
+function standingWarrantyNote(status: string | null | undefined): string {
+  const done = REPAIR_DONE_STATUSES.has(String(status ?? ""));
+  return done
+    ? "The system was fully tested after repair and confirmed to be operating normally. Replacement components carry applicable supplier warranty."
+    : "The system will be fully tested after repair to confirm normal operation, and replacement components carry applicable supplier warranty.";
+}
+
 export async function generateAssessmentBuffer(params: {
   orgId: string;
   jobId: string;
@@ -55,7 +73,7 @@ export async function generateAssessmentBuffer(params: {
   const job = await prisma.job.findFirst({
     where: { id: jobId, orgId },
     select: {
-      jobNumber: true, issueDescription: true, brand: true, model: true, deviceType: true,
+      jobNumber: true, status: true, issueDescription: true, brand: true, model: true, deviceType: true,
       diagnosisNotes: true, externalDiagnosis: true, partsNeeded: true, recommendedRepair: true, workDone: true, clientBill: true,
       warrantyMonths: true, warrantyExpiresAt: true,
       client: { select: { fullName: true, organization: true } },
@@ -147,7 +165,7 @@ export async function generateAssessmentBuffer(params: {
   if (job.warrantyExpiresAt && job.warrantyMonths) {
     warranty.push(`This repair carries a ${job.warrantyMonths}-month warranty, valid until ${formatEATDocDate(job.warrantyExpiresAt)}.`);
   } else if (warranty.length === 0) {
-    warranty.push("Replacement components are supplied with applicable supplier warranty, where applicable. The system is tested after repair to confirm stable operation.");
+    warranty.push(standingWarrantyNote(job.status));
   }
 
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
