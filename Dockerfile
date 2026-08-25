@@ -75,6 +75,11 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 USER node
 EXPOSE 3000
 
+# Runs server.js directly, not `bun run start`. The standalone bundle needs
+# .next/static and public/ copied beside it (done above); the npm start script
+# deliberately uses `next start` instead, because those copies do not exist in a
+# plain local build and the server would 404 every stylesheet.
+
 # /api/health checks the database, so an unreachable database marks the
 # container unhealthy rather than letting it serve 500s.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

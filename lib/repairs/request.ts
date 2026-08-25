@@ -39,36 +39,19 @@ async function allocateRequestNumber(orgId?: string | null): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `REQ-${year}-`;
 
-  // Repair requests are tenant-scoped; sequences must not use NULL orgIds because
-  // SQLite UNIQUE constraints treat NULLs as distinct (breaking atomic upserts).
+  // Repair requests are tenant-scoped, and the sequence must not use a NULL
+  // orgId: a UNIQUE index treats NULLs as distinct, so ON CONFLICT would never
+  // fire and every request would insert a fresh row starting at 1.
   //
-  // Do NOT fall back to "first org". That is nondeterministic and can route public
-  // repair requests into the wrong tenant. Require explicit orgId or DEFAULT_ORG_ID.
+  // Do NOT fall back to "first org". That is nondeterministic and can route
+  // public repair requests into the wrong tenant. Require an explicit orgId or
+  // DEFAULT_ORG_ID.
   if (!orgId) orgId = process.env.DEFAULT_ORG_ID?.trim() ?? null;
   if (!orgId) throw new Error("Missing orgId for repair requests. Provide orgId or set DEFAULT_ORG_ID.");
 
-  const ensureSequenceTable = async () => {
-    // Older databases predating this table may not have it.
-    // This is safe to run repeatedly.
-    // Keep this aligned with prisma/schema.prisma model RepairRequestSequence.
-    // This also makes the code resilient to DB drift in production.
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "RepairRequestSequence" (
-        "id" TEXT PRIMARY KEY NOT NULL,
-        "orgId" TEXT,
-        "year" INTEGER NOT NULL,
-        "value" INTEGER NOT NULL DEFAULT 0,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "RepairRequestSequence_orgId_year_key" ON "RepairRequestSequence"("orgId", "year")
-    `);
-  };
-
   const getMaxExisting = async () => {
     const last = await prisma.repairRequest.findFirst({
-      where: { requestNumber: { startsWith: prefix , mode: "insensitive" as const} },
+      where: { requestNumber: { startsWith: prefix, mode: "insensitive" as const } },
       orderBy: { requestNumber: "desc" },
       select: { requestNumber: true },
     });
@@ -78,19 +61,31 @@ async function allocateRequestNumber(orgId?: string | null): Promise<string> {
     return Number.isFinite(lastSeq) ? lastSeq : 0;
   };
 
-  // Always ensure the table exists before touching it (CREATE TABLE IF NOT EXISTS is a no-op when present).
-  await ensureSequenceTable();
-
-  // Ensure sequence row exists and is caught up to the max observed number.
+  // Catch the sequence up to the highest number already issued, so it stays
+  // monotonic even if rows were imported or inserted by hand.
   const maxExisting = await getMaxExisting();
 
-  // Allocate the next number atomically.
-  // We also catch up to the max observed request number to stay monotonic.
+  // One atomic statement: claim the next number, or bump the existing row.
+  //
+  // Every identifier is double-quoted. Postgres folds unquoted identifiers to
+  // lower case, so `orgId` became `orgid` and the insert failed with
+  // `column "orgid" does not exist` — which meant no repair request could be
+  // submitted at all. The table is also no longer created here: it is a real
+  // model (RepairRequestSequence) and migrations own its shape. The CREATE that
+  // used to sit here declared "updatedAt" as DATETIME, a type Postgres does not
+  // have.
   const rows = await prisma.$queryRaw<Array<{ value: number }>>`
-    INSERT INTO "RepairRequestSequence" (id, orgId, year, value, updatedAt)
+    INSERT INTO "RepairRequestSequence" ("id", "orgId", "year", "value", "updatedAt")
     VALUES (${randomUUID()}, ${orgId}, ${year}, ${maxExisting + 1}, CURRENT_TIMESTAMP)
-    ON CONFLICT(orgId, year) DO UPDATE SET value = (CASE WHEN value < ${maxExisting} THEN ${maxExisting} ELSE value END) + 1, updatedAt = CURRENT_TIMESTAMP
-    RETURNING value
+    ON CONFLICT ("orgId", "year") DO UPDATE
+      SET "value" = (
+            CASE
+              WHEN "RepairRequestSequence"."value" < ${maxExisting} THEN ${maxExisting}
+              ELSE "RepairRequestSequence"."value"
+            END
+          ) + 1,
+          "updatedAt" = CURRENT_TIMESTAMP
+    RETURNING "value"
   `;
   const nextVal = rows[0]?.value ?? 1;
   return `${prefix}${String(nextVal).padStart(4, "0")}`;

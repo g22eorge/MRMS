@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     const rows = await prisma.$queryRaw<ResolvedUser[]>`
-      SELECT email, isActive
+      SELECT "email", "isActive"
       FROM "User"
-      WHERE lower(email) = lower(${email})
+      WHERE lower("email") = lower(${email})
       LIMIT 1
     `;
 
@@ -72,9 +72,12 @@ export async function POST(request: NextRequest) {
 
     // Call BetterAuth in-process — avoids HTTP self-fetch which is unreliable
     // in serverless environments where the origin URL may not match BETTER_AUTH_URL.
+    // `||`, not `??`: an env var set to an empty string is present but useless,
+    // and `??` would let it through — producing `new Request("/api/auth/...")`,
+    // which throws ERR_INVALID_URL and turns every login into a 500.
     const authBaseURL =
-      process.env.BETTER_AUTH_URL ??
-      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.BETTER_AUTH_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
       new URL(request.url).origin;
 
     const syntheticRequest = new Request(`${authBaseURL}/api/auth/sign-in/email`, {

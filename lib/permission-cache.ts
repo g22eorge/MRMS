@@ -156,10 +156,10 @@ async function fetchFromDb(userId: string): Promise<CacheEntry | null> {
       if (!base) return null;
 
       const orgIdRows = await prisma.$queryRaw<{ orgId: string | null }[]>`
-        SELECT orgId FROM "User" WHERE id = ${userId} LIMIT 1
+        SELECT "orgId" FROM "User" WHERE "id" = ${userId} LIMIT 1
       `;
       const permRows = await prisma.$queryRaw<{ permission: string }[]>`
-        SELECT permission FROM "UserPermission" WHERE userId = ${userId}
+        SELECT "permission" FROM "UserPermission" WHERE "userId" = ${userId}
       `;
 
       row = {
