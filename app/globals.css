@@ -311,29 +311,37 @@ body {
 }
 
 /* The booking slip is bone stock on a dark counter, so its fields are ruled
-   lines on paper rather than the app's filled boxes. Unlayered again: the
+   lines on paper rather than the app's filled boxes. Unlayered: the
    `:where(input, select, textarea)` rules further down are unlayered too, and
    they would otherwise paint white-on-white inside the slip — text the customer
-   cannot see while typing. */
+   cannot see while typing.
+
+   The rule and the tint carry real contrast on purpose. The first attempt used
+   a #C4B99F hairline on #EDE6D6 paper, about 1.5:1 — the fields were invisible
+   and the form read as empty space. A faint warm fill plus a 2px rule at ~4:1
+   makes each field legible as somewhere to write. */
 .landing-shopfront :where(input:not([type="radio"]), textarea) {
   border: 0;
-  border-bottom: 1.5px solid #C4B99F;
+  border-bottom: 2px solid #6A6154;
   border-radius: 0;
-  background: transparent;
+  background: rgba(34, 30, 23, 0.05);
   color: #221E17;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.125rem;
-  transition: border-color 120ms ease;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.5rem;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea)::placeholder {
-  color: #8A806E;
+  color: #6F6656;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea):hover {
+  background: rgba(34, 30, 23, 0.08);
 }
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus,
 .landing-shopfront :where(input:not([type="radio"]), textarea):focus-visible {
   outline: none;
   border-bottom-color: #221E17;
-  background: transparent;
-  box-shadow: 0 2px 0 -1px #221E17;
+  background: rgba(34, 30, 23, 0.09);
+  box-shadow: inset 0 -1px 0 0 #221E17;
 }
 
 code,

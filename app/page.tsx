@@ -722,7 +722,6 @@ export default async function Page() {
           <span>Mon–Sat <b className="font-semibold text-[#DCD2BD]">9:00–19:00</b></span>
           <span className="hidden sm:inline">Shop L28, Nalubega Complex, Bombo Road</span>
           <span className="ml-auto flex gap-5">
-            <Link href="/status" className="transition-colors hover:text-[#EDE6D6]">Track a repair</Link>
             <Link href="/feedback" className="transition-colors hover:text-[#EDE6D6]">Complaint</Link>
             <Link href="/login" className="transition-colors hover:text-[#EDE6D6]">Staff login</Link>
           </span>
@@ -733,9 +732,13 @@ export default async function Page() {
       <div className="mx-auto max-w-[1120px] px-5 sm:px-10">
         <div className="flex items-center justify-between gap-4 pt-5">
           <div className="flex items-center gap-3">
+            {/* The square brand mark, inverted for the dark ground — the asset
+                is black-on-white. /eagle-info-logo.png is the full wordmark on a
+                black plate at 1024x410; squeezed into a square it was illegible
+                and duplicated the name set beside it. */}
             <Image
-              src="/eagle-info-logo.png" alt="" width={34} height={34}
-              className="h-[34px] w-[34px] shrink-0 object-contain" priority
+              src="/eagle-info-logo-icon.png" alt="" width={224} height={224}
+              className="h-9 w-9 shrink-0 invert" priority
             />
             <span>
               <b className="block font-cond text-[25px] font-bold uppercase leading-none tracking-[0.02em]">

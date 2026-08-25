@@ -69,6 +69,18 @@ bun run dev:sh        # a shell, for anything else
 The host equivalents (`bunx tsc --noEmit`, `bun run test:unit`) still work,
 because the database ports are published.
 
+## Adding a file to public/
+
+`proxy.ts` used to allow static assets by listing them one filename at a time,
+so a newly added image was redirected to `/login` with a 307 and `next/image`
+reported *"The requested resource isn't a valid image"* — which reads like a
+corrupt file rather than a routing rule. Assets are now allowed by extension, so
+dropping a file into `public/` just works.
+
+If you add a file whose URL collides with a route (`public/robots.txt` against
+`app/robots.ts`, say), Next returns 500 with *"A conflicting public file and page
+file was found"*. Keep one.
+
 ## Two things that will bite otherwise
 
 **File watching polls.** Bind-mounted file events do not reach a container

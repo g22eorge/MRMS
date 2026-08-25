@@ -320,7 +320,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               <label className={labelCls} htmlFor="rr-brand">Make</label>
               <input
                 id="rr-brand" value={data.brand} onChange={(e) => set("brand", e.target.value)}
-                placeholder="Samsung, Apple, HP…" className={inputCls}
+                placeholder="Samsung, Apple…" className={inputCls}
               />
             </div>
             <div>
@@ -329,7 +329,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               </label>
               <input
                 id="rr-model" value={data.model} onChange={(e) => set("model", e.target.value)}
-                placeholder="Galaxy S21, HP 840 G7…" className={inputCls}
+                placeholder="Galaxy S21…" className={inputCls}
               />
             </div>
           </div>
