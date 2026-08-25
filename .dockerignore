@@ -27,3 +27,6 @@ mrms-prod.db
 # duplicate-resolution policies), not prose, and the migrator stage runs it.
 docs
 !docs/pg-migration
+.agents/
+package-lock.json
+prisma/dev.db.bak-before-date-fix

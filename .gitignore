@@ -65,3 +65,6 @@ dev.db
 *.db-shm
 # stray libSQL local-file artifacts (created when a command treats the Turso URL as a path)
 libsql:*
+.agents/
+package-lock.json
+prisma/dev.db.bak-before-date-fix
