@@ -16,6 +16,10 @@
  */
 
 import { spawn } from "node:child_process";
+import { applyQaEnv } from "./qa-env.mjs";
+
+// Build directory and database, shared with the other QA scripts.
+const { distDir: QA_DIST } = applyQaEnv();
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 const RATE_LIMIT_ENDPOINT = `${BASE_URL}/api/auth/sign-in/email`;
@@ -58,7 +62,7 @@ try {
       env: {
         ...process.env,
         PORT: port,
-        DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
+        DATABASE_URL: process.env.DATABASE_URL,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? BASE_URL,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? BASE_URL,

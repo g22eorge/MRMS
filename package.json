@@ -6,7 +6,7 @@
     "dev": "export CLEAR_NEXT_CACHE=1; bunx prisma migrate deploy && node scripts/generate-prisma-clean.mjs && node scripts/assert-prisma-models.mjs && next dev",
     "build": "node scripts/build.mjs",
     "vercel-build": "node scripts/build.mjs",
-    "start": "PORT=${PORT:-3000} BIND_HOST=${BIND_HOST:-0.0.0.0}; if [ -f .next/standalone/server.js ]; then HOSTNAME=$BIND_HOST PORT=$PORT bun .next/standalone/server.js; else next start -p $PORT -H $BIND_HOST; fi",
+    "start": "PORT=${PORT:-3000} BIND_HOST=${BIND_HOST:-0.0.0.0} DIST=${NEXT_DIST_DIR:-.next}; if [ -f \"$DIST/standalone/server.js\" ]; then HOSTNAME=$BIND_HOST PORT=$PORT bun \"$DIST/standalone/server.js\"; else next start -p $PORT -H $BIND_HOST; fi",
     "lint": "eslint",
     "test:unit": "DATABASE_URL=\"postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public\" bunx prisma migrate deploy && DATABASE_URL=\"postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public\" node scripts/run-unit-tests.mjs",
     "test:unit:coverage": "bun run test:unit --coverage",
