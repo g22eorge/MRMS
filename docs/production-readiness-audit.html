@@ -1,0 +1,301 @@
+<title>Dduuka ProMax Re-Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#F7F8F6; --panel:#FFFFFF; --sunk:#EEF1EE;
+  --ink:#14181D; --ink-2:#3D474F; --ink-3:#6B7780;
+  --rule:#DCE1DD; --rule-2:#C6CEC7;
+  --accent:#0F6E63;
+  --p1:#B4600A; --p2:#4A6572; --p3:#7A858C;
+  --pass:#1B6E3C; --pass-soft:#E4F0E8;
+  --shadow:0 1px 2px rgba(20,24,29,.06),0 4px 14px rgba(20,24,29,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1316; --panel:#161B1F; --sunk:#1C2226;
+    --ink:#E8EDE9; --ink-2:#AEB9B4; --ink-3:#7E8A86;
+    --rule:#28312F; --rule-2:#374240;
+    --accent:#3FB3A2;
+    --p1:#E2A045; --p2:#8FA3AE; --p3:#78858B;
+    --pass:#5EC585; --pass-soft:#142C1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1316; --panel:#161B1F; --sunk:#1C2226;
+  --ink:#E8EDE9; --ink-2:#AEB9B4; --ink-3:#7E8A86;
+  --rule:#28312F; --rule-2:#374240;
+  --accent:#3FB3A2;
+  --p1:#E2A045; --p2:#8FA3AE; --p3:#78858B;
+  --pass:#5EC585; --pass-soft:#142C1E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 24px 96px}
+.prose{max-width:66ch}
+h1,h2{font-family:Archivo,sans-serif;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,4.6vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.08}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:34px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;justify-content:space-between}
+.mast .meta{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);line-height:1.9;text-align:right}
+.mast .meta b{color:var(--ink-2);font-weight:500}
+
+.verdict{background:var(--panel);border:1px solid var(--rule);border-left:5px solid var(--pass);border-radius:3px;box-shadow:var(--shadow);padding:28px 30px;margin-bottom:34px}
+.verdict .status{font-family:Archivo,sans-serif;font-size:clamp(21px,3vw,29px);font-weight:700;letter-spacing:-.015em;color:var(--pass);line-height:1.15;margin:6px 0 14px}
+.verdict p{margin:0 0 12px;color:var(--ink-2);max-width:68ch}
+.verdict p:last-child{margin-bottom:0}
+.verdict strong{color:var(--ink);font-weight:600}
+
+section{margin-top:44px}
+.shead{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;border-bottom:1px solid var(--rule-2);padding-bottom:9px}
+.shead .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--accent);font-weight:600}
+
+.scores{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.sc{background:var(--panel);padding:13px 15px;display:flex;flex-direction:column;gap:7px}
+.sc .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sc .name{font-size:13.6px;font-weight:500}
+.sc .val{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.sc .was{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3)}
+.bar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:2px}
+
+.ver{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.vrow{background:var(--panel);padding:12px 16px;display:grid;grid-template-columns:22px 1fr auto;gap:13px;align-items:baseline}
+.tick{color:var(--pass);font-weight:700;font-size:13px;font-family:"IBM Plex Mono",monospace}
+.vrow .what{font-size:14.2px}
+.vrow .what b{font-weight:600}
+.vrow .ev{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media(max-width:640px){.vrow{grid-template-columns:22px 1fr}.vrow .ev{grid-column:2;text-align:left}}
+
+.iss{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--p2);border-radius:3px;padding:17px 19px;margin-bottom:10px;box-shadow:var(--shadow)}
+.iss[data-p="P2"]{border-left-color:var(--p2)}
+.iss[data-p="P3"]{border-left-color:var(--p3)}
+.iss[data-p="DONE"]{border-left-color:var(--pass);background:var(--pass-soft)}
+.iss[data-p="DONE"] .tag{background:var(--pass)}
+.iss[data-p="DONE"] .ttl{color:var(--ink)}
+.iss .hd{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:9px}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.07em;padding:2.5px 7px;border-radius:2px;color:#fff}
+.iss[data-p="P2"] .tag{background:var(--p2)}
+.iss[data-p="P3"] .tag{background:var(--p3)}
+.mod{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3)}
+.iss .ttl{font-family:Archivo,sans-serif;font-size:15.5px;font-weight:600;width:100%}
+.iss dl{margin:0;display:grid;grid-template-columns:78px 1fr;gap:5px 13px;font-size:13.8px}
+.iss dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding-top:3px}
+.iss dd{margin:0;color:var(--ink-2)}
+@media(max-width:560px){.iss dl{grid-template-columns:1fr}.iss dt{padding-top:8px}}
+code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sunk);padding:1px 5px;border-radius:2px;color:var(--ink)}
+
+.corr{background:var(--sunk);border:1px solid var(--rule);border-radius:3px;padding:20px 22px}
+.corr p{margin:0 0 11px;font-size:14.2px;color:var(--ink-2);max-width:70ch}
+.corr ul{margin:0;padding-left:19px;font-size:14px;color:var(--ink-2)}
+.corr li{margin-bottom:7px}
+.corr li b{color:var(--ink);font-weight:600}
+.fixed{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.frow{background:var(--panel);padding:11px 16px;display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:baseline}
+.frow .lbl{font-size:14px}
+.frow .then{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);text-align:right}
+.frow .now{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--pass);font-weight:600;text-align:right;white-space:nowrap}
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <div class="eyebrow">Production readiness — second pass</div>
+      <h1>Dduuka&nbsp;ProMax</h1>
+    </div>
+    <div class="meta">
+      <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
+      <div><b>Verified against</b> &nbsp;local + both production DBs</div>
+      <div><b>Deployed</b> &nbsp;1584c7d · care + commercial</div>
+      <div><b>Date</b> &nbsp;26 August 2026</div>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Release decision</div>
+    <div class="status">Ready for production.</div>
+    <p>Would I let a real customer start today? <strong>Yes</strong> — including a repair business,
+       which was the reservation last time. The blocker then was that fitting a part on a job never
+       decremented inventory; that chain now runs end to end and I re-ran it live for this audit:
+       reserve 3 → 20 on hand / 3 reserved, mark fitted → <strong>17 / 0</strong> with an
+       <code>OUT · REPAIR_CONSUME</code> ledger row against the job.</p>
+    <p>Both production databases are clean on <strong>every</strong> integrity invariant — care and
+       commercial, eleven checks each, zero failures. No cross-tenant rows anywhere.</p>
+    <p>Since the first pass, care's P&amp;L has also been corrected. Fourteen expenses recorded before
+       cash-basis posting existed were absent from the ledger, so the report understated costs by
+       <strong>UGX 2,246,000</strong>. They are now posted, dated to the day each was spent, and the
+       ledger reconciles to the shilling.</p>
+  </div>
+
+  <section>
+    <div class="shead"><span class="n">01</span><h2>What moved since the first audit</h2></div>
+    <div class="fixed">
+      <div class="frow"><span class="lbl"><b>Repair parts decrement inventory</b> — the P1 blocker</span><span class="then">was: 0 callers</span><span class="now">fixed · verified live</span></div>
+      <div class="frow"><span class="lbl"><b>Warranty claims</b> — FKs, workflow, list, cost, customer notification</span><span class="then">was: schema only</span><span class="now">2 → 9</span></div>
+      <div class="frow"><span class="lbl"><b>Unknown record ids return 404</b> with a proper screen</span><span class="then">was: 200, blank</span><span class="now">404 · all 4 routes</span></div>
+      <div class="frow"><span class="lbl"><b>Mobile Repairs list</b> — truncation and contrast</span><span class="then">16 clipped · 7 fails</span><span class="now">3 · 1</span></div>
+      <div class="frow"><span class="lbl"><b>Job detail density</b> — cards, duplication, ordering</span><span class="then">22 cards, dupes</span><span class="now">14 · work leads</span></div>
+      <div class="frow"><span class="lbl"><b>Unit suite runnable again</b> (bun restored)</span><span class="then">could not run</span><span class="now">537 pass</span></div>
+      <div class="frow"><span class="lbl"><b>Care's P&amp;L corrected</b> — 14 pre-ledger expenses backfilled</span><span class="then">understated 2.2m</span><span class="now">reconciles exactly</span></div>
+      <div class="frow"><span class="lbl"><b>Test names cleared from a live tenant</b> — one deactivated, one renamed</span><span class="then">on a customer receipt</span><span class="now">0 left · money intact</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">02</span><h2>Readiness by area</h2></div>
+    <div class="scores">
+      <div class="sc"><div class="top"><span class="name">Financial calculation</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Permissions &amp; tenancy</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Data integrity</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Navigation &amp; routing</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Sales &amp; POS</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Error handling</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Responsive behaviour</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Warranty</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 2</span></div>
+      <div class="sc"><div class="top"><span class="name">Repairs / job cards</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 6</span></div>
+      <div class="sc"><div class="top"><span class="name">Inventory</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 5</span></div>
+      <div class="sc"><div class="top"><span class="name">Documents &amp; PDFs</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was not assessed</span></div>
+      <div class="sc"><div class="top"><span class="name">Returns</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 3 — misjudged</span></div>
+      <div class="sc"><div class="top"><span class="name">Purchasing</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was not assessed</span></div>
+      <div class="sc"><div class="top"><span class="name">Customer accounts</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 7 — misjudged</span></div>
+      <div class="sc"><div class="top"><span class="name">Expenses &amp; ledger</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">verified + corrected</span></div>
+      <div class="sc"><div class="top"><span class="name">Technical stability</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">03</span><h2>Verified this pass, by exercise</h2></div>
+    <div class="ver">
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Repair parts move stock.</b> Reserved holds it on the shelf; fitting takes it out and writes the ledger row.</span><span class="ev">20 → 20/3 → 17/0</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Both production DBs clean</b> on all eleven invariants, including warranty orphans.</span><span class="ev">0 failures × 2</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Warranty foreign keys live</b> in care and commercial.</span><span class="ev">FKs present</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No broken routes.</b> Every static route resolves or redirects deliberately.</span><span class="ev">102 routes</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Unknown ids return 404</b> and render the record-specific screen.</span><span class="ev">4 of 4</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Hostile input fails clean</b> — quotes, traversal, null bytes. No internals reach the page.</span><span class="ev">0 leaked</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Technicians see no client data</b>; roles that legitimately hold <code>viewClientInfo</code> do.</span><span class="ev">matches the matrix</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Another org's job returns 404</b>, not its contents.</span><span class="ev">cross-tenant scoped</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>All four documents</b> generate — one page, correct branding, no leaked ids or NaN.</span><span class="ev">27–28 KB each</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Mobile holds.</b> Five pipeline stages legible, one attention block, work before reference.</span><span class="ev">14 cards · 4.3 screens</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Touch targets and contrast.</b> All six filter chips ≥44px; one contrast failure, a disabled control.</span><span class="ev">1 of 49</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Console clean</b> on a fresh tab — no errors on dashboard or warranty.</span><span class="ev">0 errors</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Expenses reach the P&amp;L.</b> One created through the app posted Dr 6000 / Cr 1000 and appeared in the report.</span><span class="ev">75,000 · 4.2%</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Statement of account reconciles</b> — billed, paid and outstanding agree, and VOID invoices are excluded.</span><span class="ev">1,100,000 · due 0</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Backfill is safe to repeat.</b> Keyed on the expense id; a second run posts nothing.</span><span class="ev">idempotent</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Renaming touched only labels.</b> Quantity, price, line total, sale total and paid amount identical after.</span><span class="ev">354,000 → 354,000</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">537 pass · 0 fail</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">04</span><h2>Corrections to my own findings</h2></div>
+    <div class="corr">
+      <p>Six findings across both passes were wrong. All six shared a cause — a measurement that
+         looked precise and measured the wrong thing. Worth recording, because the same traps will
+         catch the next person:</p>
+      <ul>
+        <li><b>"Returns have no module."</b> They do — via credit notes, with a stock leg that only
+            fires when goods physically come back. Correctly designed; I had searched for a model
+            named <code>Return</code> and stopped.</li>
+        <li><b>"Two tax conventions in <code>lineTotal</code>."</b> My invariant ignored tax. With
+            <code>lines + tax</code>, production is zero.</li>
+        <li><b>"Mobile nav clips the last row."</b> I measured the nav overlapping itself.</li>
+        <li><b>"Restricted pages return an empty shell."</b> They redirect correctly in a browser;
+            curl can't follow what the RSC payload does.</li>
+        <li><b>"Unknown ids render a proper not-found."</b> This one I got right first, then
+            <em>wrongly corrected</em> — I had grepped raw HTML, which counts the component sitting
+            in the script bundle. It really was a blank page, and is now genuinely fixed.</li>
+        <li><b>"No customer account statement."</b> There is one, and it works: a statement section
+            on the client page with a running-balance table, a PDF, and send-by-WhatsApp-or-email.
+            I checked before building and found the feature I was about to duplicate.</li>
+      </ul>
+      <p style="margin-top:12px"><b>The rule that came out of it:</b> curl is the wrong instrument for
+        anything React renders, and a grep over raw HTML counts things that never reach the screen.
+        Every UI claim in this second pass was verified in a browser, with scripts stripped.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">05</span><h2>Open, and one just closed</h2></div>
+
+    <div class="iss" data-p="P2">
+      <div class="hd"><span class="tag">P2</span><span class="mod">Messaging · commercial</span>
+        <div class="ttl">Seven tenants cannot send WhatsApp or email</div></div>
+      <dl>
+        <dt>Detail</dt><dd>Commercial has no WhatsApp credentials and no Resend key in production. Warranty notifications, status updates and invoice reminders queue and fail for every tenant on it. The biggest functional gap left.</dd>
+        <dt>Blocked on</dt><dd>A decision only you can make: whether those tenants send from Eagle Info's number and domain, or are issued their own.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P2">
+      <div class="hd"><span class="tag">P2</span><span class="mod">Messaging · care</span>
+        <div class="ttl">Inbound WhatsApp webhooks are refused</div></div>
+      <dl>
+        <dt>Detail</dt><dd><code>WHATSAPP_WEBHOOK_APP_SECRET</code> is not set, so signed webhook deliveries return 500. The subscription handshake works; delivery receipts and inbound customer messages do not arrive.</dd>
+        <dt>Blocked on</dt><dd>Your Meta app secret. It cannot be generated, and a wrong value is worse than none — it fails as 401 on every message, which reads like a Meta outage.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Data · commercial</span>
+        <div class="ttl">Test names cleared from a live tenant's records</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Two parts in Akimaathe Kyarumba Foundation's inventory carried test names, and one appeared on a customer's sale line — so reprinting that receipt showed "ZZ E2E Test Battery".</dd>
+        <dt>Resolved</dt><dd><code>QA Test Screen</code> is deactivated: no price, no stock, one stray transfer, now gone from every picker with its history kept. <code>SKU-0001</code> was <em>not</em> test data despite the name — priced at 100,000, seven in stock, three sold for 300,000 — so it was renamed to "Replacement Battery" rather than removed, along with its sale line and stock-ledger text.</dd>
+        <dt>Unchanged</dt><dd>Quantity, unit price, line total, sale total and paid amount are identical to before. Only labels moved, and every step reverses with one statement.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Documents</span>
+        <div class="ttl">Five invoice-numbering formats coexist</div></div>
+      <dl>
+        <dt>Detail</dt><dd>The current path uses <code>EIS/INV/2026/NNNN</code>; the rest are legacy and test residue. Cosmetic, but it makes a customer's document history look inconsistent.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Performance</span>
+        <div class="ttl">Notifications endpoint called three times per page load</div></div>
+      <dl>
+        <dt>Detail</dt><dd><code>/api/notifications</code> fires three times on a single navigation — three queries where one would do, on every page.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Continuity</span>
+        <div class="ttl">BETTER_AUTH_SECRET cannot be recovered from Vercel</div></div>
+      <dl>
+        <dt>Detail</dt><dd>It is stored as a "sensitive" variable, which is write-only — no API, CLI or dashboard read returns it. If it is not recorded elsewhere, moving servers means re-keying session cookies and signing every user out.</dd>
+        <dt>Cost to fix</dt><dd>Minutes, today, into a password manager. Painful to discover under pressure.</dd>
+      </dl>
+    </div>
+
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">06</span><h2>What I would do next</h2></div>
+    <div class="prose">
+      <p><b>1. Record BETTER_AUTH_SECRET somewhere outside Vercel.</b> The cheapest item on this
+      page and the only one that is irreversible if left. Everything else can be fixed after the
+      fact; this one cannot be recovered at all.</p>
+      <p><b>2. Decide the commercial messaging story.</b> Seven paying tenants currently cannot
+      reach their customers. Whether they share Eagle Info's channels or get their own is a
+      product decision, not a configuration one — which is why it is still open.</p>
+      <p><b>3. Paste in the Meta app secret</b> to finish inbound WhatsApp on care — the last piece of a
+      feature that is otherwise complete and already sending outbound.</p>
+      <p style="color:var(--ink-3);font-size:14px;margin-top:22px">
+      The financial core, tenant isolation and the repair chain are the parts that are hardest to
+      build and most expensive to get wrong. All three now hold under testing that tried to break
+      them, on production data as well as local.</p>
+    </div>
+  </section>
+
+</div>
