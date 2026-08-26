@@ -264,6 +264,17 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       </dl>
     </div>
 
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Documents</span>
+        <div class="ttl">Quotation numbers were never stored anywhere</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Found while fixing the invoice numbering above, and worse in one respect: a quotation raised from a job prints a number but <em>never creates a <code>Quotation</code> row</em>. The number existed nowhere in the database &mdash; it was rebuilt from the job number on every render, and survived only inside audit-log JSON. It inherited the job-number format the same way invoices did: care's quoted jobs carry two shapes, <code>QT-EI-2026-0007</code> and <code>EIS-6/QT/2026/0016</code>.</dd>
+        <dt>Knock-on effect</dt><dd>The invoice PDF re-derived the quotation number for its own cross-reference, so an invoice could cite a quote number that had never appeared on any quote the customer received.</dd>
+        <dt>Fixed</dt><dd><code>Job.quotationNumber</code> now mirrors <code>Job.invoiceNumber</code>: allocated once from <code>DocumentSequence</code>, stored, and reused by every later render, with a re-read inside the transaction so two racing sends cannot each allocate. The invoice prints the stored number. Because job quotation numbers share the QT counter without being <code>Quotation</code> rows, the uniqueness check and the sequence seed scan now read the job column too &mdash; otherwise a reseed could reissue a number already sent.</dd>
+        <dt>Not changed</dt><dd>Every already-quoted job was backfilled with the number it has been sending &mdash; 18 in care, 0 in commercial, no collisions &mdash; so no quote a customer holds was renumbered. Only quotes issued from here on take an allocated <code>EIS/QT/YYYY/NNNN</code>.</dd>
+      </dl>
+    </div>
+
     <div class="iss" data-p="P3">
       <div class="hd"><span class="tag">P3</span><span class="mod">Performance</span>
         <div class="ttl">Notifications endpoint called three times per page load</div></div>
