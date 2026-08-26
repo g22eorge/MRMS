@@ -2,16 +2,32 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Next.js dev (npx)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
       "name": "Next.js dev",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true
     },
     {
       "name": "BullMQ worker",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "worker:start"],
+      "runtimeArgs": [
+        "run",
+        "worker:start"
+      ],
       "port": null
     }
   ]

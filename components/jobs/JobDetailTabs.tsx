@@ -595,11 +595,12 @@ type Props = {
   };
   /** Server-rendered panels folded into the tab system instead of stacked below the page. */
   assessmentSlot?: ReactNode;
+  partsSlot?: ReactNode;
   moveSlot?: ReactNode;
   portalSlot?: ReactNode;
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, moveSlot, portalSlot }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, partsSlot, moveSlot, portalSlot }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -1705,6 +1706,20 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       ) : null}
 
+      {segment === "work" && partsSlot ? (
+        <div className={`${panelShellClass} space-y-3`}>
+          <div>
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Parts used</p>
+            <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+              Taken from inventory — stock updates as you fit each part.
+            </p>
+          </div>
+          {/* Outside the repair-log form on purpose: this panel submits its own
+              forms, and a form cannot be nested inside another. */}
+          {partsSlot}
+        </div>
+      ) : null}
+
       {segment === "work" ? (
         <form
           action={(formData) => {
@@ -1729,7 +1744,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Parts replaced</label>
-            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="List parts replaced (if any)…" className={areaClass} />
+            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="Any notes on the parts used…" className={areaClass} />
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button disabled={(isTerminal && !canAssignJobs) || isRepairPending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">

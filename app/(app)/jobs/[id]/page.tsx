@@ -6,6 +6,7 @@ import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { SendAssessmentButton } from "@/components/jobs/SendAssessmentButton";
 import { MoveJobPanel } from "@/components/jobs/MoveJobPanel";
+import { JobPartsPanel } from "@/components/jobs/JobPartsPanel";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
 import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -319,6 +320,58 @@ export default async function JobDetailPage({
       }).catch(() => [])
     : [];
 
+  // Parts drawn from real stock. Reserved parts are still on the shelf but
+  // spoken for; fitting one takes it out of inventory for good. External techs
+  // are excluded here as they are everywhere else stock and pricing are shown.
+  // External techs never reach this branch — the page returns ExternalTechJobView
+  // above — so the role test here is only about who may move stock.
+  // parts-actions.ts re-checks server-side; this just decides read-only vs not.
+  const canRecordParts =
+    can.manageInventory({ role: user.role, permissions: user.permissions })
+    || user.role === "TECHNICIAN_INTERNAL";
+
+  const [stockLocation, availableParts, jobPartLines] = await Promise.all([
+    prisma.stockLocation.findFirst({
+      where: { orgId, isActive: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.part.findMany({
+      where: { orgId, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, sku: true, name: true, qtyOnHand: true, qtyReserved: true },
+    }),
+    prisma.partReservation.findMany({
+      where: { jobId: job.id, status: { in: ["RESERVED", "CONSUMED"] } },
+      orderBy: { reservedAt: "asc" },
+      select: {
+        id: true, partId: true, quantity: true, status: true,
+        reservedAt: true, consumedAt: true,
+        part: { select: { name: true, sku: true } },
+      },
+    }),
+  ]);
+
+  const partsPanel = (
+    <JobPartsPanel
+      jobId={job.id}
+      locationId={stockLocation?.id ?? null}
+      locationName={stockLocation?.name ?? null}
+      parts={availableParts}
+      lines={jobPartLines.map((line) => ({
+        id: line.id,
+        partId: line.partId,
+        name: line.part?.name ?? "Part",
+        sku: line.part?.sku ?? "",
+        quantity: line.quantity,
+        status: line.status,
+        reservedAt: line.reservedAt,
+        consumedAt: line.consumedAt,
+      }))}
+      readOnly={!canRecordParts}
+    />
+  );
+
   const movePanel = canMoveJob && moveCandidates.length > 0 ? (
     <div className="flex justify-end">
       <MoveJobPanel jobId={job.id} currentClientName={clientDisplayName(job.client, "this account")} candidates={moveCandidates} />
@@ -442,6 +495,7 @@ export default async function JobDetailPage({
       initialTab={tab}
       documentTimeline={documentTimeline}
       assessmentSlot={assessmentPanel}
+      partsSlot={partsPanel}
       moveSlot={movePanel}
       portalSlot={portalPanel}
     />
