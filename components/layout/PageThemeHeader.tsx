@@ -66,7 +66,12 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/documents/delivery-notes") return { title: "Delivery Notes", description: "Delivery and handover proof for paid invoices and sales." };
   if (pathname === "/pos") return { title: "Point of Sale", description: "Walk-in and retail sales transactions." };
   if (parts[0] === "pos" && parts[1]) {
-    return { title: "Sale Details", subtitle: `Ref ${parts[1].slice(0, 8)}`, description: "Review sale lines, payments, and receipt actions." };
+    // No subtitle here on purpose. This used to read `Ref ${id.slice(0, 8)}`,
+    // built from the URL, so a sale that does not exist was still topped by a
+    // confident "Sale Details · Ref does-not". Jobs and clients already leave
+    // this to the resolver below, which asks the record for its real number and
+    // shows nothing when there is no record to ask.
+    return { title: "Sale Details", description: "Review sale lines, payments, and receipt actions." };
   }
   if (pathname === "/finance") return { title: "Finance Hub", description: "Cash position, collections, payouts, and financial control." };
   if (pathname === "/sales") return { title: "Sales", description: "Leads pipeline and quotations." };
@@ -90,6 +95,15 @@ async function fetchJobNumber(id: string) {
   if (!contentType.includes("application/json")) return null;
   const data = (await res.json()) as { jobNumber?: string };
   return data.jobNumber ?? null;
+}
+
+async function fetchSaleNumber(id: string) {
+  const res = await fetch(`/api/meta/sale/${id}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
+  const data = (await res.json()) as { saleNumber?: string };
+  return data.saleNumber ?? null;
 }
 
 async function fetchClientName(id: string) {
@@ -153,6 +167,13 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
         if (!cancelled && clientName) {
           setResolvedSubtitle({ path: pathname, text: clientName });
         }
+        return;
+      }
+      if (parts[0] === "pos" && parts[1] && isEntityRecordId(parts[1])) {
+        const saleNumber = await fetchSaleNumber(parts[1]);
+        if (!cancelled && saleNumber) {
+          setResolvedSubtitle({ path: pathname, text: saleNumber });
+        }
       }
     };
 
@@ -162,7 +183,10 @@ export function PageThemeHeader({ role, permissions = [] }: { role: Role; permis
     };
   }, [pathname]);
 
-  const subtitle = resolvedSubtitle?.path === pathname ? resolvedSubtitle.text : meta.subtitle;
+  // Only ever a resolved identifier. No page supplies a fallback any more, so
+  // the chip is absent until a record answers with its own number or name, and
+  // stays absent when there is no record.
+  const subtitle = resolvedSubtitle?.path === pathname ? resolvedSubtitle.text : null;
 
   // Communications and Documents routes render their own section header
   // (title + tabs) via their shells, so the app-wide page header would just
