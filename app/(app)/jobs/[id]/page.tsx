@@ -7,6 +7,7 @@ import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { SendAssessmentButton } from "@/components/jobs/SendAssessmentButton";
 import { MoveJobPanel } from "@/components/jobs/MoveJobPanel";
 import { JobPartsPanel } from "@/components/jobs/JobPartsPanel";
+import { WarrantyClaimsPanel } from "@/components/jobs/WarrantyClaimsPanel";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
 import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -330,6 +331,26 @@ export default async function JobDetailPage({
     can.manageInventory({ role: user.role, permissions: user.permissions })
     || user.role === "TECHNICIAN_INTERNAL";
 
+  const [warrantyClaims, sameClientJobs] = await Promise.all([
+    prisma.warrantyClaim.findMany({
+      where: { orgId, originalJobId: id },
+      orderBy: { openedAt: "desc" },
+      select: {
+        id: true, status: true, reason: true, resolution: true,
+        openedAt: true, closedAt: true,
+        warrantyJob: { select: { id: true, jobNumber: true } },
+      },
+    }).catch(() => []),
+    // Candidates for "the repair we did under warranty": this client's other
+    // jobs, newest first. Anything else would be someone else's device.
+    prisma.job.findMany({
+      where: { orgId, clientId: job.clientId, id: { not: id } },
+      orderBy: { receivedAt: "desc" },
+      take: 20,
+      select: { id: true, jobNumber: true },
+    }).catch(() => []),
+  ]);
+
   const [stockLocation, availableParts, jobPartLines] = await Promise.all([
     prisma.stockLocation.findFirst({
       where: { orgId, isActive: true },
@@ -475,6 +496,26 @@ export default async function JobDetailPage({
             <span className="text-[0.8125rem] text-[var(--ink-muted)]">months</span>
             <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</SubmitButton>
           </form>
+
+          <div className="mt-4 border-t border-[var(--line)] pt-3">
+            <WarrantyClaimsPanel
+              jobId={id}
+              coverageMonths={warrantyInfo?.warrantyMonths ?? null}
+              coverageExpiresAt={warrantyInfo?.warrantyExpiresAt ? warrantyInfo.warrantyExpiresAt.toISOString() : null}
+              claims={warrantyClaims.map((c) => ({
+                id: c.id,
+                status: c.status,
+                reason: c.reason,
+                resolution: c.resolution,
+                openedAt: c.openedAt.toISOString(),
+                closedAt: c.closedAt ? c.closedAt.toISOString() : null,
+                warrantyJob: c.warrantyJob,
+              }))}
+              linkableJobs={sameClientJobs}
+              canRaise={can.createJob(user) || can.approveWork(user)}
+              canSettle={can.approveWork(user)}
+            />
+          </div>
         </div>
       </div>
   );
