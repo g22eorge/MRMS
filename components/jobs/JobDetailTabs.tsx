@@ -1235,9 +1235,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       </div>
 
-      {/* ── Two-column console: context rail | work segments ── */}
+      {/* ── Two-column console: context rail | work segments ──
+          Source order is rail-then-work because that is the desktop reading
+          order, left column first. On a phone the columns stack, which put the
+          client, money and delivery cards between the reader and the tabs they
+          came to use, so the order flips below lg. */}
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
-      <aside className="space-y-3 lg:sticky lg:top-4">
+      <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-4">
         {/* Device — desktop only. On a phone the hero card above already gives
             the device, the client, the technician and the FULL issue text,
             where this shows a 90-character preview. Repeating it was a card's
@@ -1335,7 +1339,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
       </aside>
-      <div className="min-w-0 space-y-3">
+      <div className="order-1 min-w-0 space-y-3 lg:order-2">
 
       {/* ── Segment nav — Work · Money · History ── */}
       <div className="sticky top-0 z-20 -mx-4 flex gap-2 overflow-x-auto bg-[var(--bg)]/95 px-4 py-2 backdrop-blur-sm [scrollbar-width:none] lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0">
