@@ -253,11 +253,14 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       </dl>
     </div>
 
-    <div class="iss" data-p="P3">
-      <div class="hd"><span class="tag">P3</span><span class="mod">Documents</span>
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Documents</span>
         <div class="ttl">Five invoice-numbering formats coexist</div></div>
       <dl>
-        <dt>Detail</dt><dd>The current path uses <code>EIS/INV/2026/NNNN</code>; the rest are legacy and test residue. Cosmetic, but it makes a customer's document history look inconsistent.</dd>
+        <dt>What it was</dt><dd>Filed as legacy residue and cosmetic. It was neither. Invoice numbers raised from a job were never allocated from the document sequence &mdash; they were <em>derived from the job number</em> by <code>deriveDocNumberFromJob</code>, which returns <code>EIS/INV/2026/0044</code> for a slash-era job but falls back to <code>INV-</code> + the raw job number for anything else. Job numbering has changed shape four times, so the invoice book inherited four shapes. The one entry that looked like an anomaly, <code>INV-EI-2026-0030</code> issued six days after the switch, was simply a job received on 15 July invoiced late &mdash; not a regression.</dd>
+        <dt>Why it was still spreading</dt><dd>A second path made it self-sustaining: the render-and-send branch (WhatsApp send, the PDF queue, a plain download) stamped a derived number onto <code>Job.invoiceNumber</code> with no allocation and no <code>Invoice</code> row. The persist path then faithfully reused that number as the invoice's own. 30 jobs were still holding dash-era numbers &mdash; 9 in care, 21 in commercial &mdash; and each would have minted another off-format invoice on its next send. Commercial's <code>TFX-001</code> would have produced <code>INV-TFX-001</code>, a fifth shape, in a paying tenant's book.</dd>
+        <dt>Fixed</dt><dd>Only a number a job has already been issued is reused; a derived number is never handed to the allocator. Everything unnumbered now takes the next <code>EIS/INV/YYYY/NNNN</code> from <code>DocumentSequence</code>, which is what standalone invoices always did. The render-and-send branch allocates properly before stamping.</dd>
+        <dt>Not changed</dt><dd>No issued invoice was renumbered. 71 jobs keep the numbers already printed on documents customers hold &mdash; renumbering those would break reconciliation to fix an appearance.</dd>
       </dl>
     </div>
 

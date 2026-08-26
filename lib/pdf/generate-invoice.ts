@@ -118,12 +118,22 @@ export async function generateInvoiceBuffer(
   const logoUrl = await resolveInvoiceLogo();
   const normalizedFooterText = (branding.footerText ?? "").trim();
   const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
-  const preferredInvoiceNumber = job.invoiceNumber?.trim() || deriveDocNumberFromJob(job.jobNumber, "INV");
-  let invoiceNumber = preferredInvoiceNumber;
+  // Only a number this job has already been issued may be reused. A number
+  // derived from the job number must never reach the allocator: job numbering
+  // has changed shape four times, and deriving from it is what put four
+  // different formats into the invoice book. Jobs still open from the dash era
+  // would keep minting fresh INV-EI-2026-NNNN invoices today. Without a stored
+  // number the invoice takes the next EIS/INV/YYYY/NNNN from DocumentSequence,
+  // which is what standalone invoices have always done.
+  const storedInvoiceNumber = job.invoiceNumber?.trim() || null;
+  // Read-only workspaces render without persisting, so there is no allocation
+  // to show; the derived number stands in on a PDF that is never issued.
+  const unpersistedInvoiceNumber = storedInvoiceNumber ?? deriveDocNumberFromJob(job.jobNumber, "INV");
+  let invoiceNumber = unpersistedInvoiceNumber;
   const invoiceTotal = clientBill;
 
   if (options.skipPersist) {
-    invoiceNumber = job.invoiceNumber?.trim() || preferredInvoiceNumber;
+    invoiceNumber = unpersistedInvoiceNumber;
   } else if (options.persistInvoiceRecord && orgId) {
     try {
       invoiceNumber = await prisma.$transaction(async (tx) => {
@@ -134,7 +144,7 @@ export async function generateInvoiceBuffer(
         const safeInvoiceNumber = await nextAvailableInvoiceNumber(
           tx,
           orgId,
-          existingInvoice?.invoiceNumber ?? preferredInvoiceNumber,
+          existingInvoice?.invoiceNumber ?? storedInvoiceNumber,
           existingInvoice?.id,
         );
 
@@ -209,22 +219,36 @@ export async function generateInvoiceBuffer(
       }).catch(() => null);
     }
   } else if (staffUserId) {
-    invoiceNumber = preferredInvoiceNumber;
-    await prisma.$transaction([
-      prisma.job.update({
-        where: { id: job.id },
-        data: { invoiceIssuedAt: issuedAtDate, invoiceNumber },
-      }),
-      prisma.auditLog.create({
-        data: {
-          jobId: job.id,
-          userId: staffUserId,
-          action: "INVOICE_GENERATED",
-          detail: JSON.stringify({ invoiceNumber }),
-          orgId: job.orgId,
-        },
-      }),
-    ]).catch(() => null);
+    // Renders and sends a PDF without creating an Invoice row — but it still
+    // stamps the number onto the job, so the number has to be a real one.
+    // Stamping a job-derived number here is what seeded Job.invoiceNumber with
+    // the dash-era formats that the persist path above then faithfully reused;
+    // the WhatsApp send, the PDF queue and the plain download all land here.
+    // Allocating burns a sequence number without an Invoice row, which is the
+    // right trade: the number is printed and sent, so it is genuinely spent.
+    try {
+      invoiceNumber = await prisma.$transaction(async (tx) => {
+        const allocated = orgId
+          ? await nextAvailableInvoiceNumber(tx, orgId, storedInvoiceNumber)
+          : unpersistedInvoiceNumber;
+        await tx.job.update({
+          where: { id: job.id },
+          data: { invoiceIssuedAt: issuedAtDate, invoiceNumber: allocated },
+        });
+        await tx.auditLog.create({
+          data: {
+            jobId: job.id,
+            userId: staffUserId,
+            action: "INVOICE_GENERATED",
+            detail: JSON.stringify({ invoiceNumber: allocated }),
+            orgId: job.orgId,
+          },
+        });
+        return allocated;
+      });
+    } catch {
+      invoiceNumber = unpersistedInvoiceNumber;
+    }
   }
 
   const docElement = createElement(InvoiceDoc as never, {
