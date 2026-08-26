@@ -8,6 +8,8 @@ import { clientDisplayName } from "@/lib/client-name";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { TablePagination } from "@/components/ui/DataTable";
+import { formatMoney } from "@/lib/currency";
+import { warrantyCostSummary, WARRANTY_COST_PERIODS, type WarrantyCostPeriod } from "@/lib/warranty/cost";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,7 @@ function ageDays(from: Date) {
 export default async function WarrantyClaimsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; cost?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
 
@@ -57,7 +59,13 @@ export default async function WarrantyClaimsPage({
 
   const where = { orgId, ...(tab.status ? { status: tab.status } : {}) };
 
-  const [claims, total, counts] = await Promise.all([
+  const costPeriod: WarrantyCostPeriod =
+    filters.cost && filters.cost in WARRANTY_COST_PERIODS
+      ? (filters.cost as WarrantyCostPeriod)
+      : "90d";
+
+  const [cost, claims, total, counts] = await Promise.all([
+    warrantyCostSummary(orgId, costPeriod),
     prisma.warrantyClaim.findMany({
       where,
       // Oldest first while open — the one waiting longest needs attention
@@ -98,6 +106,62 @@ export default async function WarrantyClaimsPage({
         description: "Repairs customers have brought back, and how each was settled.",
       }}
     >
+      <section aria-label="Cost of honouring claims" className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            Cost of honouring claims
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {(Object.keys(WARRANTY_COST_PERIODS) as WarrantyCostPeriod[]).map((k) => (
+              <Link
+                key={k}
+                href={`/warranty?tab=${tab.key}&cost=${k}`}
+                className={`rounded px-2 py-1 text-[0.6875rem] font-semibold transition ${
+                  k === costPeriod
+                    ? "bg-[var(--accent)] text-black"
+                    : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {WARRANTY_COST_PERIODS[k].label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {cost.claimsHonoured === 0 ? (
+          <p className="mt-2 text-[0.8125rem] text-[var(--ink-muted)]">
+            No claims honoured in this period, so nothing has been spent on warranty work.
+          </p>
+        ) : (
+          <>
+            <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Total cost</dt>
+                <dd className="mt-0.5 truncate text-sm font-bold tabular-nums text-[var(--ink)]">{formatMoney(cost.totalCost)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Parts</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--ink)]">{formatMoney(cost.partsCost)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Labour</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--ink)]">{formatMoney(cost.payoutCost + cost.externalCost)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Per claim</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--ink)]">{formatMoney(cost.averagePerClaim)}</dd>
+              </div>
+            </dl>
+            <p className="mt-2.5 text-[0.75rem] text-[var(--ink-muted)]">
+              Across {cost.claimsHonoured} claim{cost.claimsHonoured === 1 ? "" : "s"} honoured, dated by when each was settled.
+              {cost.billedAnyway.count > 0
+                ? ` ${cost.billedAnyway.count} of those warranty repairs still billed the customer ${formatMoney(cost.billedAnyway.amount)}, which is not counted above.`
+                : ""}
+            </p>
+          </>
+        )}
+      </section>
+
       <div className="mb-3 flex flex-wrap gap-2">
         {STATUS_TABS.map((t) => {
           const n = countFor(t.status);
