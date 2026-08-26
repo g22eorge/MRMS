@@ -33,22 +33,7 @@ function AgeBadge({ receivedAt, status }: { receivedAt: Date; status: string }) 
 
 
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
-import { normalizeJobStatus } from "@/lib/job-status";
 
-function statusAvatarClass(status: string): string {
-  const s = normalizeJobStatus(status as JobStatus);
-  const map: Record<string, string> = {
-    RECEIVED:          "bg-sky-400/15 text-sky-600",
-    DIAGNOSING:        "bg-blue-500/15 text-blue-600",
-    REFERRED:          "bg-slate-500/15 text-slate-600",
-    AWAITING_APPROVAL: "bg-amber-400/15 text-amber-600",
-    IN_REPAIR:         "bg-emerald-500/15 text-emerald-600",
-    READY_FOR_PICKUP:  "bg-[var(--accent)]/15 text-[var(--accent)]",
-    COMPLETED:         "bg-emerald-500/15 text-emerald-600",
-    CLOSED:            "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
-  };
-  return map[s] ?? "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
-}
 import { formatMoney } from "@/lib/currency";
 import { formatEATDate, formatElapsedHours } from "@/lib/date-eat";
 import { JobStatus } from "@/lib/job-status";
@@ -129,7 +114,9 @@ function getJobListFlag(job: JobRow, canManagePricing: boolean): JobListFlag | n
 
   if (canManagePricing && typeof job.clientBill === "number") {
     return {
-      badge: "bg-[var(--accent)]/10 text-[#7A5F00]",
+      // Every other flag carries a dark: variant; without one this dark gold sat
+      // on a dark ground at 2.98:1 and failed AA.
+      badge: "bg-[var(--accent)]/10 text-[#7A5F00] dark:text-[var(--accent)]",
       label: "Priced",
     };
   }
@@ -489,13 +476,12 @@ export function JobTable({
           const isActive = !["COMPLETED", "CLOSED", "DELIVERED"].includes(job.status);
 
           const name = deviceName(job.brand, job.model) ?? deviceLabel[job.deviceType] ?? job.deviceType;
-          const initial = (name[0] ?? "?").toUpperCase();
-          const avatarCls = statusAvatarClass(job.status);
-          const ageCls = ageDays <= 2 ? "text-emerald-500" : ageDays <= 5 ? "text-amber-500" : "text-red-500";
+          // The device type is already implied by the device name ("Samsung
+          // Galaxy Tab S8" says tablet), and repeating it here is what pushed the
+          // client name — the thing people actually scan for — off the row.
           const metaParts = [
             canSeeClient && job.clientName ? job.clientName : null,
             job.jobNumber,
-            deviceLabel[job.deviceType] ?? job.deviceType,
           ].filter(Boolean);
 
           // Enhancement 2: red left border for overdue (≥7 days active)
@@ -509,47 +495,56 @@ export function JobTable({
           return (
             <div className={`relative ${isOverdue ? "border-l-2 border-l-red-500" : ""}`}>
               {/* Link WRAPS the content so taps always fire navigation */}
+              {/* No avatar: a green "S" beside the word "Samsung" carried nothing,
+                  and its 40px plus the gap was exactly the width the device and
+                  client names were being clipped by. */}
               <Link
                 href={`/jobs/${job.id}`}
-                className="flex items-center gap-3 px-4 py-3 pr-16 active:bg-[var(--panel-strong)]/60 lg:pr-32"
+                // pr clears the absolutely-positioned actions menu. At pr-14 the
+                // status badge finished 4px from it, close enough that a thumb
+                // aiming at one hits the other.
+                className="block px-4 py-3 pr-[4.75rem] active:bg-[var(--panel-strong)]/60 lg:pr-32"
                 aria-label={`Open job ${job.jobNumber}`}
               >
-                {/* Status-colored avatar */}
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${avatarCls}`}>
-                  {initial}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  {/* Row 1: device name + age */}
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-[0.875rem] font-bold text-[var(--ink)]">{name}</p>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {costValue ? (
+                <div className="min-w-0">
+                  {/* Line 1: device, allowed a second line rather than clipped. */}
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-2 text-[0.875rem] font-bold leading-snug text-[var(--ink)]">{name}</p>
+                    <div className="flex shrink-0 items-baseline gap-1.5">
+                      {/* Money and time sit together here. The flag lived on line
+                          two, where "Unpaid UGX 234,567" left four characters of
+                          the client name. It also carries the amount already, so
+                          the separate cost figure would only repeat it. */}
+                      {flagCfg ? (
+                        <span className={`rounded px-1.5 py-0.5 text-[0.75rem] font-semibold ${flagCfg.badge}`}>
+                          {flagCfg.label}
+                        </span>
+                      ) : costValue ? (
                         <span className="text-[0.75rem] font-black tabular-nums text-[var(--ink)]">{costValue}</span>
                       ) : null}
                       {isActive ? (
-                        <span className={`text-[0.75rem] font-bold ${ageCls}`}>
+                        // Age stays quiet until it is actually a problem, so the
+                        // row carries one colour signal instead of a gradient of
+                        // green/amber/red competing with the status pill. Overdue
+                        // agrees with the red rail on the left edge.
+                        <span
+                          className={`text-[0.75rem] font-bold tabular-nums ${isOverdue ? "text-red-500" : "text-[var(--ink-muted)]"}`}
+                        >
                           {job.repairTimeline ?? `${ageDays}d`}
                         </span>
                       ) : null}
                     </div>
                   </div>
 
-                  {/* Row 2: meta + status badge */}
-                  <div className="mt-0.5 flex items-center justify-between gap-2">
+                  {/* Line 2: who it belongs to, then the one coloured element. */}
+                  <div className="mt-1 flex items-center justify-between gap-3">
                     <p className="truncate text-[0.8125rem] text-[var(--ink-muted)]">
                       {metaParts.join(" · ")}
-                      {/* Enhancement 6: show stale indicator */}
                       {showStale && (
-                        <span className="ml-1 text-amber-600">· no update {formatElapsedHours(updatedAgo)}</span>
+                        <span className="ml-1 text-amber-600 dark:text-amber-400">· no update {formatElapsedHours(updatedAgo)}</span>
                       )}
                     </p>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {flagCfg ? (
-                        <span className={`rounded px-1.5 py-0.5 text-[0.8125rem] font-semibold ${flagCfg.badge}`}>
-                          {flagCfg.label}
-                        </span>
-                      ) : null}
+                    <div className="shrink-0">
                       <JobStatusBadge status={job.status} />
                     </div>
                   </div>
