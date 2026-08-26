@@ -114,7 +114,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     <div class="meta">
       <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
       <div><b>Verified against</b> &nbsp;local + both production DBs</div>
-      <div><b>Deployed</b> &nbsp;1584c7d · care + commercial</div>
+      <div><b>Deployed</b> &nbsp;7671dda · care + commercial</div>
       <div><b>Date</b> &nbsp;26 August 2026</div>
     </div>
   </header>
@@ -129,6 +129,11 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
        <code>OUT · REPAIR_CONSUME</code> ledger row against the job.</p>
     <p>Both production databases are clean on <strong>every</strong> integrity invariant — care and
        commercial, eleven checks each, zero failures. No cross-tenant rows anywhere.</p>
+    <p>Document numbering is now consistent going forward. Invoice and quotation numbers were
+       never allocated for job-raised documents — they were rebuilt from the job number on every
+       render, so they inherited its format, and that was still spreading rather than being the
+       closed legacy residue it looked like. Both now draw on the shared sequence. Nothing a
+       customer already holds was renumbered.</p>
     <p>Since the first pass, care's P&amp;L has also been corrected. Fourteen expenses recorded before
        cash-basis posting existed were absent from the ledger, so the report understated costs by
        <strong>UGX 2,246,000</strong>. They are now posted, dated to the day each was spent, and the
@@ -146,6 +151,8 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="frow"><span class="lbl"><b>Unit suite runnable again</b> (bun restored)</span><span class="then">could not run</span><span class="now">537 pass</span></div>
       <div class="frow"><span class="lbl"><b>Care's P&amp;L corrected</b> — 14 pre-ledger expenses backfilled</span><span class="then">understated 2.2m</span><span class="now">reconciles exactly</span></div>
       <div class="frow"><span class="lbl"><b>Test names cleared from a live tenant</b> — one deactivated, one renamed</span><span class="then">on a customer receipt</span><span class="now">0 left · money intact</span></div>
+      <div class="frow"><span class="lbl"><b>Invoice numbers allocated, not derived</b> from the job number</span><span class="then">4 formats, still spreading</span><span class="now">one format · 0 renumbered</span></div>
+      <div class="frow"><span class="lbl"><b>Quotation numbers stored at all</b> — they lived nowhere before</span><span class="then">rebuilt every render</span><span class="now">allocated once · 18 preserved</span></div>
     </div>
   </section>
 
@@ -162,7 +169,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="sc"><div class="top"><span class="name">Warranty</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 2</span></div>
       <div class="sc"><div class="top"><span class="name">Repairs / job cards</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 6</span></div>
       <div class="sc"><div class="top"><span class="name">Inventory</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 5</span></div>
-      <div class="sc"><div class="top"><span class="name">Documents &amp; PDFs</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was not assessed</span></div>
+      <div class="sc"><div class="top"><span class="name">Documents &amp; PDFs</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8 — numbering fixed</span></div>
       <div class="sc"><div class="top"><span class="name">Returns</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 3 — misjudged</span></div>
       <div class="sc"><div class="top"><span class="name">Purchasing</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was not assessed</span></div>
       <div class="sc"><div class="top"><span class="name">Customer accounts</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 7 — misjudged</span></div>
@@ -190,6 +197,8 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Statement of account reconciles</b> — billed, paid and outstanding agree, and VOID invoices are excluded.</span><span class="ev">1,100,000 · due 0</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Backfill is safe to repeat.</b> Keyed on the expense id; a second run posts nothing.</span><span class="ev">idempotent</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Renaming touched only labels.</b> Quantity, price, line total, sale total and paid amount identical after.</span><span class="ev">354,000 → 354,000</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A quote keeps its number.</b> Rendered twice: allocated <code>EIS/QT/2026/0004</code> on the first pass and returned the same number on the second, rather than deriving <code>EIS-5/QT/2025/0005</code> from the job.</span><span class="ev">stable · allocated</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No document was renumbered.</b> Every already-quoted job backfilled with the number it had been sending, and the unique index holds.</span><span class="ev">18 of 18 · 0 clashes</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">537 pass · 0 fail</span></div>
     </div>
   </section>
