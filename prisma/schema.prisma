@@ -101,6 +101,7 @@ model Organization {
   bankTransactions       BankTransaction[]
   campaigns              Campaign[]
   portalUsers            PortalUser[] @relation("OrgPortalUsers")
+  warrantyClaims         WarrantyClaim[]
 
   @@index([slug])
   @@index([isActive])
@@ -674,6 +675,8 @@ model Job {
   inboundMessages           InboundMessage[]
   partReservations          PartReservation[]
   stockTransactions         PartStockTransaction[]
+  warrantyClaims            WarrantyClaim[]                @relation("WarrantyClaimOriginalJob")
+  warrantyRepairFor         WarrantyClaim[]                @relation("WarrantyClaimWarrantyJob")
   quotations                Quotation[]                    @relation("JobQuotation")
   fieldVisits               FieldVisit[]                   @relation("JobFieldVisits")
   technicianPayouts         TechnicianPayout[]
@@ -2167,11 +2170,22 @@ model QualityCheck {
   @@index([orgId, jobId, status])
 }
 
+/// A warranty claim against a completed repair.
+///
+/// The two job links are deliberately different shapes. `originalJob` is the
+/// repair being claimed against and is what gives the claim its meaning, so the
+/// claim is a child of that job. `warrantyJob` is the follow-up repair raised to
+/// honour the claim; it may not exist yet, and if it is later removed the claim
+/// itself must survive with the link cleared — the obligation outlives the
+/// second visit.
 model WarrantyClaim {
   id            String    @id @default(cuid())
   orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   originalJobId String
+  originalJob   Job       @relation("WarrantyClaimOriginalJob", fields: [originalJobId], references: [id], onDelete: Cascade)
   warrantyJobId String?
+  warrantyJob   Job?      @relation("WarrantyClaimWarrantyJob", fields: [warrantyJobId], references: [id], onDelete: SetNull)
   status        String    @default("OPEN")
   reason        String
   resolution    String?
@@ -2180,6 +2194,7 @@ model WarrantyClaim {
 
   @@index([orgId, status, openedAt])
   @@index([originalJobId])
+  @@index([warrantyJobId])
 }
 
 model InventoryCategory {

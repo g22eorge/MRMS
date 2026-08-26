@@ -26,6 +26,10 @@ if (process.env.TURSO_DATABASE_URL) {
   const healSteps = [
     ["Reconciling full schema", "scripts/sync-schema-to-db.mjs"],
     ["Normalizing Job data", "scripts/prod-job-column-safety.mjs"],
+    // sync-schema-to-db skips FOREIGN KEY lines and never rebuilds an existing
+    // table, so WarrantyClaim's constraints can only be added by rebuilding it.
+    // The script is idempotent and refuses outright if the table has any rows.
+    ["Adding WarrantyClaim foreign keys", "scripts/warranty-claim-foreign-keys.mjs"],
   ];
   for (const [label, script] of healSteps) {
     console.log(`[vercel-build] ${label} (${script})...`);
