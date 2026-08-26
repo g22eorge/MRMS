@@ -134,6 +134,11 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
        render, so they inherited its format, and that was still spreading rather than being the
        closed legacy residue it looked like. Both now draw on the shared sequence. Nothing a
        customer already holds was renumbered.</p>
+    <p>Authentication was audited in its own right this pass. The parts that matter hold: signup
+       cannot grant itself a role or an organisation, deactivation is checked against the database
+       rather than the session cookie, the auth endpoints are rate-limited at the handler so the
+       client SDK cannot walk around them, and production refuses to boot on a weak secret. One
+       gap: care closes registration in the UI but not at the API.</p>
     <p>Since the first pass, care's P&amp;L has also been corrected. Fourteen expenses recorded before
        cash-basis posting existed were absent from the ledger, so the report understated costs by
        <strong>UGX 2,246,000</strong>. They are now posted, dated to the day each was spent, and the
@@ -161,6 +166,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     <div class="scores">
       <div class="sc"><div class="top"><span class="name">Financial calculation</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
       <div class="sc"><div class="top"><span class="name">Permissions &amp; tenancy</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Authentication</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">newly assessed</span></div>
       <div class="sc"><div class="top"><span class="name">Data integrity</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
       <div class="sc"><div class="top"><span class="name">Navigation &amp; routing</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
       <div class="sc"><div class="top"><span class="name">Sales &amp; POS</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
@@ -199,6 +205,11 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Renaming touched only labels.</b> Quantity, price, line total, sale total and paid amount identical after.</span><span class="ev">354,000 → 354,000</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>A quote keeps its number.</b> Rendered twice: allocated <code>EIS/QT/2026/0004</code> on the first pass and returned the same number on the second, rather than deriving <code>EIS-5/QT/2025/0005</code> from the job.</span><span class="ev">stable · allocated</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>No document was renumbered.</b> Every already-quoted job backfilled with the number it had been sending, and the unique index holds.</span><span class="ev">18 of 18 · 0 clashes</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Signup cannot escalate privileges.</b> Posting <code>role:"ADMIN"</code> to the signup endpoint lands the account as <code>OPS</code>; <code>orgId</code> is refused outright with <code>FIELD_NOT_ALLOWED</code>. Exercised locally, not in production.</span><span class="ev">OPS · rejected</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Deactivation is enforced server-side.</b> <code>requireRole</code> re-reads <code>role</code> and <code>isActive</code> from the database rather than trusting the session cookie.</span><span class="ev">DB read, not cookie</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Auth endpoints are rate-limited.</b> Sign-in 10/min, signup 5 per 10 min, reset 5 per 10 min, per IP — applied at the BetterAuth handler, so the SDK cannot bypass them.</span><span class="ev">3 paths capped</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Production auth fails closed.</b> A missing or under-32-character secret, or a missing app URL, throws at startup instead of booting insecure. Preview URLs are not trusted in production.</span><span class="ev">asserted at boot</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No orphan accounts.</b> Every user in both databases belongs to an organisation, and every account is a credential account — no OAuth, 2FA or passkeys anywhere.</span><span class="ev">0 of 46</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">537 pass · 0 fail</span></div>
     </div>
   </section>
@@ -285,6 +296,17 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     </div>
 
     <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Auth · care</span>
+        <div class="ttl">Signup is closed in the UI but open at the API</div></div>
+      <dl>
+        <dt>Detail</dt><dd><code>/register</code> redirects to the login page on care, correctly — I confirmed it in a browser, not with curl, which reports 200 for that redirect. But <code>/api/auth/sign-up/email</code> answers regardless of deployment mode. I probed it on care with a deliberately too-short password: it returned <code>PASSWORD_TOO_SHORT</code>, which means it reached password validation and a valid password would have created a row. No account was created.</dd>
+        <dt>What it is not</dt><dd>Not privilege escalation. Posting <code>role:"ADMIN"</code> lands the account as <code>OPS</code>, <code>orgId</code> is refused outright, and <code>requireOrgSession</code> force-logs-out anyone not in the care org. The account cannot see anything.</dd>
+        <dt>What it is</dt><dd>Anonymous row creation in care's user table, capped at 5 per 10 minutes per IP, plus email enumeration — signup answers differently for an address that already exists, which distinguishes real staff addresses from invented ones. Nothing has come through it: <strong>zero</strong> users in either database lack an organisation.</dd>
+        <dt>Fix</dt><dd>Gate the endpoint on deployment mode using the same check the page already makes. On commercial, open signup is the product and should stay — though note that email verification is off there, so a tenant can be registered with an address the registrant does not own.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
       <div class="hd"><span class="tag">P3</span><span class="mod">Performance</span>
         <div class="ttl">Notifications endpoint called three times per page load</div></div>
       <dl>
@@ -296,8 +318,9 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="hd"><span class="tag">P3</span><span class="mod">Continuity</span>
         <div class="ttl">BETTER_AUTH_SECRET cannot be recovered from Vercel</div></div>
       <dl>
-        <dt>Detail</dt><dd>It is stored as a "sensitive" variable, which is write-only — no API, CLI or dashboard read returns it. If it is not recorded elsewhere, moving servers means re-keying session cookies and signing every user out.</dd>
-        <dt>Cost to fix</dt><dd>Minutes, today, into a password manager. Painful to discover under pressure.</dd>
+        <dt>Detail</dt><dd>It is stored as a "sensitive" variable, which is write-only — no API, CLI or dashboard read returns it. Since the current value cannot be read back, generating a new one is the only way to end up holding a copy.</dd>
+        <dt>Rotation cost</dt><dd>Lower than it sounds, and now measured. Passwords live in <code>Account.password</code>, hashed by BetterAuth's own scrypt — the secret plays no part, so all 46 users keep their passwords. Every account in both databases is a credential account: no OAuth tokens, 2FA seeds or passkeys are encrypted with the secret, so nothing becomes permanently unreadable. The real cost is sessions: <strong>232 on care and 28 on commercial</strong> die at the moment of change and everyone signs in again.</dd>
+        <dt>How</dt><dd>It is not issued by any service — generate it, with <code>openssl rand -base64 32</code> or <code>npx @better-auth/cli secret</code>. Give care and commercial different values; rotating one does not affect the other. Save it before setting it, and redeploy afterwards, since env changes do not reach a running deployment.</dd>
       </dl>
     </div>
 
@@ -306,9 +329,10 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
   <section>
     <div class="shead"><span class="n">06</span><h2>What I would do next</h2></div>
     <div class="prose">
-      <p><b>1. Record BETTER_AUTH_SECRET somewhere outside Vercel.</b> The cheapest item on this
-      page and the only one that is irreversible if left. Everything else can be fixed after the
-      fact; this one cannot be recovered at all.</p>
+      <p><b>1. Rotate BETTER_AUTH_SECRET and save the new value outside Vercel.</b> The current one
+      cannot be read back, so rotating is the only way to end up holding a copy. It is safe here —
+      no passwords, tokens or seeds are encrypted with it — and costs one forced sign-out of 260
+      sessions. Do it in a quiet hour, care first.</p>
       <p><b>2. Decide the commercial messaging story.</b> Seven paying tenants currently cannot
       reach their customers. Whether they share Eagle Info's channels or get their own is a
       product decision, not a configuration one — which is why it is still open.</p>
