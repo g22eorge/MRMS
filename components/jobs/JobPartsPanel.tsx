@@ -89,6 +89,13 @@ export function JobPartsPanel({ jobId, locationId, locationName, parts, lines, r
 
   return (
     <div className="space-y-4">
+      <div>
+        <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Parts used</p>
+        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+          Taken from inventory — stock updates as you fit each part.
+        </p>
+      </div>
+
       {!readOnly && (
         <form
           action={(fd) => {

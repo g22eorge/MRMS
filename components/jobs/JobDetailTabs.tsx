@@ -1706,18 +1706,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       ) : null}
 
+      {/* The slot is the sole child on purpose. A server-rendered element that
+          arrives through the RSC stream is validated as a runtime array child,
+          so giving it a sibling here makes React demand a key it cannot have.
+          The other slots below follow the same single-child shape.
+          It also sits outside the repair-log form: this panel submits its own
+          forms, and a form cannot be nested inside another. */}
       {segment === "work" && partsSlot ? (
-        <div className={`${panelShellClass} space-y-3`}>
-          <div>
-            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Parts used</p>
-            <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-              Taken from inventory — stock updates as you fit each part.
-            </p>
-          </div>
-          {/* Outside the repair-log form on purpose: this panel submits its own
-              forms, and a form cannot be nested inside another. */}
-          {partsSlot}
-        </div>
+        <div className={panelShellClass}>{partsSlot}</div>
       ) : null}
 
       {segment === "work" ? (
