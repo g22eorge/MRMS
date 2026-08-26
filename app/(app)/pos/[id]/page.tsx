@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { PageNotFoundState } from "@/components/page-state";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import type { PaymentMethod } from "@prisma/client";
@@ -216,17 +215,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   if (!sale) {
     if (dbNeedsFix) redirect("/pos"); // schema not yet migrated — redirect to list
     {
-      // Rendered directly rather than via notFound(): on these routes the
-      // not-found boundary never reaches the browser, so the reader was left
-      // with a page header and an empty body. See the job page for the detail.
-      return (
-        <PageNotFoundState
-          title="Sale not found"
-          description="This sale may have been removed, or you may not have access to it."
-          primaryHref="/pos"
-          primaryLabel="Go to point of sale"
-        />
-      );
+      notFound();
     }
   }
 

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PageNotFoundState } from "@/components/page-state";
 import { Role } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
@@ -128,20 +127,7 @@ export default async function JobDetailPage({
     .catch(() => prisma.job.findFirst({ where, include: includeBase }));
 
   if (!job) {
-    // Rendered directly rather than via notFound(). On these routes the
-    // not-found boundary never reaches the browser — the response comes back
-    // 200 with an empty shell, in the dev server and the production build
-    // alike — so the reader was left staring at a page header and nothing
-    // else. Returning the state makes the screen right; the status code is
-    // still 200 and is tracked separately.
-    return (
-      <PageNotFoundState
-        title="Job not found"
-        description="This repair job may have been removed, reassigned, or you may not have access to it."
-        primaryHref="/jobs"
-        primaryLabel="Go to jobs"
-      />
-    );
+    notFound();
   }
 
   const clientPayments = can.viewFinancials(user)
