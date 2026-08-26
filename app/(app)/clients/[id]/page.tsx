@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { PageNotFoundState } from "@/components/page-state";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { SearchToggle } from "@/components/shared/SearchToggle";
@@ -125,7 +126,19 @@ export default async function ClientDetailPage({
   }
 
   if (!clientData) {
-    notFound();
+    {
+      // Rendered directly rather than via notFound(): on these routes the
+      // not-found boundary never reaches the browser, so the reader was left
+      // with a page header and an empty body. See the job page for the detail.
+      return (
+        <PageNotFoundState
+          title="Client not found"
+          description="This client may have been removed, merged into another account, or you may not have access to it."
+          primaryHref="/clients"
+          primaryLabel="Go to clients"
+        />
+      );
+    }
   }
 
   type ClientDetail = Prisma.ClientGetPayload<{

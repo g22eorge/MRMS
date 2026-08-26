@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { PageNotFoundState } from "@/components/page-state";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCards, type StatCard } from "@/components/ui/StatCards";
@@ -77,7 +78,19 @@ export default async function PartDetailPage({
     }),
   ]);
 
-  if (!part) notFound();
+  if (!part) {
+    // Rendered directly rather than via notFound(): on these routes the
+    // not-found boundary never reaches the browser, so the reader was left
+    // with a page header and an empty body. See the job page for the detail.
+    return (
+      <PageNotFoundState
+        title="Part not found"
+        description="This inventory item may have been removed, or you may not have access to it."
+        primaryHref="/inventory"
+        primaryLabel="Go to inventory"
+      />
+    );
+  }
 
   const available = part.qtyOnHand - part.qtyReserved;
   const stockValue = (part.unitCost ?? 0) * part.qtyOnHand;
