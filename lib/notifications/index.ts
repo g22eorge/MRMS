@@ -1021,6 +1021,64 @@ export async function notifyPaymentReceived({
 }
 
 // ---------------------------------------------------------------------------
+// Warranty claim raised or settled
+// ---------------------------------------------------------------------------
+
+/**
+ * Tells the customer their warranty claim moved.
+ *
+ * A claim is the one moment a customer is most anxious and least informed —
+ * they have brought a device back and want to know whether it will be covered.
+ * Ordinary status changes already message them; claims did not.
+ *
+ * Best-effort, exactly like the payment confirmation above: no phone means no
+ * message, and a provider failure leaves a FAILED outbox row on the job rather
+ * than throwing back into the action that settled the claim. Settling a claim
+ * must not fail because a message could not go out.
+ */
+export async function notifyWarrantyClaim(input: {
+  orgId: string;
+  jobId: string;
+  jobNumber: string;
+  event: "OPENED" | "RESOLVED" | "REJECTED";
+  resolution?: string | null;
+}) {
+  const client = await prisma.client
+    .findFirst({
+      where: { orgId: input.orgId, jobs: { some: { id: input.jobId } } },
+      select: { phone: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.phone) return;
+
+  const name = client.fullName?.trim() || "there";
+  const outcome = input.resolution?.trim();
+
+  // Rejection is the message that most needs to read like a person wrote it:
+  // say the decision, give the reason, and leave the door open.
+  const body =
+    input.event === "OPENED"
+      ? `Hi ${name}, we've logged a warranty claim on job ${input.jobNumber}. We'll look at it and come back to you shortly. — Your Repair Team`
+      : input.event === "RESOLVED"
+        ? `Hi ${name}, your warranty claim on job ${input.jobNumber} has been settled.${outcome ? ` ${outcome}` : ""} — Your Repair Team`
+        : `Hi ${name}, we've reviewed your warranty claim on job ${input.jobNumber} and we're not able to cover this one.${outcome ? ` ${outcome}` : ""} Please get in touch if you'd like to talk it through. — Your Repair Team`;
+
+  const enqueueResult = await enqueueWhatsAppMessage({
+    orgId: input.orgId,
+    to: client.phone,
+    body,
+    type: OutboundMessageType.WARRANTY_CLAIM_UPDATE,
+    jobId: input.jobId,
+    provider: "meta",
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Technician payout recorded
 // ---------------------------------------------------------------------------
 export async function notifyPayoutGenerated({

@@ -1264,6 +1264,7 @@ enum OutboundMessageType {
   ADMIN_TEST
   STAFF_REPLY
   INVOICE_REMINDER
+  WARRANTY_CLAIM_UPDATE
 }
 
 model Notification {

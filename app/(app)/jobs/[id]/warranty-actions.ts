@@ -9,6 +9,7 @@ import { findRecentDuplicate } from "@/lib/dedup";
 import { sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { notifyWarrantyClaim } from "@/lib/notifications";
 
 /**
  * Warranty claims against a completed repair.
@@ -94,7 +95,14 @@ export async function openWarrantyClaimAction(formData: FormData): Promise<Resul
     data: { orgId, originalJobId: jobId, reason, status: "OPEN" },
   });
 
+  // Best-effort: the claim is already recorded, and a message that cannot be
+  // sent must not undo it.
+  await notifyWarrantyClaim({
+    orgId, jobId, jobNumber: job.jobNumber, event: "OPENED",
+  }).catch(() => {});
+
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/warranty");
   return { success: true, message: `Warranty claim opened against ${job.jobNumber}.` };
 }
 
@@ -111,7 +119,7 @@ export async function resolveWarrantyClaimAction(formData: FormData): Promise<Re
   // Scope through orgId, which the claim carries in its own right.
   const claim = await prisma.warrantyClaim.findFirst({
     where: { id: claimId, orgId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, originalJob: { select: { jobNumber: true } } },
   });
   if (!claim) return { success: false, error: "Claim not found." };
   if (claim.status !== "OPEN") {
@@ -123,7 +131,15 @@ export async function resolveWarrantyClaimAction(formData: FormData): Promise<Re
     data: { status, resolution, closedAt: new Date() },
   });
 
+  await notifyWarrantyClaim({
+    orgId, jobId,
+    jobNumber: claim.originalJob?.jobNumber ?? "",
+    event: status,
+    resolution,
+  }).catch(() => {});
+
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/warranty");
   return {
     success: true,
     message: status === "RESOLVED" ? "Claim resolved." : "Claim rejected.",
