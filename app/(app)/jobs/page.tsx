@@ -636,7 +636,7 @@ export default async function JobsPage({
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
               {KEY_CHIPS.map(({ href, label, count, active }) => (
                 <Link key={label} href={href}
-                  className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-center text-[0.75rem] font-bold transition ${
+                  className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-center text-[0.75rem] font-bold transition ${
                     active
                       ? "bg-[var(--accent)] text-black"
                       : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
