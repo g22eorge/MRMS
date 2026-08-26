@@ -8,6 +8,7 @@ import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { canGenerateQuotationForStatus, deriveDocNumberFromJob } from "@/lib/documents";
 import { compactText, compactListText, prettyEnum, resolvePdfLogo } from "@/lib/pdf/pdf-utils";
 import { QuotationTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
+import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { prisma } from "@/lib/prisma";
 
 import { quotationTerms } from "@/lib/quote-terms";
@@ -34,7 +35,7 @@ export async function generateQuotationBuffer(
       diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true,
       recommendationOption: true, clientConversationNote: true, partsNeeded: true,
       clientBill: true, vatApplicable: true, clientApproved: true,
-      quotedAt: true, repairTimeline: true, workDone: true,
+      quotedAt: true, quotationNumber: true, repairTimeline: true, workDone: true,
       client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
     },
   });
@@ -63,7 +64,38 @@ export async function generateQuotationBuffer(
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
   const logoUrl = await resolvePdfLogo();
-  const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
+  // A quotation number, once printed, must never change — the customer is
+  // holding that PDF. So it is allocated once, stored on the job, and reused by
+  // every later render. Deriving it from the job number, which is what this did,
+  // meant it inherited whatever shape job numbering happened to have that month.
+  const storedQuotationNumber = job.quotationNumber?.trim() || null;
+  // Read-only and portal renders never write, so they have nothing to allocate
+  // from; the derived number stands in until a real send stores a real one.
+  let quotationNumber = storedQuotationNumber ?? deriveDocNumberFromJob(job.jobNumber, "QT");
+
+  if (!storedQuotationNumber && stampQuotedAt && orgId) {
+    try {
+      quotationNumber = await prisma.$transaction(async (tx) => {
+        // Re-read inside the transaction: two sends racing on the same job must
+        // not each allocate, or the customer gets two numbers for one quote.
+        const fresh = await tx.job.findUnique({
+          where: { id: job.id },
+          select: { quotationNumber: true },
+        });
+        const already = fresh?.quotationNumber?.trim();
+        if (already) return already;
+
+        const allocated = await nextDocumentNumber(tx, "QT", "quotation", orgId);
+        await tx.job.update({
+          where: { id: job.id },
+          data: { quotationNumber: allocated },
+        });
+        return allocated;
+      });
+    } catch {
+      // Allocation failed; the derived number still prints a usable document.
+    }
+  }
 
   if (stampQuotedAt && !job.quotedAt) {
     await prisma.job.update({ where: { id: job.id }, data: { quotedAt: issuedAtDate } });

@@ -36,7 +36,7 @@ export async function generateInvoiceBuffer(
     where: expectedOrgId ? { id: jobId, orgId: expectedOrgId } : { id: jobId },
     select: {
       id: true, jobNumber: true, status: true, repairPath: true,
-      invoiceNumber: true, invoiceIssuedAt: true,
+      invoiceNumber: true, invoiceIssuedAt: true, quotationNumber: true,
       orgId: true,
       deviceType: true, brand: true, model: true, serialOrImei: true,
       accessories: true, physicalNotes: true, issueDescription: true,
@@ -117,7 +117,10 @@ export async function generateInvoiceBuffer(
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
   const logoUrl = await resolveInvoiceLogo();
   const normalizedFooterText = (branding.footerText ?? "").trim();
-  const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
+  // Print the quotation number the customer actually received, not a fresh
+  // derivation of it — otherwise the invoice cites a quote number that was
+  // never on any quote.
+  const quotationNumber = job.quotationNumber?.trim() || deriveDocNumberFromJob(job.jobNumber, "QT");
   // Only a number this job has already been issued may be reused. A number
   // derived from the job number must never reach the allocator: job numbering
   // has changed shape four times, and deriving from it is what put four

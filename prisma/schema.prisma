@@ -646,6 +646,11 @@ model Job {
   clientApproved     Boolean?
   approvalDate       DateTime?
   quotedAt           DateTime?
+  // Job quotations print a number but never create a Quotation row, so the
+  // number has to live here — allocated once from DocumentSequence and reused
+  // forever, exactly as invoiceNumber above. Before this existed the number was
+  // derived from jobNumber on every render, inheriting its format each time.
+  quotationNumber    String?   @unique
 
   repairTimeline     String?
   timelineMinMinutes Int?

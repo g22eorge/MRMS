@@ -11,8 +11,14 @@ type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "credit
  * tolerating both tagged (EGL-INV-2026-0007) and legacy untagged numbers so the
  * sequence continues smoothly through the org-tag transition. */
 async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
+  // Quotation numbers live in two places — Quotation rows and, for job
+  // quotations, Job.quotationNumber — and both draw on this one counter. Seed
+  // from the higher of the two or a reseed could reissue a number already sent.
   const numbers: string[] = countModel === "quotation"
-    ? (await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner } }, select: { quoteNumber: true } })).map((r) => r.quoteNumber)
+    ? [
+        ...(await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner } }, select: { quoteNumber: true } })).map((r) => r.quoteNumber),
+        ...(await tx.job.findMany({ where: { orgId, quotationNumber: { contains: inner } }, select: { quotationNumber: true } })).map((r) => r.quotationNumber ?? ""),
+      ]
     : countModel === "invoice"
       ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner } }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
       : countModel === "deliveryNote"
@@ -84,7 +90,13 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
 async function documentNumberTaken(tx: Tx, countModel: CountModel, value: string): Promise<boolean> {
   switch (countModel) {
     case "quotation":
-      return Boolean(await tx.quotation.findFirst({ where: { quoteNumber: value }, select: { id: true } }));
+      // Job quotations print a number without creating a Quotation row, so the
+      // job column has to be checked too — Job.quotationNumber is unique, and a
+      // candidate that collides with one would fail the write with P2002.
+      return Boolean(
+        (await tx.quotation.findFirst({ where: { quoteNumber: value }, select: { id: true } })) ??
+        (await tx.job.findFirst({ where: { quotationNumber: value }, select: { id: true } })),
+      );
     case "invoice":
       return Boolean(await tx.invoice.findFirst({ where: { invoiceNumber: value }, select: { id: true } }));
     case "deliveryNote":

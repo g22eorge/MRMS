@@ -30,10 +30,14 @@ if (process.env.TURSO_DATABASE_URL) {
     // table, so WarrantyClaim's constraints can only be added by rebuilding it.
     // The script is idempotent and refuses outright if the table has any rows.
     ["Adding WarrantyClaim foreign keys", "scripts/warranty-claim-foreign-keys.mjs"],
+    // Backfills Job.quotationNumber with the number each quoted job has already
+    // been sending, so switching to allocated numbers cannot renumber a quote a
+    // customer is holding. Idempotent; defaults to dry-run without --apply.
+    ["Preserving job quotation numbers", "scripts/job-quotation-number.mjs", ["--apply"]],
   ];
-  for (const [label, script] of healSteps) {
+  for (const [label, script, extraArgs = []] of healSteps) {
     console.log(`[vercel-build] ${label} (${script})...`);
-    const heal = spawnSync("node", [script], {
+    const heal = spawnSync("node", [script, ...extraArgs], {
       stdio: "inherit",
       shell: process.platform === "win32",
       env: process.env,
