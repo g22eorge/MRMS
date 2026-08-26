@@ -1238,8 +1238,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       {/* ── Two-column console: context rail | work segments ── */}
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
       <aside className="space-y-3 lg:sticky lg:top-4">
-        {/* Device */}
-        <div className="dc-card p-4">
+        {/* Device — desktop only. On a phone the hero card above already gives
+            the device, the client, the technician and the FULL issue text,
+            where this shows a 90-character preview. Repeating it was a card's
+            worth of scrolling to say the same thing less well. */}
+        <div className="hidden dc-card p-4 lg:block">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-[var(--ink-muted)]">
               {job.photos?.[0]?.id ? (
@@ -1288,10 +1291,12 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
 
-        {/* Attention */}
+        {/* Attention — desktop only. The mobile overview renders this same list
+            in its own "Needs attention" block, so on a phone this was the
+            second copy of identical nudges. */}
         {attentionItems.length > 0 ? (
-          <div className="dc-card p-4">
-            <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-amber-600">Needs attention</p>
+          <div className="hidden dc-card p-4 lg:block">
+            <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">Needs attention</p>
             <div className="space-y-2">
               {attentionItems.map((item) => (
                 <button key={item.label} type="button" onClick={() => setActive(item.tab)} className="flex w-full items-start gap-2.5 rounded-lg bg-amber-500/8 px-3 py-2 text-left transition hover:bg-amber-500/12">
