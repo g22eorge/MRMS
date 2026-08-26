@@ -37,6 +37,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/jobs", label: routeLabel("/jobs"), group: "service", roles: "all" },
   { href: "/intake", label: routeLabel("/intake"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL", "SALES_MANAGER"] },
   { href: "/service", label: routeLabel("/service"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK"] },
+  { href: "/warranty", label: routeLabel("/warranty"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
 
   // Inventory & Supply — the Inventory hub plus the daily-driver buying/stock
   // shortcuts the owner keeps close (purchase orders, stock counts, suppliers,
@@ -111,7 +112,7 @@ export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/clients
 const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ADMIN: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
@@ -121,7 +122,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
@@ -131,7 +132,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   TECH_MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups",
@@ -139,7 +140,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   OPS: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",

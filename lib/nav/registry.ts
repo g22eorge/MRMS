@@ -26,6 +26,7 @@ const defs = [
   { href: "/technicians/payouts", label: "My Payouts" },
   { href: "/field", label: "Field" },
   { href: "/complaints", label: "Complaints" },
+  { href: "/warranty", label: "Warranty" },
   { href: "/clients", label: "Clients" },
   { href: "/service", label: "Service Hub" },
 
