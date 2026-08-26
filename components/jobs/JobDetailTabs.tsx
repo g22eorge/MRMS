@@ -1087,9 +1087,15 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       <div className="lg:hidden space-y-3">
         {/* Slim progress dots with labels */}
         <div className="flex items-start px-1">
+          {/* Every stage gets an equal share and its label is bounded by that
+              share. The last stage previously had no width constraint, so at
+              375px "Complete" ran 17px past the edge and an ancestor's
+              overflow-hidden quietly cut it in half. The label also dropped to
+              10px: at 13px with wide tracking, five stages could not fit a
+              phone no matter how the space was divided. */}
           {stageLabels.map((label, i) => (
-            <div key={label} className={`flex items-start ${i < stageLabels.length - 1 ? "flex-1" : ""}`}>
-              <div className="flex flex-col items-center" style={{ minWidth: 44 }}>
+            <div key={label} className="flex min-w-0 flex-1 items-start">
+              <div className="flex min-w-0 flex-1 flex-col items-center">
                 <div className={`h-2.5 w-2.5 rounded-full ring-2 ring-offset-1 ring-offset-[var(--bg)] ${
                   i < currentStageIndex
                     ? "bg-emerald-500 ring-emerald-500/40"
@@ -1097,12 +1103,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                       ? "bg-[var(--accent)] ring-[var(--accent)]/40"
                       : "bg-[var(--panel-strong)] ring-[var(--line)]"
                 }`} />
-                <p className={`mt-1 text-center text-[0.8125rem] font-bold uppercase leading-none tracking-wider ${
+                {/* Sentence case, not caps: uppercase letterforms are about
+                    15% wider, which was the difference between "Diagnosis"
+                    fitting its column and ellipsing to "Diagnos…". */}
+                <p className={`mt-1 w-full truncate text-center text-[0.6875rem] font-semibold leading-none ${
                   i === currentStageIndex ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
                 }`}>{label}</p>
               </div>
               {i < stageLabels.length - 1 && (
-                <div className={`mt-[4px] h-px flex-1 mx-0.5 ${
+                // Fixed width, not flex-1: as a flex sibling of the label column
+                // the connector claimed half of every stage's share, squeezing
+                // "Diagnosis" into 31px and ellipsing it.
+                <div className={`mt-[4px] h-px w-2 shrink-0 ${
                   i < currentStageIndex ? "bg-emerald-500" : "bg-[var(--line)]"
                 }`} />
               )}
@@ -1140,71 +1152,82 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
 
-        {/* Time alert */}
-        {watchLabel ? (
-          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2">
-            <div className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-            <p className="text-xs font-semibold text-amber-600">{watchLabel} · {formatElapsedHours(statusAgeHours)} in this state</p>
-          </div>
-        ) : null}
-
-        {/* Attention items */}
-        {attentionItems.length > 0 ? (
-          <div className="space-y-1.5">
-            {attentionItems.map((item) => (
-              <button key={item.label} type="button" onClick={() => setActive(item.tab)}
-                className="flex w-full items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-left active:opacity-70">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[var(--ink)]">{item.label}</p>
-                  <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.action}</p>
+        {/* Everything asking for attention, in one block.
+            The status-age alert and each nudge used to be its own bordered
+            amber card. Stacked, four boxes read as four unrelated alarms
+            rather than one list, and the borders did work that a single
+            surface plus hairlines does more quietly. */}
+        {watchLabel || attentionItems.length > 0 ? (
+          <section
+            aria-label="Needs attention"
+            className="overflow-hidden rounded-xl border border-amber-500/25 bg-amber-500/[0.06]"
+          >
+            <p className="px-3 pt-2.5 text-[0.6875rem] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Needs attention
+            </p>
+            <div className="mt-1 divide-y divide-amber-500/15">
+              {watchLabel ? (
+                <div className="flex items-start gap-2.5 px-3 py-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  <p className="text-xs font-semibold text-[var(--ink)]">
+                    {watchLabel} · {formatElapsedHours(statusAgeHours)} in this state
+                  </p>
                 </div>
-              </button>
-            ))}
-          </div>
+              ) : null}
+              {attentionItems.map((item) => (
+                <button key={item.label} type="button" onClick={() => setActive(item.tab)}
+                  className="flex w-full items-start gap-2.5 px-3 py-2 text-left active:bg-amber-500/10">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[var(--ink)]">{item.label}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.action}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
         ) : null}
 
-        {/* Key facts 2×2 grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">ETA</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{etaValue}</p>
+        {/* One surface, four figures.
+            These were four separately filled and bordered tiles, which gave
+            equal visual weight to four halves of a single summary. The labels
+            also outsized the values they described. Balance keeps its colour —
+            money owed is worth the one accent here — but as text rather than
+            another box. */}
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-[var(--panel-strong)] px-3.5 py-3">
+          <div className="min-w-0">
+            <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">ETA</dt>
+            <dd className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{etaValue}</dd>
           </div>
-          <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Technician</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{
+          <div className="min-w-0">
+            <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Technician</dt>
+            <dd className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{
               assignedLabel === "No technician assigned yet." ? "Unassigned" : assignedLabel
-            }</p>
+            }</dd>
           </div>
           {canViewFinancials ? (
             <>
-              <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2.5">
-                <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Total Bill</p>
-                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Total bill</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--ink)]">
                   {clientBillValue > 0 ? `UGX ${formatBillAmount(clientBillValue)}` : "Not set"}
-                </p>
+                </dd>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${
-                clientBalanceDue > 0
-                  ? "border-red-500/30 bg-red-500/8"
-                  : clientBillValue > 0
-                    ? "border-emerald-500/30 bg-emerald-500/8"
-                    : "border-[var(--line)] bg-[var(--panel-strong)]"
-              }`}>
-                <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</p>
-                <p className={`mt-0.5 text-sm font-semibold ${
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</dt>
+                <dd className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${
                   clientBalanceDue > 0 ? "text-red-500"
-                  : clientBillValue > 0 ? "text-emerald-600"
+                  : clientBillValue > 0 ? "text-emerald-600 dark:text-emerald-400"
                   : "text-[var(--ink)]"
                 }`}>
                   {paymentStatus === "Paid" ? "Paid ✓"
                    : paymentStatus === "No bill set" ? "—"
                    : `UGX ${formatBillAmount(clientBalanceDue)}`}
-                </p>
+                </dd>
               </div>
             </>
           ) : null}
-        </div>
+        </dl>
 
         {/* Share button */}
         <div className="flex gap-2">
