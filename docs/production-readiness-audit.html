@@ -114,8 +114,8 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     <div class="meta">
       <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
       <div><b>Verified against</b> &nbsp;local + both production DBs</div>
-      <div><b>Deployed</b> &nbsp;472c08f · care + commercial</div>
-      <div><b>Date</b> &nbsp;26 August 2026</div>
+      <div><b>Deployed</b> &nbsp;fc58a35 · care + commercial</div>
+      <div><b>Date</b> &nbsp;26–27 August 2026</div>
     </div>
   </header>
 
@@ -158,6 +158,8 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="frow"><span class="lbl"><b>Test names cleared from a live tenant</b> — one deactivated, one renamed</span><span class="then">on a customer receipt</span><span class="now">0 left · money intact</span></div>
       <div class="frow"><span class="lbl"><b>Invoice numbers allocated, not derived</b> from the job number</span><span class="then">4 formats, still spreading</span><span class="now">one format · 0 renumbered</span></div>
       <div class="frow"><span class="lbl"><b>Quotation numbers stored at all</b> — they lived nowhere before</span><span class="then">rebuilt every render</span><span class="now">allocated once · 18 preserved</span></div>
+      <div class="frow"><span class="lbl"><b>Overlays escape the content column</b> — a CSS animation was trapping every one</span><span class="then">confined + unreadable</span><span class="now">7 portaled</span></div>
+      <div class="frow"><span class="lbl"><b>Inventory picker in quotes and invoices</b></span><span class="then">silently empty</span><span class="now">works 390–1440</span></div>
     </div>
   </section>
 
@@ -212,6 +214,8 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>No orphan accounts.</b> Every user in both databases belongs to an organisation, and every account is a credential account — no OAuth, 2FA or passkeys anywhere.</span><span class="ev">0 of 46</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Registration refused on care</b> at the endpoint, not only the page — <code>403 SIGNUP_DISABLED</code> where it previously reached password validation.</span><span class="ev">403 · was 400</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>The care alias is care again.</b> <code>mrms-eight.vercel.app/register</code> redirects to login instead of rendering the signup form.</span><span class="ev">both hosts</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>The inventory picker works at both sizes.</b> Driven through the real UI with an injected session: six matches with SKU and stock at 390px and at 1440px, the list correctly over the focused input in each.</span><span class="ev">390 · 1440</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Overlays cover the viewport.</b> Portaled dialogs paint over the whole screen with the sidebar dimmed behind, instead of being confined to the content column.</span><span class="ev">7 portaled</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">548 pass · 0 fail</span></div>
     </div>
   </section>
@@ -219,9 +223,10 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
   <section>
     <div class="shead"><span class="n">04</span><h2>Corrections to my own findings</h2></div>
     <div class="corr">
-      <p>Six findings across both passes were wrong. All six shared a cause — a measurement that
-         looked precise and measured the wrong thing. Worth recording, because the same traps will
-         catch the next person:</p>
+      <p>Eight findings across both passes were wrong, six of them calls about the system and two
+         of them fixes of mine that made things worse before they made them better. All eight share
+         a cause — a measurement that looked precise and measured the wrong thing. Worth recording,
+         because the same traps will catch the next person:</p>
       <ul>
         <li><b>"Returns have no module."</b> They do — via credit notes, with a stock leg that only
             fires when goods physically come back. Correctly designed; I had searched for a model
@@ -243,6 +248,11 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
             pulled env file) without checking whether it could be read at all. It could not; it is
             a sensitive variable. A fix that only ever adds a restriction, never replaces one,
             would not have been able to fail that way.</li>
+        <li><b>And an eighth:</b> I called the inventory picker fixed after checking it at one
+            window size. It worked at 1440px and was dead below 1024px, because the broken code
+            path only wins the race when the desktop table is hidden. Verifying at one viewport is
+            not verifying — the second fix was driven at 390px and 1440px before it was called
+            done.</li>
       </ul>
       <p style="margin-top:12px"><b>The rule that came out of it:</b> curl is the wrong instrument for
         anything React renders, and a grep over raw HTML counts things that never reach the screen.
@@ -314,6 +324,28 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
         <dt>Corrected</dt><dd><code>b601dd5</code> makes the rule only ever <em>add</em> care detection: a care request host wins outright, and a configured origin is consulted only when it is itself a care origin. It cannot lose the case that already worked, so no configuration value can turn care into a commercial deployment. Regression tests cover both directions.</dd>
         <dt>Verified live</dt><dd>Both <code>care.eagleinfosolutions.com/register</code> and <code>mrms-eight.vercel.app/register</code> redirect to the login page — checked in a browser, since curl reports 200 for that redirect and returns byte-identical HTML for both hosts. The signup endpoint returns <code>403 SIGNUP_DISABLED</code> where it previously reached password validation. Commercial signup still answers, as the product requires.</dd>
         <dt>Not affected</dt><dd>Commercial signup is the product and still works — verified after the change. Nothing had come through either gap: <strong>zero</strong> users in either database lack an organisation, and care still holds exactly one. Note separately that email verification is off on commercial, so a tenant can be registered with an address the registrant does not own.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">UI · both</span>
+        <div class="ttl">One CSS declaration trapped every overlay inside the content column</div></div>
+      <dl>
+        <dt>What it was</dt><dd>The best find of the pass, and invisible from any log. <code>&lt;main&gt;</code> carries <code>fade-in</code>: <code>animation: fade-in-up 340ms … both</code>, whose final frame is <code>transform: translateY(0)</code>. <code>fill-mode: both</code> keeps that transform applied for the life of the page — and a transformed element becomes the <em>containing block for its <code>position: fixed</code> descendants</em>. So every modal and drawer rendered as page content resolved <code>fixed inset-0</code> against the content column instead of the viewport: the backdrop dimmed the page around a squeezed, half-readable panel while the sidebar stayed bright and clickable.</dd>
+        <dt>Reach</dt><dd>Not one dialog. <code>components/ui/Modal.tsx</code> is the shared modal that ten screens build on, and six further page-level overlays had their own copy of the pattern — invoice and quotation create dialogs, both preview drawers, the record preview, the settings slide-over and the intake drawer.</dd>
+        <dt>Fixed</dt><dd>All of them render through a portal to <code>document.body</code>, outside that containing block, where fixed means fixed. No styling changed. Three things were checked before moving anything: no portaled overlay sits inside a <code>&lt;form&gt;</code> (a portal would detach its submit), modal styling is self-contained utilities plus <code>:root</code> variables with no ancestor selectors, and the theme class is on <code>&lt;html&gt;</code> so <code>body</code> inherits every custom property.</dd>
+        <dt>Left alone</dt><dd><code>Header</code> and <code>IdleLogout</code> render <em>outside</em> <code>&lt;main&gt;</code> and were never affected. <code>JobDetailTabs</code>' overlay is a click-catcher, not a modal, and is the one nested inside a <code>&lt;form&gt;</code> — the only place a portal would have broken something.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Forms · both</span>
+        <div class="ttl">Inventory search returned nothing when quoting or invoicing</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Two faults wearing one symptom. First, the suggestion list was an absolutely-positioned child of a table cell, and everything above it clips: <code>DataTable</code> wraps rows in <code>overflow-hidden</code> and the desktop table in <code>overflow-x-auto</code>, and the dialog adds <code>overflow-hidden</code> plus a <code>max-h-[80vh]</code> scroller. The matches rendered and were trimmed to nothing.</dd>
+        <dt>The half that mattered</dt><dd>Portaling the list exposed the real bug. It was positioned from a ref keyed by row — but <code>DataTable</code> renders every row <em>twice</em>, a mobile card and a desktop table with one of them <code>display:none</code>. Both cells registered under the same key and the last to mount won. Below the <code>lg</code> breakpoint that is the <em>hidden</em> input, whose rect is empty: the list appeared at <code>left:0, width:11px</code>, an invisible sliver in the corner. On a wide window the visible input happened to win — so it worked at 1440px and was dead at 390px, and at any window under 1024px including a half-width desktop one.</dd>
+        <dt>Fixed</dt><dd>The anchor is now the element that actually received focus, captured from the focus event, so there is no race to lose.</dd>
+        <dt>Verified</dt><dd>By driving the real UI, not by reading it: a throwaway local account, a real sign-in, and Playwright injecting the session cookie. At 390px the list moved from <code>left:0/w:11</code> to <code>left:49/w:293</code> over the visible input; at 1440px it is unchanged at <code>left:524/w:331</code>. Six inventory matches render with SKU and stock at both sizes. care's data was never at fault — 74 parts, 72 active, all correctly org-scoped, and the matcher over <code>sku name</code> always worked.</dd>
       </dl>
     </div>
 
