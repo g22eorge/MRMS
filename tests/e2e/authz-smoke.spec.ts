@@ -84,7 +84,10 @@ async function login(page: Page, email: string) {
 test("admin sees admin navigation and can open user settings", async ({ page }) => {
   await login(page, adminEmail);
 
-  await expect(page.getByRole("link", { name: "Settings" }).first()).toBeVisible();
+  // Settings is reached from the header control, not a sidebar link — the nav
+  // was reorganised and this waited on a link that no longer exists. The
+  // substantive checks below (Users, Branding, Create) are what this test is for.
+  await expect(page.getByRole("button", { name: "Open settings" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Clients" }).first()).toBeVisible();
 
   await page.goto("/settings");
@@ -94,8 +97,9 @@ test("admin sees admin navigation and can open user settings", async ({ page }) 
   await page.goto("/settings/users");
   await page.waitForURL("**/settings/users");
 
-  // "Create" button is revealed inside the "Add User" panel toggled by ?add=1.
-  await page.goto("/settings/users?add=1");
+  // The Add User panel is toggled by client state now, not ?add=1 — clicking the
+  // opener is what reveals the create form.
+  await page.getByRole("button", { name: "+ Add" }).click();
   await expect(page.getByRole("button", { name: "Create" }).first()).toBeVisible();
 });
 
