@@ -10,6 +10,7 @@
 import { expect, test } from "@playwright/test";
 import { OrgModule, PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { destroyE2eOrg } from "./fixtures/destroy-org";
 
 process.env.DATABASE_URL = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 
@@ -180,4 +181,11 @@ test.describe("Role escalation — restricted roles cannot access privileged API
     expect([403, 404, 401]).toContain(res.status());
     expect(res.status()).not.toBe(200);
   });
+});
+
+// Leave the database as we found it. Without this the fixture org and every
+// document these tests create survive the run, and the next spec — and the next
+// run — sees data it did not put there.
+test.afterAll(async () => {
+  await destroyE2eOrg(prisma, "e2e-role-escalation");
 });

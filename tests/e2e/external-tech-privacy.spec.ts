@@ -219,3 +219,18 @@ test("external technician job APIs do not expose client PII or billing history",
     expect(status, `External technician should not download ${suffix}`).toBe(403);
   }
 });
+
+// This spec seeds into the SEEDED org rather than a fixture org of its own,
+// because its subject is what a real external technician sees. That makes its
+// rows visible to every other spec, so they are removed by name rather than by
+// dropping an org — the org here is not ours to delete.
+test.afterAll(async () => {
+  const job = await prisma.job.findUnique({ where: { jobNumber: "E2E-PRIVACY-0001" }, select: { id: true, orgId: true } });
+  if (job) {
+    await prisma.auditLog.deleteMany({ where: { jobId: job.id } });
+    await prisma.job.delete({ where: { id: job.id } }).catch(() => undefined);
+    await prisma.client
+      .deleteMany({ where: { orgId: job.orgId, phone: "08019990001" } })
+      .catch(() => undefined);
+  }
+});
