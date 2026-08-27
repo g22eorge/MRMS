@@ -20,7 +20,7 @@ import { PreviewButton } from "./PreviewButton";
 import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
 import { RowCheckbox } from "./RowCheckbox";
-import { QuotationCreateDialog, QuotationNewButton } from "./QuotationCreateDialog";
+import { QuotationCreateDialog, QuotationCreateProvider, QuotationNewButton } from "./QuotationCreateDialog";
 import { DataTable, TablePagination, type DataTableColumn } from "@/components/ui/DataTable";
 import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -181,6 +181,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   return (
     <QuotationPreviewProvider>
+      <QuotationCreateProvider>
       <section className="space-y-4">
         <PageHeader
           title="Quotations"
@@ -335,6 +336,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
       />
 
     </section>
+      </QuotationCreateProvider>
     </QuotationPreviewProvider>
   );
 }

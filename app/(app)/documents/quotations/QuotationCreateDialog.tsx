@@ -1,8 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { NewQuotationForm } from "@/app/(app)/sales/quotations/new/NewQuotationForm";
+
+/**
+ * The button and the dialog sit far apart in the page tree, so they used to
+ * talk over a window CustomEvent. That works only while both are hydrated: if
+ * anything upstream fails to hydrate, the button still paints, the click
+ * dispatches into an empty room, and nothing happens at all — no dialog, no
+ * request, nothing to see in a server log. Shared React state fails honestly
+ * instead, and a button rendered outside the provider throws immediately
+ * rather than silently doing nothing.
+ */
+type QuotationCreateContextValue = {
+  isOpen: boolean;
+  open: () => void;
+  close: () => void;
+};
+
+const QuotationCreateContext = createContext<QuotationCreateContextValue | null>(null);
+
+function useQuotationCreate(): QuotationCreateContextValue {
+  const ctx = useContext(QuotationCreateContext);
+  if (!ctx) {
+    throw new Error(
+      "QuotationNewButton/QuotationCreateDialog must be rendered inside <QuotationCreateProvider>.",
+    );
+  }
+  return ctx;
+}
+
+export function QuotationCreateProvider({ children }: { children: ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+  const value = useMemo(() => ({ isOpen, open, close }), [isOpen, open, close]);
+  return <QuotationCreateContext.Provider value={value}>{children}</QuotationCreateContext.Provider>;
+}
 
 type ClientOption = {
   id: string;
@@ -58,25 +93,20 @@ export function QuotationCreateDialog({
   defaultTaxRate,
   defaultTaxLabel,
 }: Props) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const { isOpen, close } = useQuotationCreate();
 
-  const close = useCallback(() => {
-    setOpen(false);
-  }, []);
-
+  // Escape closes it, as a modal should. The old event version had no key
+  // handling; the listener is cheap and only bound while the dialog is up.
   useEffect(() => {
-    const opener = () => setOpen(true);
-    const closer = () => close();
-    window.addEventListener("quotation-create-dialog:open", opener);
-    window.addEventListener("quotation-create-dialog:close", closer);
-    return () => {
-      window.removeEventListener("quotation-create-dialog:open", opener);
-      window.removeEventListener("quotation-create-dialog:close", closer);
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
     };
-  }, [close]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, close]);
 
-  if (!open) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -114,10 +144,11 @@ export function QuotationCreateDialog({
 }
 
 export function QuotationNewButton({ className }: { className?: string }) {
+  const { open } = useQuotationCreate();
   return (
     <button
       type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent("quotation-create-dialog:open"))}
+      onClick={open}
       className={className ?? "btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold"}
     >
       New Quotation
