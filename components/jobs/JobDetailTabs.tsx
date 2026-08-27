@@ -644,6 +644,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+  const canStartRepair = can.createJob(permissionUser);
   const canGenerateJobCard = can.generateJobCards(permissionUser);
   const canGenerateQuotation =
     ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role) ||
@@ -1447,6 +1448,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               <div className="flex items-center justify-between px-4 py-3">
                 <p className="text-xs text-[var(--ink-muted)]">Profile</p>
                 <a href={job.clientId ? `/clients/${job.clientId}` : `/clients`} className="text-sm font-medium text-[var(--accent)]">View client →</a>
+              </div>
+            ) : null}
+            {/* Repeat customers are the common case in repair, and starting here
+                carries the client through so nobody has to search for the person
+                whose job is already open — which is how duplicate client records
+                get made. */}
+            {job.client && job.clientId && canStartRepair ? (
+              <div className="flex items-center justify-between px-4 py-3">
+                <p className="text-xs text-[var(--ink-muted)]">New repair</p>
+                <a href={`/jobs/new?clientId=${job.clientId}`} className="text-sm font-medium text-[var(--accent)]">Another for this customer →</a>
               </div>
             ) : null}
           </div>

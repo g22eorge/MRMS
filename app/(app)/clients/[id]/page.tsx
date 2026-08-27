@@ -310,7 +310,7 @@ export default async function ClientDetailPage({
         // The organisation is the account; the contact shows in the details below.
         title={clientDisplayName(client)}
         secondary={canEdit ? (
-          <Link href="/jobs/new" className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem]">+ New Repair</Link>
+          <Link href={`/jobs/new?clientId=${client.id}`} className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem]">+ New Repair</Link>
         ) : undefined}
       />
 

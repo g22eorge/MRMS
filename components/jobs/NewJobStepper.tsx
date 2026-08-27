@@ -69,13 +69,40 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-0.5 text-xs text-red-500">{msg}</p>;
 }
 
-export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
-  const [step, setStep] = useState(0);
+export type PresetClient = {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  organization: string | null;
+};
+
+/**
+ * `presetClient` arrives when the repair is started from a client or a job that
+ * already names the customer. Step 0 asks nothing else — it is purely
+ * identification — so with a known client it has nothing left to ask and the
+ * stepper opens on Device Info instead. This is a data-integrity measure as
+ * much as a convenience: made to search again, staff who do not find the
+ * record simply retype it, and a second client appears for the same person,
+ * splitting their job history, statement and receivables.
+ *
+ * The client stays changeable. People do start from the wrong page, so the
+ * banner keeps an escape back to step 0 rather than locking the choice in.
+ */
+export function NewJobStepper({
+  receivedByName,
+  presetClient = null,
+}: {
+  receivedByName: string;
+  presetClient?: PresetClient | null;
+}) {
+  const [step, setStep] = useState(presetClient ? 1 : 0);
+  const [clientPreselected, setClientPreselected] = useState(Boolean(presetClient));
   const [form, setForm] = useState({
-    fullName: "",
-    phone: "",
-    email: "",
-    organization: "",
+    fullName: presetClient?.fullName ?? "",
+    phone: presetClient?.phone ?? "",
+    email: presetClient?.email ?? "",
+    organization: presetClient?.organization ?? "",
     receivedAt: "",
   });
   const [devices, setDevices] = useState<DeviceDraft[]>([blankDevice()]);
@@ -84,13 +111,22 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     fullName: string;
     email: string | null;
     organization: string | null;
-  }>(null);
+  }>(presetClient
+    ? {
+        id: presetClient.id,
+        fullName: presetClient.fullName,
+        email: presetClient.email,
+        organization: presetClient.organization,
+      }
+    : null);
   const [clientLookupQuery, setClientLookupQuery] = useState("");
   const [clientLookupResults, setClientLookupResults] = useState<
     Array<{ id: string; fullName: string; phone: string; email: string | null; organization: string | null }>
   >([]);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>(
+    presetClient ? { fullName: true, phone: true } : {},
+  );
   const [agreedToServiceTerms, setAgreedToServiceTerms] = useState(false);
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
@@ -298,6 +334,22 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           </button>
         ))}
       </div>
+
+      {clientPreselected && step !== 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-2">
+          <p className="text-[0.8125rem] text-[var(--ink)]">
+            New repair for <span className="font-bold">{form.fullName}</span>
+            {form.phone ? <span className="text-[var(--ink-muted)]"> · {form.phone}</span> : null}
+          </p>
+          <button
+            type="button"
+            onClick={() => { setClientPreselected(false); setStep(0); }}
+            className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+          >
+            Change client
+          </button>
+        </div>
+      ) : null}
 
       {/* Step 0 — Client Info */}
       {step === 0 ? (
