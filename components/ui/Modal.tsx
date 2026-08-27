@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { modalPanelClassName, type ModalSize } from "@/lib/ui/modal";
 
@@ -43,9 +44,19 @@ export function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, closeOnEscape, onClose]);
 
-  if (!open) return null;
+  // Rendered through a portal so the modal escapes <main>, which carries
+  // `fade-in`: an animation with `fill-mode: both` whose final frame is
+  // `transform: translateY(0)`. That transform stays applied for the life of
+  // the page, and a transformed element becomes the containing block for its
+  // position:fixed descendants — so in place, "fixed inset-0" covered only the
+  // content column, dimming the page around a squeezed, half-hidden panel while
+  // the sidebar stayed live. document.body sits outside that containing block.
+  //
+  // Safe for theming: the theme class is on <html> and the custom properties
+  // are declared at :root, so body inherits every variable the panel uses.
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -60,7 +71,8 @@ export function Modal({
         aria-hidden="true"
       />
       <div className={modalPanelClassName(size, panelClassName)}>{children}</div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
