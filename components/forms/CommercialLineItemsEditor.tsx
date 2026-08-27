@@ -49,10 +49,16 @@ export function CommercialLineItemsEditor({
   // descendant, so the matches rendered correctly and were simply cut off —
   // which reads as "inventory search returns nothing".
   const [comboRect, setComboRect] = useState<{ top: number; left: number; width: number } | null>(null);
-  const anchorRefs = useRef(new Map<number, HTMLInputElement>());
+  // Anchor to the input that was actually focused, never to a ref keyed by row.
+  // DataTable renders every row twice — a mobile card and a desktop table, one
+  // of them display:none — so a key-based map is a race that the *hidden* input
+  // wins below the lg breakpoint. That put the list at left:0 with an 11px
+  // width, which is what "inventory search does nothing" looked like on a
+  // narrow window.
+  const anchorEl = useRef<HTMLInputElement | null>(null);
 
-  const positionCombo = useCallback((key: number) => {
-    const el = anchorRefs.current.get(key);
+  const positionCombo = useCallback(() => {
+    const el = anchorEl.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     setComboRect({ top: r.bottom, left: r.left, width: r.width });
@@ -62,7 +68,7 @@ export function CommercialLineItemsEditor({
     // No need to clear the rect on close: the list only renders while a combo
     // is open, and the next open repositions before it paints.
     if (openComboKey === null) return;
-    const update = () => positionCombo(openComboKey);
+    const update = () => positionCombo();
     update();
     // Capture phase so inner scrollers (the table, the dialog body) are caught,
     // not just the window.
@@ -156,13 +162,12 @@ export function CommercialLineItemsEditor({
         return (
           <div className="relative">
             <input
-              ref={(el) => {
-                if (el) anchorRefs.current.set(item.key, el);
-                else anchorRefs.current.delete(item.key);
-              }}
               value={item.description}
               onChange={(event) => onUpdateLine(item.key, { description: event.target.value, partId: "" })}
-              onFocus={() => setOpenComboKey(item.key)}
+              onFocus={(event) => {
+                anchorEl.current = event.currentTarget;
+                setOpenComboKey(item.key);
+              }}
               onBlur={() => window.setTimeout(() => setOpenComboKey((k) => (k === item.key ? null : k)), 120)}
               placeholder="Type a product or service — or pick from inventory"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
