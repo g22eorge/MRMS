@@ -73,6 +73,8 @@ export type DataTableProps<T> = {
     total: number;
     hrefForPage: (page: number) => string;
     unit?: string;
+    /** Offer the 20/50/100 selector. Omit on tables where size is fixed. */
+    hrefForSize?: (size: number) => string;
   };
   /**
    * Extra classes for a specific row's <tr> — e.g. tint rows that need
@@ -144,6 +146,8 @@ export function DataTable<T>({
       total={pagination.total}
       hrefForPage={pagination.hrefForPage}
       unit={pagination.unit}
+      pageSize={pagination.pageSize}
+      hrefForSize={pagination.hrefForSize}
     />
   ) : null;
 

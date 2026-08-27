@@ -25,7 +25,7 @@ import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/D
 import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
 export default async function RefundsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string; size?: string; error?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -52,6 +52,7 @@ export default async function RefundsPage({
   const typeFilter = params.type ?? "all";
   const periodFilter = params.period ?? "all";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const now2 = new Date();
   const thisMonthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
   const lastMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
@@ -476,7 +477,7 @@ export default async function RefundsPage({
 
   // KPIs come from whole-dataset aggregates above; the list is paginated in SQL
   // against the filtered total so no rows are dropped beyond an arbitrary cap.
-  const pageView = paginationView(page, refundCount);
+  const pageView = paginationView(page, refundCount, pageSize);
   const pageRows = await prisma.refund.findMany({
     where: baseWhere,
     orderBy: { refundedAt: "desc" },
@@ -484,12 +485,15 @@ export default async function RefundsPage({
     take: pageView.take,
     select: refundListSelect,
   }).catch(() => [] as never[]);
-  const refundsHref = pageHrefBuilder("/documents/refunds", {
+  const refundsHrefFilters = {
     q,
     method: methodFilter !== "all" ? methodFilter : "",
     type: typeFilter !== "all" ? typeFilter : "",
     period: periodFilter !== "all" ? periodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const refundsHref = pageHrefBuilder("/documents/refunds", refundsHrefFilters);
+  const refundsHrefSize = sizeHrefBuilder("/documents/refunds", refundsHrefFilters);
 
   const currency = org.baseCurrency;
   const totalRefunds = kpiData._count.id ?? 0;
@@ -941,6 +945,8 @@ export default async function RefundsPage({
         total={pageView.total}
         unit="refunds"
         hrefForPage={refundsHref}
+          pageSize={pageSize}
+          hrefForSize={refundsHrefSize}
       />
     </div>
     </Disclosure>

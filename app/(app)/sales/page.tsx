@@ -11,7 +11,7 @@ import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection } from "@
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
@@ -91,6 +91,7 @@ type SearchParams = {
   q?: string;
   createError?: string;
   page?: string;
+  size?: string;
 };
 
 export default async function SalesPage({
@@ -113,6 +114,7 @@ export default async function SalesPage({
   const statusFilter = overdueOnly ? undefined : (filters.status as LeadStatus | undefined);
   const searchQ      = (filters.q ?? "").trim();
   const page         = parsePage(filters.page);
+  const pageSize     = parsePageSize(filters.size);
   const currency     = getAppCurrency();
 
   const now = new Date();
@@ -184,8 +186,8 @@ export default async function SalesPage({
             assignedTo: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: "desc" },
-          skip: (page - 1) * PAGE_SIZE,
-          take: PAGE_SIZE,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -197,8 +199,8 @@ export default async function SalesPage({
             client: { select: { id: true, fullName: true, organization: true } },
           },
           orderBy: { createdAt: "desc" },
-          skip: (page - 1) * PAGE_SIZE,
-          take: PAGE_SIZE,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -287,13 +289,16 @@ export default async function SalesPage({
 
   const listTotal = activeTab === "leads" ? leadsTotal : quotationsTotal;
   const listUnit = activeTab === "leads" ? "leads" : "quotations";
-  const pageView = paginationView(page, listTotal);
-  const listHref = pageHrefBuilder("/sales", {
+  const pageView = paginationView(page, listTotal, pageSize);
+  const listFilters = {
     tab: activeTab,
     status: statusFilter ?? "",
     overdue: overdueOnly ? "1" : "",
     q: searchQ,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const listHref = pageHrefBuilder("/sales", listFilters);
+  const listSizeHref = sizeHrefBuilder("/sales", listFilters);
 
   const hasLeadFilters = Boolean(searchQ) || Boolean(statusFilter) || overdueOnly;
 
@@ -973,6 +978,8 @@ export default async function SalesPage({
         total={pageView.total}
         unit={listUnit}
         hrefForPage={listHref}
+        pageSize={pageSize}
+        hrefForSize={listSizeHref}
       />
     </ListPageLayout>
     </DisclosureProvider>

@@ -11,7 +11,7 @@ import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuSection } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,7 @@ export default async function SuppliersPage({
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const now = new Date();
 
@@ -43,8 +44,10 @@ export default async function SuppliersPage({
     db.supplierBill.count({ where: { dueAt: { lt: now }, status: { notIn: ["PAID", "CANCELLED"] } } }).catch(() => 0),
   ]);
 
-  const pageView = paginationView(page, suppliersTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/suppliers", {});
+  const pageView = paginationView(page, suppliersTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/suppliers", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/suppliers", hrefForPageFilters);
 
   return (
     <ListPageLayout
@@ -93,7 +96,7 @@ export default async function SuppliersPage({
       <DataTable
         rows={suppliers}
         getRowKey={(s) => s.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: suppliersTotal, hrefForPage, unit: "suppliers" }}
+        pagination={{ page: pageView.page, pageSize, total: suppliersTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "suppliers" }}
         empty="No suppliers yet. Add your first supplier to start raising purchase orders."
         columns={[
           {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
@@ -175,7 +175,16 @@ function RequestDrawer({
   // Portaled: <main> keeps a transform applied via `fade-in`'s
   // `fill-mode: both`, making it the containing block for position:fixed
   // children — backdrop and drawer were confined to the content column.
-  if (typeof document === "undefined") return null;
+  // A mounted flag, not `typeof document`, because this component renders
+  // unconditionally — the panel stays in the tree so it can slide. Branching on
+  // `typeof document` returns null on the server and content on the FIRST client
+  // render, which is a hydration mismatch React reports on every page that
+  // renders this. The flag makes the first client render match the server (null)
+  // and the portal appear on the commit after.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
 
   return createPortal(
     <>

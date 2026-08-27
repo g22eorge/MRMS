@@ -18,7 +18,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -56,7 +56,7 @@ type Segment = (typeof SEGMENTS)[number];
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -64,8 +64,9 @@ export default async function PosPage({
     redirect("/dashboard");
   }
 
-  const { period, q: rawQ, page: pageParam, error: posListError } = await searchParams;
+  const { period, q: rawQ, page: pageParam, size: sizeParam, error: posListError } = await searchParams;
   const page = parsePage(pageParam);
+  const pageSize = parsePageSize(sizeParam);
   const currency = org.baseCurrency;
   const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
   const q = (rawQ ?? "").trim();
@@ -225,8 +226,8 @@ export default async function PosPage({
     sales = await db.sale.findMany({
       where: salesWhere,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         saleNumber: true,
@@ -247,8 +248,10 @@ export default async function PosPage({
     sales = [];
   }
 
-  const salesPage = paginationView(page, salesTotal);
-  const salesHref = pageHrefBuilder("/pos", { period: segment !== "all" ? segment : "", q });
+  const salesPage = paginationView(page, salesTotal, pageSize);
+  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
+  const salesHrefSize = sizeHrefBuilder("/pos", salesHrefFilters);
   const hasSaleFilters = Boolean(q) || segment !== "all";
 
   function filterHref(next: Segment, search = q) {
@@ -600,6 +603,8 @@ export default async function PosPage({
         total={salesPage.total}
         unit="sales"
         hrefForPage={salesHref}
+        pageSize={pageSize}
+        hrefForSize={salesHrefSize}
       />
     </ListPageLayout>
   );

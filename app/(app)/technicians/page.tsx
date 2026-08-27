@@ -2,7 +2,7 @@ import Link from "next/link";
 
 
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { formatEATDate } from "@/lib/date-eat";
@@ -35,6 +35,7 @@ type SearchParams = {
   ready?: string;
   dismiss?: string;
   page?: string;
+  size?: string;
 };
 
 const ACTIVE_BOARD_STATUSES = [
@@ -82,6 +83,7 @@ export default async function TechniciansPage({
   const { user, orgId } = await requireOrgSession();
   const filters = await searchParams;
   const page = parsePage(filters.page);
+  const pageSize = parsePageSize(filters.size);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -185,14 +187,17 @@ export default async function TechniciansPage({
 
   // KPIs/spotlight stay computed from the whole in-memory-filtered set; only the
   // displayed work-queue rows are paginated.
-  const pageView = paginationView(page, sortedJobs.length);
+  const pageView = paginationView(page, sortedJobs.length, pageSize);
   const pageRows = sortedJobs.slice(pageView.skip, pageView.skip + pageView.take);
-  const jobsHref = pageHrefBuilder("/technicians", {
+  const jobsHrefFilters = {
     q: filters.q ?? "",
     status: filters.status ?? "",
     ready: filters.ready ?? "",
     dismiss: filters.dismiss ?? "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const jobsHref = pageHrefBuilder("/technicians", jobsHrefFilters);
+  const jobsHrefSize = sizeHrefBuilder("/technicians", jobsHrefFilters);
 
   const assignedCount = normalized.length;
   const readyCount = normalized.filter((job) => job.ready).length;
@@ -596,6 +601,8 @@ export default async function TechniciansPage({
           total={pageView.total}
           unit="jobs"
           hrefForPage={jobsHref}
+          pageSize={pageSize}
+          hrefForSize={jobsHrefSize}
         />
       </section>
     </ListPageLayout>

@@ -10,7 +10,7 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 import { createStockLocationAction, toggleStockLocationAction, updateStockLocationAction } from "./actions";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -30,6 +30,7 @@ export default async function StockLocationsPage({
   const saved = String(params.saved ?? "") === "1";
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [locations, locationsTotal, branches, stockRows] = await Promise.all([
     prisma.stockLocation.findMany({
@@ -56,8 +57,10 @@ export default async function StockLocationsPage({
   const stats = new Map(stockRows.map((row) => [row.locationId, row]));
   const totalOnHand = stockRows.reduce((sum, row) => sum + (row._sum.qtyOnHand ?? 0), 0);
   const branchName = new Map(branches.map((branch) => [branch.id, branch.name]));
-  const pageView = paginationView(page, locationsTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/locations", {});
+  const pageView = paginationView(page, locationsTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/locations", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/locations", hrefForPageFilters);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   const renderLocationActions = (location: (typeof locations)[number]) => (
@@ -123,7 +126,7 @@ export default async function StockLocationsPage({
       <DataTable
         rows={locations}
         getRowKey={(location) => location.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: locationsTotal, hrefForPage, unit: "locations" }}
+        pagination={{ page: pageView.page, pageSize, total: locationsTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "locations" }}
         empty="No stock locations yet. Create Main Stock, Store, Van, or Technician locations here."
         columns={[
           {

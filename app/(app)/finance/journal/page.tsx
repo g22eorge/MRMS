@@ -19,7 +19,7 @@ import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { parsePeriodInt } from "@/lib/date-eat";
@@ -60,6 +60,7 @@ export default async function JournalPage({
   const searchQ = (sp.q ?? "").trim();
   const currency = "UGX";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
 
   // ── Date ranges ───────────────────────────────────────────────────────────
   const periodFilter =
@@ -274,13 +275,16 @@ export default async function JournalPage({
   // Filtered summary — whole-dataset posted total (not just the current page)
   const filteredTotal = filteredPostedStats._sum.totalAmount ?? 0;
 
-  const pageView = paginationView(page, total);
-  const journalHref = pageHrefBuilder("/finance/journal", {
+  const pageView = paginationView(page, total, pageSize);
+  const journalHrefFilters = {
     month: month > 0 ? String(month) : "",
     year: String(year),
     status: statusFilter !== "all" ? statusFilter : "",
     q: searchQ,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const journalHref = pageHrefBuilder("/finance/journal", journalHrefFilters);
+  const journalHrefSize = sizeHrefBuilder("/finance/journal", journalHrefFilters);
 
   return (
     <div className="space-y-4">
@@ -597,6 +601,8 @@ export default async function JournalPage({
         total={pageView.total}
         unit="entries"
         hrefForPage={journalHref}
+          pageSize={pageSize}
+          hrefForSize={journalHrefSize}
       />
 
       {/* ── QUICK LINKS ────────────────────────────────────────────────────── */}

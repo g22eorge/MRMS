@@ -42,7 +42,7 @@ import { InvoicePreviewProvider } from "./InvoicePreviewProvider";
 import { PreviewButton } from "./PreviewButton";
 import { InvoiceCreateDialog } from "./InvoiceCreateDialog";
 import { InvoiceNewButton } from "./InvoiceNewButton";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -59,7 +59,7 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; voidSkipped?: string; page?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; voidSkipped?: string; page?: string; size?: string; }>;
 }) {
   const { user } = await getCurrentUserRole();
   if (!user.orgId) redirect("/dashboard");
@@ -83,6 +83,7 @@ export default async function InvoicesPage({
   const agingFilter = params.aging ?? "all";
   const q = (params.q ?? "").trim();
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const errorParam = params.error ?? "";
   const remindedParam = params.reminded ?? "";
   const remindedBulkParam = params.remindedBulk ?? "";
@@ -447,14 +448,17 @@ export default async function InvoicesPage({
 
   // KPIs/aging/summaries stay computed from the full `filtered` array; only the
   // rendered list rows are paginated.
-  const pageView = paginationView(page, filtered.length);
+  const pageView = paginationView(page, filtered.length, pageSize);
   const pageRows = filtered.slice(pageView.skip, pageView.skip + pageView.take);
-  const invoicesHref = pageHrefBuilder("/documents/invoices", {
+  const invoicesHrefFilters = {
     type: typeFilter !== "all" ? typeFilter : "",
     status: statusFilter !== "all" ? statusFilter : "",
     aging: agingFilter !== "all" ? agingFilter : "",
     q,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const invoicesHref = pageHrefBuilder("/documents/invoices", invoicesHrefFilters);
+  const invoicesHrefSize = sizeHrefBuilder("/documents/invoices", invoicesHrefFilters);
 
   const readyJobs = await db.job
     .findMany({
@@ -851,6 +855,8 @@ export default async function InvoicesPage({
           total={pageView.total}
           unit="invoices"
           hrefForPage={invoicesHref}
+          pageSize={pageSize}
+          hrefForSize={invoicesHrefSize}
         />
       </div>
 

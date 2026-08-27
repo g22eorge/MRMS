@@ -193,6 +193,7 @@ export function JobTable({
   pageSize,
   totalPages,
   hrefForPage,
+  hrefForSize,
   prevPageHref,
   nextPageHref,
 }: {
@@ -213,6 +214,7 @@ export function JobTable({
   isNextDisabled?: boolean;
   /** Preferred: full page-href builder (supports arbitrary page jumps). */
   hrefForPage?: (page: number) => string;
+  hrefForSize?: (size: number) => string;
   /** Legacy fallback when only prev/next hrefs are available. */
   prevPageHref?: string;
   nextPageHref?: string;
@@ -440,6 +442,7 @@ export function JobTable({
                 unit: "jobs",
                 hrefForPage:
                   hrefForPage ?? ((p) => (p < page! ? (prevPageHref ?? "#") : (nextPageHref ?? "#"))),
+                hrefForSize,
               }
             : undefined
         }

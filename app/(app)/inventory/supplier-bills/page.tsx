@@ -8,7 +8,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { createSupplierPaymentAction } from "./actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
@@ -26,13 +26,14 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 export default async function SupplierBillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; error?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [total, bills, outstandingRows] = await Promise.all([
     prisma.supplierBill.count({ where: { orgId } }).catch(() => 0),
@@ -58,8 +59,12 @@ export default async function SupplierBillsPage({
   const totalOutstanding = outstandingRows
     .reduce((sum, bill) => sum + Math.max(0, bill.totalAmount - bill.paidAmount), 0);
 
-  const pageView = paginationView(page, total);
-  const billsHref = pageHrefBuilder("/inventory/supplier-bills", {});
+  const pageView = paginationView(page, total, pageSize);
+  const billsHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const billsHref = pageHrefBuilder("/inventory/supplier-bills", billsHrefFilters);
+  const billsHrefSize = sizeHrefBuilder("/inventory/supplier-bills", billsHrefFilters);
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
@@ -84,7 +89,8 @@ export default async function SupplierBillsPage({
       <DataTable
         rows={bills}
         getRowKey={(bill) => bill.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: billsHref, unit: "bills" }}
+        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: billsHref,
+            hrefForSize: billsHrefSize, unit: "bills" }}
         empty="No supplier bills yet."
         columns={[
           {

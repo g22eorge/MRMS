@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ function compactJson(value: string | null) {
 export default async function SettingsAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string; page?: string }>;
+  searchParams: Promise<{ action?: string; page?: string; size?: string; }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   if (user.role !== "ADMIN") redirect("/settings");
@@ -27,6 +27,7 @@ export default async function SettingsAuditPage({
   const params = await searchParams;
   const action = typeof params.action === "string" ? params.action.trim() : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const exportHref = `/api/audit/export${action ? `?action=${encodeURIComponent(action)}` : ""}`;
 
   const eventsWhere = {
@@ -60,8 +61,12 @@ export default async function SettingsAuditPage({
       .catch(() => []),
   ]);
 
-  const pageView = paginationView(page, eventsTotal);
-  const auditHref = pageHrefBuilder("/settings/audit", { action });
+  const pageView = paginationView(page, eventsTotal, pageSize);
+  const auditHrefFilters = { action,
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const auditHref = pageHrefBuilder("/settings/audit", auditHrefFilters);
+  const auditHrefSize = sizeHrefBuilder("/settings/audit", auditHrefFilters);
 
   const actorIds = Array.from(new Set(events.map((event) => event.actorUserId).filter(Boolean))) as string[];
   const actors = actorIds.length
@@ -177,6 +182,8 @@ export default async function SettingsAuditPage({
         total={pageView.total}
         unit="events"
         hrefForPage={auditHref}
+          pageSize={pageSize}
+          hrefForSize={auditHrefSize}
       />
     </div>
   );

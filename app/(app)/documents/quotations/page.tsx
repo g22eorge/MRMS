@@ -22,7 +22,7 @@ import { BulkActionBar } from "./BulkActionBar";
 import { RowCheckbox } from "./RowCheckbox";
 import { QuotationCreateDialog, QuotationCreateProvider, QuotationNewButton } from "./QuotationCreateDialog";
 import { DataTable, TablePagination, type DataTableColumn } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatEATDate } from "@/lib/date-eat";
@@ -52,7 +52,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   const statusFilter = typeof sp.status === "string" ? sp.status.toUpperCase() : "ALL";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const page = parsePage(sp.page);
-  const pageSize = 20;
+  const pageSize = parsePageSize(sp.size);
 
   const db = orgDb(user.orgId);
   const org = await db.organization.findFirst({ where: { id: user.orgId }, select: { baseCurrency: true } });
@@ -166,7 +166,9 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   }
 
   const pageView = paginationView(page, totalItems, pageSize);
-  const hrefForPage = pageHrefBuilder(`/documents/quotations`, { status: statusFilter, q });
+  const quotationFilters = { status: statusFilter, q, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder(`/documents/quotations`, quotationFilters);
+  const hrefForSize = sizeHrefBuilder(`/documents/quotations`, quotationFilters);
 
   const [clients, parts, taxRates, leads, jobs, branding] = await Promise.all([
     db.client.findMany({ where: { orgId: user.orgId }, orderBy: { fullName: "asc" }, take: 300, select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } }),
@@ -319,6 +321,8 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
     total={pageView.total}
     unit="quotations"
     hrefForPage={hrefForPage}
+    pageSize={pageSize}
+    hrefForSize={hrefForSize}
   />
   </div>
 

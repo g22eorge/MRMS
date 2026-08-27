@@ -11,7 +11,7 @@ import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
@@ -57,11 +57,12 @@ function nextDueDateFromFrequency(from: Date, freq: Frequency): Date {
 export default async function RecurringInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; size?: string; error?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.toLowerCase().trim() ?? "";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
@@ -277,9 +278,13 @@ export default async function RecurringInvoicesPage({
     : recurringInvoices;
 
   // KPIs above stay whole-dataset; only the displayed rows are paginated.
-  const pageView = paginationView(page, filteredRecurring.length);
+  const pageView = paginationView(page, filteredRecurring.length, pageSize);
   const pageRows = filteredRecurring.slice(pageView.skip, pageView.skip + pageView.take);
-  const recurringHref = pageHrefBuilder("/finance/recurring", { q: sp.q?.trim() ?? "" });
+  const recurringHrefFilters = { q: sp.q?.trim() ?? "",
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const recurringHref = pageHrefBuilder("/finance/recurring", recurringHrefFilters);
+  const recurringHrefSize = sizeHrefBuilder("/finance/recurring", recurringHrefFilters);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   const renderRecurringActions = (rec: (typeof pageRows)[number]) => (
@@ -530,6 +535,8 @@ export default async function RecurringInvoicesPage({
         total={pageView.total}
         unit="templates"
         hrefForPage={recurringHref}
+          pageSize={pageSize}
+          hrefForSize={recurringHrefSize}
       />
     </div>
   );

@@ -14,7 +14,7 @@ import {
 } from "@/lib/complaints";
 import { RowActionsMenu, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -46,6 +46,7 @@ export default async function ComplaintsPage({
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const filterStatus = STATUSES.includes(params.status as ComplaintStatus)
     ? (params.status as ComplaintStatus)
     : null;
@@ -123,8 +124,12 @@ export default async function ComplaintsPage({
     }).catch(() => [] as Array<{ status: ComplaintStatus; _count: { status: number } }>),
   ]);
 
-  const pageView = paginationView(page, complaintsTotal);
-  const complaintsHref = pageHrefBuilder("/complaints", { status: filterStatus ?? "", q: qSearch });
+  const pageView = paginationView(page, complaintsTotal, pageSize);
+  const complaintsHrefFilters = { status: filterStatus ?? "", q: qSearch,
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const complaintsHref = pageHrefBuilder("/complaints", complaintsHrefFilters);
+  const complaintsHrefSize = sizeHrefBuilder("/complaints", complaintsHrefFilters);
 
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count?.status ?? 0]));
   const now = new Date();
@@ -328,6 +333,8 @@ export default async function ComplaintsPage({
         total={pageView.total}
         unit="complaints"
         hrefForPage={complaintsHref}
+          pageSize={pageSize}
+          hrefForSize={complaintsHrefSize}
       />
     </ListPageLayout>
   );

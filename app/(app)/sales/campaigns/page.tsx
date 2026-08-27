@@ -12,7 +12,7 @@ import { SendCampaignButton } from "@/components/shared/SendCampaignButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { buttonClasses } from "@/components/ui/Button";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
@@ -97,6 +97,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const selectedId = sp.id ?? null;
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   const statusFilter = CAMPAIGN_STATUSES.includes(sp.status as CampaignStatus) ? (sp.status as CampaignStatus) : null;
   const q = (sp.q ?? "").trim();
 
@@ -242,13 +243,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     return true;
   });
 
-  const pageView = paginationView(page, filtered.length);
+  const pageView = paginationView(page, filtered.length, pageSize);
   const pageCampaigns = filtered.slice(pageView.skip, pageView.skip + pageView.take);
-  const campaignsHref = pageHrefBuilder("/sales/campaigns", {
+  const campaignsHrefFilters = {
     id: selectedId ?? "",
     status: statusFilter ?? "",
     q,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const campaignsHref = pageHrefBuilder("/sales/campaigns", campaignsHrefFilters);
+  const campaignsHrefSize = sizeHrefBuilder("/sales/campaigns", campaignsHrefFilters);
 
   function href(next: { id?: string | null; status?: CampaignStatus | null; q?: string }) {
     const params = new URLSearchParams();
@@ -525,6 +529,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               total={pageView.total}
               unit="campaigns"
               hrefForPage={campaignsHref}
+          pageSize={pageSize}
+          hrefForSize={campaignsHrefSize}
             />
           </div>
 

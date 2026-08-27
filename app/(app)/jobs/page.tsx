@@ -16,7 +16,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 import { clientDisplayName } from "@/lib/client-name";
 type SearchParams = {
@@ -31,6 +31,7 @@ type SearchParams = {
   to?: string;
   dateField?: "receivedAt" | "completedAt";
   page?: string;
+  size?: string;
   sort?: string;
   view?: string;
   adv?: string;
@@ -141,7 +142,7 @@ export default async function JobsPage({
   const payoutFilter = filters.payout === "due" || filters.payout === "paid" ? filters.payout : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   // Mobile gets a large batch for continuous scroll; desktop uses pages
-  const pageSize = PAGE_SIZE;
+  const pageSize = parsePageSize(filters.size);
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
   const orderBy = sort === "job_number_desc" ? { jobNumber: "desc" as const } : { receivedAt: "desc" as const };
   const internalCanSearchAll =
@@ -938,7 +939,15 @@ export default async function JobsPage({
           totalPages={totalPages}
           isPrevDisabled={isPrevDisabled}
           isNextDisabled={isNextDisabled}
-          hrefForPage={pageHrefBuilder("/jobs", { ...preservedWithoutStatus, status: filters.status })}
+          hrefForPage={pageHrefBuilder("/jobs", {
+            ...preservedWithoutStatus,
+            status: filters.status,
+            size: pageSize !== PAGE_SIZE ? pageSize : "",
+          })}
+          hrefForSize={sizeHrefBuilder("/jobs", {
+            ...preservedWithoutStatus,
+            status: filters.status,
+          })}
         />
       )}
     </div>

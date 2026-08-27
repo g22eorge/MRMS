@@ -27,7 +27,7 @@ import { formatEATMediumDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
 export default async function CreditNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string; period?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; period?: string; page?: string; size?: string; error?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -51,6 +51,7 @@ export default async function CreditNotesPage({
   const filter = params.filter ?? "all";
   const periodFilter = params.period ?? "all";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const errorMessage = (params.error ?? "").trim();
   const nowCN = new Date();
   const cnThisMonthStart = new Date(nowCN.getFullYear(), nowCN.getMonth(), 1);
@@ -711,12 +712,15 @@ export default async function CreditNotesPage({
   const totalValue = statsRows.reduce((s, cn) => s + cn.totalAmount, 0);
   const pendingReturn = statsRows.filter((cn) => !cn.itemsReceivedBackAt).length;
   const currency = org.baseCurrency;
-  const pageView = paginationView(page, creditNotesTotal);
-  const creditNotesHref = pageHrefBuilder("/documents/credit-notes", {
+  const pageView = paginationView(page, creditNotesTotal, pageSize);
+  const creditNotesHrefFilters = {
     q,
     filter: filter !== "all" ? filter : "",
     period: periodFilter !== "all" ? periodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const creditNotesHref = pageHrefBuilder("/documents/credit-notes", creditNotesHrefFilters);
+  const creditNotesHrefSize = sizeHrefBuilder("/documents/credit-notes", creditNotesHrefFilters);
 
   const fmt = (d: Date | string | null) =>
     d ? formatEATMediumDate(d) : "—";
@@ -1029,6 +1033,8 @@ export default async function CreditNotesPage({
         total={pageView.total}
         unit="credit notes"
         hrefForPage={creditNotesHref}
+          pageSize={pageSize}
+          hrefForSize={creditNotesHrefSize}
       />
     </div>
   );

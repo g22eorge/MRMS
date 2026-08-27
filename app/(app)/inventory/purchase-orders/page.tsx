@@ -8,7 +8,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { deletePurchaseOrderAction, setPurchaseOrderStatusAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ function poNumber(po: { reference: string | null; id: string }) {
 export default async function PurchaseOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; }>;
 }) {
   const { user } = await getCurrentUserRole();
   const orgId = user.orgId;
@@ -41,6 +41,7 @@ export default async function PurchaseOrdersPage({
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -72,8 +73,12 @@ export default async function PurchaseOrdersPage({
   // KPIs stay whole-dataset: counts come from count({ where }) and pendingValue
   // is a simple (non-currency-converted) sum over the full open-item set.
   const pendingValue = pendingItems.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0);
-  const pageView = paginationView(page, total);
-  const poHref = pageHrefBuilder("/inventory/purchase-orders", {});
+  const pageView = paginationView(page, total, pageSize);
+  const poHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const poHref = pageHrefBuilder("/inventory/purchase-orders", poHrefFilters);
+  const poHrefSize = sizeHrefBuilder("/inventory/purchase-orders", poHrefFilters);
 
   // Named so the same actions render in the desktop table AND the mobile card.
   const renderPoActions = (po: (typeof orders)[number]) => {
@@ -129,7 +134,8 @@ export default async function PurchaseOrdersPage({
       <DataTable
         rows={orders}
         getRowKey={(po) => po.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: poHref, unit: "purchase orders" }}
+        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: poHref,
+            hrefForSize: poHrefSize, unit: "purchase orders" }}
         empty={
           <div className="space-y-3">
             <p>No purchase orders yet.</p>

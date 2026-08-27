@@ -6,7 +6,7 @@ import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +14,13 @@ export const dynamic = "force-dynamic";
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; }>;
 }) {
   await requirePlatformAdmin();
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [events, totalRevenue, monthRevenue] = await Promise.all([
     getRecentBillingEvents(100),
@@ -32,9 +33,13 @@ export default async function PaymentsPage({
     (e) => e.status === "successful" && e.event === "charge.completed",
   ).length;
 
-  const pageView = paginationView(page, events.length);
+  const pageView = paginationView(page, events.length, pageSize);
   const pageRows = events.slice(pageView.skip, pageView.skip + pageView.take);
-  const paymentsHref = pageHrefBuilder("/platform/payments", {});
+  const paymentsHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const paymentsHref = pageHrefBuilder("/platform/payments", paymentsHrefFilters);
+  const paymentsHrefSize = sizeHrefBuilder("/platform/payments", paymentsHrefFilters);
 
   const fmt = (d: Date) => formatEATMediumDate(d);
 
@@ -127,6 +132,8 @@ export default async function PaymentsPage({
         total={pageView.total}
         unit="events"
         hrefForPage={paymentsHref}
+          pageSize={pageSize}
+          hrefForSize={paymentsHrefSize}
       />
     </div>
   );

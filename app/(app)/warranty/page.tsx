@@ -6,14 +6,15 @@ import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+// This list used to hard-code 25 rows. It now starts at the app-wide 20 like
+// every other list and offers 50 or 100, which is a wider reach than it had.
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 import { TablePagination } from "@/components/ui/DataTable";
 import { formatMoney } from "@/lib/currency";
 import { warrantyCostSummary, WARRANTY_COST_PERIODS, type WarrantyCostPeriod } from "@/lib/warranty/cost";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
 
 const STATUS_TABS = [
   { key: "open", label: "Open", status: "OPEN" },
@@ -46,7 +47,7 @@ function ageDays(from: Date) {
 export default async function WarrantyClaimsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string; cost?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; size?: string; cost?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
 
@@ -56,6 +57,7 @@ export default async function WarrantyClaimsPage({
   const filters = await searchParams;
   const tab = STATUS_TABS.find((t) => t.key === filters.tab) ?? STATUS_TABS[0];
   const page = parsePage(filters.page);
+  const pageSize = parsePageSize(filters.size);
 
   const where = { orgId, ...(tab.status ? { status: tab.status } : {}) };
 
@@ -71,8 +73,8 @@ export default async function WarrantyClaimsPage({
       // Oldest first while open — the one waiting longest needs attention
       // first. Closed lists read newest first, as history normally does.
       orderBy: tab.status === "OPEN" ? { openedAt: "asc" } : { openedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true, status: true, reason: true, resolution: true,
         openedAt: true, closedAt: true,
@@ -95,8 +97,12 @@ export default async function WarrantyClaimsPage({
       ? counts.reduce((s, c) => s + c._count, 0)
       : (counts.find((c) => c.status === status)?._count ?? 0);
 
-  const view = paginationView(page, total, PAGE_SIZE);
-  const hrefFor = pageHrefBuilder("/warranty", { tab: tab.key });
+  const view = paginationView(page, total, pageSize);
+  const hrefForFilters = { tab: tab.key,
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const hrefFor = pageHrefBuilder("/warranty", hrefForFilters);
+  const hrefForSize = sizeHrefBuilder("/warranty", hrefForFilters);
 
   return (
     <ListPageLayout
@@ -259,6 +265,8 @@ export default async function WarrantyClaimsPage({
             rangeEnd={view.rangeEnd}
             total={total}
             hrefForPage={hrefFor}
+          pageSize={pageSize}
+          hrefForSize={hrefForSize}
             unit="claims"
           />
         </div>

@@ -30,14 +30,14 @@ import {
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
 import { clientDisplayName } from "@/lib/client-name";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -50,6 +50,7 @@ export default async function ReceiptsPage({
   const q = (params.q ?? "").trim();
   const period = params.period ?? "all";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const createMode = params.new === "1";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -354,8 +355,12 @@ export default async function ReceiptsPage({
     }),
   ]);
   const payments = pageRows;
-  const pageView = paginationView(page, receiptsTotal);
-  const receiptsHref = pageHrefBuilder("/documents/receipts", { q, period: period !== "all" ? period : "" });
+  const pageView = paginationView(page, receiptsTotal, pageSize);
+  const receiptsHrefFilters = { q, period: period !== "all" ? period : "",
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const receiptsHref = pageHrefBuilder("/documents/receipts", receiptsHrefFilters);
+  const receiptsHrefSize = sizeHrefBuilder("/documents/receipts", receiptsHrefFilters);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -742,6 +747,8 @@ export default async function ReceiptsPage({
         total={pageView.total}
         unit="receipts"
         hrefForPage={receiptsHref}
+          pageSize={pageSize}
+          hrefForSize={receiptsHrefSize}
       />
     </section>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useActionState } from "react";
+import { useEffect, useRef, useState, useActionState } from "react";
 import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
@@ -171,7 +171,16 @@ export function SettingsPanel({
   // `fill-mode: both`, which makes it the containing block for position:fixed
   // children — the backdrop and the slide-over were confined to the content
   // column instead of the viewport.
-  if (typeof document === "undefined") return null;
+  // A mounted flag, not `typeof document`, because this component renders
+  // unconditionally — the panel stays in the tree so it can slide. Branching on
+  // `typeof document` returns null on the server and content on the FIRST client
+  // render, which is a hydration mismatch React reports on every page that
+  // renders this. The flag makes the first client render match the server (null)
+  // and the portal appear on the commit after.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
 
   return createPortal(
     <>

@@ -23,13 +23,14 @@ type SearchParams = {
   type?: string;
   q?: string;
   page?: string;
+  size?: string;
 };
 
 const CHANNELS = Object.values(OutboundMessageChannel);
 const STATUSES = Object.values(OutboundMessageStatus);
 const TYPES = Object.values(OutboundMessageType);
 
-const PAGE_SIZE = 20;
+import { PAGE_SIZE, parsePageSize } from "@/lib/pagination";
 
 // Borderless status pills — semantic colour via tint + text, no ring.
 const STATUS_STYLES: Record<string, string> = {
@@ -91,6 +92,7 @@ export default async function OutboxPage({
     : null;
   const q = typeof filters.q === "string" ? filters.q.trim() : "";
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1);
+  const pageSize = parsePageSize(filters.size);
 
   const where: Prisma.OutboundMessageWhereInput = {
     orgId,
@@ -113,8 +115,8 @@ export default async function OutboxPage({
     prisma.outboundMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         channel: true,
@@ -137,16 +139,28 @@ export default async function OutboxPage({
   ]);
 
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count.status]));
-  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
-  const rangeStart = filteredTotal === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, filteredTotal);
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
+  const rangeStart = filteredTotal === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, filteredTotal);
 
   // Preserve active filters when moving between pages.
+  function sizeHref(targetSize: number) {
+    const sp = new URLSearchParams({
+      ...(channel ? { channel } : {}),
+      ...(status ? { status } : {}),
+      ...(q ? { q } : {}),
+      ...(targetSize !== PAGE_SIZE ? { size: String(targetSize) } : {}),
+    });
+    const qs = sp.toString();
+    return qs ? `${COMMUNICATIONS_ROUTES.outbox}?${qs}` : COMMUNICATIONS_ROUTES.outbox;
+  }
+
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({
       ...(channel ? { channel } : {}),
       ...(status ? { status } : {}),
       ...(q ? { q } : {}),
+      ...(pageSize !== PAGE_SIZE ? { size: String(pageSize) } : {}),
       ...(targetPage > 1 ? { page: String(targetPage) } : {}),
     });
     const qs = params.toString();
@@ -370,6 +384,8 @@ export default async function OutboxPage({
         total={filteredTotal}
         unit="messages"
         hrefForPage={pageHref}
+        pageSize={pageSize}
+        hrefForSize={sizeHref}
       />
     </div>
   );

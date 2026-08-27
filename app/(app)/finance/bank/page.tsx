@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
@@ -40,6 +40,7 @@ export default async function BankPage({
   const q = sp.q?.trim() ?? "";
   const txperiod = sp.txperiod ?? "";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   const currency = "UGX";
 
   const now = new Date();
@@ -181,13 +182,16 @@ export default async function BankPage({
   const txDebitsTotal = transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
 
   // Paginate the displayed transactions; KPIs/totals above stay whole-dataset.
-  const txPageView = paginationView(page, sortedTransactions.length);
+  const txPageView = paginationView(page, sortedTransactions.length, pageSize);
   const pageTransactions = sortedTransactions.slice(txPageView.skip, txPageView.skip + txPageView.take);
-  const bankHref = pageHrefBuilder("/finance/bank", {
+  const bankHrefFilters = {
     account: activeAccount?.id,
     q,
     txperiod: txperiod || "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const bankHref = pageHrefBuilder("/finance/bank", bankHrefFilters);
+  const bankHrefSize = sizeHrefBuilder("/finance/bank", bankHrefFilters);
 
   // Period analysis for active account
   const thisMonthTx = allTransactions.filter(
@@ -632,6 +636,8 @@ export default async function BankPage({
                   total={txPageView.total}
                   unit="transactions"
                   hrefForPage={bankHref}
+          pageSize={pageSize}
+          hrefForSize={bankHrefSize}
                 />
               </>
             )}

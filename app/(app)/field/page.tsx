@@ -9,7 +9,7 @@ import { formatEATDateTime } from "@/lib/date-eat";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ const TAB_OPTIONS = [
 export default async function FieldPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string; size?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   const db = orgDb(user.orgId);
@@ -69,10 +69,11 @@ export default async function FieldPage({
 
   if (!isManager && !isFieldTech) redirect("/");
 
-  const { status: statusParam, q: qParam, page: pageParam } = await searchParams;
+  const { status: statusParam, q: qParam, page: pageParam, size: sizeParam } = await searchParams;
   const activeTab = statusParam ?? "upcoming";
   const q = qParam?.trim() ?? "";
   const page = parsePage(pageParam);
+  const pageSize = parsePageSize(sizeParam);
 
   const now           = new Date();
   const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -183,13 +184,15 @@ export default async function FieldPage({
         job:         { select: { id: true, jobNumber: true, brand: true, model: true } },
       },
       orderBy: { scheduledAt: "asc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
   ]);
 
-  const pageView = paginationView(page, visitsTotal);
-  const visitsHref = pageHrefBuilder("/field", { status: statusParam ?? "", q });
+  const pageView = paginationView(page, visitsTotal, pageSize);
+  const visitsHrefFilters = { ...{ status: statusParam ?? "", q }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const visitsHref = pageHrefBuilder("/field", visitsHrefFilters);
+  const visitsHrefSize = sizeHrefBuilder("/field", visitsHrefFilters);
 
   return (
     <ListPageLayout
@@ -445,6 +448,8 @@ export default async function FieldPage({
         total={pageView.total}
         unit="visits"
         hrefForPage={visitsHref}
+        pageSize={pageSize}
+        hrefForSize={visitsHrefSize}
       />
       </div>
     </ListPageLayout>

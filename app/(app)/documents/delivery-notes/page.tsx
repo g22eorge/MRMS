@@ -27,7 +27,7 @@ import {
   DocumentShareMenuSection,
 } from "@/components/documents";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
 import { clientDisplayName } from "@/lib/client-name";
 
@@ -37,7 +37,7 @@ const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 export default async function DeliveryNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const sp = await searchParams;
@@ -45,6 +45,7 @@ export default async function DeliveryNotesPage({
   const periodFilter = sp.period ?? "all";
   const methodFilter = sp.method ?? "all";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
@@ -290,7 +291,7 @@ export default async function DeliveryNotesPage({
 
   let notes: DeliveryNoteRow[] = [];
   let filteredCount = 0;
-  let pageView = paginationView(page, 0);
+  let pageView = paginationView(page, 0, pageSize);
   try {
     filteredCount = await prisma.deliveryNote.count({ where: wherePrimary });
     pageView = paginationView(page, filteredCount);
@@ -367,11 +368,14 @@ export default async function DeliveryNotesPage({
   ]);
   const uniqueSources = distinctInvoiceSources.length + distinctSaleSources.length;
   const pageRows = notes;
-  const deliveryNotesHref = pageHrefBuilder("/documents/delivery-notes", {
+  const deliveryNotesHrefFilters = {
     q,
     period: periodFilter !== "all" ? periodFilter : "",
     method: methodFilter !== "all" ? methodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const deliveryNotesHref = pageHrefBuilder("/documents/delivery-notes", deliveryNotesHrefFilters);
+  const deliveryNotesHrefSize = sizeHrefBuilder("/documents/delivery-notes", deliveryNotesHrefFilters);
   const [invoiceOptions, saleOptions] = await Promise.all([
     prisma.invoice.findMany({
       where: { orgId, status: { not: "VOID" } },
@@ -639,6 +643,8 @@ export default async function DeliveryNotesPage({
         total={pageView.total}
         unit="delivery notes"
         hrefForPage={deliveryNotesHref}
+          pageSize={pageSize}
+          hrefForSize={deliveryNotesHrefSize}
       />
     </section>
     </Disclosure>

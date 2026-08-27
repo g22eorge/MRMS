@@ -57,9 +57,9 @@ function DeviceIcon({ type }: { type: string }) {
   }
 }
 
-type SearchParams = { q?: string; status?: string; period?: string; page?: string };
+type SearchParams = { q?: string; status?: string; period?: string; page?: string; size?: string };
 
-const PAGE_SIZE = 20;
+import { PAGE_SIZE, PAGE_SIZES, parsePageSize } from "@/lib/pagination";
 
 export default async function JobCardsPage({
   searchParams,
@@ -70,8 +70,9 @@ export default async function JobCardsPage({
   if (!can.generateJobCards(user)) redirect("/dashboard");
   await requireModule(OrgModule.JOBS);
 
-  const { q, status: statusFilter, period: periodFilter = "all", page: pageParam } = await searchParams;
+  const { q, status: statusFilter, period: periodFilter = "all", page: pageParam, size: sizeParam } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
+  const pageSize = parsePageSize(sizeParam);
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -119,8 +120,8 @@ export default async function JobCardsPage({
     prisma.job.findMany({
       where,
       orderBy: { receivedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         jobNumber: true,
@@ -140,11 +141,23 @@ export default async function JobCardsPage({
   const byStatus = Object.fromEntries(statusCounts.map((c) => [c.status, c._count.status]));
 
   // Preserve filters across pages.
+  function sizeHref(targetSize: number) {
+    const sp = new URLSearchParams({
+      ...(q ? { q } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(periodFilter && periodFilter !== "all" ? { period: periodFilter } : {}),
+      ...(targetSize !== PAGE_SIZE ? { size: String(targetSize) } : {}),
+    });
+    const qs = sp.toString();
+    return qs ? `/documents/job-cards?${qs}` : "/documents/job-cards";
+  }
+
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({
       ...(q ? { q } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(periodFilter && periodFilter !== "all" ? { period: periodFilter } : {}),
+      ...(pageSize !== PAGE_SIZE ? { size: String(pageSize) } : {}),
       ...(targetPage > 1 ? { page: String(targetPage) } : {}),
     });
     const qs = params.toString();
@@ -250,7 +263,7 @@ export default async function JobCardsPage({
         rows={jobs}
         getRowKey={(job) => job.id}
         empty={q || statusFilter ? "No jobs match your filter." : "No jobs yet. Create a job first."}
-        pagination={{ page, pageSize: PAGE_SIZE, total, hrefForPage: pageHref, unit: "job cards" }}
+        pagination={{ page, pageSize, total, hrefForPage: pageHref, hrefForSize: sizeHref, unit: "job cards" }}
         columns={[
           {
             key: "job",

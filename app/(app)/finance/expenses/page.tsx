@@ -21,7 +21,7 @@ import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 
@@ -80,6 +80,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const q = sp.q?.trim() ?? "";
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
 
   const now = new Date();
   const thisYear = now.getFullYear();
@@ -151,7 +152,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ]);
 
   const currency = "UGX";
-  const pageView = paginationView(page, total);
+  const pageView = paginationView(page, total, pageSize);
 
   const totalAmount = statsRows.reduce((sum, e) => sum + e.amount, 0);
 
@@ -355,11 +356,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const topCategory =
     byCategory.length > 0 ? [...byCategory].sort((a, b) => b.total - a.total)[0] : null;
 
-  const expensesHref = pageHrefBuilder("/finance/expenses", {
+  const expensesHrefFilters = {
     category: catFilter ?? "",
     q,
     period: periodFilter !== "all" ? periodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
+  const expensesHrefSize = sizeHrefBuilder("/finance/expenses", expensesHrefFilters);
 
   return (
     <div className="space-y-4">
@@ -731,6 +735,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
         total={pageView.total}
         unit="expenses"
         hrefForPage={expensesHref}
+          pageSize={pageSize}
+          hrefForSize={expensesHrefSize}
       />
     </div>
   );
