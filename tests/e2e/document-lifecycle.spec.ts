@@ -144,7 +144,9 @@ test("document lifecycle generates job card, quote, invoice, receipt, and delive
   // New Quotation opens a dialog from a button; it has not been a link for a while.
   await expect(page.getByRole("button", { name: /New Quotation/i })).toBeVisible();
   // "Convert to Invoice" is now in the ⋯ overflow menu — open it first
-  await page.getByRole("button", { name: "Quotation actions" }).click();
+  // The row menu is labelled with the quotation's own number ("Quotation
+  // EIS/QT/2026/0011"), not a generic "Quotation actions".
+  await page.getByRole("button", { name: /^Quotation / }).first().click();
   await page.getByRole("button", { name: "Convert to Invoice" }).click();
   await expect.poll(async () => prisma.invoice.count({ where: { orgId: org.id, jobId: job.id } })).toBe(1);
 
