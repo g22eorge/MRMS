@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { NewQuotationForm } from "@/app/(app)/sales/quotations/new/NewQuotationForm";
 
@@ -95,6 +96,14 @@ export function QuotationCreateDialog({
 }: Props) {
   const { isOpen, close } = useQuotationCreate();
 
+  // The dialog must escape <main>, which carries `fade-in`:
+  //   animation: fade-in-up 340ms ... both;  to { transform: translateY(0) }
+  // `fill-mode: both` keeps that transform applied for the life of the page, and
+  // a transformed element becomes the containing block for its position:fixed
+  // descendants. Rendered in place, "fixed inset-0" therefore covered only the
+  // content column — the dialog appeared squeezed behind its own backdrop with
+  // the sidebar untouched, rather than centred over the viewport. A portal to
+  // document.body puts it outside that containing block.
   // Escape closes it, as a modal should. The old event version had no key
   // handling; the listener is cheap and only bound while the dialog is up.
   useEffect(() => {
@@ -106,9 +115,12 @@ export function QuotationCreateDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
 
-  if (!isOpen) return null;
+  // No mounted-flag dance is needed: the dialog only opens from a click, so by
+  // the time this renders anything the document exists. The guard is for the
+  // server pass, where isOpen is false anyway.
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/55 backdrop-blur-sm" onClick={close} />
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
@@ -139,7 +151,8 @@ export function QuotationCreateDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -114,7 +114,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     <div class="meta">
       <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
       <div><b>Verified against</b> &nbsp;local + both production DBs</div>
-      <div><b>Deployed</b> &nbsp;7671dda · care + commercial</div>
+      <div><b>Deployed</b> &nbsp;472c08f · care + commercial</div>
       <div><b>Date</b> &nbsp;26 August 2026</div>
     </div>
   </header>
@@ -210,7 +210,9 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Auth endpoints are rate-limited.</b> Sign-in 10/min, signup 5 per 10 min, reset 5 per 10 min, per IP — applied at the BetterAuth handler, so the SDK cannot bypass them.</span><span class="ev">3 paths capped</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Production auth fails closed.</b> A missing or under-32-character secret, or a missing app URL, throws at startup instead of booting insecure. Preview URLs are not trusted in production.</span><span class="ev">asserted at boot</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>No orphan accounts.</b> Every user in both databases belongs to an organisation, and every account is a credential account — no OAuth, 2FA or passkeys anywhere.</span><span class="ev">0 of 46</span></div>
-      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">537 pass · 0 fail</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Registration refused on care</b> at the endpoint, not only the page — <code>403 SIGNUP_DISABLED</code> where it previously reached password validation.</span><span class="ev">403 · was 400</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>The care alias is care again.</b> <code>mrms-eight.vercel.app/register</code> redirects to login instead of rendering the signup form.</span><span class="ev">both hosts</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">548 pass · 0 fail</span></div>
     </div>
   </section>
 
@@ -235,6 +237,12 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
         <li><b>"No customer account statement."</b> There is one, and it works: a statement section
             on the client page with a running-balance table, a PDF, and send-by-WhatsApp-or-email.
             I checked before building and found the feature I was about to duplicate.</li>
+        <li><b>And a seventh, from this pass:</b> the first registration fix regressed care into
+            commercial mode and opened signup there for about half an hour. Same shape as the six
+            above — I trusted a value that looked authoritative (<code>BETTER_AUTH_URL</code> in a
+            pulled env file) without checking whether it could be read at all. It could not; it is
+            a sensitive variable. A fix that only ever adds a restriction, never replaces one,
+            would not have been able to fail that way.</li>
       </ul>
       <p style="margin-top:12px"><b>The rule that came out of it:</b> curl is the wrong instrument for
         anything React renders, and a grep over raw HTML counts things that never reach the screen.
@@ -302,7 +310,9 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
         <dt>What it was</dt><dd><code>/register</code> redirects to login on care — confirmed in a browser, not with curl, which reports 200 for that redirect. But <code>/api/auth/sign-up/email</code> answered on every deployment. Probed on care with a deliberately short password, it returned <code>PASSWORD_TOO_SHORT</code>: it had reached password validation, so a valid password would have created a row. No account was created.</dd>
         <dt>The larger half</dt><dd>Gating on the request host would not have closed it. <code>isCareDomain</code> matches hosts beginning "care.", and care is also served on Vercel aliases that do not — <code>mrms-eight.vercel.app</code> belongs to the care project. Reached that way, care's own database resolved as <code>COMMERCIAL_MULTI_TENANT</code>: <code>/register</code> rendered the form, and a signup with no orgId would have been sent to <code>/onboarding</code> to create a <em>second organisation inside a single-tenant deployment</em>. That was the real defect; the signup endpoint was how you would reach it.</dd>
         <dt>Fixed</dt><dd>Deployment mode now comes from the deployment's own configured origin — <code>BETTER_AUTH_URL</code> or <code>NEXT_PUBLIC_APP_URL</code>, which both projects already set — so it is a property of the deployment rather than of the URL used to reach it. The request host is used only when neither is configured, which is local development. Registration is refused outright on care with <code>SIGNUP_DISABLED</code>. The host selection is a pure function with nine unit tests covering the alias case, a malformed configured URL, and the local fallback.</dd>
-        <dt>Status</dt><dd>Committed as <code>0ea1838</code> and verified locally; it takes effect on the next deploy, so the audit header still names the previously deployed commit.</dd>
+        <dt>The first fix made it worse</dt><dd>Worth recording rather than tidying away. <code>0ea1838</code> let the configured origin <em>replace</em> the request host. In production that flipped <code>care.eagleinfosolutions.com</code> itself into commercial mode and <strong>opened registration on care</strong> — the opposite of the intent, and briefly a live exposure rather than a latent one. The cause was trusting <code>BETTER_AUTH_URL</code> as read from a pulled env snapshot; it is typed <em>sensitive</em>, so it cannot be read back and the snapshot did not reflect what the runtime resolves. That is the same property that makes <code>BETTER_AUTH_SECRET</code> unrecoverable, established two findings below and then not applied here.</dd>
+        <dt>Corrected</dt><dd><code>b601dd5</code> makes the rule only ever <em>add</em> care detection: a care request host wins outright, and a configured origin is consulted only when it is itself a care origin. It cannot lose the case that already worked, so no configuration value can turn care into a commercial deployment. Regression tests cover both directions.</dd>
+        <dt>Verified live</dt><dd>Both <code>care.eagleinfosolutions.com/register</code> and <code>mrms-eight.vercel.app/register</code> redirect to the login page — checked in a browser, since curl reports 200 for that redirect and returns byte-identical HTML for both hosts. The signup endpoint returns <code>403 SIGNUP_DISABLED</code> where it previously reached password validation. Commercial signup still answers, as the product requires.</dd>
         <dt>Not affected</dt><dd>Commercial signup is the product and still works — verified after the change. Nothing had come through either gap: <strong>zero</strong> users in either database lack an organisation, and care still holds exactly one. Note separately that email verification is off on commercial, so a tenant can be registered with an address the registrant does not own.</dd>
       </dl>
     </div>
