@@ -295,14 +295,15 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       </dl>
     </div>
 
-    <div class="iss" data-p="P3">
-      <div class="hd"><span class="tag">P3</span><span class="mod">Auth · care</span>
-        <div class="ttl">Signup is closed in the UI but open at the API</div></div>
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Auth · care</span>
+        <div class="ttl">Registration was closed in the UI but open at the API</div></div>
       <dl>
-        <dt>Detail</dt><dd><code>/register</code> redirects to the login page on care, correctly — I confirmed it in a browser, not with curl, which reports 200 for that redirect. But <code>/api/auth/sign-up/email</code> answers regardless of deployment mode. I probed it on care with a deliberately too-short password: it returned <code>PASSWORD_TOO_SHORT</code>, which means it reached password validation and a valid password would have created a row. No account was created.</dd>
-        <dt>What it is not</dt><dd>Not privilege escalation. Posting <code>role:"ADMIN"</code> lands the account as <code>OPS</code>, <code>orgId</code> is refused outright, and <code>requireOrgSession</code> force-logs-out anyone not in the care org. The account cannot see anything.</dd>
-        <dt>What it is</dt><dd>Anonymous row creation in care's user table, capped at 5 per 10 minutes per IP, plus email enumeration — signup answers differently for an address that already exists, which distinguishes real staff addresses from invented ones. Nothing has come through it: <strong>zero</strong> users in either database lack an organisation.</dd>
-        <dt>Fix</dt><dd>Gate the endpoint on deployment mode using the same check the page already makes. On commercial, open signup is the product and should stay — though note that email verification is off there, so a tenant can be registered with an address the registrant does not own.</dd>
+        <dt>What it was</dt><dd><code>/register</code> redirects to login on care — confirmed in a browser, not with curl, which reports 200 for that redirect. But <code>/api/auth/sign-up/email</code> answered on every deployment. Probed on care with a deliberately short password, it returned <code>PASSWORD_TOO_SHORT</code>: it had reached password validation, so a valid password would have created a row. No account was created.</dd>
+        <dt>The larger half</dt><dd>Gating on the request host would not have closed it. <code>isCareDomain</code> matches hosts beginning "care.", and care is also served on Vercel aliases that do not — <code>mrms-eight.vercel.app</code> belongs to the care project. Reached that way, care's own database resolved as <code>COMMERCIAL_MULTI_TENANT</code>: <code>/register</code> rendered the form, and a signup with no orgId would have been sent to <code>/onboarding</code> to create a <em>second organisation inside a single-tenant deployment</em>. That was the real defect; the signup endpoint was how you would reach it.</dd>
+        <dt>Fixed</dt><dd>Deployment mode now comes from the deployment's own configured origin — <code>BETTER_AUTH_URL</code> or <code>NEXT_PUBLIC_APP_URL</code>, which both projects already set — so it is a property of the deployment rather than of the URL used to reach it. The request host is used only when neither is configured, which is local development. Registration is refused outright on care with <code>SIGNUP_DISABLED</code>. The host selection is a pure function with nine unit tests covering the alias case, a malformed configured URL, and the local fallback.</dd>
+        <dt>Status</dt><dd>Committed as <code>0ea1838</code> and verified locally; it takes effect on the next deploy, so the audit header still names the previously deployed commit.</dd>
+        <dt>Not affected</dt><dd>Commercial signup is the product and still works — verified after the change. Nothing had come through either gap: <strong>zero</strong> users in either database lack an organisation, and care still holds exactly one. Note separately that email verification is off on commercial, so a tenant can be registered with an address the registrant does not own.</dd>
       </dl>
     </div>
 
