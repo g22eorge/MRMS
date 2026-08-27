@@ -12,7 +12,7 @@ import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { orgDb } from "@/lib/db";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
@@ -42,6 +42,7 @@ type SearchParams = {
   q?: string;
   segment?: string;
   page?: string;
+  size?: string;
   createError?: string;
   error?: string;
 };
@@ -59,7 +60,7 @@ export default async function ClientsPage({
 
   const filters = await searchParams;
   const page = parsePage(filters.page);
-  const pageSize = PAGE_SIZE;
+  const pageSize = parsePageSize(filters.size);
   const segment = filters.segment ?? "all";
 
   const where: Prisma.ClientWhereInput = {
@@ -123,7 +124,7 @@ export default async function ClientsPage({
     ? (matchingClients as ClientRow[]).filter((c) => c._count.jobs >= 3)
     : (matchingClients as ClientRow[]);
 
-  const pageView = paginationView(page, total);
+  const pageView = paginationView(page, total, pageSize);
   const clients = filteredClients;
   // kpiTotal is the same as totalClients (total count across all segments for the KPI bar)
   const kpiTotal = totalClients;
@@ -243,10 +244,13 @@ export default async function ClientsPage({
     return query ? `/clients?${query}` : "/clients";
   }
 
-  const clientsHref = pageHrefBuilder("/clients", {
+  const clientFilters = {
     q: filters.q,
     segment: segment !== "all" ? segment : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const clientsHref = pageHrefBuilder("/clients", clientFilters);
+  const clientsSizeHref = sizeHrefBuilder("/clients", clientFilters);
 
   return (
     <DisclosureProvider defaultOpen={Boolean(filters.createError)}>
@@ -590,6 +594,8 @@ export default async function ClientsPage({
         total={pageView.total}
         unit="clients"
         hrefForPage={clientsHref}
+        pageSize={pageSize}
+        hrefForSize={clientsSizeHref}
       />
 
     </div>

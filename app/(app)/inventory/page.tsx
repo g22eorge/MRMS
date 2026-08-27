@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -50,6 +50,7 @@ export default async function InventoryPage({
   const statusFilter: StockStatusFilter = requestedStatus === "inactive" || requestedStatus === "all" ? requestedStatus : "active";
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const canManage = can.manageInventory(user);
 
@@ -118,7 +119,7 @@ export default async function InventoryPage({
   const totalPartCount = activePartCount + inactivePartCount;
 
   const filteredTotal = Number(filteredCountRows[0]?.c ?? 0);
-  const pageView = paginationView(page, filteredTotal);
+  const pageView = paginationView(page, filteredTotal, pageSize);
   const pageRowsRaw = await prisma.$queryRaw<Array<Record<string, unknown>>>`
     SELECT id, sku, name, manufacturer, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
     FROM "Part" ${rowWhere}
@@ -126,11 +127,14 @@ export default async function InventoryPage({
     LIMIT ${pageView.take} OFFSET ${pageView.skip}
   `.catch(() => [] as Array<Record<string, unknown>>);
   const pageRows = pageRowsRaw.map(coerceRow);
-  const hrefForPage = pageHrefBuilder("/inventory", {
+  const inventoryFilters = {
     status: statusFilter,
     stock: stockFilter !== "all" ? stockFilter : "",
     q,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const hrefForPage = pageHrefBuilder("/inventory", inventoryFilters);
+  const hrefForSize = sizeHrefBuilder("/inventory", inventoryFilters);
 
   const categoryRows = await prisma.part.findMany({
     where: { orgId, category: { not: null } },
@@ -380,6 +384,8 @@ export default async function InventoryPage({
         total={pageView.total}
         unit="items"
         hrefForPage={hrefForPage}
+        pageSize={pageSize}
+        hrefForSize={hrefForSize}
       />
     </div>
   );

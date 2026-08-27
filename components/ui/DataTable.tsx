@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { PAGE_SIZES } from "@/lib/pagination";
 import { Fragment, type ReactNode } from "react";
 
 /**
@@ -291,6 +293,10 @@ export type TablePaginationProps = {
   hrefForPage: (page: number) => string;
   /** Noun for the total, e.g. "messages". */
   unit?: string;
+  /** Current page size. Pass with `hrefForSize` to offer the size selector. */
+  pageSize?: number;
+  /** Build the href for a given page size. Omit to hide the selector. */
+  hrefForSize?: (size: number) => string;
 };
 
 export function TablePagination({
@@ -301,6 +307,8 @@ export function TablePagination({
   total,
   hrefForPage,
   unit = "records",
+  pageSize,
+  hrefForSize,
 }: TablePaginationProps) {
   if (total <= 0) return null;
 
@@ -314,7 +322,23 @@ export function TablePagination({
         Showing <span className="font-semibold tabular-nums text-[var(--ink)]">{rangeStart}–{rangeEnd}</span> of{" "}
         <span className="font-semibold tabular-nums text-[var(--ink)]">{total}</span> {unit}
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Plain links, not a <select>: this footer renders inside server
+            components, and links keep the chosen size in the URL so the view is
+            shareable and the back button behaves. Hidden when there is only one
+            page — there is nothing to widen. */}
+        {hrefForSize && total > PAGE_SIZES[0] ? (
+          <span className="mr-1 flex items-center gap-1">
+            <span className="text-[0.75rem]">Show</span>
+            {PAGE_SIZES.map((size) => (
+              size === pageSize ? (
+                <span key={size} aria-current="true" className={`${edge} border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)] tabular-nums`}>{size}</span>
+              ) : (
+                <Link key={size} href={hrefForSize(size)} className={`${enabled} tabular-nums`}>{size}</Link>
+              )
+            ))}
+          </span>
+        ) : null}
         {page > 1 ? (
           <Link href={hrefForPage(page - 1)} className={enabled}>Prev</Link>
         ) : (
