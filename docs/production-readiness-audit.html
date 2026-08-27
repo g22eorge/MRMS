@@ -114,7 +114,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
     <div class="meta">
       <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
       <div><b>Verified against</b> &nbsp;local + both production DBs</div>
-      <div><b>Deployed</b> &nbsp;fc58a35 · care + commercial</div>
+      <div><b>Deployed</b> &nbsp;e39889e · care + commercial</div>
       <div><b>Date</b> &nbsp;26–27 August 2026</div>
     </div>
   </header>
@@ -139,6 +139,12 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
        rather than the session cookie, the auth endpoints are rate-limited at the handler so the
        client SDK cannot walk around them, and production refuses to boot on a weak secret. One
        gap: care closes registration in the UI but not at the API.</p>
+    <p>One finding this pass touches money indirectly and is worth stating plainly: the same
+       customer could be recorded twice purely because their phone was written two ways, and in
+       care three customers already are. A split customer has a split statement and split
+       receivables, so the shop under-reports what it is owed by the real person. New splits can no
+       longer be created; the three that exist are left for you to judge, since two names on one
+       number may be two people.</p>
     <p>Since the first pass, care's P&amp;L has also been corrected. Fourteen expenses recorded before
        cash-basis posting existed were absent from the ledger, so the report understated costs by
        <strong>UGX 2,246,000</strong>. They are now posted, dated to the day each was spent, and the
@@ -160,6 +166,9 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="frow"><span class="lbl"><b>Quotation numbers stored at all</b> — they lived nowhere before</span><span class="then">rebuilt every render</span><span class="now">allocated once · 18 preserved</span></div>
       <div class="frow"><span class="lbl"><b>Overlays escape the content column</b> — a CSS animation was trapping every one</span><span class="then">confined + unreadable</span><span class="now">7 portaled</span></div>
       <div class="frow"><span class="lbl"><b>Inventory picker in quotes and invoices</b></span><span class="then">silently empty</span><span class="now">works 390–1440</span></div>
+      <div class="frow"><span class="lbl"><b>Customers matched on the canonical phone</b> — the format no longer splits them</span><span class="then">3 already split</span><span class="now">no new splits</span></div>
+      <div class="frow"><span class="lbl"><b>A repair started from a client keeps that client</b></span><span class="then">search again</span><span class="now">carried through</span></div>
+      <div class="frow"><span class="lbl"><b>Lists open to 20, 50 or 100 rows</b></span><span class="then">fixed at 20</span><span class="now">32 pages + jobs</span></div>
     </div>
   </section>
 
@@ -216,15 +225,19 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>The care alias is care again.</b> <code>mrms-eight.vercel.app/register</code> redirects to login instead of rendering the signup form.</span><span class="ev">both hosts</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>The inventory picker works at both sizes.</b> Driven through the real UI with an injected session: six matches with SKU and stock at 390px and at 1440px, the list correctly over the focused input in each.</span><span class="ev">390 · 1440</span></div>
       <div class="vrow"><span class="tick">✓</span><span class="what"><b>Overlays cover the viewport.</b> Portaled dialogs paint over the whole screen with the sidebar dimmed behind, instead of being confined to the content column.</span><span class="ev">7 portaled</span></div>
-      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">548 pass · 0 fail</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A phone format no longer splits a customer.</b> Ten tests over the real pairs found in care, including the one that differs by a single space.</span><span class="ev">10 tests</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A repair started from a client keeps that client</b> — and a client id from another org is never preselected, so the banner cannot name another tenant\u2019s customer.</span><span class="ev">3 cases</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Lists honour the chosen size.</b> Jobs shows 20 of 33 by default, 33 at 50 and 100, and 20 again at <code>?size=99999</code> — the allow-list holds against a hostile value.</span><span class="ev">32 pages + jobs</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No hydration mismatch on a page load</b>, where before the portal guard produced one on every page.</span><span class="ev">0 errors</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">558 pass · 0 fail</span></div>
     </div>
   </section>
 
   <section>
     <div class="shead"><span class="n">04</span><h2>Corrections to my own findings</h2></div>
     <div class="corr">
-      <p>Eight findings across both passes were wrong, six of them calls about the system and two
-         of them fixes of mine that made things worse before they made them better. All eight share
+      <p>Nine findings across both passes were wrong, six of them calls about the system and three
+         of them fixes of mine that made things worse before they made them better. All nine share
          a cause — a measurement that looked precise and measured the wrong thing. Worth recording,
          because the same traps will catch the next person:</p>
       <ul>
@@ -253,6 +266,14 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
             path only wins the race when the desktop table is hidden. Verifying at one viewport is
             not verifying — the second fix was driven at 390px and 1440px before it was called
             done.</li>
+        <li><b>And a ninth, also mine:</b> the overlay sweep guarded its portals on
+            <code>typeof document === "undefined"</code>, which returns null on the server and
+            content on the <em>first</em> client render — a hydration mismatch. It was harmless for
+            dialogs, which start closed and render null on both, but <code>SettingsPanel</code>
+            renders unconditionally and <code>Header</code> renders it on every page, so every page
+            load in the app reported a mismatch and React threw that tree away and rebuilt it. I had
+            written the correct mounted-flag version first and removed it to silence a lint rule.
+            The rule was right about the shape and wrong about the case.</li>
       </ul>
       <p style="margin-top:12px"><b>The rule that came out of it:</b> curl is the wrong instrument for
         anything React renders, and a grep over raw HTML counts things that never reach the screen.
@@ -346,6 +367,18 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sun
         <dt>The half that mattered</dt><dd>Portaling the list exposed the real bug. It was positioned from a ref keyed by row — but <code>DataTable</code> renders every row <em>twice</em>, a mobile card and a desktop table with one of them <code>display:none</code>. Both cells registered under the same key and the last to mount won. Below the <code>lg</code> breakpoint that is the <em>hidden</em> input, whose rect is empty: the list appeared at <code>left:0, width:11px</code>, an invisible sliver in the corner. On a wide window the visible input happened to win — so it worked at 1440px and was dead at 390px, and at any window under 1024px including a half-width desktop one.</dd>
         <dt>Fixed</dt><dd>The anchor is now the element that actually received focus, captured from the focus event, so there is no race to lose.</dd>
         <dt>Verified</dt><dd>By driving the real UI, not by reading it: a throwaway local account, a real sign-in, and Playwright injecting the session cookie. At 390px the list moved from <code>left:0/w:11</code> to <code>left:49/w:293</code> over the visible input; at 1440px it is unchanged at <code>left:524/w:331</code>. Six inventory matches render with SKU and stock at both sizes. care's data was never at fault — 74 parts, 72 active, all correctly org-scoped, and the matcher over <code>sku name</code> always worked.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Data · care</span>
+        <div class="ttl">The same customer could be recorded twice, by phone format alone</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Found while looking at something else, and the most consequential thing in this pass after the overlays. <code>Client</code> is unique on <code>(phone, orgId)</code> over the <em>stored string</em>, and <code>normalizePhoneForStorage</code> — which exists — was called by exactly one page. Both paths that create a customer from a repair matched on the raw text, so <code>+256772006344</code> and <code>0772006344</code> were two different people.</dd>
+        <dt>Already happening</dt><dd>Not a hypothetical. In care today <strong>55 of 93</strong> client phones are stored in a non-canonical form, and three customers are already split across two rows: <code>Medrine</code> (<code>+256 742 904153</code> against <code>+256742904153</code> — one space), <code>Nangoli Robert</code> against <code>Robert Nangoli</code>, and <code>George Bwambale</code> against <code>Brian Kasirye</code> on one number. A split customer has a split job history, a split statement and split receivables, so the shop under-reports what it is owed by the real person.</dd>
+        <dt>Second fault, same lines</dt><dd>The intake conversion also <em>overwrote</em> the shop's own record from whatever an inbound web request said. A customer submitting as "amina" would rename a client recorded as "Amina Yusuf"; a wrong email would replace a known one.</dd>
+        <dt>Fixed</dt><dd>Both paths now look a customer up by the canonical number <em>and</em> the literal one they were handed, so legacy rows still match what they hold and no new second row appears for anyone we can find. New records store canonically. The intake conversion fills only fields the client record does not already have. Ten tests cover the canonicalisation, built from the real pairs above.</dd>
+        <dt>Left for you</dt><dd>The three existing splits are untouched. Merging them is a judgement about your customers, not a cleanup to run from here — George Bwambale and Brian Kasirye may simply share a phone. Say which are genuinely one person and they can be merged.</dd>
       </dl>
     </div>
 
