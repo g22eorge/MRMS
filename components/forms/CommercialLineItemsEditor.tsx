@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import type { CommercialLineItemData } from "@/lib/forms/line-items";
 import { commercialLineTotal } from "@/lib/forms/line-items";
 import type { LineWithKey } from "@/hooks/useLineItemsState";
@@ -39,6 +40,39 @@ export function CommercialLineItemsEditor({
 
   const [creatingLineKey, setCreatingLineKey] = useState<number | null>(null);
   const [openComboKey, setOpenComboKey] = useState<number | null>(null);
+
+  // The suggestion list is anchored to the input's viewport rect and rendered
+  // through a portal. It cannot be a plain absolutely-positioned child:
+  // DataTable wraps rows in `overflow-hidden` and the desktop table in
+  // `overflow-x-auto`, and inside a dialog the panel adds `overflow-hidden`
+  // plus a `max-h-[80vh]` scroller. Every one of those clips an absolute
+  // descendant, so the matches rendered correctly and were simply cut off —
+  // which reads as "inventory search returns nothing".
+  const [comboRect, setComboRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const anchorRefs = useRef(new Map<number, HTMLInputElement>());
+
+  const positionCombo = useCallback((key: number) => {
+    const el = anchorRefs.current.get(key);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setComboRect({ top: r.bottom, left: r.left, width: r.width });
+  }, []);
+
+  useEffect(() => {
+    // No need to clear the rect on close: the list only renders while a combo
+    // is open, and the next open repositions before it paints.
+    if (openComboKey === null) return;
+    const update = () => positionCombo(openComboKey);
+    update();
+    // Capture phase so inner scrollers (the table, the dialog body) are caught,
+    // not just the window.
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [openComboKey, positionCombo]);
 
   // Inline create form component
   function CreatePartInlineForm({ onCancel }: { onCancel: () => void }) {
@@ -122,6 +156,10 @@ export function CommercialLineItemsEditor({
         return (
           <div className="relative">
             <input
+              ref={(el) => {
+                if (el) anchorRefs.current.set(item.key, el);
+                else anchorRefs.current.delete(item.key);
+              }}
               value={item.description}
               onChange={(event) => onUpdateLine(item.key, { description: event.target.value, partId: "" })}
               onFocus={() => setOpenComboKey(item.key)}
@@ -129,8 +167,12 @@ export function CommercialLineItemsEditor({
               placeholder="Type a product or service — or pick from inventory"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
             />
-            {open && (matches.length > 0 || (onCreatePart && q)) ? (
-              <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1 shadow-lg">
+            {open && comboRect && (matches.length > 0 || (onCreatePart && q)) ? createPortal(
+              <div
+                style={{ position: "fixed", top: comboRect.top + 4, left: comboRect.left, width: comboRect.width }}
+                // Above the dialog's z-50 so it is not painted behind the panel.
+                className="z-[60] max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1 shadow-lg"
+              >
                 {matches.map((p) => (
                   <button
                     key={p.id}
@@ -156,7 +198,8 @@ export function CommercialLineItemsEditor({
                     + Create &ldquo;{item.description.trim()}&rdquo; as a new inventory part
                   </button>
                 ) : null}
-              </div>
+              </div>,
+              document.body,
             ) : null}
           </div>
         );
