@@ -29,7 +29,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { isTermsHeading } from "@/lib/quote-terms";
-import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
+import { QuotationPromoFooter, PROMO_PINNED_HEIGHT, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 // Palette and rhythm come from lib/pdf/house, so this template and the delivery
 // note, job card and statement cannot drift apart into slightly different greys.
 import { DIVIDER, FAINT, INK, LABEL_SZ, MUTED, NAVY, PANEL, SHADE, SP, WHITE, ZEBRA } from "@/lib/pdf/house";
@@ -39,8 +39,10 @@ const s = StyleSheet.create({
   page: {
     paddingHorizontal: 40,
     paddingTop: 0,
-    // Room for the fixed page footer, so body content can never run into it.
-    paddingBottom: 44,
+    // Room for the fixed page footer AND the pinned promo strip above it, so
+    // body content can never run into either. The strip used to flow after the
+    // content, which meant a nearly-full page pushed it onto a sheet of its own.
+    paddingBottom: 44 + PROMO_PINNED_HEIGHT,
     fontSize: 9,
     fontFamily: "Helvetica",
     color: INK,
@@ -419,7 +421,9 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
           </View>
         </View>
 
-        <QuotationPromoStrip promo={promo} />
+        {/* Sits directly above the page footer: 24 for the footer's offset plus
+            its own single line and rule. */}
+        <QuotationPromoFooter promo={promo} bottom={24 + 18} />
 
         {/* Pinned to every page: identifies a loose sheet, and makes it obvious
             when a document runs to more than one page. */}

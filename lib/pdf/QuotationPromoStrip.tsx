@@ -68,3 +68,50 @@ export function QuotationPromoStrip({ promo }: { promo?: QuotationPromo | null }
     </View>
   );
 }
+
+/**
+ * The same strip, pinned above the page footer instead of flowing after the
+ * content.
+ *
+ * As flow content the strip could not be split (`wrap={false}`) and was the
+ * last element on the page, so whenever the remaining space was smaller than
+ * the block react-pdf moved it to a page of its own — and since nothing
+ * followed it, that page held one line of cross-sell and a page of white. A
+ * two-item quotation printed as "Page 1 of 2".
+ *
+ * Pinned, it cannot create a page: absolutely positioned, so it takes no part
+ * in the flow, and `fixed` so it is drawn per page. It repeats on every page
+ * like the footer beneath it — react-pdf only passes `totalPages` to a Text
+ * render callback, not a View's, and a View cannot be nested inside a Text, so
+ * restricting it to the last page would mean relying on an untyped argument.
+ * Repeating is honest page furniture and costs nothing on the one-page
+ * quotations that are the common case.
+ *
+ * The page must reserve room for it in `paddingBottom` or long content will run
+ * underneath. PROMO_PINNED_HEIGHT is that reservation — raise it if the strip
+ * grows a line.
+ */
+export const PROMO_PINNED_HEIGHT = 40;
+
+export function QuotationPromoFooter({
+  promo,
+  bottom,
+  horizontal = 40,
+}: {
+  promo?: QuotationPromo | null;
+  /** Distance from the page bottom — clear the page footer that sits below. */
+  bottom: number;
+  /** Match the page's horizontal padding so the rule lines up with the body. */
+  horizontal?: number;
+}) {
+  if (!promo || promo.services.length === 0) return null;
+  return (
+    <View fixed style={{ position: "absolute", left: horizontal, right: horizontal, bottom }}>
+      <View style={s.wrap}>
+        <Text style={s.label}>{promo.label}</Text>
+        <Text style={s.services}>{promo.services.join("   ·   ")}</Text>
+        {promo.line ? <Text style={s.line}>{promo.line}</Text> : null}
+      </View>
+    </View>
+  );
+}
