@@ -39,13 +39,6 @@ export const DOCUMENTS_NAV: Array<{
     roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"],
   },
   {
-    key: "invoices",
-    href: DOCUMENTS_ROUTES.invoices,
-    label: "Invoices",
-    description: "Bill customers and collect payment",
-    roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER", "SALES_CORPORATE", "TECH_MANAGER"],
-  },
-  {
     key: "quotations",
     href: DOCUMENTS_ROUTES.quotations,
     label: "Quotations",
@@ -53,11 +46,11 @@ export const DOCUMENTS_NAV: Array<{
     roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "SALES", "TECHNICIAN_INTERNAL", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"],
   },
   {
-    key: "receipts",
-    href: DOCUMENTS_ROUTES.receipts,
-    label: "Receipts",
-    description: "Proof of payment for customers",
-    roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_RETAIL"],
+    key: "invoices",
+    href: DOCUMENTS_ROUTES.invoices,
+    label: "Invoices",
+    description: "Bill customers and collect payment",
+    roles: ["ADMIN", "MANAGER", "OPS", "FINANCE", "SALES_MANAGER", "SALES_CORPORATE", "TECH_MANAGER"],
   },
   {
     key: "delivery_notes",
@@ -65,6 +58,13 @@ export const DOCUMENTS_NAV: Array<{
     label: "Delivery Notes",
     description: "Confirm devices handed back to client",
     roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL"],
+  },
+  {
+    key: "receipts",
+    href: DOCUMENTS_ROUTES.receipts,
+    label: "Receipts",
+    description: "Proof of payment for customers",
+    roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_RETAIL"],
   },
   {
     key: "credit_notes",

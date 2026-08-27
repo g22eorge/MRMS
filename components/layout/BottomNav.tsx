@@ -147,7 +147,7 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
 
   const groups: NavGroup[] = [
     { title: "Customers",  items: [ITEMS.clients, ITEMS.sales, ITEMS.complaints] },
-    { title: "Documents",  items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.receipts, ITEMS.deliveryNotes, ITEMS.creditNotes, ITEMS.refunds] },
+    { title: "Documents",  items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.deliveryNotes, ITEMS.receipts, ITEMS.creditNotes, ITEMS.refunds] },
     { title: "Operations", items: [ITEMS.intake, ITEMS.inventory, ITEMS.field, ITEMS.payoutFollowups, ITEMS.board] },
     { title: "Sales",      items: [ITEMS.pos, ITEMS.targets] },
     { title: "Finance",    items: [ITEMS.expenses, ITEMS.recurring, ITEMS.taxRates] },
