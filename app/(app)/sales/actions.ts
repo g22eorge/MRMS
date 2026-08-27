@@ -442,9 +442,24 @@ export async function updateQuotationStatus(quotationId: string, status: Quotati
   }
 }
 
+/**
+ * Turn a caller-supplied partId into one we are willing to store.
+ *
+ * The id arrives in a form body, so it is not trusted: an id belonging to
+ * another org would otherwise link a line to a stock item its tenant cannot
+ * see. Anything that does not resolve within this org clears the link rather
+ * than failing the save — the line is still a valid free-text line.
+ */
+async function resolveOrgPartId(partId: string | null | undefined, orgId: string): Promise<string | null> {
+  const id = partId?.trim();
+  if (!id) return null;
+  const part = await prisma.part.findFirst({ where: { id, orgId }, select: { id: true } });
+  return part?.id ?? null;
+}
+
 export async function addQuotationItem(
   quotationId: string,
-  item: { description: string; quantity: number; unitPrice: number; discount: number },
+  item: { description: string; quantity: number; unitPrice: number; discount: number; partId?: string | null },
 ) {
   const { user, orgId, org } = await requireOrgSession();
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -457,6 +472,9 @@ export async function addQuotationItem(
   await prisma.quotationItem.create({
     data: {
       quotationId,
+      // Scoped: a partId from a form is a caller-supplied id, so it is only
+      // honoured when the part belongs to this org.
+      partId: await resolveOrgPartId(item.partId, orgId),
       description: sanitizeText(item.description),
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -495,7 +513,7 @@ export async function updateQuotationDetails(
 
 export async function updateQuotationItem(
   itemId: string,
-  item: { description: string; quantity: number; unitPrice: number; discount: number },
+  item: { description: string; quantity: number; unitPrice: number; discount: number; partId?: string | null },
 ) {
   const { user, orgId, org } = await requireOrgSession();
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -514,6 +532,7 @@ export async function updateQuotationItem(
   await prisma.quotationItem.update({
     where: { id: itemId },
     data: {
+      partId: await resolveOrgPartId(item.partId, orgId),
       description: sanitizeText(item.description),
       quantity: item.quantity,
       unitPrice: item.unitPrice,

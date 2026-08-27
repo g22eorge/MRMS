@@ -26,6 +26,7 @@ import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActio
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
 import { flash } from "@/lib/flash";
+import { PartPickerField } from "@/components/forms/PartPickerField";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -75,7 +76,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       convertedToInvoiceId: true,
       client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } },
       job: { select: { id: true, jobNumber: true, brand: true, model: true, serialOrImei: true } },
-      items: { select: { id: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+      items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!quotation) redirect("/documents/quotations");
@@ -99,6 +100,15 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   // not been converted to an invoice. Once sent/accepted/converted it is locked.
   const canEdit = quotation.status === "DRAFT" && !quotation.convertedToInvoiceId;
   const isEdit = sp?.edit === "1" && canEdit;
+  // Only needed while editing, and only active stock is offerable.
+  const parts = isEdit
+    ? await prisma.part.findMany({
+        where: { orgId, isActive: true },
+        orderBy: { name: "asc" },
+        take: 500,
+        select: { id: true, sku: true, name: true, sellingPrice: true, unitCost: true, qtyOnHand: true },
+      })
+    : [];
   const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
@@ -248,18 +258,19 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                             "use server";
                             await updateQuotationItem(String(fd.get("itemId") ?? ""), {
                               description: String(fd.get("description") ?? ""),
+                              partId: String(fd.get("partId") ?? "") || null,
                               quantity: Number(fd.get("quantity")) || 1,
                               unitPrice: Number(fd.get("unitPrice")) || 0,
                               discount: Number(fd.get("discount")) || 0,
                             });
                             revalidatePath(`/documents/quotations/${id}`);
-                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
+                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Line item saved"));
                           }}
                           className="flex flex-1 flex-wrap items-end gap-2"
                         >
                           <input type="hidden" name="itemId" value={item.id} />
                           <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
-                            <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                            <PartPickerField parts={parts} defaultValue={item.description} defaultPartId={item.partId ?? ""} />
                           </label>
                           <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                             <input name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
@@ -277,7 +288,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                             "use server";
                             await removeQuotationItem(String(fd.get("itemId") ?? ""));
                             revalidatePath(`/documents/quotations/${id}`);
-                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
+                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Line item removed"));
                           }}
                         >
                           <input type="hidden" name="itemId" value={item.id} />
@@ -290,17 +301,18 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                         "use server";
                         await addQuotationItem(id, {
                           description: String(fd.get("description") ?? ""),
+                          partId: String(fd.get("partId") ?? "") || null,
                           quantity: Number(fd.get("quantity")) || 1,
                           unitPrice: Number(fd.get("unitPrice")) || 0,
                           discount: Number(fd.get("discount")) || 0,
                         });
                         revalidatePath(`/documents/quotations/${id}`);
-                        redirect(flash(`/documents/quotations/${id}?edit=1`, "Quotation deleted"));
+                        redirect(flash(`/documents/quotations/${id}?edit=1`, "Line item added"));
                       }}
                       className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
                     >
                       <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
-                        <input name="description" required placeholder="New line item" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                        <PartPickerField parts={parts} required placeholder="New line item — or pick from inventory" />
                       </label>
                       <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                         <input name="quantity" type="number" min="1" step="any" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
@@ -370,7 +382,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   });
                   revalidatePath(`/documents/quotations/${id}`);
                   revalidatePath("/documents/quotations");
-                  redirect(flash(`/documents/quotations/${id}`, "Quotation deleted"));
+                  redirect(flash(`/documents/quotations/${id}`, "Quotation saved"));
                 }}
                 className={cardClass}
               >
