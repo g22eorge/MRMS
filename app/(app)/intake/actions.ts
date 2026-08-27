@@ -9,6 +9,7 @@ import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
+import { normalizePhoneForStorage } from "@/lib/phone";
 import { generateJobNumber } from "@/app/(app)/jobs/new/actions";
 import { checkJobLimit } from "@/lib/plan-limits";
 import {
@@ -161,19 +162,43 @@ export async function setRepairRequestStatusAction(input: { id: string; status: 
     const limit = await checkJobLimit(orgId);
     if (!limit.allowed) return { error: limit.reason } as const;
 
-    const client = await prisma.client.upsert({
-      where: { phone_orgId: { orgId, phone: req.phone } },
-      create: {
-        orgId,
-        fullName: sanitizeText(req.customerName),
-        phone: req.phone,
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
-      update: {
-        fullName: sanitizeText(req.customerName),
-        email: sanitizeOptionalText(req.email) ?? undefined,
-      },
+    // Two changes from the upsert this replaces.
+    //
+    // Match on the canonical number as well as the literal one: the unique index
+    // is over the stored string, so a request giving "0772…" against a client
+    // stored as "+256772…" created a second record for the same person.
+    //
+    // And never overwrite what the shop already knows about a customer from an
+    // inbound request. A web form saying "amina" would rename a client recorded
+    // as "Amina Yusuf", and a blank email would not, but a wrong one would. The
+    // request only fills fields the client record does not already have.
+    const requestPhone = sanitizeText(req.phone);
+    const canonicalPhone = normalizePhoneForStorage(requestPhone);
+    const existingClient = await prisma.client.findFirst({
+      where: { orgId, OR: [{ phone: canonicalPhone }, { phone: requestPhone }] },
+      select: { id: true, fullName: true, email: true },
     });
+
+    const client = existingClient
+      ? await prisma.client.update({
+          where: { id: existingClient.id },
+          data: {
+            fullName: existingClient.fullName?.trim()
+              ? existingClient.fullName
+              : sanitizeText(req.customerName),
+            email: existingClient.email?.trim()
+              ? existingClient.email
+              : sanitizeOptionalText(req.email) ?? undefined,
+          },
+        })
+      : await prisma.client.create({
+          data: {
+            orgId,
+            fullName: sanitizeText(req.customerName),
+            phone: canonicalPhone,
+            email: sanitizeOptionalText(req.email) ?? undefined,
+          },
+        });
 
     let job: { id: string; jobNumber: string } | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {

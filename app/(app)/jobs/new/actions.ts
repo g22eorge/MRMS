@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getOrgNumberConfig, maxSequenceForYear, composeJobNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
+import { normalizePhoneForStorage } from "@/lib/phone";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { uploadJobImage } from "@/lib/blob-storage";
@@ -153,21 +154,37 @@ export async function createJobAction(
       return { error: parsed.error.issues[0]?.message ?? "Invalid form values" };
     }
 
-    const client = await prisma.client.upsert({
-      where: { phone_orgId: { orgId, phone: sanitizeText(parsed.data.phone) } },
-      create: {
-        orgId,
-        fullName: sanitizeText(parsed.data.fullName),
-        phone: sanitizeText(parsed.data.phone),
-        email: sanitizeOptionalText(parsed.data.email),
-        organization: sanitizeOptionalText(parsed.data.organization),
-      },
-      update: {
-        fullName: sanitizeText(parsed.data.fullName),
-        email: sanitizeOptionalText(parsed.data.email),
-        organization: sanitizeOptionalText(parsed.data.organization),
-      },
+    // Match on the canonical number as well as the literal one. The unique index
+    // is over the stored string, so "+256772006344" and "0772006344" were two
+    // different clients — which is how the same customer ends up with a split
+    // job history, statement and receivables. Care already carries three such
+    // pairs. New records store the canonical form; legacy rows still match on
+    // what they hold, so this never creates a second row for someone we can find.
+    const rawPhone = sanitizeText(parsed.data.phone);
+    const canonicalPhone = normalizePhoneForStorage(rawPhone);
+    const existingClient = await prisma.client.findFirst({
+      where: { orgId, OR: [{ phone: canonicalPhone }, { phone: rawPhone }] },
+      select: { id: true },
     });
+
+    const client = existingClient
+      ? await prisma.client.update({
+          where: { id: existingClient.id },
+          data: {
+            fullName: sanitizeText(parsed.data.fullName),
+            email: sanitizeOptionalText(parsed.data.email),
+            organization: sanitizeOptionalText(parsed.data.organization),
+          },
+        })
+      : await prisma.client.create({
+          data: {
+            orgId,
+            fullName: sanitizeText(parsed.data.fullName),
+            phone: canonicalPhone,
+            email: sanitizeOptionalText(parsed.data.email),
+            organization: sanitizeOptionalText(parsed.data.organization),
+          },
+        });
 
     const parsedDevices = parseDevices(parsed.data.devicesJson);
     if (!parsedDevices.ok) {
