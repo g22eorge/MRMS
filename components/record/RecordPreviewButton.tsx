@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * RecordPreviewButton — self-contained paper preview for any record with a PDF.
@@ -65,7 +66,10 @@ export function RecordPreviewButton({
         </button>
       )}
 
-      {open && (
+      {/* Portaled: <main>'s `fade-in` leaves a transform applied, which makes it
+          the containing block for position:fixed children — in place this drawer
+          covered only the content column. */}
+      {open && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
           <div className="relative flex h-full w-full max-w-3xl flex-col bg-neutral-200 shadow-2xl">
@@ -99,7 +103,8 @@ export function RecordPreviewButton({
               <iframe src={inlineUrl} onLoad={() => setLoading(false)} className="h-full w-full border-none" title={title} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

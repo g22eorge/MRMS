@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useInvoicePreview } from "./InvoicePreviewProvider";
 
@@ -17,10 +18,15 @@ export function InvoicePreviewDrawer() {
     setLoading(true);
   }, [previewInvoiceId]);
 
-  if (!previewInvoiceId) return null;
+  if (!previewInvoiceId || typeof document === "undefined") return null;
   const pdfUrl = `/api/invoices/${previewInvoiceId}/pdf`;
 
-  return (
+  // Portaled to document.body: <main> carries `fade-in`, an animation with
+  // `fill-mode: both` whose final frame is `transform: translateY(0)`. That
+  // transform persists and makes <main> the containing block for its
+  // position:fixed descendants, so this overlay covered only the content column
+  // instead of the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={closePreview} />
       <div className="relative flex h-full w-full max-w-3xl flex-col bg-neutral-200 shadow-2xl">
@@ -59,6 +65,7 @@ export function InvoicePreviewDrawer() {
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

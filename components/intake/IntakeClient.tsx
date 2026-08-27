@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -171,7 +172,12 @@ function RequestDrawer({
   const isConverted = localStatus === "CONVERTED_TO_JOB";
   const isRejected  = localStatus === "REJECTED";
 
-  return (
+  // Portaled: <main> keeps a transform applied via `fade-in`'s
+  // `fill-mode: both`, making it the containing block for position:fixed
+  // children — backdrop and drawer were confined to the content column.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <>
       <ConfirmDialog
         open={confirmDelete}
@@ -390,7 +396,8 @@ function RequestDrawer({
           </Section>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

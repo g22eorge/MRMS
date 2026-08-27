@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useActionState } from "react";
+import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
@@ -166,7 +167,13 @@ export function SettingsPanel({
     ...sharedLinks,
   ];
 
-  return (
+  // Portaled: <main> keeps a transform applied via `fade-in`'s
+  // `fill-mode: both`, which makes it the containing block for position:fixed
+  // children — the backdrop and the slide-over were confined to the content
+  // column instead of the viewport.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <>
       {/* Backdrop */}
       {open ? (
@@ -331,6 +338,7 @@ export function SettingsPanel({
           </Link>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
