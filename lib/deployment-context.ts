@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { EIS_ORG_ID, isCareDomain } from "@/lib/org";
+import { EIS_ORG_ID, isCareDomain, normalizeHost } from "@/lib/org";
 
 export type DeploymentContext =
   | {
@@ -49,15 +49,27 @@ export function pickDeploymentHost(
   configuredUrls: Array<string | null | undefined>,
   requestHost: string | null | undefined,
 ): string | null {
+  // Any care signal wins. An earlier version of this returned the configured
+  // host outright and let it REPLACE the request host — which flipped
+  // care.eagleinfosolutions.com itself into commercial mode in production and
+  // opened registration there, because BETTER_AUTH_URL does not resolve to the
+  // care origin at runtime the way the pulled env snapshot suggested. The rule
+  // now only ever adds care detection, so it cannot lose the case that already
+  // worked: a single-tenant deployment stays single-tenant even when reached
+  // on an alias, and no configuration can turn care into a commercial one.
+  if (isCareDomain(requestHost)) return normalizeHost(requestHost);
+
   for (const value of configuredUrls) {
     if (!value?.trim()) continue;
+    let host: string;
     try {
-      return new URL(value.trim()).host;
+      host = new URL(value.trim()).host;
     } catch {
-      // Malformed value — try the next one rather than falling back to the
-      // request, which is the thing we are trying not to trust.
+      continue;
     }
+    if (isCareDomain(host)) return host;
   }
+
   return requestHost ?? null;
 }
 

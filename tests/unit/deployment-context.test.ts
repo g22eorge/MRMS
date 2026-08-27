@@ -6,11 +6,26 @@ const CARE = "https://care.eagleinfosolutions.com";
 const APP = "https://app.eagleinfosolutions.com";
 
 describe("pickDeploymentHost()", () => {
-  it("prefers the configured host over the host the request arrived on", () => {
-    // The bug this closes: care is served on Vercel aliases that do not begin
-    // "care.", and on those the request host resolved care's own database as a
-    // commercial deployment.
+  it("uses a configured care origin when the request arrived on an alias", () => {
+    // care is served on Vercel aliases that do not begin "care.", and on those
+    // the request host alone resolved care's database as a commercial one.
     expect(pickDeploymentHost([CARE], "mrms-eight.vercel.app")).toBe("care.eagleinfosolutions.com");
+  });
+
+  it("never lets configuration turn a care request into a commercial one", () => {
+    // The regression this guards: preferring the configured host outright
+    // flipped care.eagleinfosolutions.com itself into commercial mode in
+    // production and opened registration there. A care request host wins over
+    // any configured value, whatever that value happens to be.
+    expect(pickDeploymentHost([APP], "care.eagleinfosolutions.com")).toBe("care.eagleinfosolutions.com");
+    expect(pickDeploymentHost(["https://mrms-eight.vercel.app"], "care.eagleinfosolutions.com"))
+      .toBe("care.eagleinfosolutions.com");
+    expect(resolveDeploymentContext(pickDeploymentHost([APP], "care.eagleinfosolutions.com")).mode)
+      .toBe("CARE_SINGLE_TENANT");
+  });
+
+  it("does not let a non-care configured host displace a non-care request host", () => {
+    expect(pickDeploymentHost([APP], "mrms-apga.vercel.app")).toBe("mrms-apga.vercel.app");
   });
 
   it("falls back to the request host when nothing is configured", () => {
