@@ -135,3 +135,25 @@ export function getClientIp(
   if (forwarded) return forwarded.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "unknown";
 }
+
+// ── Test bypass ───────────────────────────────────────────────────────────────
+
+/**
+ * Whether auth rate limiting is suspended for an automated test run.
+ *
+ * The e2e suite signs in dozens of times in a few minutes and was tripping the
+ * 10-per-minute auth limiter partway through, so later specs failed with
+ * "Login failed" for reasons that had nothing to do with the code under test.
+ * The flag existed but only the route handler honoured it — proxy.ts throttles
+ * the same paths and runs first, so the bypass never took effect anywhere.
+ * Defined here so both consult one rule.
+ *
+ * The Turso condition is the real guard. Setting the flag by accident in a
+ * production environment would otherwise remove the primary defence against
+ * credential stuffing; a Turso-backed deployment can never be bypassed, whatever
+ * the flag says. NODE_ENV cannot be used for this — `next start` sets it to
+ * production for the test server too.
+ */
+export function authRateLimitBypassed(): boolean {
+  return process.env.E2E_DISABLE_RATE_LIMIT === "1" && !process.env.TURSO_DATABASE_URL;
+}

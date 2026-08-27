@@ -5,7 +5,7 @@ import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth";
 import { getDeploymentContext } from "@/lib/deployment-context";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
-import { checkRateLimit, rateLimitHeaders, getClientIp } from "@/lib/rate-limit";
+import { authRateLimitBypassed, checkRateLimit, rateLimitHeaders, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const preferredRegion = "sfo1";
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   // Platform admin is always exempt (matched later during credential check,
   // but we check the same env var for a quick bypass without a DB query).
-  let isExempt = process.env.E2E_DISABLE_RATE_LIMIT === "1";
+  let isExempt = authRateLimitBypassed();
   if (!isExempt && path.endsWith("/sign-in/email")) {
     try {
       const body = await request.clone().json();

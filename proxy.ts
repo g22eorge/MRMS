@@ -4,7 +4,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
-import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { authRateLimitBypassed, checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 const PUBLIC_PATHS = [
   // Auth
@@ -96,7 +96,10 @@ export async function proxy(req: NextRequest) {
   // credential stuffing and password brute-force. BetterAuth's built-in limiter
   // is in-memory/per-instance and useless on serverless, so gate it here on the
   // shared Turso-backed limiter (matches the /api/login wrapper).
-  if (pathname.startsWith("/api/auth/sign-in") || pathname.startsWith("/api/auth/sign-up")) {
+  if (
+    (pathname.startsWith("/api/auth/sign-in") || pathname.startsWith("/api/auth/sign-up")) &&
+    !authRateLimitBypassed()
+  ) {
     const { allowed, retryAfterMs } = await checkRateLimit(`auth:${ip}`, {
       limit: 10,
       windowMs: 60 * 1000,
