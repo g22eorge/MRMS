@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { sanitizeText } from "@/lib/sanitize";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { prisma } from "@/lib/prisma";
 import { shareQuotationDocument } from "@/lib/notifications/share-document";
@@ -280,10 +281,18 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           </form>
           <MenuSection label="Danger zone" />
           {canDelete && (
-            <form action={deleteQuotationAction}>
-              <input type="hidden" name="id" value={row.id} />
-              <MenuDestructiveRow>Delete</MenuDestructiveRow>
-            </form>
+            <MenuDestructiveRow>
+              <form action={deleteQuotationAction}>
+                <input type="hidden" name="id" value={row.id} />
+                <ConfirmSubmitButton
+                  message="Delete this quotation? This cannot be undone."
+                  confirmLabel="Delete"
+                  className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold text-red-600 dark:text-red-400"
+                >
+                  Delete
+                </ConfirmSubmitButton>
+              </form>
+            </MenuDestructiveRow>
           )}
         </RowActionsMenu>
       );
