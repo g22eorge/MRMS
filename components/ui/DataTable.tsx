@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PAGE_SIZES } from "@/lib/pagination";
+import { RememberPageSize } from "@/components/ui/RememberPageSize";
 import { Fragment, type ReactNode } from "react";
 
 /**
@@ -322,6 +323,7 @@ export function TablePagination({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-[var(--ink-muted)]">
+      {hrefForSize && pageSize ? <RememberPageSize pageSize={pageSize} /> : null}
       <span>
         Showing <span className="font-semibold tabular-nums text-[var(--ink)]">{rangeStart}–{rangeEnd}</span> of{" "}
         <span className="font-semibold tabular-nums text-[var(--ink)]">{total}</span> {unit}

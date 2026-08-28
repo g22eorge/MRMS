@@ -111,7 +111,11 @@ export function sizeHrefBuilder(
       const str = String(value).trim();
       if (str.length > 0) params.set(key, str);
     }
-    if (target !== PAGE_SIZE) params.set("size", String(target));
+    // Always emitted, including for the default. Omitting it made choosing 20
+    // indistinguishable from expressing no preference, which the remembered
+    // size then treats as "restore the last one" — so a reader who had chosen
+    // 100 could never get back down to 20.
+    params.set("size", String(target));
     const qs = params.toString();
     return qs ? `${basePath}?${qs}` : basePath;
   };
