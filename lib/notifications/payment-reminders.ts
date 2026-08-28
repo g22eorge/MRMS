@@ -135,7 +135,23 @@ export async function runPaymentReminders(params: {
     const balance = invoice.totalAmount - invoice.paidAmount;
     const currency = normalizeCurrency(invoice.currency, org.baseCurrency);
     const due = effectiveDueDate(invoice, settings.paymentTermsDays);
-    const stage = stageDueNow(due, now);
+    // What this invoice has actually been sent, so the ladder can tell a cold
+    // start from a customer who has been climbing it. PREVIEW is excluded for
+    // the same reason it is excluded from the dedupe: a rehearsal is not a
+    // message the customer received.
+    const sentStages = (
+      await prisma.outboundMessage.findMany({
+        where: {
+          orgId: params.orgId,
+          invoiceId: invoice.id,
+          type: OutboundMessageType.INVOICE_REMINDER,
+          status: { not: "PREVIEW" },
+          reminderStage: { not: null },
+        },
+        select: { reminderStage: true },
+      })
+    ).map((m) => m.reminderStage!);
+    const stage = stageDueNow(due, now, sentStages);
     const push = (action: ReminderOutcome["action"], reason?: string) =>
       results.push({ invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, stage: stage?.key ?? "-", action, reason });
 
@@ -154,10 +170,20 @@ export async function runPaymentReminders(params: {
       continue;
     }
 
-    // Already asked at this rung. The unique-ish guard is the pair
-    // (invoice, stage), so a cron running hourly is harmless.
+    // Already asked at this rung. The guard is the pair (invoice, stage), so a
+    // cron running more than once a day is harmless.
+    //
+    // PREVIEW rows are excluded deliberately. A dry run is a rehearsal, and
+    // counting it as the message would mean a fortnight of watching the outbox
+    // silently consumed every reminder the customer was owed: the switch to
+    // live would then send nothing at all, and look like it was working.
     const already = await prisma.outboundMessage.findFirst({
-      where: { orgId: params.orgId, invoiceId: invoice.id, reminderStage: stage.key },
+      where: {
+        orgId: params.orgId,
+        invoiceId: invoice.id,
+        reminderStage: stage.key,
+        status: { not: "PREVIEW" },
+      },
       select: { id: true },
     });
     if (already) continue;
@@ -169,6 +195,7 @@ export async function runPaymentReminders(params: {
         orgId: params.orgId,
         invoiceId: invoice.id,
         type: OutboundMessageType.INVOICE_REMINDER,
+        status: { not: "PREVIEW" },
         createdAt: { gte: startOfDay(now) },
       },
       select: { id: true },

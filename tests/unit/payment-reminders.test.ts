@@ -72,21 +72,22 @@ describe("ladder", () => {
   });
 
   it("escalates after the due date", () => {
-    expect(stageDueNow(due, day("2026-10-04"))?.key).toBe("+3");
-    expect(stageDueNow(due, day("2026-10-11"))?.key).toBe("+10");
+    // A history is passed because these rungs are only reachable by an invoice
+    // that has been climbing; a cold start is held back deliberately.
+    expect(stageDueNow(due, day("2026-10-04"), ["DUE"])?.key).toBe("+3");
+    expect(stageDueNow(due, day("2026-10-11"), ["DUE", "+3"])?.key).toBe("+10");
   });
 
   it("stops after the final rung instead of chasing forever", () => {
     // An invoice three weeks past terms needs a person, not an eleventh message.
-    expect(stageDueNow(due, day("2026-11-30"))?.key).toBe("+10");
+    expect(stageDueNow(due, day("2026-11-30"), ["DUE", "+3", "+10"])?.key).toBe("+10");
     expect(REMINDER_LADDER.at(-1)?.key).toBe("+10");
   });
 
   it("never returns a backlog — only the rung actually reached", () => {
-    // An invoice that becomes eligible late, because the feature was switched
-    // on today, must not fire four messages at once to catch up.
-    const stage = stageDueNow(due, day("2026-10-20"));
-    expect(stage?.key).toBe("+10");
+    // An invoice that becomes eligible late must not fire four messages at once
+    // to catch up; it returns one rung, the latest.
+    expect(stageDueNow(due, day("2026-10-20"), ["DUE", "+3"])?.key).toBe("+10");
   });
 
   it("tones escalate in order and end firm, not shrill", () => {
@@ -106,5 +107,37 @@ describe("quiet hours", () => {
     expect(withinQuietHours(at(8), 8, 20)).toBe(true);
     expect(withinQuietHours(at(19), 8, 20)).toBe(true);
     expect(withinQuietHours(at(20), 8, 20)).toBe(false);
+  });
+});
+
+describe("cold start", () => {
+  const due = day("2026-10-01");
+
+  it("does not open at the final rung on an invoice that has had nothing", () => {
+    // Switching the feature on over a book of old invoices must not greet
+    // customers with "this is our last automatic reminder" when there were no
+    // earlier ones. That sentence is false and reads as an accusation.
+    const stage = stageDueNow(due, day("2026-10-20"), []);
+    expect(stage?.tone).not.toBe("final");
+  });
+
+  it("opens a cold overdue invoice at the mildest rung that is still true", () => {
+    // Not the courtesy or the due-day notice: both would state something false
+    // about an invoice that passed its date three weeks ago.
+    expect(stageDueNow(due, day("2026-10-20"), [])?.tone).toBe("firm");
+  });
+
+  it("still climbs normally once something has been sent", () => {
+    expect(stageDueNow(due, day("2026-10-20"), ["DUE"])?.key).toBe("+10");
+    expect(stageDueNow(due, day("2026-10-04"), ["DUE"])?.key).toBe("+3");
+  });
+
+  it("leaves an in-terms cold start exactly where it was", () => {
+    // A courtesy is already the gentlest rung, so nothing should change.
+    expect(stageDueNow(due, day("2026-09-24"), [])?.key).toBe("T-7");
+  });
+
+  it("stays silent before the ladder opens, history or not", () => {
+    expect(stageDueNow(due, day("2026-09-05"), [])).toBeNull();
   });
 });

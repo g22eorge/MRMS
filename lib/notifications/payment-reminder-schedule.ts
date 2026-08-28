@@ -78,10 +78,31 @@ export function effectiveDueDate(
  * eligible late — because the feature was switched on, or the ladder changed —
  * must not fire four messages at once to catch up.
  */
-export function stageDueNow(dueDate: Date, now: Date): ReminderStage | null {
+export function stageDueNow(
+  dueDate: Date,
+  now: Date,
+  /** Rungs already sent for this invoice. Empty means nothing has ever been sent. */
+  alreadySent: readonly string[] = [],
+): ReminderStage | null {
   const days = Math.round((startOfDay(now).getTime() - startOfDay(dueDate).getTime()) / DAY_MS);
   const reached = REMINDER_LADDER.filter((s) => days >= s.offsetDays);
-  return reached.at(-1) ?? null;
+  const latest = reached.at(-1);
+  if (!latest) return null;
+
+  // A cold start must not open at the top of the ladder. Switching the feature
+  // on over a book of old invoices would otherwise greet customers who have
+  // never heard from it with "this is our last automatic reminder" — untrue,
+  // since there were no earlier ones, and it reads as an accusation.
+  //
+  // The cap is "firm" rather than something gentler because the gentler rungs
+  // say things that are false about an old invoice: a courtesy announces a due
+  // date that has passed, and the due-day notice claims it falls due today.
+  // Firm states the position accurately — overdue, this much outstanding — and
+  // claims no history. It is the mildest rung that is still true.
+  if (alreadySent.length === 0 && latest.tone === "final") {
+    return REMINDER_LADDER.find((s) => s.tone === "firm") ?? latest;
+  }
+  return latest;
 }
 
 export function withinQuietHours(now: Date, startHour: number, endHour: number): boolean {
