@@ -112,6 +112,10 @@ export default async function InvoiceDetailPage({
         },
         orderBy: { createdAt: "asc" },
       },
+      // Every payment mints a receipt through createReceiptForPayment, but this
+      // page never read them back, so the document it caused was invisible from
+      // the document that caused it.
+      receipts: { select: { id: true, receiptNumber: true, paymentId: true } },
       payments: {
         select: {
           id: true,
@@ -306,7 +310,18 @@ export default async function InvoiceDetailPage({
 
   const related = [
     ...(invoice.job ? [{ label: invoice.job.jobNumber, href: `/jobs/${invoice.job.id}`, sub: `${invoice.job.brand} ${invoice.job.model}`.trim() || "Job" }] : []),
-    ...invoice.deliveryNotes.map((dn) => ({ label: dn.deliveryNoteNumber, sub: `Delivered ${formatEATDate(dn.deliveredAt)}` })),
+    // These carried no href, so the numbers rendered as plain text and the
+    // chain dead-ended on the page that lists it.
+    ...invoice.deliveryNotes.map((dn) => ({
+      label: dn.deliveryNoteNumber,
+      href: `/documents/delivery-notes/${dn.id}`,
+      sub: `Delivered ${formatEATDate(dn.deliveredAt)}`,
+    })),
+    ...invoice.receipts.map((r) => ({
+      label: r.receiptNumber,
+      href: `/documents/receipts/${r.id}`,
+      sub: "Receipt",
+    })),
   ];
 
   const activity = [
@@ -447,6 +462,20 @@ export default async function InvoiceDetailPage({
                     { key: "method", header: "Method", cell: (row) => row.method },
                     { key: "reference", header: "Reference", cell: (row) => row.reference ?? "—" },
                     { key: "by", header: "Recorded by", cell: (row) => row.createdBy?.name ?? "—" },
+                    {
+                      key: "receipt",
+                      header: "Receipt",
+                      cell: (row) => {
+                        const receipt = invoice.receipts.find((r) => r.paymentId === row.id);
+                        return receipt ? (
+                          <Link href={`/documents/receipts/${receipt.id}`} className="mono text-[var(--accent)] hover:underline">
+                            {receipt.receiptNumber}
+                          </Link>
+                        ) : (
+                          <span className="text-[var(--ink-muted)]">—</span>
+                        );
+                      },
+                    },
                   ]}
                 />
               </div>
@@ -461,7 +490,15 @@ export default async function InvoiceDetailPage({
                   getRowKey={(dn) => dn.id}
                   empty="No delivery notes."
                   columns={[
-                    { key: "number", header: "DN #", cell: (row) => row.deliveryNoteNumber },
+                    {
+                      key: "number",
+                      header: "DN #",
+                      cell: (row) => (
+                        <Link href={`/documents/delivery-notes/${row.id}`} className="mono text-[var(--accent)] hover:underline">
+                          {row.deliveryNoteNumber}
+                        </Link>
+                      ),
+                    },
                     { key: "date", header: "Delivered", cell: (row) => formatEATDate(row.deliveredAt) },
                     { key: "method", header: "Method", cell: (row) => row.deliveryMethod },
                     { key: "by", header: "Delivered by", cell: (row) => row.deliveredByName },
