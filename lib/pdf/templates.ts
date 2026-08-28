@@ -5,7 +5,19 @@ import type { ComponentType } from "react";
 import { EagleInfoInvoiceAdapter }  from "@/lib/pdf/EagleInfoInvoiceAdapter";
 import { EagleInfoJobCardDocument } from "@/lib/pdf/EagleInfoJobCardDocument";
 import { EagleInfoQuotationAdapter }from "@/lib/pdf/EagleInfoQuotationAdapter";
+import { InvoiceDocumentExecutive }     from "@/lib/pdf/InvoiceDocumentExecutive";
+import { InvoiceDocumentMinimal }       from "@/lib/pdf/InvoiceDocumentMinimal";
+import { InvoiceDocumentPremium }       from "@/lib/pdf/InvoiceDocumentPremium";
+import { InvoiceDocumentV2 }            from "@/lib/pdf/InvoiceDocumentV2";
+import { JobCardDocument }              from "@/lib/pdf/JobCardDocument";
+import { JobCardDocumentCompact }       from "@/lib/pdf/JobCardDocumentCompact";
+import { JobCardDocumentPremium }       from "@/lib/pdf/JobCardDocumentPremium";
+import { JobCardDocumentTechnical }     from "@/lib/pdf/JobCardDocumentTechnical";
+import { QuotationDocument }            from "@/lib/pdf/QuotationDocument";
+import { QuotationDocumentMinimal }     from "@/lib/pdf/QuotationDocumentMinimal";
 import { SaleReceiptDocument }          from "@/lib/pdf/SaleReceiptDocument";
+import { SaleReceiptDocumentBranded }   from "@/lib/pdf/SaleReceiptDocumentBranded";
+import { SaleReceiptDocumentExecutive } from "@/lib/pdf/SaleReceiptDocumentExecutive";
 import { SaleReceiptDocumentThermal }   from "@/lib/pdf/SaleReceiptDocumentThermal";
 
 export type DocKind = "INVOICE" | "QUOTATION" | "JOB_CARD" | "RECEIPT";
@@ -17,12 +29,11 @@ export type TemplateKey =
   | "invoice_premium"
   | "invoice_minimal"
   | "invoice_executive"
-  // Quotation
+  // Quotation — "modern" and "executive" were advertised without ever having a
+  // component behind them; they are gone until one is written.
   | "quote_classic"
-  | "quote_modern"
   | "quote_minimal"
   | "quote_detailed"
-  | "quote_executive"
   // Job Card
   | "job_card_classic"
   | "job_card_compact"
@@ -33,7 +44,6 @@ export type TemplateKey =
   | "receipt_classic"
   | "receipt_thermal"
   | "receipt_branded"
-  | "receipt_itemized"
   | "receipt_executive";
 
 export type TemplateDef = {
@@ -68,10 +78,8 @@ export const DOC_TEMPLATES: TemplateDef[] = [
 
   // ── QUOTATION ──────────────────────────────────────────────────────────────
   { kind: "QUOTATION", key: "quote_classic",   label: "Default",   description: "Standard quotation with validity period",                previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
-  { kind: "QUOTATION", key: "quote_modern",    label: "Modern",    description: "Colorful header with summary box",                       previewColor: "bg-blue-500",   minPlan: "STANDARD",   templateNumber: 2 },
-  { kind: "QUOTATION", key: "quote_minimal",   label: "Minimal",   description: "Clean, distraction-free presentation",                   previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 3 },
-  { kind: "QUOTATION", key: "quote_detailed",  label: "Detailed",  description: "Adds terms, notes, and signature block",                 previewColor: "bg-amber-500",  minPlan: "GROWTH",     templateNumber: 4 },
-  { kind: "QUOTATION", key: "quote_executive", label: "Executive", description: "Dark premium layout for corporate proposals",             previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 5 },
+  { kind: "QUOTATION", key: "quote_minimal",   label: "Minimal",   description: "Clean, distraction-free presentation",                   previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 2 },
+  { kind: "QUOTATION", key: "quote_detailed",  label: "Detailed",  description: "Adds terms, notes, and signature block",                 previewColor: "bg-amber-500",  minPlan: "GROWTH",     templateNumber: 3 },
 
   // ── JOB_CARD ───────────────────────────────────────────────────────────────
   { kind: "JOB_CARD", key: "job_card_classic",   label: "Default",   description: "Standard workshop job card with diagnosis",            previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
@@ -84,8 +92,7 @@ export const DOC_TEMPLATES: TemplateDef[] = [
   { kind: "RECEIPT", key: "receipt_classic",   label: "Default",    description: "Simple payment receipt",                               previewColor: "bg-slate-500",   minPlan: "STARTER",    templateNumber: 1 },
   { kind: "RECEIPT", key: "receipt_thermal",   label: "Thermal",    description: "Narrow 80mm thermal printer format",                   previewColor: "bg-neutral-600", minPlan: "STANDARD",   templateNumber: 2 },
   { kind: "RECEIPT", key: "receipt_branded",   label: "Branded",    description: "Full logo header with payment breakdown",              previewColor: "bg-emerald-600", minPlan: "GROWTH",     templateNumber: 3 },
-  { kind: "RECEIPT", key: "receipt_itemized",  label: "Itemized",   description: "Shows line items from the invoice",                    previewColor: "bg-teal-600",    minPlan: "PREMIUM",    templateNumber: 4 },
-  { kind: "RECEIPT", key: "receipt_executive", label: "Executive",  description: "Dark premium format for high-value payments",          previewColor: "bg-slate-800",   minPlan: "ENTERPRISE", templateNumber: 5 },
+  { kind: "RECEIPT", key: "receipt_executive", label: "Executive",  description: "Dark premium format for high-value payments",          previewColor: "bg-slate-800",   minPlan: "ENTERPRISE", templateNumber: 4 },
 ];
 
 export function templatesFor(kind: DocKind, plan: OrgPlan) {
@@ -132,9 +139,57 @@ function fallbackKeyForKind(kind: DocKind) {
   return "receipt_classic";
 }
 
-// The alternate template components are still in lib/pdf/ but are no longer
-// imported here. They are kept so an alternate can be rebuilt in the house
-// style later rather than written from scratch.
+/* ── Key → component ───────────────────────────────────────────────────────
+   Every resolver used to ignore its key and return the one default, so all
+   five choices per document kind rendered the same PDF. The alternates were
+   still sitting in lib/pdf/, orphaned when the Eagle Info adapters landed —
+   which made the template picker, and the plan tiers gating it, promise
+   something the product did not do. An ENTERPRISE customer picking
+   "Executive" got the STARTER default.
+
+   These maps are deliberately total over the keys the catalogue advertises:
+   an entry here without a catalogue entry is dead, and a catalogue entry
+   without one here is the bug this replaces. The ?? fallbacks are for a key
+   read from the database that is no longer offered, which resolveTemplateKey
+   already screens for.                                                      */
+
+type InvoiceKey   = Extract<TemplateKey, `invoice_${string}`>;
+type QuotationKey = Extract<TemplateKey, `quote_${string}`>;
+type JobCardKey   = Extract<TemplateKey, `job_card_${string}`>;
+type ReceiptKey   = Extract<TemplateKey, `receipt_${string}`>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const INVOICE_TEMPLATES: Record<InvoiceKey, ComponentType<any>> = {
+  invoice_classic:   EagleInfoInvoiceAdapter,
+  invoice_modern:    InvoiceDocumentV2,
+  invoice_premium:   InvoiceDocumentPremium,
+  invoice_minimal:   InvoiceDocumentMinimal,
+  invoice_executive: InvoiceDocumentExecutive,
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const QUOTATION_TEMPLATES: Record<QuotationKey, ComponentType<any>> = {
+  quote_classic:  EagleInfoQuotationAdapter,
+  quote_minimal:  QuotationDocumentMinimal,
+  quote_detailed: QuotationDocument,
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const JOB_CARD_TEMPLATES: Record<JobCardKey, ComponentType<any>> = {
+  job_card_classic:   EagleInfoJobCardDocument,
+  job_card_compact:   JobCardDocumentCompact,
+  job_card_detailed:  JobCardDocument,
+  job_card_technical: JobCardDocumentTechnical,
+  job_card_premium:   JobCardDocumentPremium,
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RECEIPT_TEMPLATES: Record<ReceiptKey, ComponentType<any>> = {
+  receipt_classic:   SaleReceiptDocument,
+  receipt_thermal:   SaleReceiptDocumentThermal,
+  receipt_branded:   SaleReceiptDocumentBranded,
+  receipt_executive: SaleReceiptDocumentExecutive,
+};
 
 // Different templates have different prop types; the caller is responsible for
 // supplying a compatible props object.
@@ -151,23 +206,22 @@ function fallbackKeyForKind(kind: DocKind) {
 // paper format for an 80mm till roll, not a style choice.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function InvoiceTemplateComponent(_key: TemplateKey): ComponentType<any> {
-  return EagleInfoInvoiceAdapter;
+export function InvoiceTemplateComponent(key: TemplateKey): ComponentType<any> {
+  return INVOICE_TEMPLATES[key as InvoiceKey] ?? EagleInfoInvoiceAdapter;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function QuotationTemplateComponent(_key: TemplateKey): ComponentType<any> {
-  return EagleInfoQuotationAdapter;
+export function QuotationTemplateComponent(key: TemplateKey): ComponentType<any> {
+  return QUOTATION_TEMPLATES[key as QuotationKey] ?? EagleInfoQuotationAdapter;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function JobCardTemplateComponent(_key: TemplateKey): ComponentType<any> {
-  return EagleInfoJobCardDocument;
+export function JobCardTemplateComponent(key: TemplateKey): ComponentType<any> {
+  return JOB_CARD_TEMPLATES[key as JobCardKey] ?? EagleInfoJobCardDocument;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReceiptTemplateComponent(key: TemplateKey): ComponentType<any> {
-  // Thermal is a paper size, not a look: 80mm till roll. Keep it.
-  if (key === "receipt_thermal") return SaleReceiptDocumentThermal;
-  return SaleReceiptDocument;
+  // Thermal is a paper size, not a look: 80mm till roll.
+  return RECEIPT_TEMPLATES[key as ReceiptKey] ?? SaleReceiptDocument;
 }
