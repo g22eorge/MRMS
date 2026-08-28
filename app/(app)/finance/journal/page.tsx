@@ -78,6 +78,11 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return { error: "Your account is not attached to a workspace." };
+    // The page redirects a non-accountant at render, but a server action is
+    // callable on its own — the render guard never runs for a direct
+    // invocation, so raising a journal entry needs the same check here that
+    // decides who may see the screen.
+    if (!canAccessAccountantFinance(_u.role)) return { error: "You do not have access to the journal." };
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const db = orgDb(_u.orgId);
 
@@ -142,6 +147,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
@@ -163,6 +169,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
@@ -176,6 +183,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;

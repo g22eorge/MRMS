@@ -70,6 +70,10 @@ export default async function ChartOfAccountsPage({
   async function createAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const code = fd.get("code") as string;
@@ -89,6 +93,10 @@ export default async function ChartOfAccountsPage({
   async function toggleActive(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
@@ -101,6 +109,10 @@ export default async function ChartOfAccountsPage({
   async function deleteAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;

@@ -52,6 +52,10 @@ export default async function BankPage({
   async function createBankAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const name = fd.get("name") as string;
@@ -70,6 +74,10 @@ export default async function BankPage({
   async function addTransaction(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const bankAccountId = fd.get("bankAccountId") as string;
@@ -99,6 +107,7 @@ export default async function BankPage({
   async function reconcile(fd: FormData) {
     "use server";
     const { user, org } = await requireOrgSession();
+    if (!can.viewFinancials(user)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const id = fd.get("id") as string;
     if (!user.orgId) return;
@@ -116,6 +125,10 @@ export default async function BankPage({
   async function deleteBankAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;

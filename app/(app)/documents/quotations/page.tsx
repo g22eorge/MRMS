@@ -125,7 +125,10 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   async function deleteQuotationAction(formData: FormData) {
     "use server";
     const { user, org } = await requireOrgSession();
-    if (!canDelete) redirect("/dashboard");
+    // Re-derived from the live actor, not from canDelete: that closure holds
+    // what was true when the page rendered, so a user whose role was withdrawn
+    // could still delete from a tab left open.
+    if (!["ADMIN", "OPS"].includes(user.role)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = String(formData.get("id") ?? "").trim();
