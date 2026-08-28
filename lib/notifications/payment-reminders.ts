@@ -18,19 +18,23 @@ import { prisma } from "@/lib/prisma";
  * Automatic payment reminders for invoices sold on terms.
  *
  * Shaped by what the receivables book actually looks like rather than by what a
- * reminder feature usually does. On care at the time of writing: 20 unpaid
- * invoices, 19.6m outstanding, of which 14.5m is already past 30 days and
- * 13.3m of that is a single invoice. So:
+ * reminder feature usually does. On care at the time of writing: 19 unpaid
+ * invoices, 6.3m outstanding, of which 5.1m is still inside terms and 2.8m
+ * sits on a single client holding ten separate invoices. So:
  *
- *   - This is preventive, not recovery. It protects invoices still inside
- *     their terms from ageing. It will not collect an old debt, and pretending
- *     otherwise would be the wrong promise to build against.
- *   - A large balance is never chased by template. Above `manualReviewAbove`
- *     the ladder stops and a person is asked to call — a 13m debt answered by
- *     an automated message reads as an insult, and does not work.
+ *   - This is preventive, not recovery. Eighty-two per cent of the book is
+ *     still inside its terms, which is exactly what a ladder can protect. It
+ *     will not collect an old debt, and pretending otherwise would be the
+ *     wrong promise to build against.
  *   - A client holding several unpaid invoices gets one statement, not one
- *     message per invoice. Ten messages in a morning is how a reminder system
- *     turns into a reason to block the number.
+ *     message per invoice. C-Care IHK holds ten — nearly half the book by
+ *     value. Ten messages in a morning is how a reminder system turns into a
+ *     reason to block the number.
+ *   - A large balance is never chased by template. Above `manualReviewAbove`
+ *     the ladder stops and a person is asked to call, because a substantial
+ *     debt answered by an automated message reads as an insult and does not
+ *     work. No current invoice reaches the default ceiling, so this guard is
+ *     deliberate policy rather than something the present book exercises.
  *
  * The ladder is deliberately silent for the first three weeks of a 30-day
  * term. Chasing on day three signals distrust of a customer who is not late,

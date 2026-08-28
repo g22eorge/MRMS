@@ -8,11 +8,11 @@
  * does the reading and sending around them.
  *
  * Shaped by what the receivables book actually looks like rather than by what a
- * reminder feature usually does. On care at the time of writing: 20 unpaid
- * invoices, 19.6m outstanding, of which 14.5m is already past 30 days and
- * 13.3m of that is a single invoice. So this is preventive, not recovery — it
- * protects invoices still inside their terms from ageing, and does not pretend
- * it can collect an old debt.
+ * reminder feature usually does. On care at the time of writing: 19 unpaid
+ * invoices, 6.3m outstanding, of which 5.1m — 82% — is still inside terms and
+ * only 1.2m has aged past thirty days. So this is preventive, not recovery: it
+ * protects the majority of the book from ageing, and does not pretend it can
+ * collect an old debt.
  *
  * The ladder is silent for the first three weeks of a 30-day term. Chasing on
  * day three signals distrust of a customer who is not late, and teaches
