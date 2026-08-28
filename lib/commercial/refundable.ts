@@ -1,4 +1,5 @@
 import { toBaseAmount } from "@/lib/currency";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -87,7 +88,7 @@ export async function refundableCeiling(params: {
       // and a credit note would let you refund another 100,000. The guard that
       // exists to stop paying back money never received was inverted by the very
       // rows that record paying it back.
-      where: { orgId, ...parentWhere, kind: "PAYMENT" },
+      where: { orgId, ...parentWhere, ...INCOMING_PAYMENT },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }),
     prisma.refund.findMany({

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { redirect } from "next/navigation";
 
 import { MonthSelectForm } from "@/components/shared/MonthSelectForm";
@@ -427,7 +428,7 @@ export default async function ReportsPage({
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.job.findMany({ where: { orgId, externalPaid: true, externalPaidAt: { gte: ytdStart } }, select: { externalTechFee: true, externalTechBill: true } })
       .catch(() => [] as Array<{ externalTechFee: number | null; externalTechBill: number | null }>),
-    prisma.payment.findMany({ where: { orgId, kind: "PAYMENT", receivedAt: { gte: sparklineStart } }, select: { amount: true, currency: true, exchangeRateToBase: true, receivedAt: true } })
+    prisma.payment.findMany({ where: { orgId, ...INCOMING_PAYMENT, receivedAt: { gte: sparklineStart } }, select: { amount: true, currency: true, exchangeRateToBase: true, receivedAt: true } })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null; receivedAt: Date | null }>),
     prisma.job.findMany({ where: { orgId, receivedAt: { gte: selectedRange.start, lte: selectedRange.end }, clientId: { not: undefined } }, select: { clientId: true } })
       .catch(() => [] as Array<{ clientId: string | null }>),

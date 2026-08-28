@@ -94,8 +94,13 @@ export default async function ClientsPage({
       where: pagedWhere,
       include: { _count: { select: { jobs: true } } },
       orderBy: { updatedAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      // The "Top" segment cannot be expressed in `where` — Prisma has no
+      // comparison on a relation count — so it is narrowed to >= 3 jobs after
+      // the query. Paginating first therefore filtered within a page: page one
+      // showed whichever few of its twenty qualified, later pages could be
+      // empty, and the footer counted every client with any job at all. For
+      // that segment the slice is taken after the filter instead, below.
+      ...(segment === "high" ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
     }),
     db.client.count({ where: pagedWhere }).catch(() => 0),
     db.client.count().catch(() => 0),
@@ -124,8 +129,15 @@ export default async function ClientsPage({
     ? (matchingClients as ClientRow[]).filter((c) => c._count.jobs >= 3)
     : (matchingClients as ClientRow[]);
 
-  const pageView = paginationView(page, total, pageSize);
-  const clients = filteredClients;
+  const pageView = paginationView(
+    page,
+    segment === "high" ? filteredClients.length : total,
+    pageSize,
+  );
+  const clients =
+    segment === "high"
+      ? filteredClients.slice(pageView.skip, pageView.skip + pageView.take)
+      : filteredClients;
   // kpiTotal is the same as totalClients (total count across all segments for the KPI bar)
   const kpiTotal = totalClients;
 

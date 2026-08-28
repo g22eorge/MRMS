@@ -379,7 +379,14 @@ export default async function TechniciansPage({
         {/* Search + quick chips + action — single compact row */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2">
           <form className="flex min-w-0 flex-1 gap-1.5">
+            {/* Everything the reader has already narrowed by has to ride along,
+                or submitting a search silently widens the list back out. Only
+                status was carried, so the Ready chip and a dismissed spotlight
+                were both lost the moment anyone typed. */}
             {filters.status && <input type="hidden" name="status" value={filters.status} />}
+            {filters.ready && <input type="hidden" name="ready" value={filters.ready} />}
+            {filters.dismiss && <input type="hidden" name="dismiss" value={filters.dismiss} />}
+            {filters.size && <input type="hidden" name="size" value={filters.size} />}
             <input
               name="q"
               defaultValue={filters.q}

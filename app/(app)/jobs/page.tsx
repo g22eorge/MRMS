@@ -819,6 +819,17 @@ export default async function JobsPage({
                 sort: sort !== "received_desc" ? sort : undefined,
                 from: filters.from,
                 to: filters.to,
+                // These were missing, so typing in the search box quietly
+                // cleared whatever the reader had already narrowed to — most
+                // visibly Overdue and Mine, which are one-click chips, so it
+                // looked like the search had widened the list rather than that
+                // a filter had been dropped.
+                overdue: filters.overdue,
+                mine: filters.mine,
+                assignedToId: filters.assignedToId,
+                payout: filters.payout,
+                dateField: filters.dateField,
+                size: filters.size,
               }}
             />
             {!isExternalTech ? (
