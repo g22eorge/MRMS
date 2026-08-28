@@ -2,7 +2,6 @@
 
 import {
   CommunicationStatus,
-  DeliveryMethod,
   JobStatus,
   Prisma,
   RecommendationOption,
@@ -35,8 +34,8 @@ import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
-import { nextAvailableInvoiceNumber, createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
 import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
@@ -1560,9 +1559,14 @@ export async function issueJobInvoiceAction(
 // One-click delivery note straight from the job: reuse the job's invoice and
 // the deliveredTo/deliveryMethod already captured at handover, so the user
 // never leaves the job for /documents/delivery-notes and re-types data the
-// system already has. Mirrors the canonical create in the delivery-notes page
-// (same numbering, dedup guard, and audit) but drops the "fully paid" gate —
-// a customer collecting on partial payment still needs a handover slip.
+// system already has.
+//
+// The creation itself is createDeliveryNoteFromInvoice, shared with the
+// documents page, the invoice page and the API route. This function used to
+// mirror that logic by hand, which is how the four copies drifted: two grew a
+// "fully paid" gate and this one did not, so whether a handover slip could be
+// issued depended on which screen you started from. What stays here is the
+// part that is genuinely the job's — who received the device and how it left.
 export async function generateJobDeliveryNoteAction(
   jobId: string,
 ): Promise<{ success: boolean; error?: string; deliveryNoteNumber?: string }> {
@@ -1574,69 +1578,41 @@ export async function generateJobDeliveryNoteAction(
 
   const job = await prisma.job.findFirst({
     where: { id: jobId, orgId },
+    // Only what this function still decides. The line items, the existing-note
+    // check and the fallback description all moved into the shared helper,
+    // which reads them from the invoice itself.
     select: {
-      id: true,
-      jobNumber: true,
-      brand: true,
-      model: true,
       deliveredTo: true,
       deliveryMethod: true,
-      client: { select: { fullName: true, organization: true } },
-      invoice: {
-        select: {
-          id: true,
-          invoiceNumber: true,
-          lines: { select: { description: true, quantity: true } },
-          deliveryNotes: { select: { deliveryNoteNumber: true }, take: 1 },
-        },
-      },
+      client: { select: { fullName: true } },
+      invoice: { select: { id: true } },
     },
   });
   if (!job) return { success: false, error: "Job not found" };
   if (!job.invoice) return { success: false, error: "Generate the invoice first, then the delivery note." };
 
-  // Already has one — treat as idempotent so a double-tap doesn't duplicate.
-  if (job.invoice.deliveryNotes.length > 0) {
-    return { success: true, deliveryNoteNumber: job.invoice.deliveryNotes[0].deliveryNoteNumber };
-  }
-
   const deliveredByName = user.name?.trim() || "Front desk";
+  // The job knows who collected the device; the generic paths cannot.
   const receivedByName = job.deliveredTo?.trim() || job.client.fullName;
-  const items = job.invoice.lines.length > 0
-    ? job.invoice.lines.map((line) => ({
-        description: line.description,
-        quantity: Math.max(1, Math.round(Number(line.quantity) || 1)),
-      }))
-    : [{ description: `Repair handover for ${job.jobNumber} (${job.brand} ${job.model})`, quantity: 1 }];
-
-  // Double-submit guard: a delivery note for this invoice landed seconds ago.
-  const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, invoiceId: job.invoice.id });
-  if (dupDn) return { success: true };
 
   try {
-    const noteRecord = await prisma.$transaction(async (tx) => {
-      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
-      return tx.deliveryNote.create({
-        data: {
-          orgId,
-          invoiceId: job.invoice!.id,
-          deliveryNoteNumber,
-          deliveryMethod: job.deliveryMethod as DeliveryMethod | null,
-          deliveredByName,
-          receivedByName,
-          createdById: user.id,
-          items: { create: items },
-        },
-        select: { id: true, deliveryNoteNumber: true },
-      });
+    const result = await createDeliveryNoteFromInvoice({
+      orgId,
+      invoiceId: job.invoice.id,
+      actorUserId: user.id,
+      deliveredByName,
+      receivedByName,
+      deliveryMethod: job.deliveryMethod,
     });
-    await writeSystemAuditEvent({
-      orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: noteRecord.id,
-      action: "DELIVERY_NOTE_CREATED", summary: `${noteRecord.deliveryNoteNumber} generated from ${job.jobNumber}`,
-    });
-    revalidatePath(`/jobs/${jobId}`);
-    revalidatePath("/documents/delivery-notes");
-    return { success: true, deliveryNoteNumber: noteRecord.deliveryNoteNumber };
+    if (!result.ok) return { success: false, error: result.error };
+
+    // Idempotent on purpose: an invoice that already has a note returns that
+    // note's number rather than a second document, so a double-tap is safe.
+    if (!result.duplicate) {
+      revalidatePath(`/jobs/${jobId}`);
+      revalidatePath("/documents/delivery-notes");
+    }
+    return { success: true, deliveryNoteNumber: result.deliveryNoteNumber };
   } catch {
     return { success: false, error: "Could not create the delivery note. Please try again." };
   }
