@@ -116,7 +116,7 @@ export function InvoiceCreateDialog({
   // for position:fixed descendants. In place, this covered the content column
   // rather than the viewport.
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-label={editInvoiceId ? "Edit invoice" : "New invoice"} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/55 backdrop-blur-sm" onClick={close} />
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="relative w-full max-w-[1300px] rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden">

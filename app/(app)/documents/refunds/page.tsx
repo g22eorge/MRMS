@@ -756,6 +756,27 @@ export default async function RefundsPage({
                 ))}
               </select>
             </div>
+            {/* The action refuses a refund on a document that is not in the
+                org's base currency unless it is given a rate — and there was no
+                field to give one in, so refunding a foreign-currency document
+                was impossible: the form returned "Enter the exchange rate for
+                this USD refund" with nowhere to enter it. It is rendered
+                unconditionally because the currency follows the source, which
+                is chosen in the browser after this markup is built; the action
+                ignores it when the document is already in {currency}. */}
+            <div className="space-y-1">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                Exchange rate to {currency}
+              </label>
+              <input
+                name="exchangeRateToBase"
+                type="number"
+                min="0"
+                step="any"
+                placeholder={`Only if the document is not in ${currency}`}
+                className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Reference

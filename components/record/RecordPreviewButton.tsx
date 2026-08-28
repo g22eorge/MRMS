@@ -70,7 +70,14 @@ export function RecordPreviewButton({
           the containing block for position:fixed children — in place this drawer
           covered only the content column. */}
       {open && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">
+        // role="dialog" is what marks this as a dialog to assistive
+        // technology, and it is also the exception RowActionsMenu makes when
+        // deciding whether a mousedown landed outside itself. Without it the
+        // first click anywhere in this drawer — the close button, the backdrop,
+        // Open PDF — closed the row menu, which unmounted its children and took
+        // this drawer with them. Reached from a row menu, the preview appeared
+        // and vanished on the next click.
+        <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-[10000] flex items-stretch justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
           <div className="relative flex h-full w-full max-w-3xl flex-col bg-neutral-200 shadow-2xl">
             <div className="flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-2">

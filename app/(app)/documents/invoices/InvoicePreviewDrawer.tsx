@@ -27,7 +27,7 @@ export function InvoicePreviewDrawer() {
   // position:fixed descendants, so this overlay covered only the content column
   // instead of the viewport.
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-stretch justify-end">
+    <div role="dialog" aria-modal="true" aria-label="Invoice preview" className="fixed inset-0 z-[10000] flex items-stretch justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={closePreview} />
       <div className="relative flex h-full w-full max-w-3xl flex-col bg-neutral-200 shadow-2xl">
         <div className="flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-2">
