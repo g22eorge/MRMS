@@ -8,15 +8,27 @@ import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
 import { flash } from "@/lib/flash";
-async function requireAdmin() {
+/**
+ * Suppliers are inventory work, and every sibling action in this folder —
+ * locations, purchase orders, purchase requests, stock counts, supplier bills,
+ * transfers — gates on manageInventory. This one alone asked for manageUsers,
+ * which is user administration and a different thing entirely.
+ *
+ * The page admits anyone with manageInventory, so a MANAGER, OPS or
+ * TECH_MANAGER could open Suppliers, fill in the visible Add Supplier form,
+ * click Add, and be bounced to /inventory with nothing created and nothing
+ * said. Aligning with the siblings is a correction of an outlier rather than a
+ * widening: the six other writes in the same folder already work this way.
+ */
+async function requireInventoryManager() {
   const ctx = await requireOrgSession();
-  if (!can.manageUsers(ctx.user)) redirect("/inventory");
+  if (!can.manageInventory(ctx.user)) redirect("/inventory");
   assertOrgCanMutate({ access: ctx.org.access, userRole: ctx.user.role, userAccessMode: ctx.user.accessMode, kind: "GENERAL" });
   return ctx;
 }
 
 export async function createSupplierAction(formData: FormData): Promise<{ id?: string; error?: string }> {
-  const { orgId } = await requireAdmin();
+  const { orgId } = await requireInventoryManager();
   const name = (formData.get("name") as string).trim();
   if (!name) return { error: "Supplier name is required" };
   try {
@@ -38,7 +50,7 @@ export async function createSupplierAction(formData: FormData): Promise<{ id?: s
 }
 
 export async function updateSupplierAction(formData: FormData): Promise<{ error?: string }> {
-  const { orgId } = await requireAdmin();
+  const { orgId } = await requireInventoryManager();
   const id = formData.get("id") as string;
   const supplier = await prisma.supplier.findUnique({ where: { id }, select: { orgId: true } });
   if (!supplier || supplier.orgId !== orgId) return { error: "Not found" };
@@ -58,7 +70,7 @@ export async function updateSupplierAction(formData: FormData): Promise<{ error?
 }
 
 export async function createSupplierPriceAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId } = await requireInventoryManager();
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   const partId = String(formData.get("partId") ?? "").trim() || null;
   const sku = String(formData.get("sku") ?? "").trim() || null;
@@ -91,7 +103,7 @@ export async function createSupplierPriceAction(formData: FormData): Promise<voi
 }
 
 export async function updateSupplierPriceAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   const partId = String(formData.get("partId") ?? "").trim() || null;
@@ -124,7 +136,7 @@ export async function updateSupplierPriceAction(formData: FormData): Promise<voi
 }
 
 export async function deleteSupplierPriceAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireAdmin();
+  const { orgId } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   if (!id || !supplierId) return;

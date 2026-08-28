@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+import { flash } from "@/lib/flash";
 import { revalidatePath } from "next/cache";
 
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
@@ -81,7 +83,13 @@ export default async function JobCardsPage({
   async function convertJobCardToQuotationAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!(["ADMIN", "OPS", "MANAGER", "SALES", "FINANCE"].includes(user.role) || can.viewFinancials(user))) return;
+    // A bare return told the caller nothing: the row menu's Convert to
+    // Quotation showed for TECH_MANAGER and TECHNICIAN_INTERNAL, the action
+    // stopped here, the page revalidated, and the user saw no quotation, no
+    // error and no toast — a button that looked ordinary and did nothing.
+    if (!(["ADMIN", "OPS", "MANAGER", "SALES", "FINANCE"].includes(user.role) || can.viewFinancials(user))) {
+      redirect(flash("/documents/job-cards", "You do not have permission to convert a job card to a quotation."));
+    }
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const jobId = String(formData.get("jobId") ?? "").trim();
