@@ -14,10 +14,13 @@ import { JobCardDocumentCompact }       from "@/lib/pdf/JobCardDocumentCompact";
 import { JobCardDocumentPremium }       from "@/lib/pdf/JobCardDocumentPremium";
 import { JobCardDocumentTechnical }     from "@/lib/pdf/JobCardDocumentTechnical";
 import { QuotationDocument }            from "@/lib/pdf/QuotationDocument";
+import { QuotationDocumentExecutive }   from "@/lib/pdf/QuotationDocumentExecutive";
 import { QuotationDocumentMinimal }     from "@/lib/pdf/QuotationDocumentMinimal";
+import { QuotationDocumentModern }      from "@/lib/pdf/QuotationDocumentModern";
 import { SaleReceiptDocument }          from "@/lib/pdf/SaleReceiptDocument";
 import { SaleReceiptDocumentBranded }   from "@/lib/pdf/SaleReceiptDocumentBranded";
 import { SaleReceiptDocumentExecutive } from "@/lib/pdf/SaleReceiptDocumentExecutive";
+import { SaleReceiptDocumentItemized }  from "@/lib/pdf/SaleReceiptDocumentItemized";
 import { SaleReceiptDocumentThermal }   from "@/lib/pdf/SaleReceiptDocumentThermal";
 
 export type DocKind = "INVOICE" | "QUOTATION" | "JOB_CARD" | "RECEIPT";
@@ -29,11 +32,12 @@ export type TemplateKey =
   | "invoice_premium"
   | "invoice_minimal"
   | "invoice_executive"
-  // Quotation — "modern" and "executive" were advertised without ever having a
-  // component behind them; they are gone until one is written.
+  // Quotation
   | "quote_classic"
+  | "quote_modern"
   | "quote_minimal"
   | "quote_detailed"
+  | "quote_executive"
   // Job Card
   | "job_card_classic"
   | "job_card_compact"
@@ -44,6 +48,7 @@ export type TemplateKey =
   | "receipt_classic"
   | "receipt_thermal"
   | "receipt_branded"
+  | "receipt_itemized"
   | "receipt_executive";
 
 export type TemplateDef = {
@@ -78,8 +83,10 @@ export const DOC_TEMPLATES: TemplateDef[] = [
 
   // ── QUOTATION ──────────────────────────────────────────────────────────────
   { kind: "QUOTATION", key: "quote_classic",   label: "Default",   description: "Standard quotation with validity period",                previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
-  { kind: "QUOTATION", key: "quote_minimal",   label: "Minimal",   description: "Clean, distraction-free presentation",                   previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 2 },
-  { kind: "QUOTATION", key: "quote_detailed",  label: "Detailed",  description: "Adds terms, notes, and signature block",                 previewColor: "bg-amber-500",  minPlan: "GROWTH",     templateNumber: 3 },
+  { kind: "QUOTATION", key: "quote_modern",    label: "Modern",    description: "Colorful header with summary box",                       previewColor: "bg-blue-500",   minPlan: "STANDARD",   templateNumber: 2 },
+  { kind: "QUOTATION", key: "quote_minimal",   label: "Minimal",   description: "Clean, distraction-free presentation",                   previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 3 },
+  { kind: "QUOTATION", key: "quote_detailed",  label: "Detailed",  description: "Adds terms, notes, and signature block",                 previewColor: "bg-amber-500",  minPlan: "GROWTH",     templateNumber: 4 },
+  { kind: "QUOTATION", key: "quote_executive", label: "Executive", description: "Dark premium layout for corporate proposals",            previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 5 },
 
   // ── JOB_CARD ───────────────────────────────────────────────────────────────
   { kind: "JOB_CARD", key: "job_card_classic",   label: "Default",   description: "Standard workshop job card with diagnosis",            previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
@@ -92,7 +99,8 @@ export const DOC_TEMPLATES: TemplateDef[] = [
   { kind: "RECEIPT", key: "receipt_classic",   label: "Default",    description: "Simple payment receipt",                               previewColor: "bg-slate-500",   minPlan: "STARTER",    templateNumber: 1 },
   { kind: "RECEIPT", key: "receipt_thermal",   label: "Thermal",    description: "Narrow 80mm thermal printer format",                   previewColor: "bg-neutral-600", minPlan: "STANDARD",   templateNumber: 2 },
   { kind: "RECEIPT", key: "receipt_branded",   label: "Branded",    description: "Full logo header with payment breakdown",              previewColor: "bg-emerald-600", minPlan: "GROWTH",     templateNumber: 3 },
-  { kind: "RECEIPT", key: "receipt_executive", label: "Executive",  description: "Dark premium format for high-value payments",          previewColor: "bg-slate-800",   minPlan: "ENTERPRISE", templateNumber: 4 },
+  { kind: "RECEIPT", key: "receipt_itemized",  label: "Itemized",   description: "Shows every line with SKU, unit price and balance",     previewColor: "bg-teal-600",    minPlan: "PREMIUM",    templateNumber: 4 },
+  { kind: "RECEIPT", key: "receipt_executive", label: "Executive",  description: "Dark premium format for high-value payments",          previewColor: "bg-slate-800",   minPlan: "ENTERPRISE", templateNumber: 5 },
 ];
 
 export function templatesFor(kind: DocKind, plan: OrgPlan) {
@@ -169,9 +177,11 @@ const INVOICE_TEMPLATES: Record<InvoiceKey, ComponentType<any>> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const QUOTATION_TEMPLATES: Record<QuotationKey, ComponentType<any>> = {
-  quote_classic:  EagleInfoQuotationAdapter,
-  quote_minimal:  QuotationDocumentMinimal,
-  quote_detailed: QuotationDocument,
+  quote_classic:   EagleInfoQuotationAdapter,
+  quote_modern:    QuotationDocumentModern,
+  quote_minimal:   QuotationDocumentMinimal,
+  quote_detailed:  QuotationDocument,
+  quote_executive: QuotationDocumentExecutive,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -188,6 +198,7 @@ const RECEIPT_TEMPLATES: Record<ReceiptKey, ComponentType<any>> = {
   receipt_classic:   SaleReceiptDocument,
   receipt_thermal:   SaleReceiptDocumentThermal,
   receipt_branded:   SaleReceiptDocumentBranded,
+  receipt_itemized:  SaleReceiptDocumentItemized,
   receipt_executive: SaleReceiptDocumentExecutive,
 };
 

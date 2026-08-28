@@ -13,6 +13,20 @@ export function compactText(value: string | null | undefined, max = 90): string 
   return `${flat.slice(0, max - 1)}...`;
 }
 
+/**
+ * True when a value carries information a reader would want printed.
+ *
+ * compactText/compactListText return the literal string "N/A" for an empty
+ * field, which is truthy — so the usual `{props.x ? <Text/> : null}` guard
+ * renders "Accessories: N/A" instead of omitting the line. Templates that care
+ * about a clean page should test with this rather than truthiness.
+ */
+export function hasValue(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const flat = value.trim().toLowerCase();
+  return flat !== "" && flat !== "n/a" && flat !== "-" && flat !== "none";
+}
+
 export function compactListText(value: string | null | undefined, max = 220): string {
   if (!value) return "N/A";
   const normalized = value

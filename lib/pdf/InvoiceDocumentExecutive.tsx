@@ -26,7 +26,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 28, paddingTop: 20, paddingBottom: 16,
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
   },
-  logo:   { width: 56, height: 56, marginRight: 12 },
+  logo:   { width: 56, height: 56 },
+  // Same reason as the quotation twin: dark mark, near-black header.
+  logoChip: { backgroundColor: WHITE, borderRadius: 4, padding: 4, marginRight: 12 },
   coRow:  { flexDirection: "row", alignItems: "center" },
   coName: { fontSize: 14, fontWeight: 700, color: WHITE, marginBottom: 2 },
   coTag:  { fontSize: 8.2, color: GOLD, fontWeight: 600, marginBottom: 2 },
@@ -121,8 +123,12 @@ export function InvoiceDocumentExecutive(props: Props) {
         {/* ── Dark header ── */}
         <View style={s.header}>
           <View style={s.coRow}>
-            {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            {props.companyLogoUrl ? <Image style={s.logo} src={props.companyLogoUrl} /> : null}
+            {props.companyLogoUrl ? (
+              <View style={s.logoChip}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt prop. */}
+                <Image style={s.logo} src={props.companyLogoUrl} />
+              </View>
+            ) : null}
             <View>
               <Text style={s.coName}>{props.companyName}</Text>
               {props.companyTagline ? <Text style={s.coTag}>{props.companyTagline}</Text> : null}
