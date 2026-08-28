@@ -39,6 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       sale: {
         select: {
           id: true, saleNumber: true, totalAmount: true, paidAmount: true,
+          subtotal: true, discountAmount: true, vatAmount: true, taxApplicable: true,
           client: { select: { fullName: true, organization: true, phone: true } },
           items: {
             select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           id: true, invoiceNumber: true, totalAmount: true, paidAmount: true,
           client: { select: { fullName: true, organization: true, phone: true } },
           lines: {
-            select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
+            select: { description: true, quantity: true, unitPrice: true, lineTotal: true, taxAmount: true },
             orderBy: { createdAt: "asc" },
           },
           job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } },
@@ -121,6 +122,29 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     amount: formatMoney(l.lineTotal, currency),
   }));
 
+  // With real lines on the page the money column has to reconcile: they sum to
+  // the subtotal, not to the total. Printing the total alone would give a table
+  // whose rows visibly do not add up to the figure beneath them wherever tax or
+  // a discount applies. The two documents keep their breakdown in different
+  // places — an invoice carries tax per line, a sale carries it on the document
+  // — so each is read the way its own PDF route already reads it.
+  const money = (v: number | null | undefined) =>
+    v != null && v !== 0 ? formatMoney(v, currency) : null;
+
+  let subtotalLabel: string | null = null;
+  let discountLabel: string | null = null;
+  let vatLabel: string | null = null;
+  if (payment.invoice) {
+    const sub = payment.invoice.lines.reduce((s, l) => s + l.lineTotal, 0);
+    const tax = payment.invoice.lines.reduce((s, l) => s + (l.taxAmount ?? 0), 0);
+    subtotalLabel = formatMoney(sub, currency);
+    vatLabel = money(tax);
+  } else if (payment.sale) {
+    subtotalLabel = formatMoney(payment.sale.subtotal, currency);
+    discountLabel = money(payment.sale.discountAmount);
+    vatLabel = payment.sale.taxApplicable ? money(payment.sale.vatAmount) : null;
+  }
+
   const element = createElement(PaymentReceiptDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     receiptNumber: receipt?.receiptNumber ?? `RCPT-${payment.id.slice(0, 8).toUpperCase()}`,
@@ -137,6 +161,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientPhone,
     lineItems,
     docTotalLabel: docTotal != null ? formatMoney(docTotal, currency) : null,
+    subtotalLabel,
+    discountLabel,
+    vatLabel,
   });
 
   const pdf = await renderToBuffer(element as never);

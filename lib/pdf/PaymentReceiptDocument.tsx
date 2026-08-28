@@ -37,11 +37,15 @@ type ReceiptProps = {
   clientPhone?: string | null;
   /** The document's own lines. Empty for a payment with nothing linked. */
   lineItems?: EagleInfoLineItem[] | null;
-  /** The linked document's total, which the lines sum to. */
+  /** The linked document's total. */
   docTotalLabel?: string | null;
+  /** What the lines actually sum to, before discount and VAT. */
+  subtotalLabel?: string | null;
+  discountLabel?: string | null;
+  vatLabel?: string | null;
 };
 
-export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, lineItems, docTotalLabel }: ReceiptProps) {
+export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, lineItems, docTotalLabel, subtotalLabel, discountLabel, vatLabel }: ReceiptProps) {
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
 
   // Zero in the amount's currency (e.g. "UGX 600,000" -> "UGX 0") for the
@@ -82,7 +86,10 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       metaRows={[
         { label: "Receipt Date", value: receivedAt },
         { label: "Payment Method", value: method },
-        { label: "Reference", value: reference || `REF-${receiptNumber}` },
+        // Only a real reference. Cash has none, and the old fallback invented
+        // "REF-<receipt number>", which reads like a transaction id the customer
+        // could quote back to a bank and cannot.
+        ...(reference ? [{ label: "Reference", value: reference }] : []),
         { label: "For", value: forLabel },
       ]}
       clientLabel="Received From"
@@ -93,7 +100,11 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       headlineLabel="Amount Received"
       headlineAmount={amountLabel}
       lineItems={items}
-      subTotal={columnTotal}
+      subTotal={(hasLines && subtotalLabel) || columnTotal}
+      discountLabel={hasLines && discountLabel ? "Discount" : undefined}
+      discountAmount={hasLines ? discountLabel : null}
+      vatLabel={hasLines && vatLabel ? "VAT" : null}
+      vatAmount={hasLines ? vatLabel : null}
       totalLabel="Total"
       totalAmount={columnTotal}
       paymentMade={paidLabel || amountLabel}
