@@ -116,6 +116,17 @@ export default async function InvoiceDetailPage({
       // page never read them back, so the document it caused was invisible from
       // the document that caused it.
       receipts: { select: { id: true, receiptNumber: true, paymentId: true } },
+      // An invoice-sourced credit note reduces the invoice, and its refund pays
+      // out against it, but neither was readable from the invoice itself — the
+      // POS sale page shows both and this one showed nothing.
+      creditNotes: {
+        select: { id: true, creditNoteNumber: true, totalAmount: true, issuedAt: true, reason: true },
+        orderBy: { issuedAt: "desc" },
+      },
+      refunds: {
+        select: { id: true, amount: true, method: true, refundedAt: true, creditNoteId: true },
+        orderBy: { refundedAt: "desc" },
+      },
       payments: {
         select: {
           id: true,
@@ -322,6 +333,16 @@ export default async function InvoiceDetailPage({
       href: `/documents/receipts/${r.id}`,
       sub: "Receipt",
     })),
+    ...invoice.creditNotes.map((cn) => ({
+      label: cn.creditNoteNumber,
+      href: `/documents/credit-notes/${cn.id}`,
+      sub: `Credit note ${formatMoney(cn.totalAmount, currency)}`,
+    })),
+    ...invoice.refunds.map((r) => ({
+      label: formatMoney(r.amount, currency),
+      href: `/documents/refunds/${r.id}`,
+      sub: `Refund ${formatEATDate(r.refundedAt)}`,
+    })),
   ];
 
   const activity = [
@@ -478,6 +499,75 @@ export default async function InvoiceDetailPage({
                     },
                   ]}
                 />
+              </div>
+            )}
+
+            {(invoice.creditNotes.length > 0 || invoice.refunds.length > 0) && (
+              <div className={cardClass}>
+                <div className={cardHeadClass}>Credit Notes &amp; Refunds</div>
+                {invoice.creditNotes.length > 0 && (
+                  <DataTable
+                    frameless
+                    rows={invoice.creditNotes}
+                    getRowKey={(cn) => cn.id}
+                    empty="No credit notes."
+                    columns={[
+                      {
+                        key: "number",
+                        header: "CN #",
+                        cell: (row) => (
+                          <Link href={`/documents/credit-notes/${row.id}`} className="mono text-[var(--accent)] hover:underline">
+                            {row.creditNoteNumber}
+                          </Link>
+                        ),
+                      },
+                      { key: "issued", header: "Issued", cell: (row) => formatEATDate(row.issuedAt) },
+                      { key: "reason", header: "Reason", cell: (row) => row.reason ?? "—" },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        className: "whitespace-nowrap tabular-nums",
+                        cell: (row) => formatMoney(row.totalAmount, currency),
+                      },
+                    ]}
+                  />
+                )}
+                {invoice.refunds.length > 0 && (
+                  <DataTable
+                    frameless
+                    rows={invoice.refunds}
+                    getRowKey={(r) => r.id}
+                    empty="No refunds."
+                    columns={[
+                      {
+                        key: "refund",
+                        header: "Refund",
+                        cell: (row) => (
+                          <Link href={`/documents/refunds/${row.id}`} className="text-[var(--accent)] hover:underline">
+                            {formatEATDate(row.refundedAt)}
+                          </Link>
+                        ),
+                      },
+                      { key: "method", header: "Method", cell: (row) => row.method },
+                      {
+                        key: "against",
+                        header: "Against",
+                        cell: (row) => {
+                          const cn = invoice.creditNotes.find((c) => c.id === row.creditNoteId);
+                          return cn ? <span className="mono">{cn.creditNoteNumber}</span> : <span className="text-[var(--ink-muted)]">—</span>;
+                        },
+                      },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        className: "whitespace-nowrap tabular-nums",
+                        cell: (row) => formatMoney(row.amount, currency),
+                      },
+                    ]}
+                  />
+                )}
               </div>
             )}
 

@@ -22,6 +22,7 @@ import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMe
 import { shareSaleReceiptDocument } from "@/lib/notifications/share-document";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
+import { refundableCeiling } from "@/lib/commercial/refundable";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -839,10 +840,30 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     });
     if (!creditNote) posReject(saleId, "The related credit note was not found.");
 
-    const refundedAgg = await prisma.refund.aggregate({ where: { orgId, creditNoteId: creditNote.id }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: 0 } }));
-    const refundedSoFar = refundedAgg._sum.amount ?? 0;
-    const refundable = Math.max(0, creditNote.totalAmount - refundedSoFar);
-    if (amount > refundable) posReject(saleId, `Refund exceeds the refundable amount (${formatMoney(refundable, normalizeCurrency(creditNote.currency, org.baseCurrency))}).`);
+    // Capped by the credit note AND by what the till actually took, so a return
+    // on a sale still owing money credits the balance without opening the drawer.
+    const cnCurrency = normalizeCurrency(creditNote.currency, org.baseCurrency);
+    const ceiling = await refundableCeiling({
+      orgId,
+      baseCurrency: org.baseCurrency,
+      creditNote: {
+        id: creditNote.id,
+        totalAmount: creditNote.totalAmount,
+        currency: cnCurrency,
+        exchangeRateToBase: null,
+        invoiceId: null,
+        saleId,
+      },
+    });
+    const refundable = ceiling.refundableBase;
+    if (amount > refundable) {
+      posReject(
+        saleId,
+        ceiling.limitedByCash
+          ? `Only ${formatMoney(refundable, cnCurrency)} has been paid on this sale, so that is the most that can be refunded.`
+          : `Refund exceeds the refundable amount (${formatMoney(refundable, cnCurrency)}).`,
+      );
+    }
 
     const safeMethod: PaymentMethod = METHODS.includes(method as PaymentMethod)
       ? (method as PaymentMethod)

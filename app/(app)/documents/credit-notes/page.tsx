@@ -13,6 +13,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
+import { refundableCeiling } from "@/lib/commercial/refundable";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { creditNoteParent, creditValueForReturn } from "@/lib/commercial/credit-note-parent";
 import { creditedSoFar, loadCreditNoteSource, parseCreditNoteSourceKey } from "@/lib/commercial/credit-note-source";
@@ -137,10 +138,29 @@ export default async function CreditNotesPage({
     });
     if (!cn) return;
 
-    const alreadyRefunded = cn.refunds.reduce((s, r) => s + r.amount, 0);
-    if (alreadyRefunded + amountRaw > cn.totalAmount) {
-      const left = Math.max(0, cn.totalAmount - alreadyRefunded);
-      redirect(`/documents/credit-notes?error=${encodeURIComponent(`Only ${formatMoney(left, normalizeCurrency(cn.currency, org.baseCurrency))} is left to refund on this credit note.`)}`);
+    // Two ceilings: what the credit note allows, and what the customer has
+    // actually paid. Only the first was checked, which was safe while credit
+    // notes required a settled document and is not any more.
+    const cnCurrency = normalizeCurrency(cn.currency, org.baseCurrency);
+    const ceiling = await refundableCeiling({
+      orgId,
+      baseCurrency: org.baseCurrency,
+      creditNote: {
+        id: cn.id,
+        totalAmount: cn.totalAmount,
+        currency: cnCurrency,
+        exchangeRateToBase: null,
+        invoiceId: cn.invoiceId,
+        saleId: cn.saleId,
+      },
+    });
+    if (amountRaw > ceiling.refundableBase) {
+      const left = formatMoney(Math.max(0, ceiling.refundableBase), cnCurrency);
+      redirect(`/documents/credit-notes?error=${encodeURIComponent(
+        ceiling.limitedByCash
+          ? `Only ${left} has been received on that document, so that is the most that can be paid back. The credit note still reduces the balance owed.`
+          : `Only ${left} is left to refund on this credit note.`,
+      )}`);
     }
 
     const method = parsePaymentMethod(methodRaw, "CASH");
@@ -679,7 +699,11 @@ export default async function CreditNotesPage({
       take: PAGE_SIZE,
     }).catch(() => []),
     prisma.sale.findMany({
-      where: { orgId, status: { in: ["PAID", "PARTIALLY_RETURNED"] } },
+      // OPEN included: goods sold on credit get returned too, and the credit
+      // note is what reduces the balance still owed. Refunds are separately
+      // capped by cash actually received, so nothing is paid out that was
+      // never taken in.
+      where: { orgId, status: { in: ["OPEN", "PAID", "PARTIALLY_RETURNED"] } },
       select: {
         id: true,
         saleNumber: true,
@@ -692,9 +716,11 @@ export default async function CreditNotesPage({
       take: 50,
     }).catch(() => []),
     // Invoices are creditable too — a repair or service that has to be given
-    // back. Only settled ones, matching the rule sales already follow.
+    // back. Settlement is not the test: a customer on 30-day terms who returns
+    // goods needs the balance credited before the due date, which is exactly
+    // when the invoice is unpaid.
     prisma.invoice.findMany({
-      where: { orgId, status: "PAID" },
+      where: { orgId, status: { not: "VOID" } },
       select: {
         id: true,
         invoiceNumber: true,

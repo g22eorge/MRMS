@@ -15,6 +15,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
+import { refundableCeiling } from "@/lib/commercial/refundable";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postRefund, reverseJournalEntry } from "@/lib/accounting/post";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -94,7 +95,6 @@ export default async function RefundsPage({
     // A credit note stores no FX rate of its own, so its ceiling can only be
     // converted once the rate on this form has been read. Held here until then.
     let creditNoteDocTotal: number | null = null;
-    let creditNoteRefundedBase = 0;
 
     if (sourceType === "invoice") {
       const inv = await prisma.invoice.findFirst({
@@ -125,7 +125,6 @@ export default async function RefundsPage({
           invoiceId: true,
           totalAmount: true,
           currency: true,
-          refunds: { select: { amount: true, currency: true, exchangeRateToBase: true } },
         },
       });
       if (!creditNote) return;
@@ -138,17 +137,6 @@ export default async function RefundsPage({
       // A credit note carries no paidAmount and stores no rate of its own, so
       // its total stays in document currency until the form's rate is read.
       creditNoteDocTotal = creditNote.totalAmount;
-      creditNoteRefundedBase = creditNote.refunds.reduce(
-        (sum, refund) =>
-          sum +
-          toBaseAmount({
-            amount: refund.amount,
-            currency: refund.currency,
-            baseCurrency: org.baseCurrency,
-            exchangeRateToBase: refund.exchangeRateToBase,
-          }),
-        0,
-      );
     }
 
     // Capture the FX rate for a non-base refund so it can be converted for
@@ -162,14 +150,26 @@ export default async function RefundsPage({
       redirect(`/documents/refunds?error=${encodeURIComponent(`Enter the exchange rate for this ${refundCurrency} refund.`)}`);
     }
 
-    if (creditNoteDocTotal != null) {
-      const creditedBase = toBaseAmount({
-        amount: creditNoteDocTotal,
-        currency: refundCurrency,
+    let limitedByCash = false;
+    if (creditNoteDocTotal != null && creditNoteId) {
+      // The credit note is only one of the two ceilings; the other is the cash
+      // actually received against the parent, which nothing checked because
+      // credit notes used to require a fully-paid document. See
+      // lib/commercial/refundable.ts.
+      const ceiling = await refundableCeiling({
+        orgId,
         baseCurrency: org.baseCurrency,
-        exchangeRateToBase,
+        creditNote: {
+          id: creditNoteId,
+          totalAmount: creditNoteDocTotal,
+          currency: refundCurrency,
+          exchangeRateToBase,
+          invoiceId,
+          saleId,
+        },
       });
-      refundableBase = Math.max(0, creditedBase - creditNoteRefundedBase);
+      refundableBase = ceiling.refundableBase;
+      limitedByCash = ceiling.limitedByCash;
     }
 
     // Show the ceiling in the currency the user is actually typing in.
@@ -184,10 +184,18 @@ export default async function RefundsPage({
     // Was a bare return, so over-refunding did nothing at all — no refund, no
     // message. The amount field has no max, so this is an ordinary typo.
     if (refundableBase <= 0) {
-      redirect(`/documents/refunds?error=${encodeURIComponent("There is nothing left to refund on that document.")}`);
+      redirect(`/documents/refunds?error=${encodeURIComponent(
+        limitedByCash
+          ? "Nothing has been paid on that document yet, so there is no money to refund. The credit note already reduces the balance owed."
+          : "There is nothing left to refund on that document.",
+      )}`);
     }
     if (amountBase > refundableBase) {
-      redirect(`/documents/refunds?error=${encodeURIComponent(`That is more than the refundable amount (${formatMoney(refundableAmount, refundCurrency)}).`)}`);
+      redirect(`/documents/refunds?error=${encodeURIComponent(
+        limitedByCash
+          ? `Only ${formatMoney(refundableAmount, refundCurrency)} has been received on that document, so that is the most that can be paid back.`
+          : `That is more than the refundable amount (${formatMoney(refundableAmount, refundCurrency)}).`,
+      )}`);
     }
 
     // Double-submit guard: an identical refund landed seconds ago — reuse it
