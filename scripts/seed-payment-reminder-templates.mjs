@@ -56,6 +56,21 @@ const TEMPLATES = [
     variables: ["customerName", "companyName", "invoiceNumber", "amount", "dueDate"],
     subject: "Invoice {invoiceNumber} — {amount} outstanding",
   },
+  {
+    // A client holding several unpaid invoices gets this instead of one message
+    // per invoice. It names the total and the count rather than listing the
+    // documents: a template cannot hold a variable-length list, and the
+    // statement itself carries the detail.
+    key: "PAYMENT_REMINDER_STATEMENT",
+    label: "Statement of account (multiple unpaid invoices)",
+    metaTemplateName: "payment_reminder_statement_v1",
+    body:
+      "Hello {customerName}, this is {companyName}. " +
+      "Your account has {documentCount} unpaid documents totalling {amount}, the oldest dated {oldestDate}. " +
+      "Reply to this message and we will send the full statement, or let us know when payment will be made.",
+    variables: ["customerName", "companyName", "documentCount", "amount", "oldestDate"],
+    subject: "Statement of account — {amount} outstanding",
+  },
 ];
 
 const orgArg = process.argv.find((a) => a.startsWith("--org="));

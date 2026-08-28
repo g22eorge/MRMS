@@ -2,6 +2,8 @@ import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDocDate } from "@/lib/date-eat";
+import { getClientStatement } from "@/lib/commercial/statements";
+import { shareStatementDocument } from "@/lib/notifications/share-document";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import {
@@ -131,6 +133,8 @@ export async function runPaymentReminders(params: {
   }
 
   const results: ReminderOutcome[] = [];
+  /** clientId -> the invoice number that first triggered a statement this run. */
+  const statementClients = new Map<string, string>();
 
   for (const invoice of outstanding) {
     const balance = invoice.totalAmount - invoice.paidAmount;
@@ -168,7 +172,12 @@ export async function runPaymentReminders(params: {
       continue;
     }
     if (settings.statementForMultiInvoice && invoice.clientId && (perClient.get(invoice.clientId) ?? 0) > 1) {
-      push("statement", "client holds several unpaid invoices — send one statement instead");
+      // Deferred, not dropped: the client is collected here and sent one
+      // statement after the loop, so ten invoices produce one message rather
+      // than ten. Recording the invoice that triggered it keeps the reason
+      // visible in the run summary.
+      statementClients.set(invoice.clientId, invoice.invoiceNumber);
+      push("statement", "client holds several unpaid invoices — one statement sent instead");
       continue;
     }
     if (!invoice.client) {
@@ -312,6 +321,64 @@ export async function runPaymentReminders(params: {
       await deliverOutboundMessage(enqueued.outboxId).catch(() => null);
     }
     push("queued");
+  }
+
+  // ── statements ────────────────────────────────────────────────────────────
+  // Monthly, not per rung. A statement is a periodic summary of an account
+  // rather than a chase of one document, and a client with ten overdue
+  // invoices would otherwise receive one every time any of them moved.
+  const period = `STMT-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  for (const [clientId, triggeredBy] of statementClients) {
+    const already = await prisma.outboundMessage.findFirst({
+      where: { orgId: params.orgId, clientId, reminderStage: period, status: { not: "PREVIEW" } },
+      select: { id: true },
+    });
+    if (already) continue;
+
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, orgId: params.orgId },
+      select: { fullName: true, phone: true, email: true },
+    });
+    const channel = client?.phone ? "whatsapp" : client?.email ? "email" : null;
+    if (!client || !channel) {
+      results.push({ invoiceId: clientId, invoiceNumber: triggeredBy, stage: period, action: "skipped", reason: "client has neither phone nor email" });
+      continue;
+    }
+
+    if (dryRun) {
+      const statement = await getClientStatement(params.orgId, clientId, org.baseCurrency);
+      await prisma.outboundMessage.create({
+        data: {
+          orgId: params.orgId,
+          clientId,
+          reminderStage: period,
+          type: OutboundMessageType.INVOICE_REMINDER,
+          channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+          status: "PREVIEW",
+          to: channel === "whatsapp" ? client.phone! : client.email!,
+          subject: channel === "email" ? `Statement of account — ${formatMoney(statement.totals.outstanding, statement.currency)}` : null,
+          body: `Statement of account for ${client.fullName}: ${statement.lines.length} document(s), ${formatMoney(statement.totals.outstanding, statement.currency)} outstanding.`,
+        },
+      });
+      results.push({ invoiceId: clientId, invoiceNumber: triggeredBy, stage: period, action: "dry-run" });
+      continue;
+    }
+
+    const ok = await shareStatementDocument({
+      orgId: params.orgId,
+      clientId,
+      channel,
+      baseCurrency: org.baseCurrency,
+      reminderStage: period,
+    });
+    results.push({
+      invoiceId: clientId,
+      invoiceNumber: triggeredBy,
+      stage: period,
+      action: ok ? "queued" : "skipped",
+      reason: ok ? undefined : "statement could not be sent",
+    });
   }
 
   return results;
