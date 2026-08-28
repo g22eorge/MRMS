@@ -927,10 +927,18 @@ export default async function CreditNotesPage({
         searchPlaceholder="Search customer, credit note, sale or invoice…"
       >
         <div className="flex gap-1">
+          {/* Built through URLSearchParams, not string concatenation: a search
+              for "Sam & Co" put a bare & in the href, so following a chip
+              silently dropped everything after it and the search reset. A # in
+              the term truncated the query entirely. */}
           {(["all", "pending", "received"] as const).map((f) => (
             <Link
               key={f}
-              href={`?filter=${f}${q ? `&q=${q}` : ""}${periodFilter !== "all" ? `&period=${periodFilter}` : ""}`}
+              href={`?${new URLSearchParams({
+                filter: f,
+                ...(q ? { q } : {}),
+                ...(periodFilter !== "all" ? { period: periodFilter } : {}),
+              }).toString()}`}
               className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${filter === f ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
             >
               {f === "all" ? "All" : f === "pending" ? "Awaiting Return" : "Items Received"}

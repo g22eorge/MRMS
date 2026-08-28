@@ -103,6 +103,28 @@ describe("POST /api/login — success path", () => {
     expect(res.headers.get("x-login-redirect")).toBe("/dashboard");
   });
 
+  it("refuses an off-site callbackURL", async () => {
+    // The header is assigned to window.location.href by the login form, so an
+    // absolute URL here walks the user off the app the instant they sign in.
+    for (const hostile of ["https://evil.example/", "//evil.example/", "/\\evil.example"]) {
+      mockQueryRaw
+        .mockImplementationOnce(async () => [ACTIVE_USER])
+        .mockImplementationOnce(async (): Promise<[]> => []);
+      mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
+      const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!", callbackURL: hostile }));
+      expect(res.headers.get("x-login-redirect")).toBe("/dashboard");
+    }
+  });
+
+  it("keeps an in-app callbackURL", async () => {
+    mockQueryRaw
+      .mockImplementationOnce(async () => [ACTIVE_USER])
+      .mockImplementationOnce(async (): Promise<[]> => []);
+    mockAuthHandler.mockImplementation(async () => makeBetterAuthResponse(200, '{"token":"abc"}'));
+    const res = await POST(makePost({ email: "alice@example.com", password: "Pass1!", callbackURL: "/jobs/abc" }));
+    expect(res.headers.get("x-login-redirect")).toBe("/jobs/abc");
+  });
+
   it("forwards set-cookie from BetterAuth response", async () => {
     mockQueryRaw
       .mockImplementationOnce(async () => [ACTIVE_USER])

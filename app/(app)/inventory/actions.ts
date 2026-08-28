@@ -19,7 +19,7 @@ type StockTxnType = "IN" | "OUT" | "ADJUST";
  * SKU-#### based on the org's current max, with a short retry to absorb races
  * (the @@unique([sku, orgId]) constraint still backstops it).
  */
-async function generatePartSku(orgId: string): Promise<string> {
+export async function generatePartSku(orgId: string): Promise<string> {
   const rows = await prisma.part.findMany({
     where: { orgId, sku: { startsWith: "SKU-" } },
     select: { sku: true },

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
@@ -11,6 +12,7 @@ import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { reverseGoodsReceivedAction } from "@/app/(app)/inventory/purchase-orders/actions";
+import { flashError } from "@/lib/flash";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,14 @@ const BILL_STATUS_TONES: Record<string, BadgeTone> = {
   CANCELLED: "danger",
 };
 
-export default async function GoodsReceivedDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function GoodsReceivedDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const sp = (await searchParams) ?? {};
   const { id } = await params;
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
@@ -104,6 +113,11 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
 
   return (
     <div className="space-y-4">
+      {sp.error ? (
+        <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-[0.8125rem] font-medium text-red-600">
+          {sp.error}
+        </p>
+      ) : null}
       <RecordActionBar
         backHref="/inventory/goods-received"
         eyebrow="Inventory · GRN"
@@ -118,7 +132,13 @@ export default async function GoodsReceivedDetailPage({ params }: { params: Prom
               <form
                 action={async (fd: FormData) => {
                   "use server";
-                  await reverseGoodsReceivedAction(fd);
+                  // The action refuses a GRN that is already billed, or whose
+                  // stock has since been sold, and says why. That reason was
+                  // thrown away here, so the page re-rendered unchanged and the
+                  // operator was left to guess whether the click had registered.
+                  const res = await reverseGoodsReceivedAction(fd);
+                  if (res?.error) redirect(flashError(`/inventory/goods-received/${grn.id}`, res.error));
+                  revalidatePath(`/inventory/goods-received/${grn.id}`);
                 }}
               >
                 <input type="hidden" name="grnId" value={grn.id} />

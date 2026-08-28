@@ -41,7 +41,17 @@ export async function POST(request: NextRequest) {
       );
     }
     const password = String(body.password ?? "");
-    const callbackURL = typeof body.callbackURL === "string" && body.callbackURL.length > 0 ? body.callbackURL : "/dashboard";
+    // Only a path within this app. The value comes from the request body and is
+    // echoed back in x-login-redirect, which the login form assigns straight to
+    // window.location.href — so an absolute URL here is an open redirect that
+    // lands the user on another site immediately after a genuine sign-in, with
+    // the app's own login page as the referrer. "//host" is rejected too: the
+    // browser reads a protocol-relative URL as another origin.
+    const requested = typeof body.callbackURL === "string" ? body.callbackURL : "";
+    const callbackURL =
+      requested.startsWith("/") && !requested.startsWith("//") && !requested.startsWith("/\\")
+        ? requested
+        : "/dashboard";
     const rememberMe = Boolean(body.rememberMe);
 
     if (!email || !password) {
