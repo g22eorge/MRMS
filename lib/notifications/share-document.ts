@@ -50,6 +50,8 @@ async function dispatchDocumentShare(params: {
   orgId: string;
   channel: DocumentShareChannel;
   jobId?: string | null;
+  clientId?: string | null;
+  reminderStage?: string | null;
   recipient: DocumentRecipient;
   whatsappBody: string;
   emailSubject: string;
@@ -63,6 +65,8 @@ async function dispatchDocumentShare(params: {
     await enqueueWhatsAppMessage({
       orgId: params.orgId,
       jobId: params.jobId ?? undefined,
+      clientId: params.clientId ?? undefined,
+      reminderStage: params.reminderStage ?? undefined,
       to: params.recipient.phone,
       type: messageType,
       body: params.whatsappBody,
@@ -74,6 +78,8 @@ async function dispatchDocumentShare(params: {
   await enqueueEmailMessage({
     orgId: params.orgId,
     jobId: params.jobId ?? undefined,
+    clientId: params.clientId ?? undefined,
+    reminderStage: params.reminderStage ?? undefined,
     to: params.recipient.email,
     subject: params.emailSubject,
     body: params.emailBody,
@@ -395,6 +401,8 @@ export async function shareStatementDocument(params: {
   clientId: string;
   channel: DocumentShareChannel;
   baseCurrency: string;
+  /** Stamped on the outbox row so a scheduled statement can be deduped. */
+  reminderStage?: string;
 }): Promise<boolean> {
   const client = await prisma.client.findFirst({
     where: { id: params.clientId, orgId: params.orgId },
@@ -417,6 +425,8 @@ export async function shareStatementDocument(params: {
     orgId: params.orgId,
     channel: params.channel,
     recipient,
+    clientId: params.clientId,
+    reminderStage: params.reminderStage,
     whatsappBody: `Hi ${recipient.fullName}, here is your statement of account.\n\n${intro}\nView and download it here: ${portalUrl}`,
     type: OutboundMessageType.INVOICE_REMINDER,
     emailSubject: `Statement of account — balance ${balance}`,

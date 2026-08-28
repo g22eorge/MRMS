@@ -2,6 +2,7 @@ import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDocDate } from "@/lib/date-eat";
+import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import {
   REMINDER_LADDER,
@@ -232,11 +233,41 @@ export async function runPaymentReminders(params: {
       continue;
     }
 
+    // WhatsApp will not deliver a free-form business message outside the
+    // 24-hour window the customer opens by writing first, and a customer who
+    // owes money is quiet by definition — so that window is nearly always shut.
+    // Meta accepts the send regardless and returns a message id, which is why
+    // the first live run reported five sent and one arrived. An approved
+    // template is the only thing that reaches a closed window.
+    //
+    // Two templates, chosen by which side of the due date we are on, because a
+    // template cannot branch and "falls due on" is wrong for July.
+    const rendered = await renderCommunicationTemplate({
+      orgId: params.orgId,
+      key: stage.offsetDays < 0 ? "PAYMENT_REMINDER_UPCOMING" : "PAYMENT_REMINDER_OVERDUE",
+      channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+      variables: {
+        customerName: invoice.client.fullName,
+        companyName: org.name,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: formatMoney(balance, currency),
+        dueLabel: formatEATDocDate(due),
+        dueDate: formatEATDocDate(due),
+      },
+      // No template configured: fall back to the hand-written body rather than
+      // sending nothing. Inside an open window it still arrives, and the outbox
+      // records which path was taken.
+      fallback: { body, subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` },
+    });
+
     const common = {
       orgId: params.orgId,
       invoiceId: invoice.id,
       reminderStage: stage.key,
       type: OutboundMessageType.INVOICE_REMINDER,
+      metaTemplateName: rendered.metaTemplateName,
+      metaTemplateLanguage: rendered.metaLanguageCode,
+      metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
     };
     // A dry run writes the message it would have sent, as PREVIEW. Recording
     // nothing would have made the preview unreadable — the settings page
@@ -266,12 +297,12 @@ export async function runPaymentReminders(params: {
     // "due today" would have arrived tomorrow.
     const enqueued =
       channel === "whatsapp"
-        ? await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body })
+        ? await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body: rendered.body || body })
         : await enqueueEmailMessage({
             ...common,
             to: invoice.client.email!,
-            subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
-            body,
+            subject: rendered.subject ?? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
+            body: rendered.body || body,
           });
 
     if (enqueued && "outboxId" in enqueued && enqueued.outboxId) {

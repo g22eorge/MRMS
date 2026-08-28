@@ -541,6 +541,7 @@ model Client {
   @@unique([phone, orgId])
   @@index([orgId])
   @@index([orgId, updatedAt])
+  outboundMessages OutboundMessage[]
 }
 
 model Device {
@@ -1348,6 +1349,11 @@ model OutboundMessage {
   // between a reminder system and a way to pester customers.
   invoiceId       String?
   invoice         Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  // A statement covers a client rather than one invoice, so it needs its own
+  // link — without it there is no way to ask whether this client has already
+  // had one this month.
+  clientId        String?
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   // Which rung of the reminder ladder this message was: "T-7", "DUE", "+3".
   // Kept as text so the ladder can change shape without a migration.
   reminderStage   String?
@@ -1362,6 +1368,7 @@ model OutboundMessage {
   @@index([providerMessageId])
   @@index([repairRequestId])
   @@index([invoiceId, reminderStage])
+  @@index([clientId, reminderStage])
   @@index([jobId])
   @@index([templateKey])
 }
