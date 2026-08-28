@@ -42,10 +42,13 @@ export function PartPickerField({
   required = false,
   placeholder = "Type a product or service — or pick from inventory",
   className = "",
+  formId,
 }: {
   parts: PartOption[];
   name?: string;
   partIdName?: string;
+  /** Associate the inputs with a form by id instead of by nesting. */
+  formId?: string;
   /** Sibling input in the same form to fill with the part's price on select. */
   priceFieldName?: string;
   defaultValue?: string;
@@ -91,7 +94,9 @@ export function PartPickerField({
     // than lifted into this component and changing every caller's layout.
     const price = part.sellingPrice ?? part.unitCost;
     if (price != null && inputRef.current) {
-      const form = inputRef.current.closest("form");
+      // .form, not closest("form"): these inputs may be associated with a form
+      // by id rather than nested inside it, and closest() only walks ancestors.
+      const form = inputRef.current.form;
       const field = form?.elements.namedItem(priceFieldName);
       if (field instanceof HTMLInputElement) {
         field.value = String(price);
@@ -101,10 +106,11 @@ export function PartPickerField({
 
   return (
     <>
-      <input type="hidden" name={partIdName} value={partId} />
+      <input type="hidden" name={partIdName} value={partId} form={formId} />
       <input
         ref={inputRef}
         name={name}
+        form={formId}
         required={required}
         value={text}
         placeholder={placeholder}
