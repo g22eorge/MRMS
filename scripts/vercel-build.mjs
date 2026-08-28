@@ -36,6 +36,13 @@ if (process.env.TURSO_DATABASE_URL) {
     // fine. Rebuilding is the only way to drop that constraint. Idempotent, and
     // migrates any legacy rows rather than dropping them.
     ["Repairing GoodsReceivedItem drift", "scripts/goods-received-item-drift.mjs"],
+    // The general case of the same fault, and the net beneath the script above:
+    // any table still carrying a NOT NULL column schema.prisma does not know
+    // about. Where that column has no default, every insert fails and the
+    // feature has never worked on that deployment — which is how complaints,
+    // supplier payments, cashier shifts and group permissions all sat at zero
+    // rows on commercial. Rebuilds only empty tables; reports the rest.
+    ["Repairing unknown NOT NULL columns", "scripts/schema-shape-repair.mjs"],
     // Backfills Job.quotationNumber with the number each quoted job has already
     // been sending, so switching to allocated numbers cannot renumber a quote a
     // customer is holding. Idempotent; defaults to dry-run without --apply.

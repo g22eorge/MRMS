@@ -16,6 +16,8 @@
 import { spawnSync } from "node:child_process";
 import { createClient } from "@libsql/client";
 
+import { splitSqlStatements } from "./lib/split-sql.mjs";
+
 // Use || (not ??) so an empty-string env var falls through to the next source.
 const url = process.env.TURSO_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim() || "file:./prisma/dev.db";
 const authToken = process.env.TURSO_AUTH_TOKEN;
@@ -45,20 +47,13 @@ function generateDdl() {
   return res.stdout;
 }
 
-function splitStatements(ddl) {
-  // No semicolons appear inside identifiers/defaults in generated DDL, so a
-  // split on ";" is safe. Strip -- comment lines and blank pieces.
-  return ddl
-    .split(";")
-    .map((chunk) =>
-      chunk
-        .split("\n")
-        .filter((line) => !line.trim().startsWith("--"))
-        .join("\n")
-        .trim(),
-    )
-    .filter((s) => s.length > 0);
-}
+// Was a plain split(";") on the assumption that no semicolon appears inside a
+// generated default. DocumentBrandingSettings.termsText has contained one since
+// the terms copy was edited ("...carry out repairs; only the terms..."), which
+// truncated that CREATE TABLE and hid every column after termsText from this
+// reconciler — silently, because the leftover tail matches neither CREATE TABLE
+// nor CREATE INDEX and was simply discarded.
+const splitStatements = splitSqlStatements;
 
 async function existingTables() {
   const r = await client.execute("SELECT name FROM sqlite_master WHERE type = 'table'");
