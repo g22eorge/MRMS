@@ -2,7 +2,7 @@ import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDocDate } from "@/lib/date-eat";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import {
   REMINDER_LADDER,
   effectiveDueDate,
@@ -222,15 +222,25 @@ export async function runPaymentReminders(params: {
       continue;
     }
 
-    if (channel === "whatsapp") {
-      await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body });
-    } else {
-      await enqueueEmailMessage({
-        ...common,
-        to: invoice.client.email!,
-        subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
-        body,
-      });
+    // Enqueue then deliver, which is the house pattern every other sender
+    // follows. Enqueueing alone only writes a PENDING row; nothing sends it
+    // until the retry sweep runs, and that is a daily job — a reminder saying
+    // "due today" would have arrived tomorrow.
+    const enqueued =
+      channel === "whatsapp"
+        ? await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body })
+        : await enqueueEmailMessage({
+            ...common,
+            to: invoice.client.email!,
+            subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
+            body,
+          });
+
+    if (enqueued && "outboxId" in enqueued && enqueued.outboxId) {
+      // A failure here is not a failure of the run: the row is written, carries
+      // its error, and the retry sweep will take it. Throwing would abandon
+      // every invoice after this one in the loop.
+      await deliverOutboundMessage(enqueued.outboxId).catch(() => null);
     }
     push("sent");
   }
