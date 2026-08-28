@@ -68,6 +68,7 @@ export async function generateStatementBuffer(
       companyContacts: branding.companyContacts,
       companyEmail: branding.companyEmail,
       companyWebsite: branding.companyWebsite,
+      companyTaxId: branding.companyTaxId || null,
       companyLogoUrl: logoUrl,
       footerText: branding.footerText,
     },

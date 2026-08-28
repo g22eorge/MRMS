@@ -52,6 +52,7 @@ type Props = {
     companyContacts: string;
     companyEmail?: string | null;
     companyWebsite?: string | null;
+    companyTaxId?: string | null;
     companyLogoUrl?: string | null;
     footerText?: string | null;
   };
@@ -73,6 +74,7 @@ export function StatementDocument({
     companyPhone: branding.companyContacts,
     companyEmail: branding.companyEmail,
     companyWebsite: branding.companyWebsite,
+    companyTaxId: branding.companyTaxId,
   });
 
   return (

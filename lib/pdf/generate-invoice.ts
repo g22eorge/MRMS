@@ -262,6 +262,7 @@ export async function generateInvoiceBuffer(
     companyContacts: branding.companyContacts,
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     paymentInstructions: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? "",
     documentTitle: "INVOICE",

@@ -113,6 +113,11 @@ const s = StyleSheet.create({
 
   // ── Totals ──
   totalsWrap: { marginTop: SP.sm, marginLeft: "auto", width: 250 },
+  // Full width and below the totals, not inside the 250pt column: the sentence
+  // is long and would wrap to four cramped lines beside the figures.
+  wordsWrap: { marginTop: SP.sm, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: DIVIDER },
+  wordsLabel: { fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.8 },
+  wordsText: { fontSize: 9, fontFamily: "Helvetica-Bold", color: INK, marginTop: 3 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
   totalLabel: { fontSize: 9, color: MUTED },
   totalValue: { fontSize: 9, textAlign: "right" },
@@ -169,6 +174,8 @@ export type EagleInfoDocumentProps = {
   companyPhone?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  /** Tax Identification Number, printed under the contact lines when set. */
+  companyTaxId?: string | null;
   companyLogoUrl?: string | null;
 
   // Document meta
@@ -205,6 +212,8 @@ export type EagleInfoDocumentProps = {
   balanceDue: string;
   /** Header-card overrides. A receipt leads with "Amount Paid", not a nil balance. */
   headlineLabel?: string | null;
+  /** The total written out, printed under the totals block when supplied. */
+  amountInWords?: string | null;
   headlineAmount?: string | null;
 
   // Footer
@@ -218,12 +227,12 @@ export type EagleInfoDocumentProps = {
 
 export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   const {
-    companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyLogoUrl,
+    companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyTaxId, companyLogoUrl,
     docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate, metaRows, topRuleColor,
     clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation,
     lineItems,
     subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
-    headlineLabel, headlineAmount,
+    headlineLabel, headlineAmount, amountInWords,
     notes, paymentTo, termsText, promo,
   } = props;
 
@@ -251,6 +260,10 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
     ...companyAddress.split("\n").map((l) => l.trim()),
     companyPhone ?? "",
     [companyEmail, companyWebsite].filter(Boolean).join("   ·   "),
+    // Its own line, and only when set: a URA TIN is what a customer or an
+    // auditor looks for to tie the document to a registered business, and it
+    // reads as an account number if it trails the phone and email.
+    companyTaxId ? `TIN: ${companyTaxId}` : "",
   ].filter((l) => l && l.trim());
 
   // Bank details: one or more accounts, each a block of lines. Blank lines
@@ -380,6 +393,13 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             <Text style={s.totalValueBold}>{balanceDue}</Text>
           </View>
         </View>
+
+        {amountInWords ? (
+          <View style={s.wordsWrap}>
+            <Text style={s.wordsLabel}>AMOUNT IN WORDS</Text>
+            <Text style={s.wordsText}>{amountInWords}</Text>
+          </View>
+        ) : null}
 
         {/* ── Footer ── */}
         <View style={s.footerDivider} />

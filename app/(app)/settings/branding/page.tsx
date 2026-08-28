@@ -44,6 +44,7 @@ const brandingSchema = z.object({
   companyContacts: z.string().min(3).max(180),
   companyEmail: z.string().email().optional(),
   companyWebsite: z.string().max(200).optional(),
+  companyTaxId: z.string().max(40).optional(),
   documentTitle: z.string().min(2).max(60),
   quotePrefix: z.string().min(2).max(12),
   quoteFormat: z.string().min(8).max(80),
@@ -220,6 +221,7 @@ export default async function BrandingPage({
       companyContacts: String(formData.get("companyContacts") ?? ""),
       companyEmail: normalizeOptionalEmail(formData.get("companyEmail")),
       companyWebsite: normalizeOptionalWebsite(formData.get("companyWebsite")),
+      companyTaxId: String(formData.get("companyTaxId") ?? "").trim() || undefined,
       documentTitle: String(formData.get("documentTitle") ?? ""),
       quotePrefix: String(formData.get("quotePrefix") ?? ""),
       quoteFormat: String(formData.get("quoteFormat") ?? ""),
@@ -253,7 +255,7 @@ export default async function BrandingPage({
       const labels: Record<string, string> = {
         companyName: "Business name", companyTagline: "Tagline",
         companyAddressLine1: "Address line 1", companyAddressLine2: "Address line 2",
-        companyContacts: "Phone / contacts", companyEmail: "Email", companyWebsite: "Website",
+        companyContacts: "Phone / contacts", companyEmail: "Email", companyWebsite: "Website", companyTaxId: "TIN",
         documentTitle: "Document title", quotePrefix: "Document code", quoteFormat: "Quote format",
         quoteValidityDays: "Quote validity (days)", sequencePadLength: "Number padding",
         vatRatePercent: "VAT rate", vatLabel: "VAT label",
@@ -290,6 +292,7 @@ export default async function BrandingPage({
       companyContacts: sanitizeText(parsed.data.companyContacts),
       companyEmail: sanitizeOptionalText(parsed.data.companyEmail) ?? "",
       companyWebsite: sanitizeOptionalText(parsed.data.companyWebsite) ?? "",
+      companyTaxId: sanitizeOptionalText(parsed.data.companyTaxId) ?? "",
       documentTitle: sanitizeText(parsed.data.documentTitle),
       quotePrefix: wantedCode,
       quoteFormat: sanitizeText(parsed.data.quoteFormat),
@@ -351,6 +354,10 @@ export default async function BrandingPage({
             <input name="companyContacts" defaultValue={settings.companyContacts} placeholder="Phone / contacts" className={brandingFieldClass} />
             <input name="companyEmail" defaultValue={settings.companyEmail ?? ""} placeholder="Company email" className={brandingFieldClass} />
             <input name="companyWebsite" defaultValue={settings.companyWebsite ?? ""} placeholder="Company website" className={brandingFieldClass} />
+            {/* Printed in the company block on every document. Left blank by an
+                org that is not registered, which prints nothing rather than an
+                empty label. */}
+            <input name="companyTaxId" defaultValue={settings.companyTaxId ?? ""} placeholder="TIN (tax identification number)" className={brandingFieldClass} />
           </div>
         </div>
 

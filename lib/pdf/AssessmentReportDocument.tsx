@@ -47,6 +47,7 @@ export type AssessmentReportProps = {
   companyContacts?: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string | null;
 
   jobNumber: string;
@@ -97,6 +98,7 @@ export function AssessmentReportDocument(p: AssessmentReportProps) {
     companyPhone: p.companyContacts,
     companyEmail: p.companyEmail,
     companyWebsite: p.companyWebsite,
+    companyTaxId: p.companyTaxId,
   });
 
   return (

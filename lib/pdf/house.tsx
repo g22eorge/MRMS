@@ -117,11 +117,15 @@ export function companyLetterheadLines(input: {
   companyPhone?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyTaxId?: string | null;
 }): string[] {
   return [
     ...(input.companyAddress ?? "").split("\n").map((l) => l.trim()),
     input.companyPhone ?? "",
     [input.companyEmail, input.companyWebsite].filter(Boolean).join("   ·   "),
+    // Its own line, and only when set, matching EagleInfoDocument: a TIN reads
+    // as an account number when it trails the phone and email.
+    input.companyTaxId ? `TIN: ${input.companyTaxId}` : "",
   ].filter((l) => l && l.trim());
 }
 

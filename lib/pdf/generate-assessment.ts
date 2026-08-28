@@ -184,6 +184,7 @@ export async function generateAssessmentBuffer(params: {
     companyContacts: branding.companyContacts ?? "",
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     jobNumber: job.jobNumber,
     preparedForName: job.client?.fullName ?? "",

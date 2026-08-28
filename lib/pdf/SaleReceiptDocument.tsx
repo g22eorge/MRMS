@@ -4,6 +4,7 @@
  */
 import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
+import { amountInWords } from "@/lib/amount-in-words";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
 import { pickDocumentTerms } from "@/lib/quote-terms";
@@ -14,6 +15,7 @@ type Branding = {
   companyContacts?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyTaxId?: string | null;
   companyAddressLine1?: string | null;
   companyAddressLine2?: string | null;
   companyLogoUrl?: string | null;
@@ -90,6 +92,7 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       companyPhone={branding?.companyContacts ?? null}
       companyEmail={branding?.companyEmail ?? null}
       companyWebsite={branding?.companyWebsite ?? null}
+      companyTaxId={branding?.companyTaxId ?? null}
       companyLogoUrl={branding?.companyLogoUrl ?? null}
       docTitle="Receipt"
       docNumber={sale.saleNumber}
@@ -117,6 +120,10 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       totalAmount={formatMoney(sale.totalAmount, currency)}
       paymentMade={sale.paidAmount > 0 ? formatMoney(sale.paidAmount, currency) : null}
       balanceDue={balance > 0 ? formatMoney(balance, currency) : formatMoney(0, currency)}
+      // What the customer actually paid, matching the headline. On a sale still
+      // carrying a balance the paid figure is the one worth protecting from
+      // alteration; the total is on the page above it either way.
+      amountInWords={sale.paidAmount > 0 ? amountInWords(sale.paidAmount, currency) : null}
       notes={methodNote ?? (branding?.footerText ?? null)}
       paymentTo={bankLines || null}
       termsText={pickDocumentTerms(branding?.termsText, "SALE")}

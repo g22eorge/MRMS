@@ -13,6 +13,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   paymentInstructions?: string;
   invoiceNumber: string;
@@ -91,6 +92,7 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       companyPhone={props.companyContacts || null}
       companyEmail={props.companyEmail || null}
       companyWebsite={props.companyWebsite || null}
+      companyTaxId={props.companyTaxId || null}
       companyLogoUrl={props.companyLogoUrl || null}
       docTitle="Invoice"
       docNumber={props.invoiceNumber}

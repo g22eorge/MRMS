@@ -9,6 +9,7 @@ export const defaultBranding = {
   companyContacts: "",
   companyEmail: "",
   companyWebsite: "",
+  companyTaxId: "",
   documentTitle: "Job Card",
   quotePrefix: "EIS",
   quoteFormat: "{PREFIX} {M}/{YYYY}/{SEQ}",
@@ -63,6 +64,7 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     companyContacts: String(row.companyContacts ?? defaultBranding.companyContacts),
     companyEmail: row.companyEmail ? String(row.companyEmail) : "",
     companyWebsite: row.companyWebsite ? String(row.companyWebsite) : "",
+    companyTaxId: row.companyTaxId ? String(row.companyTaxId) : "",
     documentTitle: String(row.documentTitle ?? defaultBranding.documentTitle),
     quotePrefix: String(row.quotePrefix ?? defaultBranding.quotePrefix),
     quoteFormat: String(row.quoteFormat ?? defaultBranding.quoteFormat),
@@ -105,6 +107,7 @@ async function ensureRawTable() {
       companyContacts TEXT NOT NULL,
       companyEmail TEXT,
       companyWebsite TEXT,
+      companyTaxId TEXT,
       documentTitle TEXT NOT NULL,
       quotePrefix TEXT NOT NULL,
       quoteFormat TEXT NOT NULL,
@@ -137,7 +140,7 @@ async function ensureRawTable() {
   const ADDABLE_COLUMNS: ReadonlySet<string> = new Set([
     "invoiceTemplateKey", "quotationTemplateKey", "jobCardTemplateKey", "receiptTemplateKey",
     "primaryColor", "secondaryColor", "accentColor", "backgroundColor", "surfaceColor", "borderColor",
-    "orgId", "vatInclusive", "paymentInstructions", "paymentAccounts",
+    "orgId", "vatInclusive", "paymentInstructions", "paymentAccounts", "companyTaxId",
   ]);
   const addColumn = async (name: string, dflt: string, type = "TEXT") => {
     if (!ADDABLE_COLUMNS.has(name)) return;
@@ -161,6 +164,9 @@ async function ensureRawTable() {
   await addColumn("vatInclusive",   "0", "BOOLEAN");
   await addColumn("paymentInstructions", "''");
   await addColumn("paymentAccounts", "''");
+  // NULL, not '': an org with no TIN should print nothing at all rather than an
+  // empty "TIN:" label on every document it issues.
+  await addColumn("companyTaxId", "NULL");
 
   rawTableEnsured = true;
 }
@@ -186,7 +192,7 @@ async function getViaRaw(orgId?: string) {
       await prisma.$executeRaw`
         INSERT INTO "DocumentBrandingSettings" (
           id, companyName, companyTagline, companyAddressLine1, companyAddressLine2,
-          companyContacts, companyEmail, companyWebsite, documentTitle,
+          companyContacts, companyEmail, companyWebsite, companyTaxId, documentTitle,
           quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
           vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
           footerText, signatureCompanyLabel, signatureClientLabel,
@@ -195,7 +201,7 @@ async function getViaRaw(orgId?: string) {
         ) VALUES (
           ${defaultBranding.id}, ${defaultBranding.companyName}, ${defaultBranding.companyTagline},
           ${defaultBranding.companyAddressLine1}, ${defaultBranding.companyAddressLine2},
-          ${defaultBranding.companyContacts}, ${defaultBranding.companyEmail}, ${defaultBranding.companyWebsite},
+          ${defaultBranding.companyContacts}, ${defaultBranding.companyEmail}, ${defaultBranding.companyWebsite}, ${defaultBranding.companyTaxId},
           ${defaultBranding.documentTitle}, ${defaultBranding.quotePrefix}, ${defaultBranding.quoteFormat},
           ${defaultBranding.quoteValidityDays}, ${defaultBranding.sequencePadLength},
           ${defaultBranding.vatDefaultApplicable}, ${defaultBranding.vatRatePercent}, ${defaultBranding.vatInclusive}, ${defaultBranding.vatLabel},
@@ -220,14 +226,25 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
   // because ensureRawTable() adds any missing columns before we write.
   await ensureRawTable();
 
-  // Use orgId as the row id so each org gets its own row without conflicting with 'singleton'
-  const rowId = orgId;
+  // The row id, which is NOT always the orgId. Rows created through Prisma carry
+  // a cuid and hold the orgId in its own column, and orgId is UNIQUE. Inserting
+  // with id = orgId therefore did not collide on id, so ON CONFLICT(id) never
+  // fired and the write died on the orgId index instead: saving branding
+  // settings failed outright for every org whose row this function did not
+  // create itself — six of the seven rows in this database. Resolving the
+  // existing row's id first makes the conflict target the row that is actually
+  // there, and falls back to the orgId for a genuinely new one.
+  const existing: Array<{ id: string }> = await prisma.$queryRawUnsafe(
+    `SELECT id FROM "DocumentBrandingSettings" WHERE orgId = ? LIMIT 1`,
+    orgId,
+  );
+  const rowId = existing[0]?.id ?? orgId;
 
   await prisma.$executeRaw`
     INSERT INTO "DocumentBrandingSettings" (
       id, orgId,
       companyName, companyTagline, companyAddressLine1, companyAddressLine2,
-      companyContacts, companyEmail, companyWebsite, documentTitle,
+      companyContacts, companyEmail, companyWebsite, companyTaxId, documentTitle,
       quotePrefix, quoteFormat, quoteValidityDays, sequencePadLength,
       vatDefaultApplicable, vatRatePercent, vatInclusive, vatLabel, termsText,
       footerText, paymentInstructions, paymentAccounts, signatureCompanyLabel, signatureClientLabel,
@@ -238,7 +255,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       ${rowId}, ${orgId},
       ${data.companyName}, ${data.companyTagline},
       ${data.companyAddressLine1}, ${data.companyAddressLine2},
-      ${data.companyContacts}, ${data.companyEmail}, ${data.companyWebsite},
+      ${data.companyContacts}, ${data.companyEmail}, ${data.companyWebsite}, ${data.companyTaxId},
       ${data.documentTitle}, ${data.quotePrefix}, ${data.quoteFormat},
       ${data.quoteValidityDays}, ${data.sequencePadLength},
       ${data.vatDefaultApplicable}, ${data.vatRatePercent}, ${data.vatInclusive}, ${data.vatLabel},
@@ -259,6 +276,7 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
       companyContacts = excluded.companyContacts,
       companyEmail = excluded.companyEmail,
       companyWebsite = excluded.companyWebsite,
+      companyTaxId = excluded.companyTaxId,
       documentTitle = excluded.documentTitle,
       quotePrefix = excluded.quotePrefix,
       quoteFormat = excluded.quoteFormat,

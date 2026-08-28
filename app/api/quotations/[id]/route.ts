@@ -83,6 +83,7 @@ export async function GET(
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
     companyWebsite: branding.companyWebsite || null,
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Estimate",
     docNumber: quotation.quoteNumber,

@@ -92,6 +92,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     companyContacts: branding.companyContacts,
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     documentTitle: "INVOICE",
     invoiceNumber: invoice.invoiceNumber,

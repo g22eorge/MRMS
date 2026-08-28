@@ -1455,6 +1455,10 @@ model DocumentBrandingSettings {
   companyContacts       String        @default("+256772 006 344 | +256754 006 344")
   companyEmail          String?
   companyWebsite        String?
+  // Tax Identification Number, printed in the company block on every document.
+  // Nullable because an org that is not registered should print nothing rather
+  // than an empty label.
+  companyTaxId          String?
   documentTitle         String        @default("Job Card")
   quotePrefix           String        @default("EIS")
   quoteFormat           String        @default("{PREFIX} {M}/{YYYY}/{SEQ}")

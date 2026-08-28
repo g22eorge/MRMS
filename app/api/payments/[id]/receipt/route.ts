@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
 
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
+import { amountInWords } from "@/lib/amount-in-words";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -164,6 +165,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     subtotalLabel,
     discountLabel,
     vatLabel,
+    amountWords: amountInWords(payment.amount, currency),
   });
 
   const pdf = await renderToBuffer(element as never);

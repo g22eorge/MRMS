@@ -102,6 +102,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
     companyWebsite: branding.companyWebsite || null,
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Refund",
     docNumber: refundNumber,

@@ -16,6 +16,7 @@ type ReceiptProps = {
     companyContacts: string;
     companyEmail?: string | null;
     companyWebsite?: string | null;
+    companyTaxId?: string | null;
     companyLogoUrl?: string | null;
     paymentInstructions?: string | null;
     termsText?: string;
@@ -37,6 +38,8 @@ type ReceiptProps = {
   clientPhone?: string | null;
   /** The document's own lines. Empty for a payment with nothing linked. */
   lineItems?: EagleInfoLineItem[] | null;
+  /** The amount received, written out. */
+  amountWords?: string | null;
   /** The linked document's total. */
   docTotalLabel?: string | null;
   /** What the lines actually sum to, before discount and VAT. */
@@ -45,7 +48,7 @@ type ReceiptProps = {
   vatLabel?: string | null;
 };
 
-export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, lineItems, docTotalLabel, subtotalLabel, discountLabel, vatLabel }: ReceiptProps) {
+export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, lineItems, docTotalLabel, subtotalLabel, discountLabel, vatLabel, amountWords }: ReceiptProps) {
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
 
   // Zero in the amount's currency (e.g. "UGX 600,000" -> "UGX 0") for the
@@ -78,6 +81,7 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       companyPhone={branding.companyContacts || null}
       companyEmail={branding.companyEmail || null}
       companyWebsite={branding.companyWebsite || null}
+      companyTaxId={branding.companyTaxId || null}
       companyLogoUrl={branding.companyLogoUrl || null}
       docTitle="Receipt"
       docNumber={receiptNumber}
@@ -99,6 +103,10 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       clientPhone={clientPhone || null}
       headlineLabel="Amount Received"
       headlineAmount={amountLabel}
+      // The amount RECEIVED, not the document total: this line exists so the
+      // figure the customer handed over cannot be altered by adding a digit,
+      // and writing out a total they have not paid would defeat that.
+      amountInWords={amountWords || null}
       lineItems={items}
       subTotal={(hasLines && subtotalLabel) || columnTotal}
       discountLabel={hasLines && discountLabel ? "Discount" : undefined}
