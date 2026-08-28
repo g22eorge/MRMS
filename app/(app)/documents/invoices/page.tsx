@@ -425,8 +425,14 @@ export default async function InvoicesPage({
   // Compute aging for each outstanding invoice
   const withAging = invoices.map((inv) => {
     const balance = Math.max(0, inv.totalAmount - inv.paidAmount);
-    const isPaid = balance <= 0 || inv.status === "PAID";
     const isVoid = inv.status === "VOID";
+    // Void wins over paid, and a zero-total document is not "paid". isPaid was
+    // read before isVoid everywhere below, so a voided invoice with no balance
+    // left — one that had been paid before it was voided — showed as "Paid",
+    // with a green "Cleared" badge and "Fully paid — no void" where its own row
+    // menu should say "Voided". A draft with no lines yet has a zero balance for
+    // the same arithmetic reason and was labelled paid on the same line.
+    const isPaid = !isVoid && inv.totalAmount > 0 && (balance <= 0 || inv.status === "PAID");
     let daysOverdue = 0;
     if (!isPaid && !isVoid) {
       const dueOrIssued = inv.dueDate ?? inv.issuedAt;
