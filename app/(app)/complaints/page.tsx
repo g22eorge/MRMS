@@ -97,8 +97,8 @@ export default async function ComplaintsPage({
     prisma.complaint.findMany({
       where: complaintsWhere,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         complaintNumber: true,

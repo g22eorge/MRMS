@@ -118,8 +118,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
           createdBy: { select: { name: true } },
         },
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       }),
       // Whole-dataset KPIs: totalAmount, thisMonthAmount (paidAt ?? createdAt
       // fallback isn't SQL-aggregatable) and byCategory are computed in JS from

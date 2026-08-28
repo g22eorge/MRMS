@@ -36,8 +36,8 @@ export default async function StockLocationsPage({
     prisma.stockLocation.findMany({
       where: { orgId },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     prisma.stockLocation.count({ where: { orgId } }).catch(() => 0),
     prisma.branch.findMany({

@@ -731,7 +731,11 @@ export default async function InvoicesPage({
                 DRAFT: "neutral",
               };
 
-              const rows = (filtered as any[]).map((inv) => {
+              // pageRows, not filtered: the paginated slice was computed on
+              // line 452 and then never used, so every page rendered the whole
+              // result set while the footer counted a page of it. On a book of
+              // any size the list ignored both the page and the chosen size.
+              const rows = (pageRows as any[]).map((inv) => {
                 const clientName = clientDisplayName(inv.job?.client ?? inv.client, "—");
                 const invoiceCurrency = normalizeCurrency(inv.currency ?? orgCurrency, "UGX");
                 const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;

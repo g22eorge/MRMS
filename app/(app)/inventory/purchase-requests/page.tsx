@@ -45,8 +45,8 @@ export default async function PurchaseRequestsPage({
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
   ]);
 

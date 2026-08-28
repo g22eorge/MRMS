@@ -1,15 +1,29 @@
+/**
+ * These pointed at /communications/*, which is where the pages used to live.
+ * They are now redirect stubs into Settings, and the labelling here had it
+ * exactly backwards — the paths marked "legacy" are the real pages.
+ *
+ * That inversion was not cosmetic. Every filter chip, search box and pagination
+ * link on the Outbox, and all twenty save/error redirects on Templates, were
+ * built from these constants, so each one bounced through a stub that forwards
+ * nothing: the query string was dropped on the way. Filtering the outbox landed
+ * on unfiltered page 1, and a rejected template save looked identical to a
+ * successful one because the error banner's parameter never arrived.
+ *
+ * Pointing them at the real pages removes the hop rather than patching it.
+ */
 export const COMMUNICATIONS_ROUTES = {
   home: "/communications",
-  outbox: "/communications/outbox",
-  templates: "/communications/templates",
-  policies: "/communications/policies",
-  whatsapp: "/communications/whatsapp",
-  /** Personal notification preferences stay under Settings. */
+  outbox: "/settings/notifications/outbox",
+  templates: "/settings/notifications/templates",
+  policies: "/settings/notifications/templates#policies",
+  whatsapp: "/settings/notifications/whatsapp",
+  /** Personal notification preferences. */
   preferences: "/settings/notifications",
-  /** Legacy paths — redirect stubs only. */
-  legacyOutbox: "/settings/notifications/outbox",
-  legacyTemplates: "/settings/notifications/templates",
-  legacyWhatsapp: "/settings/notifications/whatsapp",
+  /** Old paths, kept as stubs so existing bookmarks still land somewhere. */
+  legacyOutbox: "/communications/outbox",
+  legacyTemplates: "/communications/templates",
+  legacyWhatsapp: "/communications/whatsapp",
   shortcutOutbox: "/outbox",
 } as const;
 

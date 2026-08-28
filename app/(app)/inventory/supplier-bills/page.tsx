@@ -45,8 +45,8 @@ export default async function SupplierBillsPage({
         grn: { select: { id: true, grnNumber: true } },
       },
       orderBy: { issuedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     // Outstanding is a per-row Math.max sum (not SQL-aggregatable); keep a slim
     // whole-dataset fetch so the KPI stays correct after the list is paginated.

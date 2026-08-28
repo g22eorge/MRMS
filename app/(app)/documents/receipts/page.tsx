@@ -337,8 +337,8 @@ export default async function ReceiptsPage({
     prisma.payment.findMany({
       where: paymentsWhere,
       orderBy: { receivedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         amount: true,

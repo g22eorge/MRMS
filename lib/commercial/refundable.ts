@@ -78,18 +78,35 @@ export async function refundableCeiling(params: {
     };
   }
 
-  const [payments, refundsOnParent] = await Promise.all([
+  const [payments, refundsOnParent, refundPayments] = await Promise.all([
     prisma.payment.findMany({
-      where: { orgId, ...parentWhere },
+      // kind matters: a refund taken from the job Billing tab is written as a
+      // Payment row with kind "REFUND" and a POSITIVE amount, negated only when
+      // read. Summing every row therefore counted money paid out as money
+      // received, and doubled the ceiling — pay 100,000, refund it from the job,
+      // and a credit note would let you refund another 100,000. The guard that
+      // exists to stop paying back money never received was inverted by the very
+      // rows that record paying it back.
+      where: { orgId, ...parentWhere, kind: "PAYMENT" },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }),
     prisma.refund.findMany({
       where: { orgId, ...parentWhere },
       select: { amount: true, currency: true, exchangeRateToBase: true },
     }),
+    // Refunds are recorded two ways depending on where they were taken: a
+    // Refund row from the documents side, and a REFUND-kind Payment row from
+    // the job Billing tab. Both are money out, and both have to be subtracted
+    // or the same cash can be handed back through the other door.
+    prisma.payment.findMany({
+      where: { orgId, ...parentWhere, kind: "REFUND" },
+      select: { amount: true, currency: true, exchangeRateToBase: true },
+    }),
   ]);
   const receivedBase = payments.reduce((sum, p) => sum + base(p.amount, p.currency, p.exchangeRateToBase), 0);
-  const paidOutBase = refundsOnParent.reduce((sum, r) => sum + base(r.amount, r.currency, r.exchangeRateToBase), 0);
+  const paidOutBase =
+    refundsOnParent.reduce((sum, r) => sum + base(r.amount, r.currency, r.exchangeRateToBase), 0) +
+    refundPayments.reduce((sum, p) => sum + base(p.amount, p.currency, p.exchangeRateToBase), 0);
   const cashRemainingBase = Math.max(0, receivedBase - paidOutBase);
 
   return {

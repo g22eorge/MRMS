@@ -52,8 +52,8 @@ export default async function PurchaseOrdersPage({
     prisma.purchaseOrder.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         supplier: { select: { id: true, name: true } },
         items: { select: { qtyOrdered: true, qtyReceived: true, unitCost: true } },

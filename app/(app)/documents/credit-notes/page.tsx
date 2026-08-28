@@ -695,8 +695,8 @@ export default async function CreditNotesPage({
         itemsReceivedBackBy: { select: { name: true } },
       },
       orderBy: { issuedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     prisma.sale.findMany({
       // OPEN included: goods sold on credit get returned too, and the credit

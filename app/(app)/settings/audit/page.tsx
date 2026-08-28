@@ -41,8 +41,8 @@ export default async function SettingsAuditPage({
       .findMany({
         where: eventsWhere,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
         select: {
           id: true,
           actorUserId: true,

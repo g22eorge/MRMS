@@ -216,8 +216,8 @@ export default async function JournalPage({
     db.journalEntry.findMany({
       where: entriesWhere,
       orderBy: { date: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         lines: {
           include: { account: { select: { code: true, name: true } } },
