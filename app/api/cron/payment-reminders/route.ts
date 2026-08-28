@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       select: { orgId: true },
     });
 
-    const summary: Record<string, number> = { sent: 0, "dry-run": 0, skipped: 0, "manual-review": 0, statement: 0 };
+    const summary: Record<string, number> = { queued: 0, "dry-run": 0, skipped: 0, "manual-review": 0, statement: 0 };
     const detail: Array<{ orgId: string; outcomes: number }> = [];
 
     for (const { orgId } of orgs) {

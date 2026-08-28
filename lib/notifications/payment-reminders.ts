@@ -79,7 +79,11 @@ export type ReminderOutcome = {
   invoiceId: string;
   invoiceNumber: string;
   stage: string;
-  action: "sent" | "dry-run" | "skipped" | "manual-review" | "statement";
+  // "queued", not "sent": the engine hands the message to the outbox and asks
+  // for delivery, but whether the provider accepted it is the outbox row's
+  // business. Reporting "sent" here made a run that failed at the provider read
+  // as a clean one in the cron summary.
+  action: "queued" | "dry-run" | "skipped" | "manual-review" | "statement";
   reason?: string;
 };
 
@@ -242,7 +246,7 @@ export async function runPaymentReminders(params: {
       // every invoice after this one in the loop.
       await deliverOutboundMessage(enqueued.outboxId).catch(() => null);
     }
-    push("sent");
+    push("queued");
   }
 
   return results;
