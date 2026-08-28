@@ -150,6 +150,45 @@ export default async function JobDetailPage({
         },
       }).then((invoice) => invoice?.payments ?? []).catch(() => [])
     : [];
+
+  // Refunds are Refund rows, not Payment rows with kind REFUND, so the billing
+  // tab — which rebuilt the running balance from payments alone — showed a
+  // refunded job as still fully paid and overstated what the customer had
+  // parted with. They are folded in here in the payment shape the tab already
+  // knows how to render and subtract.
+  const clientRefunds = can.viewFinancials(user)
+    ? await prisma.refund
+        .findMany({
+          where: { orgId, invoice: { jobId: job.id } },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            reference: true,
+            note: true,
+            refundedAt: true,
+            createdBy: { select: { name: true } },
+          },
+          orderBy: { refundedAt: "desc" },
+        })
+        .then((rows) =>
+          rows.map((r) => ({
+            id: r.id,
+            amount: r.amount,
+            kind: "REFUND",
+            method: r.method,
+            reference: r.reference,
+            note: r.note,
+            receivedAt: r.refundedAt,
+            createdBy: r.createdBy,
+          })),
+        )
+        .catch(() => [])
+    : [];
+
+  const clientLedger = [...clientPayments, ...clientRefunds].sort(
+    (a, b) => b.receivedAt.getTime() - a.receivedAt.getTime(),
+  );
   const technicianPayouts = can.reviewExternalBills(user) || user.role === "ADMIN"
     ? await prisma.technicianPayout.findMany({
         where: { orgId, jobId: job.id },
@@ -528,7 +567,7 @@ export default async function JobDetailPage({
       permissions={user.permissions}
       orgBaseCurrency={org.baseCurrency}
       supportedCurrencies={org.supportedCurrencies}
-      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments, technicianPayouts }}
+      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }}
       technicians={technicians}
       deviceHistory={deviceHistory}
       returnTo={safeReturnTo}

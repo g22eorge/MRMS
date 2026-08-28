@@ -135,6 +135,22 @@ export default async function TechniciansPage({
     where: {
       orgId, // tenant scope — the role branches below only filter by assignee
       ...where,
+      // The status filter used to run in JS after the query, so the board
+      // loaded every job the org had ever recorded and then threw away the
+      // closed ones — the great majority, and a set that only grows. It is the
+      // same rule, applied where the rows are chosen instead of after.
+      //
+      // AND, not a second status key: the two filters can both be set, and
+      // overwriting one with the other would silently widen the result rather
+      // than narrowing it the way the old JS chain did.
+      AND: [
+        statusFilter
+          ? { status: statusFilter }
+          : { status: { in: ACTIVE_BOARD_STATUSES as JobStatus[] } },
+        ...(filters.ready === "1"
+          ? [{ status: "IN_REPAIR" as JobStatus, clientApproved: true }]
+          : []),
+      ],
       ...(filters.q
         ? {
             OR: [
@@ -152,12 +168,6 @@ export default async function TechniciansPage({
   });
 
   const normalized = jobs
-    .filter((job) => {
-      if (statusFilter && job.status !== statusFilter) return false;
-      if (!statusFilter && !ACTIVE_BOARD_STATUSES.includes(job.status)) return false;
-      if (filters.ready === "1" && !(job.status === "IN_REPAIR" && job.clientApproved === true)) return false;
-      return true;
-    })
     .map((job) => {
     const extendedJob = job as typeof job & { timelineNote?: string | null };
     const ageDays = Math.floor((job.updatedAt.getTime() - job.receivedAt.getTime()) / (1000 * 60 * 60 * 24));
