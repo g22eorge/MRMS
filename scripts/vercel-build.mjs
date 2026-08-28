@@ -30,6 +30,12 @@ if (process.env.TURSO_DATABASE_URL) {
     // table, so WarrantyClaim's constraints can only be added by rebuilding it.
     // The script is idempotent and refuses outright if the table has any rows.
     ["Adding WarrantyClaim foreign keys", "scripts/warranty-claim-foreign-keys.mjs"],
+    // Same limitation, worse symptom: the commercial database still had the
+    // pre-Prisma GoodsReceivedItem shape, whose NOT NULL receivedQty column the
+    // code never writes, so every goods receipt failed there while care was
+    // fine. Rebuilding is the only way to drop that constraint. Idempotent, and
+    // migrates any legacy rows rather than dropping them.
+    ["Repairing GoodsReceivedItem drift", "scripts/goods-received-item-drift.mjs"],
     // Backfills Job.quotationNumber with the number each quoted job has already
     // been sending, so switching to allocated numbers cannot renumber a quote a
     // customer is holding. Idempotent; defaults to dry-run without --apply.
