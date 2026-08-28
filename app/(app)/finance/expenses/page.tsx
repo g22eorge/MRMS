@@ -96,8 +96,23 @@ export default async function ExpensesPage({ searchParams }: Props) {
   // 6-month trend window
   const trendStart = new Date(thisYear, thisMonth - 5, 1);
 
+  // The period chips have never narrowed anything: `periodFilter` was read from
+  // the URL and used only to highlight the active chip, and `where` referenced
+  // no date at all. Clicking "This month" reloaded the identical list, so the
+  // chips looked like a filter and behaved like decoration.
+  const periodRange: { gte?: Date; lte?: Date } | null =
+    periodFilter === "this_month" ? { gte: new Date(thisYear, thisMonth, 1) }
+    : periodFilter === "last_month" ? { gte: prevMonthStart, lte: prevMonthEnd }
+    : periodFilter === "ytd" ? { gte: new Date(thisYear, 0, 1) }
+    : null;
+
   const where: Prisma.ExpenseWhereInput = {
     ...(catFilter ? { category: catFilter } : {}),
+    // paidAt where it exists, falling back to createdAt — the same pairing the
+    // KPI tiles on this page already use, so the chip and the tiles agree.
+    ...(periodRange
+      ? { OR: [{ paidAt: periodRange }, { AND: [{ paidAt: null }, { createdAt: periodRange }] }] }
+      : {}),
     ...(q
       ? {
           OR: [
@@ -347,8 +362,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const base = new URLSearchParams();
     const nextCat = params.category !== undefined ? params.category : catFilter;
     const nextQ = params.q !== undefined ? params.q : q;
+    // period was accepted as an argument and then ignored, so all four chips
+    // produced the same URL and none of them could ever become active.
+    const nextPeriod =
+      params.period !== undefined ? params.period : periodFilter !== "all" ? periodFilter : "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
+    if (nextPeriod) base.set("period", nextPeriod);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };

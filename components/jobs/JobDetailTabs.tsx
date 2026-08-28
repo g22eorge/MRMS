@@ -1512,7 +1512,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                       <select
                         id="assignedToId"
                         name="assignedToId"
-                        value="__one_time__"
+                        // defaultValue, not value: pinned to the sentinel it was
+                        // a controlled select that could never change, so this
+                        // form always posted "__one_time__". On any job with a
+                        // one-time external tech, saving diagnosis notes came
+                        // back "Invalid assignee. Select an active technician."
+                        // and discarded everything typed. The sibling select
+                        // below has always done it this way.
+                        defaultValue="__one_time__"
                         className={fieldClass}
                         onChange={(e) => {
                           if (e.target.value === "__one_time__") {

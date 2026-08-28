@@ -580,10 +580,15 @@ export default async function RefundsPage({
       : r.creditNote
       ? r.creditNote.creditNoteNumber
       : "—";
+    // Both halves of this were wrong. /sales/<id> is not a route — a POS sale
+    // lives at /pos/<id> — so the Source link on every sale-backed refund
+    // 404'd. And /documents/invoices?id=<id> pointed the invoice case at the
+    // list with a parameter the list does not read, so it opened an unfiltered
+    // index instead of the invoice. Both now link to the record itself.
     const sourceHref = r.invoiceId
-      ? `/documents/invoices?id=${r.invoiceId}`
+      ? `/documents/invoices/${r.invoiceId}`
       : r.saleId
-      ? `/sales/${r.saleId}`
+      ? `/pos/${r.saleId}`
       : null;
     const clientName = clientDisplayName(
       r.invoice?.job?.client ??
