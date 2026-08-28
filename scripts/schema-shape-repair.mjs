@@ -28,14 +28,19 @@
  * the FOREIGN KEY constraints the reconciler skips when it patches columns onto
  * an existing table.
  *
- * Only empty tables are rebuilt. With foreign keys enforced, DROP TABLE runs an
- * implicit DELETE FROM and fires ON DELETE CASCADE into child tables, so
- * rebuilding a populated parent could delete rows nobody asked to touch. A
- * table holding data is reported and left alone: it needs a deliberate
- * migration that says what maps to what, which is what
- * scripts/goods-received-item-drift.mjs does for the one table where legacy
- * rows were plausible (receivedQty -> quantity). That script runs first and
- * this one is the net beneath it.
+ * Rebuilds run through client.migrate(), which disables foreign keys for the
+ * batch. That matters more than it looks: with foreign keys enforced, DROP
+ * TABLE performs an implicit DELETE FROM and fires ON DELETE CASCADE into
+ * child tables, so rebuilding PosSession with plain execute() would take its
+ * Sale rows with it. Rows are carried across on the columns both shapes share.
+ *
+ * An unattended run still only touches empty tables. A populated one is
+ * reported until someone names it with --tables=Name, because the mechanical
+ * safety of the rebuild is not the same question as whether the column being
+ * dropped holds anything worth keeping — and only a person can answer that.
+ * scripts/goods-received-item-drift.mjs is the worked example of answering it
+ * for a table where legacy rows were plausible (receivedQty -> quantity). That
+ * script runs first and this one is the net beneath it.
  *
  *   node scripts/schema-shape-repair.mjs --check   # report only, non-zero on drift
  *   node scripts/schema-shape-repair.mjs           # repair
@@ -47,6 +52,24 @@ import { createClient } from "@libsql/client";
 import { splitSqlStatements } from "./lib/split-sql.mjs";
 
 const CHECK_ONLY = process.argv.includes("--check");
+
+// Populated tables are rebuilt only when named explicitly, one at a time:
+//
+//   node scripts/schema-shape-repair.mjs --tables=SaleItem,PosSession
+//
+// The unattended run must not decide on its own that a column holding values
+// is disposable. Naming the table is the deliberate step — it means someone
+// has looked at what is in the column being dropped and confirmed it carries
+// nothing the model does not already hold. The rebuild itself is safe either
+// way (see MIGRATION_NOTE below); the judgement about the data is not
+// something this script can make.
+const NAMED_TABLES = new Set(
+  (process.argv.find((a) => a.startsWith("--tables="))?.slice("--tables=".length) ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
 const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
 
 if (!url) {
@@ -129,29 +152,45 @@ async function main() {
 
     if (CHECK_ONLY) continue;
 
-    // Only empty tables are rebuilt, and the reason is sharper than caution:
-    // with foreign keys enforced, DROP TABLE performs an implicit DELETE FROM,
-    // which fires ON DELETE CASCADE into every child table. Rebuilding a
-    // populated parent could therefore quietly delete rows in tables nobody
-    // asked to touch. A table that still holds data needs a deliberate
-    // migration — scripts/goods-received-item-drift.mjs is the worked example.
     const rows = Number((await client.execute(`SELECT COUNT(*) AS n FROM "${table}"`)).rows[0].n ?? 0);
-    if (rows > 0) {
-      skipped.push(`${table}: holds ${rows} row(s) — rebuild would cascade into child tables`);
+    if (rows > 0 && !NAMED_TABLES.has(table)) {
+      skipped.push(`${table}: holds ${rows} row(s) — name it with --tables=${table} to rebuild`);
       continue;
     }
 
+    // MIGRATION_NOTE: the whole rebuild goes through client.migrate(), which
+    // runs the batch with foreign keys disabled. That is not tidiness, it is
+    // the difference between keeping and losing data: with foreign keys
+    // enforced, DROP TABLE performs an implicit DELETE FROM and fires
+    // ON DELETE CASCADE into every child table. Rebuilding PosSession with
+    // plain execute() would take its Sale rows with it. Measured on a replica:
+    // two child rows survived a parent rebuild through migrate() and were
+    // deleted by the identical sequence through execute().
+    //
+    // migrate() is also transactional, so a failed copy rolls the whole thing
+    // back and leaves the original table untouched rather than half-moved.
+    const have = new Set(info.map((c) => String(c.name)));
+    const shared = [...want].filter((c) => have.has(c)).map((c) => `"${c}"`).join(", ");
     const tmp = `__${table}_rebuild`;
-    await client.execute(`DROP TABLE IF EXISTS "${tmp}"`);
-    // Only the table name is swapped; constraint names inside stay as Prisma
-    // wrote them, so they read correctly once the table is renamed back.
-    await client.execute(create.replace(/^CREATE TABLE\s+"[^"]+"/i, `CREATE TABLE "${tmp}"`));
-    await client.execute(`DROP TABLE "${table}"`);
-    await client.execute(`ALTER TABLE "${tmp}" RENAME TO "${table}"`);
-    // The old indexes went with the old table, so these names are free again.
-    for (const idx of indexes.get(table) ?? []) await client.execute(idx);
-    repaired.push(label);
-    console.log(`[shape] Rebuilt ${table}.`);
+
+    await client.migrate([
+      `DROP TABLE IF EXISTS "${tmp}"`,
+      // Only the table name is swapped; constraint names inside stay as Prisma
+      // wrote them, so they read correctly once the table is renamed back.
+      create.replace(/^CREATE TABLE\s+"[^"]+"/i, `CREATE TABLE "${tmp}"`),
+      ...(rows > 0 ? [`INSERT INTO "${tmp}" (${shared}) SELECT ${shared} FROM "${table}"`] : []),
+      `DROP TABLE "${table}"`,
+      `ALTER TABLE "${tmp}" RENAME TO "${table}"`,
+      // The old indexes went with the old table, so these names are free again.
+      ...(indexes.get(table) ?? []),
+    ]);
+
+    const after = Number((await client.execute(`SELECT COUNT(*) AS n FROM "${table}"`)).rows[0].n ?? 0);
+    if (after !== rows) {
+      throw new Error(`${table}: rebuilt with ${after} rows, expected ${rows} — stopping.`);
+    }
+    repaired.push(`${label}${rows > 0 ? ` (${rows} row(s) preserved)` : ""}`);
+    console.log(`[shape] Rebuilt ${table}${rows > 0 ? ` — ${rows} row(s) preserved` : ""}.`);
   }
 
   const report = (title, list) => {
